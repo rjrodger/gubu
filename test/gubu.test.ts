@@ -136,7 +136,28 @@ describe('gubu', () => {
     })
   })
 
+  test('deepx', () => {
+    let a1 = gubu({ a: 1 })
+    expect(a1({})).toMatchObject({ a: 1 })
 
+    let ab1 = gubu({ a: { b: 1 } })
+    expect(ab1({})).toMatchObject({ a: { b: 1 } })
+
+    let abc1 = gubu({ a: { b: { c: 1 } } })
+    expect(abc1({})).toMatchObject({ a: { b: { c: 1 } } })
+
+
+    // let ab1c2 = gubu({ a: { b: 1 }, c: 2 })
+    // expect(ab1c2({})).toMatchObject({ a: { b: 1 }, c: 2 })
+
+    // let ab1cd2 = gubu({ a: { b: 1 }, c: { d: 2 } })
+    // expect(ab1cd2({})).toMatchObject({ a: { b: 1 }, c: { d: 2 } })
+
+    // let abc1ade2f3 = gubu({ a: { b: { c: 1 }, d: { e: 2 } }, f: 3 })
+    // expect(abc1ade2f3({})).toMatchObject({ a: { b: { c: 1 }, d: { e: 2 } }, f: 3 })
+
+
+  })
 })
 
 
