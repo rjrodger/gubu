@@ -37,6 +37,9 @@ type ValSpec = {
 }
 
 
+type Builder = (spec?: any) => ValSpec & { [name: string]: Builder | any }
+
+
 // TODO: put to work!
 type ErrSpec = {}
 
@@ -48,6 +51,16 @@ const IS_TYPE: { [name: string]: boolean } = {
   Object: true,
   Array: true,
   Function: true,
+}
+
+
+const EMPTY_VAL: { [name: string]: any } = {
+  string: '',
+  number: 0,
+  boolean: false,
+  object: {},
+  array: [],
+  function: () => undefined,
 }
 
 
@@ -69,6 +82,7 @@ function norm(spec?: any): ValSpec {
   let t: ValType | 'undefined' = null === spec ? 'null' : typeof (spec)
   t = (undefined === t ? 'any' : t) as ValType
 
+  let v = spec
   let a: ArrayKind = ''
   let r = false // Optional by default
 
@@ -83,6 +97,7 @@ function norm(spec?: any): ValSpec {
     if (IS_TYPE[spec.name]) {
       t = (spec.name.toLowerCase() as ValType)
       r = true
+      v = EMPTY_VAL[t]
     }
   }
 
@@ -90,11 +105,10 @@ function norm(spec?: any): ValSpec {
     $: GUBU,
     t,
     a,
-    // p: '',
-    v: spec,
+    v,
     c: {
       r
-    }
+    },
   }
 
   return vs
@@ -192,7 +206,7 @@ function make(inspec?: any) {
         }
 
         // type from default
-        else if (undefined !== sval && n.t !== stype) {
+        else if ('any' !== n.t && undefined !== sval && n.t !== stype) {
           err.push({ ...n, s: sval, p })
         }
 
@@ -201,7 +215,8 @@ function make(inspec?: any) {
           if (n.c.r) {
             err.push({ ...n, s: sval, p, w: 'required' })
           }
-          else {
+          // NOTE: `undefined` is special and cannot be set
+          else if (undefined !== n.v) {
             cur[k] = n.v
           }
         }
@@ -240,11 +255,42 @@ function J(x: any) {
 }
 
 
-function Required(term?: any) { }
+const Required: Builder = function(this: ValSpec, spec?: any) {
+  let vs = buildize(this || spec)
+  vs.c.r = true
+  return vs
+}
 
-function Optional(term?: any) { }
+const Optional: Builder = function(this: ValSpec, spec?: any) {
+  let vs = buildize(this || spec)
+  vs.c.r = false
+  return vs
+}
+
+
+const Any: Builder = function(this: ValSpec, spec?: any) {
+  let vs = buildize(this || spec)
+  vs.t = 'any'
+  vs.c.r = true === spec // Special convenience
+  return vs
+}
+
+
+
 
 function Custom(handler?: any) { }
+
+
+
+
+function buildize(invs: any): ValSpec {
+  let vs = norm(invs)
+  return Object.assign(vs, {
+    Required,
+    Optional,
+    Any,
+  })
+}
 
 
 Object.assign(make, {
@@ -267,8 +313,11 @@ const gubu: Gubu = (make as Gubu)
 export {
   gubu,
   G$,
+  norm,
+  buildize,
   Required,
   Optional,
+  Any,
   Custom
 }
 

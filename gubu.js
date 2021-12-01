@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Custom = exports.Optional = exports.Required = exports.G$ = exports.gubu = void 0;
+exports.Custom = exports.Any = exports.Optional = exports.Required = exports.buildize = exports.norm = exports.G$ = exports.gubu = void 0;
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
@@ -12,6 +12,14 @@ const IS_TYPE = {
     Object: true,
     Array: true,
     Function: true,
+};
+const EMPTY_VAL = {
+    string: '',
+    number: 0,
+    boolean: false,
+    object: {},
+    array: [],
+    function: () => undefined,
 };
 function G$(opts) {
     let vs = norm();
@@ -26,6 +34,7 @@ function norm(spec) {
         return spec;
     let t = null === spec ? 'null' : typeof (spec);
     t = (undefined === t ? 'any' : t);
+    let v = spec;
     let a = '';
     let r = false; // Optional by default
     if ('object' === t && Array.isArray(spec)) {
@@ -37,20 +46,21 @@ function norm(spec) {
         if (IS_TYPE[spec.name]) {
             t = spec.name.toLowerCase();
             r = true;
+            v = EMPTY_VAL[t];
         }
     }
     let vs = {
         $: GUBU,
         t,
         a,
-        // p: '',
-        v: spec,
+        v,
         c: {
             r
-        }
+        },
     };
     return vs;
 }
+exports.norm = norm;
 function make(inspec) {
     let spec = norm(inspec);
     return function gubu(insrc) {
@@ -118,7 +128,7 @@ function make(inspec) {
                     cN++;
                 }
                 // type from default
-                else if (undefined !== sval && n.t !== stype) {
+                else if ('any' !== n.t && undefined !== sval && n.t !== stype) {
                     err.push({ ...n, s: sval, p });
                 }
                 // spec= k:1 // default
@@ -126,7 +136,8 @@ function make(inspec) {
                     if (n.c.r) {
                         err.push({ ...n, s: sval, p, w: 'required' });
                     }
-                    else {
+                    // NOTE: `undefined` is special and cannot be set
+                    else if (undefined !== n.v) {
                         cur[k] = n.v;
                     }
                 }
@@ -158,12 +169,36 @@ function make(inspec) {
 function J(x) {
     return null == x ? '' : JSON.stringify(x).replace(/"/g, '');
 }
-function Required(term) { }
+const Required = function (spec) {
+    let vs = buildize(this || spec);
+    vs.c.r = true;
+    return vs;
+};
 exports.Required = Required;
-function Optional(term) { }
+const Optional = function (spec) {
+    let vs = buildize(this || spec);
+    vs.c.r = false;
+    return vs;
+};
 exports.Optional = Optional;
+const Any = function (spec) {
+    let vs = buildize(this || spec);
+    vs.t = 'any';
+    vs.c.r = true === spec; // Special convenience
+    return vs;
+};
+exports.Any = Any;
 function Custom(handler) { }
 exports.Custom = Custom;
+function buildize(invs) {
+    let vs = norm(invs);
+    return Object.assign(vs, {
+        Required,
+        Optional,
+        Any,
+    });
+}
+exports.buildize = buildize;
 Object.assign(make, {
     Required,
     Optional,

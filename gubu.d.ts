@@ -14,15 +14,21 @@ declare type ValSpec = {
         r: boolean;
     };
 };
+declare type Builder = (spec?: any) => ValSpec & {
+    [name: string]: Builder | any;
+};
 declare function G$(opts: any): ValSpec;
+declare function norm(spec?: any): ValSpec;
 declare function make(inspec?: any): <T>(insrc?: T | undefined) => T;
-declare function Required(term?: any): void;
-declare function Optional(term?: any): void;
+declare const Required: Builder;
+declare const Optional: Builder;
+declare const Any: Builder;
 declare function Custom(handler?: any): void;
+declare function buildize(invs: any): ValSpec;
 declare type Gubu = typeof make & {
     Required: typeof Required;
     Optional: typeof Optional;
     Custom: typeof Custom;
 };
 declare const gubu: Gubu;
-export { gubu, G$, Required, Optional, Custom };
+export { gubu, G$, norm, buildize, Required, Optional, Any, Custom };

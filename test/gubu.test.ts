@@ -1,7 +1,12 @@
 /* Copyright (c) 2021 Richard Rodger and other contributors, MIT License */
 
 
-import { gubu } from '../gubu'
+import {
+  gubu,
+  Required,
+  Optional,
+  Any,
+} from '../gubu'
 
 
 describe('gubu', () => {
@@ -19,6 +24,92 @@ describe('gubu', () => {
     expect(g0({ b: 999 })).toEqual({ a: 'foo', b: 999 })
     expect(g0({ a: 'bar', b: 999 })).toEqual({ a: 'bar', b: 999 })
     expect(g0({ a: 'bar', b: 999, c: true })).toEqual({ a: 'bar', b: 999, c: true })
+  })
+
+
+  test('buildize-construct', () => {
+    expect(Required('x')).toMatchObject({
+      '$': { 'gubu$': true },
+      t: 'string',
+      a: '',
+      v: 'x',
+      c: { r: true },
+    })
+
+    expect(Optional(String)).toMatchObject({
+      '$': { 'gubu$': true },
+      t: 'string',
+      a: '',
+      v: '',
+      c: { r: false },
+    })
+
+
+    expect(Required(Required('x'))).toMatchObject({
+      '$': { 'gubu$': true },
+      t: 'string',
+      a: '',
+      v: 'x',
+      c: { r: true },
+    })
+
+    expect(Optional(Required('x'))).toMatchObject({
+      '$': { 'gubu$': true },
+      t: 'string',
+      a: '',
+      v: 'x',
+      c: { r: false },
+    })
+
+    expect(Required('x').Required()).toMatchObject({
+      '$': { 'gubu$': true },
+      t: 'string',
+      a: '',
+      v: 'x',
+      c: { r: true },
+    })
+
+    expect(Required('x').Optional()).toMatchObject({
+      '$': { 'gubu$': true },
+      t: 'string',
+      a: '',
+      v: 'x',
+      c: { r: false },
+    })
+
+
+    expect(Optional(Optional(String))).toMatchObject({
+      '$': { 'gubu$': true },
+      t: 'string',
+      a: '',
+      v: '',
+      c: { r: false },
+    })
+
+    expect(Optional(String).Optional()).toMatchObject({
+      '$': { 'gubu$': true },
+      t: 'string',
+      a: '',
+      v: '',
+      c: { r: false },
+    })
+
+    expect(Optional(String).Required()).toMatchObject({
+      '$': { 'gubu$': true },
+      t: 'string',
+      a: '',
+      v: '',
+      c: { r: true },
+    })
+
+    expect(Required(Optional(String))).toMatchObject({
+      '$': { 'gubu$': true },
+      t: 'string',
+      a: '',
+      v: '',
+      c: { r: true },
+    })
+
   })
 
 
@@ -189,6 +280,27 @@ describe('gubu', () => {
     expect(a1({ b: 1 })).toMatchObject({ a: 'A', b: 1 })
   })
   */
+
+
+  test('buildize-required', () => {
+    let g0 = gubu({ a: Required(1) })
+    expect(g0({ a: 2 })).toMatchObject({ a: 2 })
+    expect(() => g0({ a: 'x' })).toThrow(/number/)
+  })
+
+  test('buildize-optional', () => {
+    let g0 = gubu({ a: Optional(String) })
+    expect(g0({ a: 'x' })).toMatchObject({ a: 'x' })
+    expect(g0({})).toMatchObject({ a: '' })
+    expect(() => g0({ a: 1 })).toThrow(/string/)
+  })
+
+  test('buildize-any', () => {
+    let g0 = gubu({ a: Any(), b: Any(true) })
+    expect(g0({ a: 2, b: 1 })).toMatchObject({ a: 2, b: 1 })
+    expect(g0({ a: 'x', b: 'y' })).toMatchObject({ a: 'x', b: 'y' })
+    expect(g0({ b: 1 })).toEqual({ b: 1 })
+  })
 
 })
 

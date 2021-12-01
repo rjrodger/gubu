@@ -15,6 +15,78 @@ describe('gubu', () => {
         expect(g0({ a: 'bar', b: 999 })).toEqual({ a: 'bar', b: 999 });
         expect(g0({ a: 'bar', b: 999, c: true })).toEqual({ a: 'bar', b: 999, c: true });
     });
+    test('buildize-construct', () => {
+        expect((0, gubu_1.Required)('x')).toMatchObject({
+            '$': { 'gubu$': true },
+            t: 'string',
+            a: '',
+            v: 'x',
+            c: { r: true },
+        });
+        expect((0, gubu_1.Optional)(String)).toMatchObject({
+            '$': { 'gubu$': true },
+            t: 'string',
+            a: '',
+            v: '',
+            c: { r: false },
+        });
+        expect((0, gubu_1.Required)((0, gubu_1.Required)('x'))).toMatchObject({
+            '$': { 'gubu$': true },
+            t: 'string',
+            a: '',
+            v: 'x',
+            c: { r: true },
+        });
+        expect((0, gubu_1.Optional)((0, gubu_1.Required)('x'))).toMatchObject({
+            '$': { 'gubu$': true },
+            t: 'string',
+            a: '',
+            v: 'x',
+            c: { r: false },
+        });
+        expect((0, gubu_1.Required)('x').Required()).toMatchObject({
+            '$': { 'gubu$': true },
+            t: 'string',
+            a: '',
+            v: 'x',
+            c: { r: true },
+        });
+        expect((0, gubu_1.Required)('x').Optional()).toMatchObject({
+            '$': { 'gubu$': true },
+            t: 'string',
+            a: '',
+            v: 'x',
+            c: { r: false },
+        });
+        expect((0, gubu_1.Optional)((0, gubu_1.Optional)(String))).toMatchObject({
+            '$': { 'gubu$': true },
+            t: 'string',
+            a: '',
+            v: '',
+            c: { r: false },
+        });
+        expect((0, gubu_1.Optional)(String).Optional()).toMatchObject({
+            '$': { 'gubu$': true },
+            t: 'string',
+            a: '',
+            v: '',
+            c: { r: false },
+        });
+        expect((0, gubu_1.Optional)(String).Required()).toMatchObject({
+            '$': { 'gubu$': true },
+            t: 'string',
+            a: '',
+            v: '',
+            c: { r: true },
+        });
+        expect((0, gubu_1.Required)((0, gubu_1.Optional)(String))).toMatchObject({
+            '$': { 'gubu$': true },
+            t: 'string',
+            a: '',
+            v: '',
+            c: { r: true },
+        });
+    });
     test('type-default-optional', () => {
         let f0 = () => true;
         let g0 = (0, gubu_1.gubu)({
@@ -154,5 +226,22 @@ describe('gubu', () => {
       expect(a1({ b: 1 })).toMatchObject({ a: 'A', b: 1 })
     })
     */
+    test('buildize-required', () => {
+        let g0 = (0, gubu_1.gubu)({ a: (0, gubu_1.Required)(1) });
+        expect(g0({ a: 2 })).toMatchObject({ a: 2 });
+        expect(() => g0({ a: 'x' })).toThrow(/number/);
+    });
+    test('buildize-optional', () => {
+        let g0 = (0, gubu_1.gubu)({ a: (0, gubu_1.Optional)(String) });
+        expect(g0({ a: 'x' })).toMatchObject({ a: 'x' });
+        expect(g0({})).toMatchObject({ a: '' });
+        expect(() => g0({ a: 1 })).toThrow(/string/);
+    });
+    test('buildize-any', () => {
+        let g0 = (0, gubu_1.gubu)({ a: (0, gubu_1.Any)(), b: (0, gubu_1.Any)(true) });
+        expect(g0({ a: 2, b: 1 })).toMatchObject({ a: 2, b: 1 });
+        expect(g0({ a: 'x', b: 'y' })).toMatchObject({ a: 'x', b: 'y' });
+        expect(g0({ b: 1 })).toEqual({ b: 1 });
+    });
 });
 //# sourceMappingURL=gubu.test.js.map
