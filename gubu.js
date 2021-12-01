@@ -1,14 +1,58 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Custom = exports.Optional = exports.Required = exports.gubu = void 0;
-function make(inspec) {
-    let spec = {
-        $: 1,
-        t: 'object',
-        p: '',
-        v: inspec || {}
+exports.Custom = exports.Optional = exports.Required = exports.G$ = exports.gubu = void 0;
+/*
+ * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
+ */
+const GUBU = { gubu$: true };
+const IS_TYPE = {
+    String: true,
+    Number: true,
+    Boolean: true,
+    Object: true,
+    Array: true,
+    Function: true,
+};
+function G$(opts) {
+    let vs = norm();
+    if (null != opts) {
+        // TODO: self validate to generate a normed spec!
+    }
+    return vs;
+}
+exports.G$ = G$;
+function norm(spec) {
+    if (GUBU === (spec === null || spec === void 0 ? void 0 : spec.$))
+        return spec;
+    let t = null === spec ? 'null' : typeof (spec);
+    t = (undefined === t ? 'any' : t);
+    let a = '';
+    let r = false; // Optional by default
+    if ('object' === t && Array.isArray(spec)) {
+        t = 'array';
+        // defaults: [,<spec>] -> [], [<spec>] -> [<spec>]
+        a = undefined === spec[0] ? 'empty' : 'fill';
+    }
+    else if ('function' === t) {
+        if (IS_TYPE[spec.name]) {
+            t = spec.name.toLowerCase();
+            r = true;
+        }
+    }
+    let vs = {
+        $: GUBU,
+        t,
+        a,
+        // p: '',
+        v: spec,
+        c: {
+            r
+        }
     };
-    console.log('\n===', J(spec));
+    return vs;
+}
+function make(inspec) {
+    let spec = norm(inspec);
     return function gubu(insrc) {
         let src = insrc || {};
         const root = src;
@@ -23,6 +67,9 @@ function make(inspec) {
         let cur;
         // Iterative depth-first traversal of the spec.
         while (true) {
+            // Dereference the back pointers to ancestor siblings.
+            // Only objects|arrays can be nodes, so a number is a back pointer.
+            // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
             node = nodeStack[pI];
             while (+node) {
                 pI = node;
@@ -30,44 +77,34 @@ function make(inspec) {
             }
             sI = pI + 1;
             cur = curStack[pI];
-            console.log('BB', 'p=' + pI, 's=' + sI, node, cur);
+            // console.log('BB', 'p=' + pI, 's=' + sI, node, cur)
             if (!node) {
                 break;
             }
             cN = 0;
             pI = nI;
-            let keys = Object.keys('array' === node.t ? cur : node.v);
-            console.log('K', keys);
+            let keys = Object.keys(node.v);
+            if (node.a) {
+                if (0 < cur.length) {
+                    keys = Object.keys(cur);
+                }
+                else if ('empty' === node.a) {
+                    keys = [];
+                }
+            }
+            // let keys = Object.keys('array' === node.t ? cur : node.v)
+            // console.log('K', keys)
             for (let k of keys) {
                 let sval = cur[k];
                 let stype = typeof (sval);
                 let n = node.v['array' === node.t ? 0 : k];
-                console.log('VTa', k, sval, stype, n);
-                if (!n.$) {
-                    let nval = n;
-                    let ntype = typeof (nval);
-                    n = node.v[k] = {
-                        $: 1,
-                        t: 'any',
-                        p: node.p + (0 < node.p.length ? '.' : '') +
-                            ('array' === node.t ? '' : k),
-                        v: nval
-                    };
-                    if ('object' === ntype) {
-                        if (Array.isArray(nval)) {
-                            n.t = 'array';
-                        }
-                        else {
-                            n.t = 'object';
-                        }
-                    }
-                    else if ('function' === ntype) {
-                        n.t = nval.name.toLowerCase();
-                    }
-                    else if ('string' === ntype || 'number' === ntype || 'boolean' === ntype) {
-                        n.t = ntype;
-                    }
+                // console.log('VTa', k, sval, stype, n)
+                if (GUBU !== n.$) {
+                    n = node.v[k] = norm(n);
                 }
+                // TODO: won't work with multiple nested arrays - use a path stack
+                // let p = n.p + (n.p.endsWith('.') ? k : '')
+                let p = k;
                 if ('object' === n.t) {
                     nodeStack[nI] = n;
                     curStack[nI] = cur[k] = (cur[k] || {});
@@ -82,13 +119,16 @@ function make(inspec) {
                 }
                 // type from default
                 else if (undefined !== sval && n.t !== stype) {
-                    // TODO: won't work with multiple nested arrays - use a path stack
-                    let p = n.p + (n.p.endsWith('.') ? k : '');
                     err.push({ ...n, s: sval, p });
                 }
                 // spec= k:1 // default
                 else if (undefined === sval) {
-                    cur[k] = n.v;
+                    if (n.c.r) {
+                        err.push({ ...n, s: sval, p, w: 'required' });
+                    }
+                    else {
+                        cur[k] = n.v;
+                    }
                 }
             }
             if (0 < cN) {
@@ -97,11 +137,16 @@ function make(inspec) {
             else {
                 pI = sI;
             }
-            console.log('***');
-            for (let i = 0; i < nodeStack.length; i++) {
-                console.log(('' + i).padStart(4), J(nodeStack[i]).substring(0, 111).padEnd(112), '/', J(curStack[i]).substring(0, 33).padEnd(34));
-            }
-            console.log('END', 'c=' + cN, 's=' + sI, 'p=' + pI, 'n=' + nI);
+            // console.log('***')
+            // for (let i = 0; i < nodeStack.length; i++) {
+            //   console.log(
+            //     ('' + i).padStart(4),
+            //     J(nodeStack[i]).substring(0, 111).padEnd(112),
+            //     '/',
+            //     J(curStack[i]).substring(0, 33).padEnd(34),
+            //   )
+            // }
+            // console.log('END', 'c=' + cN, 's=' + sI, 'p=' + pI, 'n=' + nI)
         }
         // TODO: collect errors
         if (0 < err.length) {

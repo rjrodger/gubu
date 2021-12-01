@@ -1,26 +1,110 @@
 import { Jsonic } from 'jsonic'
 
 
+/*
+ * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
+ */
 
-type ValKind = 'any' | 'string' | 'number' | 'boolean' | 'object'
+
+const GUBU = { gubu$: true }
+
+type ValType =
+  'any' |
+  'null' |
+  'string' |
+  'number' |
+  'boolean' |
+  'object' |
+  'array' |
+  'bigint' |
+  'symbol' |
+  'function'
+
+type ArrayKind =
+  '' |        // Not an array.
+  'fill' |    // Fill empty array with defaults.
+  'empty'     // Leave empty array empty.
 
 type ValSpec = {
-  $: 1
-  t: ValKind
-  p: string
+  $: typeof GUBU
+  t: ValType
+  a: ArrayKind
+  // p: string
   v: any
+  c: {
+    r: boolean // required
+  }
 }
 
 
-function make(inspec?: any) {
-  let spec: ValSpec = {
-    $: 1, // TODO: move to prototype
-    t: 'object',
-    p: '',
-    v: inspec || {}
-  }
-  console.log('\n===', J(spec))
+// TODO: put to work!
+type ErrSpec = {}
 
+
+const IS_TYPE: { [name: string]: boolean } = {
+  String: true,
+  Number: true,
+  Boolean: true,
+  Object: true,
+  Array: true,
+  Function: true,
+}
+
+
+
+function G$(opts: any): ValSpec {
+  let vs = norm()
+
+  if (null != opts) {
+    // TODO: self validate to generate a normed spec!
+  }
+
+  return vs
+}
+
+
+function norm(spec?: any): ValSpec {
+  if (GUBU === spec?.$) return spec
+
+  let t: ValType | 'undefined' = null === spec ? 'null' : typeof (spec)
+  t = (undefined === t ? 'any' : t) as ValType
+
+  let a: ArrayKind = ''
+  let r = false // Optional by default
+
+  if ('object' === t && Array.isArray(spec)) {
+    t = 'array'
+
+    // defaults: [,<spec>] -> [], [<spec>] -> [<spec>]
+    a = undefined === spec[0] ? 'empty' : 'fill'
+  }
+
+  else if ('function' === t) {
+    if (IS_TYPE[spec.name]) {
+      t = (spec.name.toLowerCase() as ValType)
+      r = true
+    }
+  }
+
+  let vs: ValSpec = {
+    $: GUBU,
+    t,
+    a,
+    // p: '',
+    v: spec,
+    c: {
+      r
+    }
+  }
+
+  return vs
+}
+
+
+
+
+function make(inspec?: any) {
+  let spec: ValSpec = norm(inspec)
 
 
   return function gubu<T>(insrc?: T): T {
@@ -43,8 +127,10 @@ function make(inspec?: any) {
     // Iterative depth-first traversal of the spec.
     while (true) {
 
+      // Dereference the back pointers to ancestor siblings.
+      // Only objects|arrays can be nodes, so a number is a back pointer.
+      // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
       node = nodeStack[pI]
-
       while (+node) {
         pI = node
         node = nodeStack[pI]
@@ -54,7 +140,7 @@ function make(inspec?: any) {
 
       cur = curStack[pI]
 
-      console.log('BB', 'p=' + pI, 's=' + sI, node, cur)
+      // console.log('BB', 'p=' + pI, 's=' + sI, node, cur)
 
       if (!node) {
         break
@@ -63,43 +149,33 @@ function make(inspec?: any) {
       cN = 0
       pI = nI
 
-      let keys = Object.keys('array' === node.t ? cur : node.v)
-      console.log('K', keys)
+      let keys = Object.keys(node.v)
+
+      if (node.a) {
+        if (0 < cur.length) {
+          keys = Object.keys(cur)
+        }
+        else if ('empty' === node.a) {
+          keys = []
+        }
+      }
+      // let keys = Object.keys('array' === node.t ? cur : node.v)
+      // console.log('K', keys)
 
       for (let k of keys) {
         let sval = cur[k]
         let stype = typeof (sval)
 
         let n = node.v['array' === node.t ? 0 : k]
-        console.log('VTa', k, sval, stype, n)
+        // console.log('VTa', k, sval, stype, n)
 
-        if (!n.$) {
-          let nval = n
-          let ntype = typeof (nval)
-
-          n = node.v[k] = {
-            $: 1,
-            t: 'any',
-            p: node.p + (0 < node.p.length ? '.' : '') +
-              ('array' === node.t ? '' : k),
-            v: nval
-          }
-
-          if ('object' === ntype) {
-            if (Array.isArray(nval)) {
-              n.t = 'array'
-            }
-            else {
-              n.t = 'object'
-            }
-          }
-          else if ('function' === ntype) {
-            n.t = nval.name.toLowerCase()
-          }
-          else if ('string' === ntype || 'number' === ntype || 'boolean' === ntype) {
-            n.t = ntype
-          }
+        if (GUBU !== n.$) {
+          n = node.v[k] = norm(n)
         }
+
+        // TODO: won't work with multiple nested arrays - use a path stack
+        // let p = n.p + (n.p.endsWith('.') ? k : '')
+        let p = k
 
         if ('object' === n.t) {
           nodeStack[nI] = n
@@ -117,14 +193,17 @@ function make(inspec?: any) {
 
         // type from default
         else if (undefined !== sval && n.t !== stype) {
-          // TODO: won't work with multiple nested arrays - use a path stack
-          let p = n.p + (n.p.endsWith('.') ? k : '')
           err.push({ ...n, s: sval, p })
         }
 
         // spec= k:1 // default
         else if (undefined === sval) {
-          cur[k] = n.v
+          if (n.c.r) {
+            err.push({ ...n, s: sval, p, w: 'required' })
+          }
+          else {
+            cur[k] = n.v
+          }
         }
       }
 
@@ -135,17 +214,16 @@ function make(inspec?: any) {
         pI = sI
       }
 
-      console.log('***')
-      for (let i = 0; i < nodeStack.length; i++) {
-        console.log(
-          ('' + i).padStart(4),
-          J(nodeStack[i]).substring(0, 111).padEnd(112),
-          '/',
-          J(curStack[i]).substring(0, 33).padEnd(34),
-        )
-      }
-
-      console.log('END', 'c=' + cN, 's=' + sI, 'p=' + pI, 'n=' + nI)
+      // console.log('***')
+      // for (let i = 0; i < nodeStack.length; i++) {
+      //   console.log(
+      //     ('' + i).padStart(4),
+      //     J(nodeStack[i]).substring(0, 111).padEnd(112),
+      //     '/',
+      //     J(curStack[i]).substring(0, 33).padEnd(34),
+      //   )
+      // }
+      // console.log('END', 'c=' + cN, 's=' + sI, 'p=' + pI, 'n=' + nI)
     }
 
     // TODO: collect errors
@@ -186,6 +264,12 @@ Object.defineProperty(make, 'name', { value: 'gubu' })
 
 const gubu: Gubu = (make as Gubu)
 
-export { gubu, Required, Optional, Custom }
+export {
+  gubu,
+  G$,
+  Required,
+  Optional,
+  Custom
+}
 
 
