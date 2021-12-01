@@ -4,6 +4,7 @@ exports.Custom = exports.Any = exports.Optional = exports.Required = exports.bui
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
+// TODO: freeze
 const GUBU = { gubu$: true };
 const IS_TYPE = {
     String: true,
@@ -37,6 +38,7 @@ function norm(spec) {
     let v = spec;
     let a = '';
     let r = false; // Optional by default
+    let d = undefined;
     if ('object' === t && Array.isArray(spec)) {
         t = 'array';
         // defaults: [,<spec>] -> [], [<spec>] -> [<spec>]
@@ -48,6 +50,10 @@ function norm(spec) {
             r = true;
             v = EMPTY_VAL[t];
         }
+        else {
+            t = 'custom';
+            d = spec;
+        }
     }
     let vs = {
         $: GUBU,
@@ -57,96 +63,139 @@ function norm(spec) {
         c: {
             r
         },
+        k: '',
+        d: -1,
     };
+    if (d) {
+        vs.f = d;
+    }
     return vs;
 }
 exports.norm = norm;
 function make(inspec) {
-    let spec = norm(inspec);
-    return function gubu(insrc) {
-        let src = insrc || {};
-        const root = src;
-        const nodeStack = [spec, -1];
-        const curStack = [root, -1];
-        let nI = 2;
-        let pI = 0;
-        let sI = -1;
-        let cN = 0;
-        let err = [];
-        let node;
-        let cur;
+    let spec = norm(inspec); // Tree of validation nodes.
+    return function gubu(inroot) {
+        const root = inroot || {};
+        const nodes = [spec, -1];
+        const srcs = [root, -1];
+        const path = [];
+        let dI = 0;
+        let nI = 2; // Next free slot in nodes.
+        let pI = 0; // Pointer to current node.
+        let sI = -1; // Pointer to next sibling node.
+        let cN = 0; // Number of children of current node.
+        let err = []; // Errors collected.
+        let node; // Current node.  
+        let src; // Current source value to validate.
         // Iterative depth-first traversal of the spec.
         while (true) {
             // Dereference the back pointers to ancestor siblings.
             // Only objects|arrays can be nodes, so a number is a back pointer.
             // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
-            node = nodeStack[pI];
+            node = nodes[pI];
             while (+node) {
                 pI = node;
-                node = nodeStack[pI];
+                node = nodes[pI];
+                dI--;
             }
             sI = pI + 1;
-            cur = curStack[pI];
-            // console.log('BB', 'p=' + pI, 's=' + sI, node, cur)
+            src = srcs[pI];
             if (!node) {
                 break;
             }
+            path[dI++] = node.k;
             cN = 0;
             pI = nI;
             let keys = Object.keys(node.v);
+            // Treat array indexes as keys.
             if (node.a) {
-                if (0 < cur.length) {
-                    keys = Object.keys(cur);
+                if (0 < src.length) {
+                    keys = Object.keys(src);
                 }
                 else if ('empty' === node.a) {
                     keys = [];
                 }
             }
-            // let keys = Object.keys('array' === node.t ? cur : node.v)
-            // console.log('K', keys)
-            for (let k of keys) {
-                let sval = cur[k];
+            for (let key of keys) {
+                path[dI] = key;
+                let sval = src[key];
                 let stype = typeof (sval);
-                let n = node.v['array' === node.t ? 0 : k];
+                let n = node.v['array' === node.t ? 0 : key];
                 // console.log('VTa', k, sval, stype, n)
-                if (GUBU !== n.$) {
-                    n = node.v[k] = norm(n);
-                }
+                // TODO: add node parent
+                let vs = GUBU === n.$ ? n : (node.v[key] = norm(n));
+                vs.k = key;
+                vs.d = dI;
                 // TODO: won't work with multiple nested arrays - use a path stack
                 // let p = n.p + (n.p.endsWith('.') ? k : '')
-                let p = k;
-                if ('object' === n.t) {
-                    nodeStack[nI] = n;
-                    curStack[nI] = cur[k] = (cur[k] || {});
+                // let p = key
+                let t = vs.t;
+                if ('custom' === t && vs.f) {
+                    let update = {};
+                    let valid = vs.f(sval, update, {
+                        dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, err
+                    });
+                    if (!valid || update.err) {
+                        let w = 'custom';
+                        let p = pathstr(path, dI);
+                        let f = null == vs.f.name || '' === vs.f.name ?
+                            vs.f.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
+                            vs.f.name;
+                        if ('object' === typeof (update.err)) {
+                            err.push(...[update.err].flat().map(e => {
+                                e.p = null == e.p ? p : e.p;
+                                e.f = null == e.f ? f : e.f;
+                                return e;
+                            }));
+                        }
+                        else {
+                            err.push({ node: vs, s: sval, p, w, f });
+                        }
+                    }
+                    else {
+                        if (undefined !== update.val) {
+                            sval = src[key] = update.val;
+                        }
+                        nI = undefined === update.nI ? nI : update.nI;
+                        sI = undefined === update.sI ? sI : update.sI;
+                        pI = undefined === update.pI ? pI : update.pI;
+                        cN = undefined === update.cN ? cN : update.cN;
+                    }
+                }
+                else if ('object' === t) {
+                    nodes[nI] = vs;
+                    // TODO: err if obj required
+                    srcs[nI] = src[key] = (src[key] || {});
                     nI++;
                     cN++;
                 }
-                else if ('array' === n.t) {
-                    nodeStack[nI] = n;
-                    curStack[nI] = cur[k] = (cur[k] || []);
+                else if ('array' === t) {
+                    nodes[nI] = vs;
+                    srcs[nI] = src[key] = (src[key] || []);
                     nI++;
                     cN++;
                 }
                 // type from default
-                else if ('any' !== n.t && undefined !== sval && n.t !== stype) {
-                    err.push({ ...n, s: sval, p });
+                else if ('any' !== t && undefined !== sval && t !== stype) {
+                    err.push({ node: vs, s: sval, p: pathstr(path, dI), w: 'type' });
                 }
                 // spec= k:1 // default
                 else if (undefined === sval) {
-                    if (n.c.r) {
-                        err.push({ ...n, s: sval, p, w: 'required' });
+                    if (vs.c.r) {
+                        err.push({ node: vs, s: sval, p: pathstr(path, dI), w: 'required' });
                     }
                     // NOTE: `undefined` is special and cannot be set
-                    else if (undefined !== n.v) {
-                        cur[k] = n.v;
+                    else if (undefined !== vs.v) {
+                        src[key] = vs.v;
                     }
                 }
             }
             if (0 < cN) {
-                nodeStack[nI++] = sI;
+                nodes[nI++] = sI;
             }
             else {
                 pI = sI;
+                dI--;
             }
             // console.log('***')
             // for (let i = 0; i < nodeStack.length; i++) {
@@ -169,6 +218,9 @@ function make(inspec) {
 function J(x) {
     return null == x ? '' : JSON.stringify(x).replace(/"/g, '');
 }
+function pathstr(path, dI) {
+    return path.slice(1, dI + 1).filter(s => null != s).join('.');
+}
 const Required = function (spec) {
     let vs = buildize(this || spec);
     vs.c.r = true;
@@ -188,7 +240,12 @@ const Any = function (spec) {
     return vs;
 };
 exports.Any = Any;
-function Custom(handler) { }
+function Custom(validate) {
+    let vs = buildize();
+    vs.t = 'custom';
+    vs.f = validate;
+    return vs;
+}
 exports.Custom = Custom;
 function buildize(invs) {
     let vs = norm(invs);
