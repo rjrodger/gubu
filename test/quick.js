@@ -45,3 +45,14 @@ J(x2({}))
 J(x2({}))
 
 
+
+let r0 = gubu({ a: [Boolean] })
+J(r0({a:[false, true]}))
+
+
+let r1 = gubu({ a: [{x:1,y:{z:2}}] })
+J(r1({a:[{},{x:11},{x:11,y:{}},{x:11,y:{z:22}}]}))
+
+
+
+

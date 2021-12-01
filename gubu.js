@@ -36,12 +36,12 @@ function make(inspec) {
             }
             cN = 0;
             pI = nI;
-            let keys = Object.keys(node.v);
-            // console.log('K', keys)
+            let keys = Object.keys('array' === node.t ? cur : node.v);
+            console.log('K', keys);
             for (let k of keys) {
                 let sval = cur[k];
                 let stype = typeof (sval);
-                let n = node.v[k];
+                let n = node.v['array' === node.t ? 0 : k];
                 console.log('VTa', k, sval, stype, n);
                 if (!n.$) {
                     let nval = n;
@@ -49,29 +49,42 @@ function make(inspec) {
                     n = node.v[k] = {
                         $: 1,
                         t: 'any',
-                        p: node.p + (0 < node.p.length ? '.' : '') + k,
+                        p: node.p + (0 < node.p.length ? '.' : '') +
+                            ('array' === node.t ? '' : k),
                         v: nval
                     };
                     if ('object' === ntype) {
-                        n.t = 'object';
+                        if (Array.isArray(nval)) {
+                            n.t = 'array';
+                        }
+                        else {
+                            n.t = 'object';
+                        }
                     }
                     else if ('function' === ntype) {
-                        n.t = nval.name.toUpperCase().substring(0, 3);
+                        n.t = nval.name.toLowerCase();
                     }
                     else if ('string' === ntype || 'number' === ntype || 'boolean' === ntype) {
                         n.t = ntype;
                     }
                 }
-                // console.log('VTb', k, sval, stype, n)
                 if ('object' === n.t) {
                     nodeStack[nI] = n;
                     curStack[nI] = cur[k] = (cur[k] || {});
                     nI++;
                     cN++;
                 }
+                else if ('array' === n.t) {
+                    nodeStack[nI] = n;
+                    curStack[nI] = cur[k] = (cur[k] || []);
+                    nI++;
+                    cN++;
+                }
                 // type from default
                 else if (undefined !== sval && n.t !== stype) {
-                    err.push({ ...n, s: sval });
+                    // TODO: won't work with multiple nested arrays - use a path stack
+                    let p = n.p + (n.p.endsWith('.') ? k : '');
+                    err.push({ ...n, s: sval, p });
                 }
                 // spec= k:1 // default
                 else if (undefined === sval) {
