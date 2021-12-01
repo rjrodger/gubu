@@ -9,9 +9,15 @@ function J(x) {
 
 let a1 = gubu({ a: 1 })
 J(a1({}))
+// J(a1({a:'x'}))
 
 let ab1 = gubu({ a: { b: 1 } })
 J(ab1({}))
+// J(ab1({a:{b:'x'}}))
+
+let ab1acX = gubu({ a: { b: 1, c: 'X' } })
+J(ab1acX({}))
+// J(ab1acX({a:{b:'y',c:2}}))
 
 let abc1 = gubu({ a: { b: { c: 1 } } })
 J(abc1({}))
@@ -35,6 +41,7 @@ J(x1({}))
 
 
 let x2 = gubu({ a: { b: { c: { d: 1 }, x: { y: 3 } } }, e: { f: {m:5}, ff:{mm:55} }, g: { h: 4 } })
+J(x2({}))
 J(x2({}))
 
 

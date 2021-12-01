@@ -1,18 +1,33 @@
 import { Jsonic } from 'jsonic'
 
 
-function make(spec?: any) {
-  spec = spec || {}
+
+type ValKind = 'any' | 'string' | 'number' | 'boolean' | 'object'
+
+type ValSpec = {
+  $: 1
+  t: ValKind
+  p: string
+  v: any
+}
+
+
+function make(inspec?: any) {
+  let spec: ValSpec = {
+    $: 1, // TODO: move to prototype
+    t: 'object',
+    p: '',
+    v: inspec || {}
+  }
   console.log('\n===', J(spec))
 
+
+
   return function gubu<T>(insrc?: T): T {
-
-
     let src: any = insrc || {}
 
-    const root: any = {}
+    const root: any = src
 
-    const pathStack: string[] = []
     const nodeStack: any[] = [spec, -1]
     const curStack: any[] = [root, -1]
 
@@ -21,16 +36,16 @@ function make(spec?: any) {
     let sI: number = -1
     let cN: number = 0
 
-    let err: any = undefined
+    let err: any = []
     let node: any
     let cur: any
 
+    // Iterative depth-first traversal of the spec.
     while (true) {
 
       node = nodeStack[pI]
 
       while (+node) {
-        // nodeStack[pI] = 0
         pI = node
         node = nodeStack[pI]
       }
@@ -42,46 +57,61 @@ function make(spec?: any) {
       console.log('BB', 'p=' + pI, 's=' + sI, node, cur)
 
       if (!node) {
-        console.log('WWW')
         break
       }
 
       cN = 0
       pI = nI
 
-      for (let k of Object.keys(node)) {
-        let nval = node[k]
-        let ntype = typeof (nval)
-        let sval = src[k]
+      let keys = Object.keys(node.v)
+      // console.log('K', keys)
+
+      for (let k of keys) {
+        let sval = cur[k]
         let stype = typeof (sval)
 
-        if ('object' === ntype) {
-          nodeStack[nI] = nval
+        let n = node.v[k]
+        console.log('VTa', k, sval, stype, n)
+
+        if (!n.$) {
+          let nval = n
+          let ntype = typeof (nval)
+
+          n = node.v[k] = {
+            $: 1,
+            t: 'any',
+            p: node.p + (0 < node.p.length ? '.' : '') + k,
+            v: nval
+          }
+
+          if ('object' === ntype) {
+            n.t = 'object'
+          }
+          else if ('function' === ntype) {
+            n.t = nval.name.toUpperCase().substring(0, 3)
+          }
+          else if ('string' === ntype || 'number' === ntype || 'boolean' === ntype) {
+            n.t = ntype
+          }
+        }
+
+        // console.log('VTb', k, sval, stype, n)
+
+        if ('object' === n.t) {
+          nodeStack[nI] = n
           curStack[nI] = cur[k] = (cur[k] || {})
           nI++
           cN++
         }
 
-        // spec= k:String // required type
-        else if ('function' === ntype) {
-          if (nval.name.toLowerCase() === stype) {
-            cur[k] = sval
-          }
-          else {
-            err = { path: [...pathStack] }
-            break;
-          }
-        }
-
         // type from default
-        else if (undefined !== sval && ntype !== stype) {
-          err = { path: [...pathStack] }
-          break;
+        else if (undefined !== sval && n.t !== stype) {
+          err.push({ ...n, s: sval })
         }
 
         // spec= k:1 // default
         else if (undefined === sval) {
-          cur[k] = nval
+          cur[k] = n.v
         }
       }
 
@@ -96,7 +126,7 @@ function make(spec?: any) {
       for (let i = 0; i < nodeStack.length; i++) {
         console.log(
           ('' + i).padStart(4),
-          J(nodeStack[i]).substring(0, 33).padEnd(34),
+          J(nodeStack[i]).substring(0, 111).padEnd(112),
           '/',
           J(curStack[i]).substring(0, 33).padEnd(34),
         )
@@ -106,7 +136,7 @@ function make(spec?: any) {
     }
 
     // TODO: collect errors
-    if (err) {
+    if (0 < err.length) {
       throw new Error('gubu: ' + JSON.stringify(err))
     }
 
