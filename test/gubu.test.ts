@@ -6,6 +6,7 @@ import {
   Required,
   Optional,
   Any,
+  Closed,
   G$,
 } from '../gubu'
 
@@ -32,7 +33,6 @@ describe('gubu', () => {
     expect(Required('x')).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      y: '',
       v: 'x',
       r: true,
     })
@@ -40,7 +40,6 @@ describe('gubu', () => {
     expect(Optional(String)).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      y: '',
       v: '',
       r: false,
     })
@@ -49,7 +48,6 @@ describe('gubu', () => {
     expect(Required(Required('x'))).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      y: '',
       v: 'x',
       r: true,
     })
@@ -57,7 +55,6 @@ describe('gubu', () => {
     expect(Optional(Required('x'))).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      y: '',
       v: 'x',
       r: false,
     })
@@ -65,7 +62,6 @@ describe('gubu', () => {
     expect(Required('x').Required()).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      y: '',
       v: 'x',
       r: true,
     })
@@ -73,7 +69,6 @@ describe('gubu', () => {
     expect(Required('x').Optional()).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      y: '',
       v: 'x',
       r: false,
     })
@@ -82,7 +77,6 @@ describe('gubu', () => {
     expect(Optional(Optional(String))).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      y: '',
       v: '',
       r: false,
     })
@@ -90,7 +84,6 @@ describe('gubu', () => {
     expect(Optional(String).Optional()).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      y: '',
       v: '',
       r: false,
     })
@@ -98,7 +91,6 @@ describe('gubu', () => {
     expect(Optional(String).Required()).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      y: '',
       v: '',
       r: true,
     })
@@ -106,7 +98,6 @@ describe('gubu', () => {
     expect(Required(Optional(String))).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      y: '',
       v: '',
       r: true,
     })
@@ -131,7 +122,7 @@ describe('gubu', () => {
       number: 1,
       boolean: true,
       object: { x: 2 },
-      array: [3],
+      array: [],
       function: f0
     })
 
@@ -179,7 +170,9 @@ describe('gubu', () => {
 
     let e0 = gubu({ s0: String, s1: 'x' })
     expect(e0({ s0: 'a' })).toMatchObject({ s0: 'a', s1: 'x' })
-    expect(() => e0({ s0: 1 })).toThrow(/string/)
+
+    expect(() => e0({ s0: 1 })).toThrow(/Validation failed for path "s0" with value "1" because the value is not of type string\./)
+    expect(() => e0({ s1: 1 })).toThrow(/Validation failed for path "s0" with value "" because the value is required\.\nValidation failed for path "s1" with value "1" because the value is not of type string\./)
 
     // TODO: more fails
 
@@ -203,11 +196,11 @@ describe('gubu', () => {
 
   test('array-elements', () => {
     let g0 = gubu({
-      a: ['x']
+      a: [String]
     })
 
     expect(g0({ a: ['X', 'Y'] })).toEqual({ a: ['X', 'Y'] })
-    expect(() => g0({ a: ['X', 1] })).toThrow(/gubu.*string/)
+    expect(() => g0({ a: ['X', 1] })).toThrow(/Validation failed for path "a.1" with value "1" because the value is not of type string\./)
   })
 
   /*
@@ -281,6 +274,17 @@ describe('gubu', () => {
     expect(a1({ b: 1 })).toMatchObject({ a: 'A', b: 1 })
   })
   */
+
+
+  test('closed', () => {
+    let g0 = gubu({
+      a: { b: { c: Closed({ x: 1 }) } }
+    })
+
+    expect(g0({ a: { b: { c: { x: 2 } } } })).toEqual({ a: { b: { c: { x: 2 } } } })
+    expect(() => g0({ a: { b: { c: { x: 2, y: 3 } } } })).toThrow(/Validation failed for path "a.b.c" with value "{x:2,y:3}" because the property "y" is not allowed\./)
+  })
+
 
 
   test('buildize-required', () => {

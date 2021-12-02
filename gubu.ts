@@ -6,7 +6,9 @@ import { Jsonic } from 'jsonic'
  */
 
 
-// TODO: Required object and array
+// TODO: Builder type - allow for opts
+// TODO: define ErrSpec
+// TODO: review Array spec conventions
 // TODO: describe for debugging
 
 
@@ -27,15 +29,9 @@ type ValType =
   'symbol' |
   'function'
 
-type ArrayKind =
-  '' |        // Not an array.
-  'fill' |    // Fill empty array with defaults.
-  'empty'     // Leave empty array empty.
-
 type ValSpec = {
   $: typeof GUBU
   t: ValType
-  y: ArrayKind
   d: number    // Depth.
   v: any
   r: boolean   // Value is required.
@@ -82,7 +78,14 @@ type Update = {
 
 
 // TODO: put to work!
-type ErrSpec = {}
+type ErrSpec = {
+  node: ValSpec // Failing spec node.
+  s: any        // Failing src value.
+  p: string     // Key path to src value.
+  w: string     // Error code ("why").
+  m: number     // Error mark for debugging.
+  t: string     // Error message text.
+}
 
 
 const IS_TYPE: { [name: string]: boolean } = {
@@ -115,16 +118,11 @@ function norm(spec?: any): ValSpec {
   t = (undefined === t ? 'any' : t) as ValType
 
   let v = spec
-  let y: ArrayKind = ''
   let r = false // Optional by default
   let f = undefined
 
   if ('object' === t && Array.isArray(spec)) {
     t = 'array'
-
-    // TODO: review!
-    // defaults: [,<spec>] -> [], [<spec>] -> [<spec>]
-    y = undefined === spec[0] ? 'empty' : 'fill'
   }
 
   else if ('function' === t) {
@@ -142,7 +140,6 @@ function norm(spec?: any): ValSpec {
   let vs: ValSpec = {
     $: GUBU,
     t,
-    y,
     v,
     r,
     k: '',
@@ -167,9 +164,9 @@ function make(inspec?: any) {
 
     const nodes: (ValSpec | number)[] = [spec, -1]
     const srcs: any[] = [root, -1]
-    const path: string[] = []
+    const path: string[] = [] // Key path to current node.
 
-    let dI: number = 0
+    let dI: number = 0  // Node depth.
     let nI: number = 2  // Next free slot in nodes.
     let pI: number = 0  // Pointer to current node.
     let sI: number = -1 // Pointer to next sibling node.
@@ -207,13 +204,8 @@ function make(inspec?: any) {
       let keys = Object.keys(node.v)
 
       // Treat array indexes as keys.
-      if (node.y) {
-        if (0 < src.length) {
-          keys = Object.keys(src)
-        }
-        else if ('empty' === node.y) {
-          keys = []
-        }
+      if ('array' === node.t) {
+        keys = Object.keys(src)
       }
 
       // console.log('NODE', node)
@@ -224,32 +216,28 @@ function make(inspec?: any) {
         let sval = src[key]
         let stype = typeof (sval)
 
-        // let n = node.v['array' === node.t ? 0 : key]
-        // console.log('VTa', k, sval, stype, n)
-
         // First array entry is general type spec.
         // Following are special case elements offset by +1
         let vkey = node.y ? 1 + parseInt(key) : key
         let n = node.v[vkey]
 
-        // console.log('VKEY', key, vkey, n)
-
         if (undefined === n && 'array' === node.t) {
           n = node.v[0]
+
+          // No first element defining element type spec, so use Any.
+          if (null == n) {
+            n = node.v[0] = Any()
+          }
           key = '' + 0
         }
         else {
           key = '' + vkey
         }
 
-        // TODO: add node parent
         let tvs: ValSpec = GUBU === n.$ ? n : (node.v[key] = norm(n))
         tvs.k = key
         tvs.d = dI
 
-        // TODO: won't work with multiple nested arrays - use a path stack
-        // let p = n.p + (n.p.endsWith('.') ? k : '')
-        // let p = key
         let t = tvs.t
 
         let vss: ValSpec[]
@@ -303,16 +291,18 @@ function make(inspec?: any) {
           }
           else if ('object' === t) {
             if (vs.r && null == sval) {
-              terr.push({
-                node: vs, s: sval, p: pathstr(path, dI), w: 'required',
-                m: 1010
-              })
+              // terr.push({
+              //   node: vs, s: sval, p: pathstr(path, dI), w: 'required',
+              //   m: 1010
+              // })
+              terr.push(makeErr('required', sval, path, dI, vs, 1010))
             }
             else if (null != sval && ('object' !== stype || Array.isArray(sval))) {
-              terr.push({
-                node: vs, s: sval, p: pathstr(path, dI), w: 'type',
-                m: 1020
-              })
+              // terr.push({
+              //   node: vs, s: sval, p: pathstr(path, dI), w: 'type',
+              //   m: 1020
+              // })
+              terr.push(makeErr('type', sval, path, dI, vs, 1020))
             }
             else {
               nodes[nI] = vs
@@ -324,16 +314,18 @@ function make(inspec?: any) {
 
           else if ('array' === t) {
             if (vs.r && null == sval) {
-              terr.push({
-                node: vs, s: sval, p: pathstr(path, dI), w: 'required',
-                m: 1030
-              })
+              // terr.push({
+              //   node: vs, s: sval, p: pathstr(path, dI), w: 'required',
+              //   m: 1030
+              // })
+              terr.push(makeErr('required', sval, path, dI, vs, 1030))
             }
             else if (null != sval && !Array.isArray(sval)) {
-              terr.push({
-                node: vs, s: sval, p: pathstr(path, dI), w: 'type',
-                m: 1040
-              })
+              // terr.push({
+              //   node: vs, s: sval, p: pathstr(path, dI), w: 'type',
+              //   m: 1040
+              // })
+              terr.push(makeErr('type', sval, path, dI, vs, 1040))
             }
             else {
               nodes[nI] = vs
@@ -345,20 +337,22 @@ function make(inspec?: any) {
 
           // type from default
           else if ('any' !== t && undefined !== sval && t !== stype) {
-            terr.push({
-              node: vs, s: sval, p: pathstr(path, dI), w: 'type',
-              m: 1050
-            })
+            // terr.push({
+            //   node: vs, s: sval, p: pathstr(path, dI), w: 'type',
+            //   m: 1050
+            // })
+            terr.push(makeErr('type', sval, path, dI, vs, 1050))
             pass = false
           }
 
           // spec= k:1 // default
           else if (undefined === sval) {
             if (vs.r) {
-              terr.push({
-                node: vs, s: sval, p: pathstr(path, dI), w: 'required',
-                m: 1060
-              })
+              // terr.push({
+              //   node: vs, s: sval, p: pathstr(path, dI), w: 'required',
+              //   m: 1060
+              // })
+              terr.push(makeErr('required', sval, path, dI, vs, 1060))
               pass = false
             }
             // NOTE: `undefined` is special and cannot be set
@@ -423,7 +417,12 @@ function make(inspec?: any) {
 
     // TODO: collect errors
     if (0 < err.length) {
-      throw new Error('gubu: ' + JSON.stringify(err))
+      // throw new Error('gubu: ' + JSON.stringify(err))
+
+      // TODO: GubuError
+      let ex: any = new Error(err.map((e: ErrSpec) => e.t).join('\n'))
+      ex.err = err
+      throw ex
     }
 
     return root
@@ -447,15 +446,17 @@ function handleValidate(vf: Validate, sval: any, state: State): Update {
       vf.name
 
     if ('object' === typeof (update.err)) {
+      // Assumes makeErr already called
       state.terr.push(...[update.err].flat().map(e => {
         e.p = null == e.p ? p : e.p
         e.f = null == e.f ? f : e.f
-        e.m = 2010
+        e.m = null == e.m ? 2010 : e.m
         return e
       }))
     }
     else {
-      state.terr.push({ node: state.node, s: sval, p, w, f, m: 2020 })
+      // state.terr.push({ node: state.node, s: sval, p, w, f, m: 2020 })
+      state.terr.push(makeErr(w, sval, state.path, state.dI, state.node, 1040))
     }
     update.pass = false
   }
@@ -550,10 +551,12 @@ const Closed: Builder = function(this: ValSpec, spec?: any) {
         if (undefined === vs.v[k]) {
           // TODO: err
           // update.why = 'closed'
-          update.err = {
-            node: vs, s: val, p: pathstr(state.path, state.dI), w: 'closed',
-            u: { k }
-          }
+          // update.err = {
+          //   node: vs, s: val, p: pathstr(state.path, state.dI), w: 'closed',
+          //   u: { k }
+          // }
+          update.err =
+            makeErr('closed', val, state.path, state.dI, vs, 3010, '', { k })
           return false
         }
       }
@@ -599,6 +602,44 @@ function buildize(invs?: any): ValSpec {
     Any,
   })
 }
+
+
+function makeErr(
+  w: string,
+  s: any,
+  path: string[],
+  dI: number,
+  n: ValSpec,
+  m: number,
+  t?: string,
+  u?: any
+): ErrSpec {
+  let err: ErrSpec = {
+    node: n,
+    s,
+    p: pathstr(path, dI),
+    w,
+    m,
+    t: '',
+  }
+
+  if (null == t || '' === t) {
+    let jstr = undefined === s ? '' : JSON.stringify(s)
+    let valstr = jstr.replace(/"/g, '')
+    valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '')
+    err.t = `Validation failed for path "${err.p}" ` +
+      `with value "${valstr}" because ` +
+
+      ('type' === w ? `the value is not of type ${n.t}` :
+        'required' === w ? `the value is required` :
+          'closed' === w ? `the property "${u?.k}" is not allowed` :
+            `checked "${w}" failed`) +
+      '.'
+  }
+
+  return err
+}
+
 
 
 Object.assign(make, {

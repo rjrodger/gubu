@@ -3,13 +3,9 @@ declare const GUBU: {
 };
 declare type ValType = 'any' | 'custom' | 'null' | // TODO: test
 'list' | 'string' | 'number' | 'boolean' | 'object' | 'array' | 'bigint' | 'symbol' | 'function';
-declare type ArrayKind = '' | // Not an array.
-'fill' | // Fill empty array with defaults.
-'empty';
 declare type ValSpec = {
     $: typeof GUBU;
     t: ValType;
-    y: ArrayKind;
     d: number;
     v: any;
     r: boolean;

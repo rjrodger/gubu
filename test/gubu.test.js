@@ -19,70 +19,60 @@ describe('gubu', () => {
         expect((0, gubu_1.Required)('x')).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
-            y: '',
             v: 'x',
             r: true,
         });
         expect((0, gubu_1.Optional)(String)).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
-            y: '',
             v: '',
             r: false,
         });
         expect((0, gubu_1.Required)((0, gubu_1.Required)('x'))).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
-            y: '',
             v: 'x',
             r: true,
         });
         expect((0, gubu_1.Optional)((0, gubu_1.Required)('x'))).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
-            y: '',
             v: 'x',
             r: false,
         });
         expect((0, gubu_1.Required)('x').Required()).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
-            y: '',
             v: 'x',
             r: true,
         });
         expect((0, gubu_1.Required)('x').Optional()).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
-            y: '',
             v: 'x',
             r: false,
         });
         expect((0, gubu_1.Optional)((0, gubu_1.Optional)(String))).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
-            y: '',
             v: '',
             r: false,
         });
         expect((0, gubu_1.Optional)(String).Optional()).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
-            y: '',
             v: '',
             r: false,
         });
         expect((0, gubu_1.Optional)(String).Required()).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
-            y: '',
             v: '',
             r: true,
         });
         expect((0, gubu_1.Required)((0, gubu_1.Optional)(String))).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
-            y: '',
             v: '',
             r: true,
         });
@@ -102,7 +92,7 @@ describe('gubu', () => {
             number: 1,
             boolean: true,
             object: { x: 2 },
-            array: [3],
+            array: [],
             function: f0
         });
         expect(g0({
@@ -143,7 +133,8 @@ describe('gubu', () => {
         expect(g0(o0)).toMatchObject(o0);
         let e0 = (0, gubu_1.gubu)({ s0: String, s1: 'x' });
         expect(e0({ s0: 'a' })).toMatchObject({ s0: 'a', s1: 'x' });
-        expect(() => e0({ s0: 1 })).toThrow(/string/);
+        expect(() => e0({ s0: 1 })).toThrow(/Validation failed for path "s0" with value "1" because the value is not of type string\./);
+        expect(() => e0({ s1: 1 })).toThrow(/Validation failed for path "s0" with value "" because the value is required\.\nValidation failed for path "s1" with value "1" because the value is not of type string\./);
         // TODO: more fails
     });
     test('type-native-optional', () => {
@@ -160,10 +151,10 @@ describe('gubu', () => {
     });
     test('array-elements', () => {
         let g0 = (0, gubu_1.gubu)({
-            a: ['x']
+            a: [String]
         });
         expect(g0({ a: ['X', 'Y'] })).toEqual({ a: ['X', 'Y'] });
-        expect(() => g0({ a: ['X', 1] })).toThrow(/gubu.*string/);
+        expect(() => g0({ a: ['X', 1] })).toThrow(/Validation failed for path "a.1" with value "1" because the value is not of type string\./);
     });
     /*
       test('deep-required', () => {
@@ -226,6 +217,13 @@ describe('gubu', () => {
       expect(a1({ b: 1 })).toMatchObject({ a: 'A', b: 1 })
     })
     */
+    test('closed', () => {
+        let g0 = (0, gubu_1.gubu)({
+            a: { b: { c: (0, gubu_1.Closed)({ x: 1 }) } }
+        });
+        expect(g0({ a: { b: { c: { x: 2 } } } })).toEqual({ a: { b: { c: { x: 2 } } } });
+        expect(() => g0({ a: { b: { c: { x: 2, y: 3 } } } })).toThrow(/Validation failed for path "a.b.c" with value "{x:2,y:3}" because the property "y" is not allowed\./);
+    });
     test('buildize-required', () => {
         let g0 = (0, gubu_1.gubu)({ a: (0, gubu_1.Required)(1) });
         expect(g0({ a: 2 })).toMatchObject({ a: 2 });
