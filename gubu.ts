@@ -6,7 +6,7 @@ import { Jsonic } from 'jsonic'
  */
 
 
-// TODO: Only - alternates
+// TODO: Required object and array
 // TODO: describe for debugging
 
 
@@ -55,6 +55,7 @@ type Validate = (val: any, update: Update, state: State) => boolean
 type State = {
   key: string
   node: ValSpec
+  src: any
   dI: number
   nI: number
   sI: number
@@ -121,6 +122,7 @@ function norm(spec?: any): ValSpec {
   if ('object' === t && Array.isArray(spec)) {
     t = 'array'
 
+    // TODO: review!
     // defaults: [,<spec>] -> [], [<spec>] -> [<spec>]
     y = undefined === spec[0] ? 'empty' : 'fill'
   }
@@ -214,6 +216,7 @@ function make(inspec?: any) {
         }
       }
 
+      // console.log('NODE', node)
       // console.log('KEYS', keys)
 
       for (let key of keys) {
@@ -221,8 +224,23 @@ function make(inspec?: any) {
         let sval = src[key]
         let stype = typeof (sval)
 
-        let n = node.v['array' === node.t ? 0 : key]
+        // let n = node.v['array' === node.t ? 0 : key]
         // console.log('VTa', k, sval, stype, n)
+
+        // First array entry is general type spec.
+        // Following are special case elements offset by +1
+        let vkey = node.y ? 1 + parseInt(key) : key
+        let n = node.v[vkey]
+
+        // console.log('VKEY', key, vkey, n)
+
+        if (undefined === n && 'array' === node.t) {
+          n = node.v[0]
+          key = '' + 0
+        }
+        else {
+          key = '' + vkey
+        }
 
         // TODO: add node parent
         let tvs: ValSpec = GUBU === n.$ ? n : (node.v[key] = norm(n))
@@ -256,7 +274,8 @@ function make(inspec?: any) {
 
           if (vs.b) {
             let update = handleValidate(vs.b, sval, {
-              dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, terr, err, ctx
+              dI, nI, sI, pI, cN,
+              key, node: vs, src, nodes, srcs, path, terr, err, ctx
             })
             pass = update.pass
             if (undefined !== update.val) {
@@ -270,7 +289,8 @@ function make(inspec?: any) {
 
           if ('custom' === t && vs.f) {
             let update = handleValidate(vs.f, sval, {
-              dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, terr, err, ctx
+              dI, nI, sI, pI, cN,
+              key, node: vs, src, nodes, srcs, path, terr, err, ctx
             })
             pass = update.pass
             if (undefined !== update.val) {
@@ -280,67 +300,65 @@ function make(inspec?: any) {
             sI = undefined === update.sI ? sI : update.sI
             pI = undefined === update.pI ? pI : update.pI
             cN = undefined === update.cN ? cN : update.cN
-
-
-            // let update: Update = { pass: true }
-            // let valid = vs.f(sval, update, {
-            //   dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, terr, err, ctx
-            // })
-
-            // if (!valid || update.err) {
-            //   let w = 'custom'
-            //   let p = pathstr(path, dI)
-            //   let f = null == vs.f.name || '' === vs.f.name ?
-            //     vs.f.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
-            //     vs.f.name
-
-            //   if ('object' === typeof (update.err)) {
-            //     terr.push(...[update.err].flat().map(e => {
-            //       e.p = null == e.p ? p : e.p
-            //       e.f = null == e.f ? f : e.f
-            //       return e
-            //     }))
-            //   }
-            //   else {
-            //     terr.push({ node: vs, s: sval, p, w, f })
-            //   }
-            //   pass = false
-            // }
-            // else {
-            //   if (undefined !== update.val) {
-            //     sval = src[key] = update.val
-            //   }
-            //   nI = undefined === update.nI ? nI : update.nI
-            //   sI = undefined === update.sI ? sI : update.sI
-            //   pI = undefined === update.pI ? pI : update.pI
-            //   cN = undefined === update.cN ? cN : update.cN
-            // }
           }
           else if ('object' === t) {
-            nodes[nI] = vs
-            // TODO: err if obj required
-            srcs[nI] = src[key] = (src[key] || {})
-            nI++
-            cN++
+            if (vs.r && null == sval) {
+              terr.push({
+                node: vs, s: sval, p: pathstr(path, dI), w: 'required',
+                m: 1010
+              })
+            }
+            else if (null != sval && ('object' !== stype || Array.isArray(sval))) {
+              terr.push({
+                node: vs, s: sval, p: pathstr(path, dI), w: 'type',
+                m: 1020
+              })
+            }
+            else {
+              nodes[nI] = vs
+              srcs[nI] = src[key] = (src[key] || {})
+              nI++
+              cN++
+            }
           }
 
           else if ('array' === t) {
-            nodes[nI] = vs
-            srcs[nI] = src[key] = (src[key] || [])
-            nI++
-            cN++
+            if (vs.r && null == sval) {
+              terr.push({
+                node: vs, s: sval, p: pathstr(path, dI), w: 'required',
+                m: 1030
+              })
+            }
+            else if (null != sval && !Array.isArray(sval)) {
+              terr.push({
+                node: vs, s: sval, p: pathstr(path, dI), w: 'type',
+                m: 1040
+              })
+            }
+            else {
+              nodes[nI] = vs
+              srcs[nI] = src[key] = (src[key] || [])
+              nI++
+              cN++
+            }
           }
 
           // type from default
           else if ('any' !== t && undefined !== sval && t !== stype) {
-            terr.push({ node: vs, s: sval, p: pathstr(path, dI), w: 'type' })
+            terr.push({
+              node: vs, s: sval, p: pathstr(path, dI), w: 'type',
+              m: 1050
+            })
             pass = false
           }
 
           // spec= k:1 // default
           else if (undefined === sval) {
             if (vs.r) {
-              terr.push({ node: vs, s: sval, p: pathstr(path, dI), w: 'required' })
+              terr.push({
+                node: vs, s: sval, p: pathstr(path, dI), w: 'required',
+                m: 1060
+              })
               pass = false
             }
             // NOTE: `undefined` is special and cannot be set
@@ -352,7 +370,8 @@ function make(inspec?: any) {
 
           if (vs.a) {
             let update = handleValidate(vs.a, sval, {
-              dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, terr, err, ctx
+              dI, nI, sI, pI, cN,
+              key, node: vs, src, nodes, srcs, path, terr, err, ctx
             })
             pass = update.pass
             if (undefined !== update.val) {
@@ -431,11 +450,12 @@ function handleValidate(vf: Validate, sval: any, state: State): Update {
       state.terr.push(...[update.err].flat().map(e => {
         e.p = null == e.p ? p : e.p
         e.f = null == e.f ? f : e.f
+        e.m = 2010
         return e
       }))
     }
     else {
-      state.terr.push({ node: state.node, s: sval, p, w, f })
+      state.terr.push({ node: state.node, s: sval, p, w, f, m: 2020 })
     }
     update.pass = false
   }
@@ -519,6 +539,7 @@ function Custom(validate: Validate) {
 
 // TODO: pure Before, After
 
+// TODO: array needs special handling as first entry is type spec
 const Closed: Builder = function(this: ValSpec, spec?: any) {
   let vs = buildize(this || spec)
 
@@ -538,6 +559,30 @@ const Closed: Builder = function(this: ValSpec, spec?: any) {
       }
     }
     return true
+  }
+
+  return vs
+}
+
+
+// Not a Builder?
+const Rename: any = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
+  let vs = buildize(this || spec)
+
+  let opts = 'object' === typeof inopts ? inopts || {} : {}
+  let name = 'string' === typeof inopts ? inopts : opts.name
+
+
+  if (null != name && '' != name) {
+    vs.a = (val: any, update: Update, state: State) => {
+      state.src[name] = val
+
+      if (!opts.keep) {
+        delete state.src[state.key]
+      }
+
+      return true
+    }
   }
 
   return vs
@@ -628,6 +673,7 @@ export {
   Some,
   All,
   Closed,
+  Rename,
 }
 
 

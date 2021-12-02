@@ -7,6 +7,8 @@ const {
   Some,
   All,
   Closed,
+  Rename,
+  Required,
 } = require('../gubu')
 
 
@@ -118,10 +120,47 @@ function J(x) {
 // J(s0({a:5}))
 
 
-let c0 = gubu({ a: Closed({x:1,y:2}) })
-J(c0({a:{x:1,y:2}}))
-J(c0({a:{x:1,y:2,z:3}}))
+// let c0 = gubu({ a: Closed({x:1,y:2}) })
+// J(c0({a:{x:1,y:2}}))
+// J(c0({a:{x:1,y:2,z:3}}))
 
 
 
+// let r0 = gubu({ a: Rename('b',{x:1}) })
+// J(r0({a:{x:1}}))
+
+
+// let r1 = gubu(One(
+//   [Number,String],
+//   [String]
+// ))
+// J(r0({a:{x:1}}))
+
+
+
+// let a0 = gubu({ a: [String,1,'x'] })
+// J(a0({a:[2,'y']}))
+// J(a0({a:[2,'y','z']}))
+// J(a0({a:[2,'y',true]}))
+
+
+
+// let r0 = gubu({ a: Required({x:1}) })
+// J(r0({a:{x:2}}))
+// J(r0({}))
+
+
+// let r1 = gubu({ a: Required([Number]) })
+// J(r1({a:[1]}))
+// J(r1({}))
+
+
+// let r0 = gubu({ a: {x:1} })
+// J(r0({a:{x:2}}))
+// J(r0({a:true}))
+
+
+let r0 = gubu({ a: [{x:Number}] })
+J(r0({a:[{x:1},{x:2}]}))
+J(r0({a:true}))
 
