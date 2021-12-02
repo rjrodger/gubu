@@ -17,6 +17,7 @@ type ValType =
   'any' |
   'custom' |
   'null' |   // TODO: test
+  'list' |
   'string' |
   'number' |
   'boolean' |
@@ -35,13 +36,12 @@ type ValSpec = {
   $: typeof GUBU
   t: ValType
   a: ArrayKind
-  d: number // Depth.
+  d: number    // Depth.
   v: any
-  c: {
-    r: boolean // Value is required.
-  },
+  r: boolean   // Value is required.
   k: string    // Key of this node.
   f?: Validate // Custom validation function.
+  u?: any      // Custom meta data
 }
 
 
@@ -137,11 +137,10 @@ function norm(spec?: any): ValSpec {
     t,
     a,
     v,
-    c: {
-      r
-    },
+    r,
     k: '',
     d: -1,
+    u: {},
   }
 
   if (d) {
@@ -219,81 +218,120 @@ function make(inspec?: any) {
         // console.log('VTa', k, sval, stype, n)
 
         // TODO: add node parent
-        let vs: ValSpec = GUBU === n.$ ? n : (node.v[key] = norm(n))
-        vs.k = key
-        vs.d = dI
+        let tvs: ValSpec = GUBU === n.$ ? n : (node.v[key] = norm(n))
+        tvs.k = key
+        tvs.d = dI
 
         // TODO: won't work with multiple nested arrays - use a path stack
         // let p = n.p + (n.p.endsWith('.') ? k : '')
         // let p = key
-        let t = vs.t
+        let t = tvs.t
 
+        let vss: ValSpec[]
+        let listkind: string = ''
+        let failN = 0
 
-        if ('custom' === t && vs.f) {
-          let update: Update = {}
-          let valid = vs.f(sval, update, {
-            dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, err, ctx
-          })
+        if ('list' === t) {
+          vss = tvs.u.list.specs
+          listkind = tvs.u.list.kind
+        }
+        else {
+          vss = [tvs]
+        }
 
-          if (!valid || update.err) {
-            let w = 'custom'
-            let p = pathstr(path, dI)
-            let f = null == vs.f.name || '' === vs.f.name ?
-              vs.f.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
-              vs.f.name
+        // console.log('LIST', listkind, vss)
 
-            if ('object' === typeof (update.err)) {
-              err.push(...[update.err].flat().map(e => {
-                e.p = null == e.p ? p : e.p
-                e.f = null == e.f ? f : e.f
-                return e
-              }))
+        let terr: any[] = []
+
+        for (let vs of vss) {
+          let t = vs.t
+          let pass = true
+
+          if ('custom' === t && vs.f) {
+            let update: Update = {}
+            let valid = vs.f(sval, update, {
+              dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, err, ctx
+            })
+
+            if (!valid || update.err) {
+              let w = 'custom'
+              let p = pathstr(path, dI)
+              let f = null == vs.f.name || '' === vs.f.name ?
+                vs.f.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
+                vs.f.name
+
+              if ('object' === typeof (update.err)) {
+                terr.push(...[update.err].flat().map(e => {
+                  e.p = null == e.p ? p : e.p
+                  e.f = null == e.f ? f : e.f
+                  return e
+                }))
+              }
+              else {
+                terr.push({ node: vs, s: sval, p, w, f })
+              }
+              pass = false
             }
             else {
-              err.push({ node: vs, s: sval, p, w, f })
+              if (undefined !== update.val) {
+                sval = src[key] = update.val
+              }
+              nI = undefined === update.nI ? nI : update.nI
+              sI = undefined === update.sI ? sI : update.sI
+              pI = undefined === update.pI ? pI : update.pI
+              cN = undefined === update.cN ? cN : update.cN
             }
           }
-          else {
-            if (undefined !== update.val) {
-              sval = src[key] = update.val
+          else if ('object' === t) {
+            nodes[nI] = vs
+            // TODO: err if obj required
+            srcs[nI] = src[key] = (src[key] || {})
+            nI++
+            cN++
+          }
+
+          else if ('array' === t) {
+            nodes[nI] = vs
+            srcs[nI] = src[key] = (src[key] || [])
+            nI++
+            cN++
+          }
+
+          // type from default
+          else if ('any' !== t && undefined !== sval && t !== stype) {
+            terr.push({ node: vs, s: sval, p: pathstr(path, dI), w: 'type' })
+            pass = false
+          }
+
+          // spec= k:1 // default
+          else if (undefined === sval) {
+            if (vs.r) {
+              terr.push({ node: vs, s: sval, p: pathstr(path, dI), w: 'required' })
+              pass = false
             }
-            nI = undefined === update.nI ? nI : update.nI
-            sI = undefined === update.sI ? sI : update.sI
-            pI = undefined === update.pI ? pI : update.pI
-            cN = undefined === update.cN ? cN : update.cN
+            // NOTE: `undefined` is special and cannot be set
+            else if (undefined !== vs.v) {
+              src[key] = vs.v
+            }
+          }
+
+          if (!pass) {
+            failN++
+            if ('all' === listkind) {
+              break
+            }
+          }
+          else if ('one' === listkind) {
+            break
           }
         }
-        else if ('object' === t) {
-          nodes[nI] = vs
-          // TODO: err if obj required
-          srcs[nI] = src[key] = (src[key] || {})
-          nI++
-          cN++
-        }
 
-        else if ('array' === t) {
-          nodes[nI] = vs
-          srcs[nI] = src[key] = (src[key] || [])
-          nI++
-          cN++
-        }
-
-        // type from default
-        else if ('any' !== t && undefined !== sval && t !== stype) {
-          err.push({ node: vs, s: sval, p: pathstr(path, dI), w: 'type' })
-        }
-
-        // spec= k:1 // default
-        else if (undefined === sval) {
-          if (vs.c.r) {
-            err.push({ node: vs, s: sval, p: pathstr(path, dI), w: 'required' })
-          }
-          // NOTE: `undefined` is special and cannot be set
-          else if (undefined !== vs.v) {
-            src[key] = vs.v
-          }
+        if (0 < terr.length &&
+          !(('one' === listkind || 'some' === listkind) && failN < vss.length)) {
+          err.push(...terr)
         }
       }
+
 
       if (0 < cN) {
         nodes[nI++] = sI
@@ -336,13 +374,13 @@ function pathstr(path: string[], dI: number) {
 
 const Required: Builder = function(this: ValSpec, spec?: any) {
   let vs = buildize(this || spec)
-  vs.c.r = true
+  vs.r = true
   return vs
 }
 
 const Optional: Builder = function(this: ValSpec, spec?: any) {
   let vs = buildize(this || spec)
-  vs.c.r = false
+  vs.r = false
   return vs
 }
 
@@ -350,9 +388,38 @@ const Optional: Builder = function(this: ValSpec, spec?: any) {
 const Any: Builder = function(this: ValSpec, spec?: any) {
   let vs = buildize(this || spec)
   vs.t = 'any'
-  vs.c.r = true === spec // Special convenience
+  vs.r = true === spec // Special convenience
   return vs
 }
+
+
+const makeListBuilder = function(kind: string) {
+  return function(this: ValSpec, ...specs: any[]) {
+    let vs = buildize()
+    vs.t = 'list'
+    vs.u.list = {
+      specs: specs.map(s =>
+        buildize(s)).map(s => (
+          s.u.list = {
+            kind
+          },
+          s)),
+      kind
+    }
+    return vs
+  }
+}
+
+// Pass on first match. Short circuits.
+const One: Builder = makeListBuilder('one')
+
+// Pass if some match, but always check each one - does *not* short circuit.
+const Some: Builder = makeListBuilder('some')
+
+// Pass only if all match. Short circuits.
+const All: Builder = makeListBuilder('all')
+
+
 
 
 
@@ -398,29 +465,35 @@ Object.defineProperty(make, 'name', { value: 'gubu' })
 const G$type: { [name: string]: boolean } = {
   string: true,
   number: true,
+  boolean: true,
+  object: true,
+  array: true,
+  function: true,
 }
 
 const G$spec = make({
-  type: (v: string, u: Update, s: State) => {
+  type: (v: string, _u: Update, s: State) => {
     if (G$type[v]) {
       s.ctx.vs.t = v
       return true
     }
-  }
+  },
+  value: (v: string, _u: Update, s: State) => {
+    s.ctx.vs.v = v
+    return true
+  },
+  required: (v: string, _u: Update, s: State) => {
+    s.ctx.vs.r = !!v
+    return true
+  },
 })
 
 function G$(opts: any): ValSpec {
   let vs = norm()
 
-  console.log('G$ A', vs, opts)
-
   if (null != opts) {
-    // TODO: self validate to generate a normed spec!
-
     G$spec(opts, { vs })
   }
-
-  console.log('G$ Z', vs)
 
   return vs
 }
@@ -438,7 +511,10 @@ export {
   Required,
   Optional,
   Any,
-  Custom
+  Custom,
+  One,
+  Some,
+  All,
 }
 
 

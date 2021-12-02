@@ -6,6 +6,7 @@ import {
   Required,
   Optional,
   Any,
+  G$,
 } from '../gubu'
 
 
@@ -33,7 +34,7 @@ describe('gubu', () => {
       t: 'string',
       a: '',
       v: 'x',
-      c: { r: true },
+      r: true,
     })
 
     expect(Optional(String)).toMatchObject({
@@ -41,7 +42,7 @@ describe('gubu', () => {
       t: 'string',
       a: '',
       v: '',
-      c: { r: false },
+      r: false,
     })
 
 
@@ -50,7 +51,7 @@ describe('gubu', () => {
       t: 'string',
       a: '',
       v: 'x',
-      c: { r: true },
+      r: true,
     })
 
     expect(Optional(Required('x'))).toMatchObject({
@@ -58,7 +59,7 @@ describe('gubu', () => {
       t: 'string',
       a: '',
       v: 'x',
-      c: { r: false },
+      r: false,
     })
 
     expect(Required('x').Required()).toMatchObject({
@@ -66,7 +67,7 @@ describe('gubu', () => {
       t: 'string',
       a: '',
       v: 'x',
-      c: { r: true },
+      r: true,
     })
 
     expect(Required('x').Optional()).toMatchObject({
@@ -74,7 +75,7 @@ describe('gubu', () => {
       t: 'string',
       a: '',
       v: 'x',
-      c: { r: false },
+      r: false,
     })
 
 
@@ -83,7 +84,7 @@ describe('gubu', () => {
       t: 'string',
       a: '',
       v: '',
-      c: { r: false },
+      r: false,
     })
 
     expect(Optional(String).Optional()).toMatchObject({
@@ -91,7 +92,7 @@ describe('gubu', () => {
       t: 'string',
       a: '',
       v: '',
-      c: { r: false },
+      r: false,
     })
 
     expect(Optional(String).Required()).toMatchObject({
@@ -99,7 +100,7 @@ describe('gubu', () => {
       t: 'string',
       a: '',
       v: '',
-      c: { r: true },
+      r: true,
     })
 
     expect(Required(Optional(String))).toMatchObject({
@@ -107,7 +108,7 @@ describe('gubu', () => {
       t: 'string',
       a: '',
       v: '',
-      c: { r: true },
+      r: true,
     })
 
   })
@@ -122,7 +123,7 @@ describe('gubu', () => {
       boolean: true,
       object: { x: 2 },
       array: [3],
-      function: f0
+      function: G$({ type: 'function', value: f0 })
     })
 
     expect(g0()).toMatchObject({

@@ -21,70 +21,70 @@ describe('gubu', () => {
             t: 'string',
             a: '',
             v: 'x',
-            c: { r: true },
+            r: true,
         });
         expect((0, gubu_1.Optional)(String)).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
             a: '',
             v: '',
-            c: { r: false },
+            r: false,
         });
         expect((0, gubu_1.Required)((0, gubu_1.Required)('x'))).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
             a: '',
             v: 'x',
-            c: { r: true },
+            r: true,
         });
         expect((0, gubu_1.Optional)((0, gubu_1.Required)('x'))).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
             a: '',
             v: 'x',
-            c: { r: false },
+            r: false,
         });
         expect((0, gubu_1.Required)('x').Required()).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
             a: '',
             v: 'x',
-            c: { r: true },
+            r: true,
         });
         expect((0, gubu_1.Required)('x').Optional()).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
             a: '',
             v: 'x',
-            c: { r: false },
+            r: false,
         });
         expect((0, gubu_1.Optional)((0, gubu_1.Optional)(String))).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
             a: '',
             v: '',
-            c: { r: false },
+            r: false,
         });
         expect((0, gubu_1.Optional)(String).Optional()).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
             a: '',
             v: '',
-            c: { r: false },
+            r: false,
         });
         expect((0, gubu_1.Optional)(String).Required()).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
             a: '',
             v: '',
-            c: { r: true },
+            r: true,
         });
         expect((0, gubu_1.Required)((0, gubu_1.Optional)(String))).toMatchObject({
             '$': { 'gubu$': true },
             t: 'string',
             a: '',
             v: '',
-            c: { r: true },
+            r: true,
         });
     });
     test('type-default-optional', () => {
@@ -95,7 +95,7 @@ describe('gubu', () => {
             boolean: true,
             object: { x: 2 },
             array: [3],
-            function: f0
+            function: (0, gubu_1.G$)({ type: 'function', value: f0 })
         });
         expect(g0()).toMatchObject({
             string: 's',

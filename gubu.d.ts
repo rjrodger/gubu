@@ -2,7 +2,7 @@ declare const GUBU: {
     gubu$: boolean;
 };
 declare type ValType = 'any' | 'custom' | 'null' | // TODO: test
-'string' | 'number' | 'boolean' | 'object' | 'array' | 'bigint' | 'symbol' | 'function';
+'list' | 'string' | 'number' | 'boolean' | 'object' | 'array' | 'bigint' | 'symbol' | 'function';
 declare type ArrayKind = '' | // Not an array.
 'fill' | // Fill empty array with defaults.
 'empty';
@@ -12,11 +12,10 @@ declare type ValSpec = {
     a: ArrayKind;
     d: number;
     v: any;
-    c: {
-        r: boolean;
-    };
+    r: boolean;
     k: string;
     f?: Validate;
+    u?: any;
 };
 declare type Builder = (spec?: any) => ValSpec & {
     [name: string]: Builder | any;
@@ -49,6 +48,9 @@ declare function make(inspec?: any): <T>(inroot?: T | undefined, inctx?: any) =>
 declare const Required: Builder;
 declare const Optional: Builder;
 declare const Any: Builder;
+declare const One: Builder;
+declare const Some: Builder;
+declare const All: Builder;
 declare function Custom(validate: Validate): ValSpec;
 declare function buildize(invs?: any): ValSpec;
 declare type Gubu = typeof make & {
@@ -59,4 +61,4 @@ declare type Gubu = typeof make & {
 };
 declare function G$(opts: any): ValSpec;
 declare const gubu: Gubu;
-export { gubu, G$, norm, buildize, Required, Optional, Any, Custom };
+export { gubu, G$, norm, buildize, Required, Optional, Any, Custom, One, Some, All, };

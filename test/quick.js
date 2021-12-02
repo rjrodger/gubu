@@ -1,5 +1,5 @@
 
-const { gubu, Custom, G$ } = require('../gubu')
+const { gubu, Custom, G$, One, Some, All } = require('../gubu')
 
 
 function J(x) {
@@ -9,7 +9,7 @@ function J(x) {
 
 // let a1 = gubu({ a: 1 })
 // J(a1({}))
-// // J(a1({a:'x'}))
+// J(a1({a:'x'}))
 
 // let ab1 = gubu({ a: { b: 1 } })
 // J(ab1({}))
@@ -69,6 +69,47 @@ function J(x) {
 // J(e0({d:{e:'x'}}))
 
 
-let d0 = gubu({ a: G$({type:'string'}) })
-J(d0({a:'x'}))
-J(d0({a:1}))
+// let d0 = gubu({ a: G$({type:'string'}) })
+// J(d0({a:'x'}))
+// J(d0({a:1}))
+
+
+// let o0 = gubu({ a: One(String,Number) })
+// // let o0 = gubu({ a: One(String) })
+// J(o0({a:'x'}))
+// J(o0({a:1}))
+// J(o0({a:true}))
+
+
+// let log = []
+// let s0 = gubu({ a: Some(
+//   Custom((x)=>(log.push(10),x>10)),
+//   Custom((x)=>(log.push(20),x>20))
+// )})
+// J(s0({a:11}))
+// console.log(log)
+
+// log = []
+// J(s0({a:22}))
+// console.log(log)
+
+// J(s0({a:5}))
+
+
+let log = []
+let s0 = gubu({ a: All(
+  Custom((x)=>(log.push(10),x>10)),
+  Custom((x)=>(log.push(20),x>20))
+)})
+
+log = []
+J(s0({a:22}))
+console.log(log)
+
+// J(s0({a:11}))
+J(s0({a:5}))
+
+
+
+
+

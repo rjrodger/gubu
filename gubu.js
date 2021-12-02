@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Custom = exports.Any = exports.Optional = exports.Required = exports.buildize = exports.norm = exports.G$ = exports.gubu = void 0;
+exports.All = exports.Some = exports.One = exports.Custom = exports.Any = exports.Optional = exports.Required = exports.buildize = exports.norm = exports.G$ = exports.gubu = void 0;
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
@@ -54,11 +54,10 @@ function norm(spec) {
         t,
         a,
         v,
-        c: {
-            r
-        },
+        r,
         k: '',
         d: -1,
+        u: {},
     };
     if (d) {
         vs.f = d;
@@ -118,71 +117,103 @@ function make(inspec) {
                 let n = node.v['array' === node.t ? 0 : key];
                 // console.log('VTa', k, sval, stype, n)
                 // TODO: add node parent
-                let vs = GUBU === n.$ ? n : (node.v[key] = norm(n));
-                vs.k = key;
-                vs.d = dI;
+                let tvs = GUBU === n.$ ? n : (node.v[key] = norm(n));
+                tvs.k = key;
+                tvs.d = dI;
                 // TODO: won't work with multiple nested arrays - use a path stack
                 // let p = n.p + (n.p.endsWith('.') ? k : '')
                 // let p = key
-                let t = vs.t;
-                if ('custom' === t && vs.f) {
-                    let update = {};
-                    let valid = vs.f(sval, update, {
-                        dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, err, ctx
-                    });
-                    if (!valid || update.err) {
-                        let w = 'custom';
-                        let p = pathstr(path, dI);
-                        let f = null == vs.f.name || '' === vs.f.name ?
-                            vs.f.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
-                            vs.f.name;
-                        if ('object' === typeof (update.err)) {
-                            err.push(...[update.err].flat().map(e => {
-                                e.p = null == e.p ? p : e.p;
-                                e.f = null == e.f ? f : e.f;
-                                return e;
-                            }));
+                let t = tvs.t;
+                let vss;
+                let listkind = '';
+                let failN = 0;
+                if ('list' === t) {
+                    vss = tvs.u.list.specs;
+                    listkind = tvs.u.list.kind;
+                }
+                else {
+                    vss = [tvs];
+                }
+                // console.log('LIST', listkind, vss)
+                let terr = [];
+                for (let vs of vss) {
+                    let t = vs.t;
+                    let pass = true;
+                    if ('custom' === t && vs.f) {
+                        let update = {};
+                        let valid = vs.f(sval, update, {
+                            dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, err, ctx
+                        });
+                        if (!valid || update.err) {
+                            let w = 'custom';
+                            let p = pathstr(path, dI);
+                            let f = null == vs.f.name || '' === vs.f.name ?
+                                vs.f.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
+                                vs.f.name;
+                            if ('object' === typeof (update.err)) {
+                                terr.push(...[update.err].flat().map(e => {
+                                    e.p = null == e.p ? p : e.p;
+                                    e.f = null == e.f ? f : e.f;
+                                    return e;
+                                }));
+                            }
+                            else {
+                                terr.push({ node: vs, s: sval, p, w, f });
+                            }
+                            pass = false;
                         }
                         else {
-                            err.push({ node: vs, s: sval, p, w, f });
+                            if (undefined !== update.val) {
+                                sval = src[key] = update.val;
+                            }
+                            nI = undefined === update.nI ? nI : update.nI;
+                            sI = undefined === update.sI ? sI : update.sI;
+                            pI = undefined === update.pI ? pI : update.pI;
+                            cN = undefined === update.cN ? cN : update.cN;
                         }
                     }
-                    else {
-                        if (undefined !== update.val) {
-                            sval = src[key] = update.val;
+                    else if ('object' === t) {
+                        nodes[nI] = vs;
+                        // TODO: err if obj required
+                        srcs[nI] = src[key] = (src[key] || {});
+                        nI++;
+                        cN++;
+                    }
+                    else if ('array' === t) {
+                        nodes[nI] = vs;
+                        srcs[nI] = src[key] = (src[key] || []);
+                        nI++;
+                        cN++;
+                    }
+                    // type from default
+                    else if ('any' !== t && undefined !== sval && t !== stype) {
+                        terr.push({ node: vs, s: sval, p: pathstr(path, dI), w: 'type' });
+                        pass = false;
+                    }
+                    // spec= k:1 // default
+                    else if (undefined === sval) {
+                        if (vs.r) {
+                            terr.push({ node: vs, s: sval, p: pathstr(path, dI), w: 'required' });
+                            pass = false;
                         }
-                        nI = undefined === update.nI ? nI : update.nI;
-                        sI = undefined === update.sI ? sI : update.sI;
-                        pI = undefined === update.pI ? pI : update.pI;
-                        cN = undefined === update.cN ? cN : update.cN;
+                        // NOTE: `undefined` is special and cannot be set
+                        else if (undefined !== vs.v) {
+                            src[key] = vs.v;
+                        }
+                    }
+                    if (!pass) {
+                        failN++;
+                        if ('all' === listkind) {
+                            break;
+                        }
+                    }
+                    else if ('one' === listkind) {
+                        break;
                     }
                 }
-                else if ('object' === t) {
-                    nodes[nI] = vs;
-                    // TODO: err if obj required
-                    srcs[nI] = src[key] = (src[key] || {});
-                    nI++;
-                    cN++;
-                }
-                else if ('array' === t) {
-                    nodes[nI] = vs;
-                    srcs[nI] = src[key] = (src[key] || []);
-                    nI++;
-                    cN++;
-                }
-                // type from default
-                else if ('any' !== t && undefined !== sval && t !== stype) {
-                    err.push({ node: vs, s: sval, p: pathstr(path, dI), w: 'type' });
-                }
-                // spec= k:1 // default
-                else if (undefined === sval) {
-                    if (vs.c.r) {
-                        err.push({ node: vs, s: sval, p: pathstr(path, dI), w: 'required' });
-                    }
-                    // NOTE: `undefined` is special and cannot be set
-                    else if (undefined !== vs.v) {
-                        src[key] = vs.v;
-                    }
+                if (0 < terr.length &&
+                    !(('one' === listkind || 'some' === listkind) && failN < vss.length)) {
+                    err.push(...terr);
                 }
             }
             if (0 < cN) {
@@ -218,23 +249,46 @@ function pathstr(path, dI) {
 }
 const Required = function (spec) {
     let vs = buildize(this || spec);
-    vs.c.r = true;
+    vs.r = true;
     return vs;
 };
 exports.Required = Required;
 const Optional = function (spec) {
     let vs = buildize(this || spec);
-    vs.c.r = false;
+    vs.r = false;
     return vs;
 };
 exports.Optional = Optional;
 const Any = function (spec) {
     let vs = buildize(this || spec);
     vs.t = 'any';
-    vs.c.r = true === spec; // Special convenience
+    vs.r = true === spec; // Special convenience
     return vs;
 };
 exports.Any = Any;
+const makeListBuilder = function (kind) {
+    return function (...specs) {
+        let vs = buildize();
+        vs.t = 'list';
+        vs.u.list = {
+            specs: specs.map(s => buildize(s)).map(s => (s.u.list = {
+                kind
+            },
+                s)),
+            kind
+        };
+        return vs;
+    };
+};
+// Pass on first match. Short circuits.
+const One = makeListBuilder('one');
+exports.One = One;
+// Pass if some match, but always check each one - does *not* short circuit.
+const Some = makeListBuilder('some');
+exports.Some = Some;
+// Pass only if all match. Short circuits.
+const All = makeListBuilder('all');
+exports.All = All;
 function Custom(validate) {
     let vs = buildize();
     vs.t = 'custom';
@@ -261,23 +315,32 @@ Object.defineProperty(make, 'name', { value: 'gubu' });
 const G$type = {
     string: true,
     number: true,
+    boolean: true,
+    object: true,
+    array: true,
+    function: true,
 };
 const G$spec = make({
-    type: (v, u, s) => {
+    type: (v, _u, s) => {
         if (G$type[v]) {
             s.ctx.vs.t = v;
             return true;
         }
-    }
+    },
+    value: (v, _u, s) => {
+        s.ctx.vs.v = v;
+        return true;
+    },
+    required: (v, _u, s) => {
+        s.ctx.vs.r = !!v;
+        return true;
+    },
 });
 function G$(opts) {
     let vs = norm();
-    console.log('G$ A', vs, opts);
     if (null != opts) {
-        // TODO: self validate to generate a normed spec!
         G$spec(opts, { vs });
     }
-    console.log('G$ Z', vs);
     return vs;
 }
 exports.G$ = G$;
