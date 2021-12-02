@@ -6,6 +6,10 @@ import { Jsonic } from 'jsonic'
  */
 
 
+// TODO: Only - alternates
+// TODO: describe for debugging
+
+
 // TODO: freeze
 const GUBU = { gubu$: true }
 
@@ -58,6 +62,7 @@ type State = {
   srcs: any[]
   path: string[]
   err: any[]
+  ctx: any
 }
 
 type Update = {
@@ -95,15 +100,6 @@ const EMPTY_VAL: { [name: string]: any } = {
 
 
 
-function G$(opts: any): ValSpec {
-  let vs = norm()
-
-  if (null != opts) {
-    // TODO: self validate to generate a normed spec!
-  }
-
-  return vs
-}
 
 
 function norm(spec?: any): ValSpec {
@@ -159,7 +155,8 @@ function norm(spec?: any): ValSpec {
 function make(inspec?: any) {
   let spec: ValSpec = norm(inspec) // Tree of validation nodes.
 
-  return function gubu<T>(inroot?: T): T {
+  return function gubu<T>(inroot?: T, inctx?: any): T {
+    const ctx: any = inctx || {}
     const root: any = inroot || {}
 
     const nodes: (ValSpec | number)[] = [spec, -1]
@@ -235,7 +232,7 @@ function make(inspec?: any) {
         if ('custom' === t && vs.f) {
           let update: Update = {}
           let valid = vs.f(sval, update, {
-            dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, err
+            dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, err, ctx
           })
 
           if (!valid || update.err) {
@@ -384,6 +381,7 @@ Object.assign(make, {
   Required,
   Optional,
   Custom,
+  Any,
 })
 
 
@@ -391,9 +389,44 @@ type Gubu = typeof make & {
   Required: typeof Required,
   Optional: typeof Optional,
   Custom: typeof Custom,
+  Any: typeof Any,
 }
 
 Object.defineProperty(make, 'name', { value: 'gubu' })
+
+
+const G$type: { [name: string]: boolean } = {
+  string: true,
+  number: true,
+}
+
+const G$spec = make({
+  type: (v: string, u: Update, s: State) => {
+    if (G$type[v]) {
+      s.ctx.vs.t = v
+      return true
+    }
+  }
+})
+
+function G$(opts: any): ValSpec {
+  let vs = norm()
+
+  console.log('G$ A', vs, opts)
+
+  if (null != opts) {
+    // TODO: self validate to generate a normed spec!
+
+    G$spec(opts, { vs })
+  }
+
+  console.log('G$ Z', vs)
+
+  return vs
+}
+
+
+
 
 const gubu: Gubu = (make as Gubu)
 

@@ -4,6 +4,8 @@ exports.Custom = exports.Any = exports.Optional = exports.Required = exports.bui
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
+// TODO: Only - alternates
+// TODO: describe for debugging
 // TODO: freeze
 const GUBU = { gubu$: true };
 const IS_TYPE = {
@@ -22,14 +24,6 @@ const EMPTY_VAL = {
     array: [],
     function: () => undefined,
 };
-function G$(opts) {
-    let vs = norm();
-    if (null != opts) {
-        // TODO: self validate to generate a normed spec!
-    }
-    return vs;
-}
-exports.G$ = G$;
 function norm(spec) {
     if (GUBU === (spec === null || spec === void 0 ? void 0 : spec.$))
         return spec;
@@ -74,7 +68,8 @@ function norm(spec) {
 exports.norm = norm;
 function make(inspec) {
     let spec = norm(inspec); // Tree of validation nodes.
-    return function gubu(inroot) {
+    return function gubu(inroot, inctx) {
+        const ctx = inctx || {};
         const root = inroot || {};
         const nodes = [spec, -1];
         const srcs = [root, -1];
@@ -133,7 +128,7 @@ function make(inspec) {
                 if ('custom' === t && vs.f) {
                     let update = {};
                     let valid = vs.f(sval, update, {
-                        dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, err
+                        dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, err, ctx
                     });
                     if (!valid || update.err) {
                         let w = 'custom';
@@ -260,8 +255,32 @@ Object.assign(make, {
     Required,
     Optional,
     Custom,
+    Any,
 });
 Object.defineProperty(make, 'name', { value: 'gubu' });
+const G$type = {
+    string: true,
+    number: true,
+};
+const G$spec = make({
+    type: (v, u, s) => {
+        if (G$type[v]) {
+            s.ctx.vs.t = v;
+            return true;
+        }
+    }
+});
+function G$(opts) {
+    let vs = norm();
+    console.log('G$ A', vs, opts);
+    if (null != opts) {
+        // TODO: self validate to generate a normed spec!
+        G$spec(opts, { vs });
+    }
+    console.log('G$ Z', vs);
+    return vs;
+}
+exports.G$ = G$;
 const gubu = make;
 exports.gubu = gubu;
 //# sourceMappingURL=gubu.js.map

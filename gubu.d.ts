@@ -34,6 +34,7 @@ declare type State = {
     srcs: any[];
     path: string[];
     err: any[];
+    ctx: any;
 };
 declare type Update = {
     val?: any;
@@ -43,9 +44,8 @@ declare type Update = {
     cN?: number;
     err?: boolean | any;
 };
-declare function G$(opts: any): ValSpec;
 declare function norm(spec?: any): ValSpec;
-declare function make(inspec?: any): <T>(inroot?: T | undefined) => T;
+declare function make(inspec?: any): <T>(inroot?: T | undefined, inctx?: any) => T;
 declare const Required: Builder;
 declare const Optional: Builder;
 declare const Any: Builder;
@@ -55,6 +55,8 @@ declare type Gubu = typeof make & {
     Required: typeof Required;
     Optional: typeof Optional;
     Custom: typeof Custom;
+    Any: typeof Any;
 };
+declare function G$(opts: any): ValSpec;
 declare const gubu: Gubu;
 export { gubu, G$, norm, buildize, Required, Optional, Any, Custom };

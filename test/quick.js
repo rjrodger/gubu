@@ -1,5 +1,5 @@
 
-const { gubu, Custom } = require('../gubu')
+const { gubu, Custom, G$ } = require('../gubu')
 
 
 function J(x) {
@@ -65,5 +65,10 @@ function J(x) {
 
 
 // let e0 = gubu({ a: { b: 1 } })
-let e0 = gubu({ a: { b: { c: 1, cc: 2 } }, d: { e: 3 } })
-J(e0({d:{e:'x'}}))
+// let e0 = gubu({ a: { b: { c: 1, cc: 2 } }, d: { e: 3 } })
+// J(e0({d:{e:'x'}}))
+
+
+let d0 = gubu({ a: G$({type:'string'}) })
+J(d0({a:'x'}))
+J(d0({a:1}))
