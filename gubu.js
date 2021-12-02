@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.All = exports.Some = exports.One = exports.Custom = exports.Any = exports.Optional = exports.Required = exports.buildize = exports.norm = exports.G$ = exports.gubu = void 0;
+exports.Closed = exports.All = exports.Some = exports.One = exports.Custom = exports.Any = exports.Optional = exports.Required = exports.buildize = exports.norm = exports.G$ = exports.gubu = void 0;
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
@@ -30,13 +30,13 @@ function norm(spec) {
     let t = null === spec ? 'null' : typeof (spec);
     t = (undefined === t ? 'any' : t);
     let v = spec;
-    let a = '';
+    let y = '';
     let r = false; // Optional by default
-    let d = undefined;
+    let f = undefined;
     if ('object' === t && Array.isArray(spec)) {
         t = 'array';
         // defaults: [,<spec>] -> [], [<spec>] -> [<spec>]
-        a = undefined === spec[0] ? 'empty' : 'fill';
+        y = undefined === spec[0] ? 'empty' : 'fill';
     }
     else if ('function' === t) {
         if (IS_TYPE[spec.name]) {
@@ -46,21 +46,21 @@ function norm(spec) {
         }
         else {
             t = 'custom';
-            d = spec;
+            f = spec;
         }
     }
     let vs = {
         $: GUBU,
         t,
-        a,
+        y,
         v,
         r,
         k: '',
         d: -1,
         u: {},
     };
-    if (d) {
-        vs.f = d;
+    if (f) {
+        vs.f = f;
     }
     return vs;
 }
@@ -102,14 +102,15 @@ function make(inspec) {
             pI = nI;
             let keys = Object.keys(node.v);
             // Treat array indexes as keys.
-            if (node.a) {
+            if (node.y) {
                 if (0 < src.length) {
                     keys = Object.keys(src);
                 }
-                else if ('empty' === node.a) {
+                else if ('empty' === node.y) {
                     keys = [];
                 }
             }
+            // console.log('KEYS', keys)
             for (let key of keys) {
                 path[dI] = key;
                 let sval = src[key];
@@ -139,38 +140,62 @@ function make(inspec) {
                 for (let vs of vss) {
                     let t = vs.t;
                     let pass = true;
-                    if ('custom' === t && vs.f) {
-                        let update = {};
-                        let valid = vs.f(sval, update, {
-                            dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, err, ctx
+                    if (vs.b) {
+                        let update = handleValidate(vs.b, sval, {
+                            dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, terr, err, ctx
                         });
-                        if (!valid || update.err) {
-                            let w = 'custom';
-                            let p = pathstr(path, dI);
-                            let f = null == vs.f.name || '' === vs.f.name ?
-                                vs.f.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
-                                vs.f.name;
-                            if ('object' === typeof (update.err)) {
-                                terr.push(...[update.err].flat().map(e => {
-                                    e.p = null == e.p ? p : e.p;
-                                    e.f = null == e.f ? f : e.f;
-                                    return e;
-                                }));
-                            }
-                            else {
-                                terr.push({ node: vs, s: sval, p, w, f });
-                            }
-                            pass = false;
+                        pass = update.pass;
+                        if (undefined !== update.val) {
+                            sval = src[key] = update.val;
                         }
-                        else {
-                            if (undefined !== update.val) {
-                                sval = src[key] = update.val;
-                            }
-                            nI = undefined === update.nI ? nI : update.nI;
-                            sI = undefined === update.sI ? sI : update.sI;
-                            pI = undefined === update.pI ? pI : update.pI;
-                            cN = undefined === update.cN ? cN : update.cN;
+                        nI = undefined === update.nI ? nI : update.nI;
+                        sI = undefined === update.sI ? sI : update.sI;
+                        pI = undefined === update.pI ? pI : update.pI;
+                        cN = undefined === update.cN ? cN : update.cN;
+                    }
+                    if ('custom' === t && vs.f) {
+                        let update = handleValidate(vs.f, sval, {
+                            dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, terr, err, ctx
+                        });
+                        pass = update.pass;
+                        if (undefined !== update.val) {
+                            sval = src[key] = update.val;
                         }
+                        nI = undefined === update.nI ? nI : update.nI;
+                        sI = undefined === update.sI ? sI : update.sI;
+                        pI = undefined === update.pI ? pI : update.pI;
+                        cN = undefined === update.cN ? cN : update.cN;
+                        // let update: Update = { pass: true }
+                        // let valid = vs.f(sval, update, {
+                        //   dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, terr, err, ctx
+                        // })
+                        // if (!valid || update.err) {
+                        //   let w = 'custom'
+                        //   let p = pathstr(path, dI)
+                        //   let f = null == vs.f.name || '' === vs.f.name ?
+                        //     vs.f.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
+                        //     vs.f.name
+                        //   if ('object' === typeof (update.err)) {
+                        //     terr.push(...[update.err].flat().map(e => {
+                        //       e.p = null == e.p ? p : e.p
+                        //       e.f = null == e.f ? f : e.f
+                        //       return e
+                        //     }))
+                        //   }
+                        //   else {
+                        //     terr.push({ node: vs, s: sval, p, w, f })
+                        //   }
+                        //   pass = false
+                        // }
+                        // else {
+                        //   if (undefined !== update.val) {
+                        //     sval = src[key] = update.val
+                        //   }
+                        //   nI = undefined === update.nI ? nI : update.nI
+                        //   sI = undefined === update.sI ? sI : update.sI
+                        //   pI = undefined === update.pI ? pI : update.pI
+                        //   cN = undefined === update.cN ? cN : update.cN
+                        // }
                     }
                     else if ('object' === t) {
                         nodes[nI] = vs;
@@ -200,6 +225,19 @@ function make(inspec) {
                         else if (undefined !== vs.v) {
                             src[key] = vs.v;
                         }
+                    }
+                    if (vs.a) {
+                        let update = handleValidate(vs.a, sval, {
+                            dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, terr, err, ctx
+                        });
+                        pass = update.pass;
+                        if (undefined !== update.val) {
+                            sval = src[key] = update.val;
+                        }
+                        nI = undefined === update.nI ? nI : update.nI;
+                        sI = undefined === update.sI ? sI : update.sI;
+                        pI = undefined === update.pI ? pI : update.pI;
+                        cN = undefined === update.cN ? cN : update.cN;
                     }
                     if (!pass) {
                         failN++;
@@ -241,8 +279,41 @@ function make(inspec) {
         return root;
     };
 }
-function J(x) {
-    return null == x ? '' : JSON.stringify(x).replace(/"/g, '');
+// function J(x: any) {
+//   return null == x ? '' : JSON.stringify(x).replace(/"/g, '')
+// }
+function handleValidate(vf, sval, state) {
+    let update = { pass: true };
+    let valid = vf(sval, update, state);
+    if (!valid || update.err) {
+        let w = update.why || 'custom';
+        let p = pathstr(state.path, state.dI);
+        let f = null == vf.name || '' === vf.name ?
+            vf.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
+            vf.name;
+        if ('object' === typeof (update.err)) {
+            state.terr.push(...[update.err].flat().map(e => {
+                e.p = null == e.p ? p : e.p;
+                e.f = null == e.f ? f : e.f;
+                return e;
+            }));
+        }
+        else {
+            state.terr.push({ node: state.node, s: sval, p, w, f });
+        }
+        update.pass = false;
+    }
+    return update;
+    // else {
+    //   if (undefined !== update.val) {
+    //     sval = src[key] = update.val
+    //   }
+    //   nI = undefined === update.nI ? nI : update.nI
+    //   sI = undefined === update.sI ? sI : update.sI
+    //   pI = undefined === update.pI ? pI : update.pI
+    //   cN = undefined === update.cN ? cN : update.cN
+    // }
+    // return pass
 }
 function pathstr(path, dI) {
     return path.slice(1, dI + 1).filter(s => null != s).join('.');
@@ -296,6 +367,29 @@ function Custom(validate) {
     return vs;
 }
 exports.Custom = Custom;
+// TODO: pure Before, After
+const Closed = function (spec) {
+    let vs = buildize(this || spec);
+    vs.b = (val, update, state) => {
+        // console.log('B', val, vs)
+        if (null != val && 'object' === typeof (val)) {
+            for (let k in val) {
+                if (undefined === vs.v[k]) {
+                    // TODO: err
+                    // update.why = 'closed'
+                    update.err = {
+                        node: vs, s: val, p: pathstr(state.path, state.dI), w: 'closed',
+                        u: { k }
+                    };
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
+    return vs;
+};
+exports.Closed = Closed;
 function buildize(invs) {
     let vs = norm(invs);
     return Object.assign(vs, {

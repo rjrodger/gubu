@@ -1,5 +1,13 @@
 
-const { gubu, Custom, G$, One, Some, All } = require('../gubu')
+const {
+  gubu,
+  Custom,
+  G$,
+  One,
+  Some,
+  All,
+  Closed,
+} = require('../gubu')
 
 
 function J(x) {
@@ -57,7 +65,7 @@ function J(x) {
 // let gt10m2 = (v,u)=>10<v ? !!(u.val=v*2) : false
 
 // // let d0 = gubu({ a: Custom((v)=>10<v) })
-// // let d0 = gubu({ a: (v)=>10<v })
+// let d0 = gubu({ a: (v)=>10<v })
 // let d0 = gubu({ a: gt10m2 })
 // J(d0({a:11}))
 // J(d0({a:9}))
@@ -96,19 +104,23 @@ function J(x) {
 // J(s0({a:5}))
 
 
-let log = []
-let s0 = gubu({ a: All(
-  Custom((x)=>(log.push(10),x>10)),
-  Custom((x)=>(log.push(20),x>20))
-)})
+// let log = []
+// let s0 = gubu({ a: All(
+//   Custom((x)=>(log.push(10),x>10)),
+//   Custom((x)=>(log.push(20),x>20))
+// )})
 
-log = []
-J(s0({a:22}))
-console.log(log)
+// log = []
+// J(s0({a:22}))
+// console.log(log)
 
-// J(s0({a:11}))
-J(s0({a:5}))
+// // J(s0({a:11}))
+// J(s0({a:5}))
 
+
+let c0 = gubu({ a: Closed({x:1,y:2}) })
+J(c0({a:{x:1,y:2}}))
+J(c0({a:{x:1,y:2,z:3}}))
 
 
 

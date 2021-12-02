@@ -32,7 +32,7 @@ describe('gubu', () => {
     expect(Required('x')).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      a: '',
+      y: '',
       v: 'x',
       r: true,
     })
@@ -40,7 +40,7 @@ describe('gubu', () => {
     expect(Optional(String)).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      a: '',
+      y: '',
       v: '',
       r: false,
     })
@@ -49,7 +49,7 @@ describe('gubu', () => {
     expect(Required(Required('x'))).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      a: '',
+      y: '',
       v: 'x',
       r: true,
     })
@@ -57,7 +57,7 @@ describe('gubu', () => {
     expect(Optional(Required('x'))).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      a: '',
+      y: '',
       v: 'x',
       r: false,
     })
@@ -65,7 +65,7 @@ describe('gubu', () => {
     expect(Required('x').Required()).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      a: '',
+      y: '',
       v: 'x',
       r: true,
     })
@@ -73,7 +73,7 @@ describe('gubu', () => {
     expect(Required('x').Optional()).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      a: '',
+      y: '',
       v: 'x',
       r: false,
     })
@@ -82,7 +82,7 @@ describe('gubu', () => {
     expect(Optional(Optional(String))).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      a: '',
+      y: '',
       v: '',
       r: false,
     })
@@ -90,7 +90,7 @@ describe('gubu', () => {
     expect(Optional(String).Optional()).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      a: '',
+      y: '',
       v: '',
       r: false,
     })
@@ -98,7 +98,7 @@ describe('gubu', () => {
     expect(Optional(String).Required()).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      a: '',
+      y: '',
       v: '',
       r: true,
     })
@@ -106,7 +106,7 @@ describe('gubu', () => {
     expect(Required(Optional(String))).toMatchObject({
       '$': { 'gubu$': true },
       t: 'string',
-      a: '',
+      y: '',
       v: '',
       r: true,
     })

@@ -9,13 +9,15 @@ declare type ArrayKind = '' | // Not an array.
 declare type ValSpec = {
     $: typeof GUBU;
     t: ValType;
-    a: ArrayKind;
+    y: ArrayKind;
     d: number;
     v: any;
     r: boolean;
     k: string;
     f?: Validate;
     u?: any;
+    b?: Validate;
+    a?: Validate;
 };
 declare type Builder = (spec?: any) => ValSpec & {
     [name: string]: Builder | any;
@@ -32,16 +34,19 @@ declare type State = {
     nodes: (ValSpec | number)[];
     srcs: any[];
     path: string[];
+    terr: any[];
     err: any[];
     ctx: any;
 };
 declare type Update = {
+    pass: boolean;
     val?: any;
     nI?: number;
     sI?: number;
     pI?: number;
     cN?: number;
     err?: boolean | any;
+    why?: string;
 };
 declare function norm(spec?: any): ValSpec;
 declare function make(inspec?: any): <T>(inroot?: T | undefined, inctx?: any) => T;
@@ -52,6 +57,7 @@ declare const One: Builder;
 declare const Some: Builder;
 declare const All: Builder;
 declare function Custom(validate: Validate): ValSpec;
+declare const Closed: Builder;
 declare function buildize(invs?: any): ValSpec;
 declare type Gubu = typeof make & {
     Required: typeof Required;
@@ -61,4 +67,4 @@ declare type Gubu = typeof make & {
 };
 declare function G$(opts: any): ValSpec;
 declare const gubu: Gubu;
-export { gubu, G$, norm, buildize, Required, Optional, Any, Custom, One, Some, All, };
+export { gubu, G$, norm, buildize, Required, Optional, Any, Custom, One, Some, All, Closed, };

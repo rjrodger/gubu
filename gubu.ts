@@ -35,20 +35,22 @@ type ArrayKind =
 type ValSpec = {
   $: typeof GUBU
   t: ValType
-  a: ArrayKind
+  y: ArrayKind
   d: number    // Depth.
   v: any
   r: boolean   // Value is required.
   k: string    // Key of this node.
   f?: Validate // Custom validation function.
   u?: any      // Custom meta data
+  b?: Validate // Custom before validation function.
+  a?: Validate // Custom after vaidation function.
 }
 
 
 type Builder = (spec?: any) => ValSpec & { [name: string]: Builder | any }
 
-
 type Validate = (val: any, update: Update, state: State) => boolean
+
 
 type State = {
   key: string
@@ -61,17 +63,20 @@ type State = {
   nodes: (ValSpec | number)[]
   srcs: any[]
   path: string[]
+  terr: any[] // Term errors (for One,Some,All).
   err: any[]
   ctx: any
 }
 
 type Update = {
+  pass: boolean
   val?: any
   nI?: number
   sI?: number
   pI?: number
   cN?: number
   err?: boolean | any // TODO: ErrSpec | ErrSpec[]
+  why?: string
 }
 
 
@@ -109,15 +114,15 @@ function norm(spec?: any): ValSpec {
   t = (undefined === t ? 'any' : t) as ValType
 
   let v = spec
-  let a: ArrayKind = ''
+  let y: ArrayKind = ''
   let r = false // Optional by default
-  let d = undefined
+  let f = undefined
 
   if ('object' === t && Array.isArray(spec)) {
     t = 'array'
 
     // defaults: [,<spec>] -> [], [<spec>] -> [<spec>]
-    a = undefined === spec[0] ? 'empty' : 'fill'
+    y = undefined === spec[0] ? 'empty' : 'fill'
   }
 
   else if ('function' === t) {
@@ -128,14 +133,14 @@ function norm(spec?: any): ValSpec {
     }
     else {
       t = 'custom'
-      d = spec
+      f = spec
     }
   }
 
   let vs: ValSpec = {
     $: GUBU,
     t,
-    a,
+    y,
     v,
     r,
     k: '',
@@ -143,8 +148,8 @@ function norm(spec?: any): ValSpec {
     u: {},
   }
 
-  if (d) {
-    vs.f = d
+  if (f) {
+    vs.f = f
   }
 
   return vs
@@ -200,14 +205,16 @@ function make(inspec?: any) {
       let keys = Object.keys(node.v)
 
       // Treat array indexes as keys.
-      if (node.a) {
+      if (node.y) {
         if (0 < src.length) {
           keys = Object.keys(src)
         }
-        else if ('empty' === node.a) {
+        else if ('empty' === node.y) {
           keys = []
         }
       }
+
+      // console.log('KEYS', keys)
 
       for (let key of keys) {
         path[dI] = key
@@ -247,40 +254,67 @@ function make(inspec?: any) {
           let t = vs.t
           let pass = true
 
-          if ('custom' === t && vs.f) {
-            let update: Update = {}
-            let valid = vs.f(sval, update, {
-              dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, err, ctx
+          if (vs.b) {
+            let update = handleValidate(vs.b, sval, {
+              dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, terr, err, ctx
             })
-
-            if (!valid || update.err) {
-              let w = 'custom'
-              let p = pathstr(path, dI)
-              let f = null == vs.f.name || '' === vs.f.name ?
-                vs.f.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
-                vs.f.name
-
-              if ('object' === typeof (update.err)) {
-                terr.push(...[update.err].flat().map(e => {
-                  e.p = null == e.p ? p : e.p
-                  e.f = null == e.f ? f : e.f
-                  return e
-                }))
-              }
-              else {
-                terr.push({ node: vs, s: sval, p, w, f })
-              }
-              pass = false
+            pass = update.pass
+            if (undefined !== update.val) {
+              sval = src[key] = update.val
             }
-            else {
-              if (undefined !== update.val) {
-                sval = src[key] = update.val
-              }
-              nI = undefined === update.nI ? nI : update.nI
-              sI = undefined === update.sI ? sI : update.sI
-              pI = undefined === update.pI ? pI : update.pI
-              cN = undefined === update.cN ? cN : update.cN
+            nI = undefined === update.nI ? nI : update.nI
+            sI = undefined === update.sI ? sI : update.sI
+            pI = undefined === update.pI ? pI : update.pI
+            cN = undefined === update.cN ? cN : update.cN
+          }
+
+          if ('custom' === t && vs.f) {
+            let update = handleValidate(vs.f, sval, {
+              dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, terr, err, ctx
+            })
+            pass = update.pass
+            if (undefined !== update.val) {
+              sval = src[key] = update.val
             }
+            nI = undefined === update.nI ? nI : update.nI
+            sI = undefined === update.sI ? sI : update.sI
+            pI = undefined === update.pI ? pI : update.pI
+            cN = undefined === update.cN ? cN : update.cN
+
+
+            // let update: Update = { pass: true }
+            // let valid = vs.f(sval, update, {
+            //   dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, terr, err, ctx
+            // })
+
+            // if (!valid || update.err) {
+            //   let w = 'custom'
+            //   let p = pathstr(path, dI)
+            //   let f = null == vs.f.name || '' === vs.f.name ?
+            //     vs.f.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
+            //     vs.f.name
+
+            //   if ('object' === typeof (update.err)) {
+            //     terr.push(...[update.err].flat().map(e => {
+            //       e.p = null == e.p ? p : e.p
+            //       e.f = null == e.f ? f : e.f
+            //       return e
+            //     }))
+            //   }
+            //   else {
+            //     terr.push({ node: vs, s: sval, p, w, f })
+            //   }
+            //   pass = false
+            // }
+            // else {
+            //   if (undefined !== update.val) {
+            //     sval = src[key] = update.val
+            //   }
+            //   nI = undefined === update.nI ? nI : update.nI
+            //   sI = undefined === update.sI ? sI : update.sI
+            //   pI = undefined === update.pI ? pI : update.pI
+            //   cN = undefined === update.cN ? cN : update.cN
+            // }
           }
           else if ('object' === t) {
             nodes[nI] = vs
@@ -313,6 +347,21 @@ function make(inspec?: any) {
             else if (undefined !== vs.v) {
               src[key] = vs.v
             }
+          }
+
+
+          if (vs.a) {
+            let update = handleValidate(vs.a, sval, {
+              dI, nI, sI, pI, cN, key, node: vs, nodes, srcs, path, terr, err, ctx
+            })
+            pass = update.pass
+            if (undefined !== update.val) {
+              sval = src[key] = update.val
+            }
+            nI = undefined === update.nI ? nI : update.nI
+            sI = undefined === update.sI ? sI : update.sI
+            pI = undefined === update.pI ? pI : update.pI
+            cN = undefined === update.cN ? cN : update.cN
           }
 
           if (!pass) {
@@ -362,8 +411,47 @@ function make(inspec?: any) {
   }
 }
 
-function J(x: any) {
-  return null == x ? '' : JSON.stringify(x).replace(/"/g, '')
+// function J(x: any) {
+//   return null == x ? '' : JSON.stringify(x).replace(/"/g, '')
+// }
+
+
+function handleValidate(vf: Validate, sval: any, state: State): Update {
+  let update: Update = { pass: true }
+  let valid = vf(sval, update, state)
+
+  if (!valid || update.err) {
+    let w = update.why || 'custom'
+    let p = pathstr(state.path, state.dI)
+    let f = null == vf.name || '' === vf.name ?
+      vf.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
+      vf.name
+
+    if ('object' === typeof (update.err)) {
+      state.terr.push(...[update.err].flat().map(e => {
+        e.p = null == e.p ? p : e.p
+        e.f = null == e.f ? f : e.f
+        return e
+      }))
+    }
+    else {
+      state.terr.push({ node: state.node, s: sval, p, w, f })
+    }
+    update.pass = false
+  }
+
+  return update
+
+  // else {
+  //   if (undefined !== update.val) {
+  //     sval = src[key] = update.val
+  //   }
+  //   nI = undefined === update.nI ? nI : update.nI
+  //   sI = undefined === update.sI ? sI : update.sI
+  //   pI = undefined === update.pI ? pI : update.pI
+  //   cN = undefined === update.cN ? cN : update.cN
+  // }
+  // return pass
 }
 
 
@@ -421,13 +509,37 @@ const All: Builder = makeListBuilder('all')
 
 
 
-
-
-
 function Custom(validate: Validate) {
   let vs = buildize()
   vs.t = 'custom'
   vs.f = validate
+  return vs
+}
+
+
+// TODO: pure Before, After
+
+const Closed: Builder = function(this: ValSpec, spec?: any) {
+  let vs = buildize(this || spec)
+
+  vs.b = (val: any, update: Update, state: State) => {
+    // console.log('B', val, vs)
+    if (null != val && 'object' === typeof (val)) {
+      for (let k in val) {
+        if (undefined === vs.v[k]) {
+          // TODO: err
+          // update.why = 'closed'
+          update.err = {
+            node: vs, s: val, p: pathstr(state.path, state.dI), w: 'closed',
+            u: { k }
+          }
+          return false
+        }
+      }
+    }
+    return true
+  }
+
   return vs
 }
 
@@ -515,6 +627,7 @@ export {
   One,
   Some,
   All,
+  Closed,
 }
 
 
