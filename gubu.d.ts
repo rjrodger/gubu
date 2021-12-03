@@ -1,5 +1,6 @@
 declare const GUBU: {
-    gubu$: boolean;
+    gubu$: symbol;
+    version: string;
 };
 declare type ValType = 'any' | 'custom' | 'null' | // TODO: test
 'list' | 'string' | 'number' | 'boolean' | 'object' | 'array' | 'bigint' | 'symbol' | 'function';
@@ -15,7 +16,7 @@ declare type ValSpec = {
     b?: Validate;
     a?: Validate;
 };
-declare type Builder = (spec?: any) => ValSpec & {
+declare type Builder = (opts?: any, ...specs: any[]) => ValSpec & {
     [name: string]: Builder | any;
 };
 declare type Validate = (val: any, update: Update, state: State) => boolean;
@@ -46,7 +47,7 @@ declare type Update = {
     why?: string;
 };
 declare function norm(spec?: any): ValSpec;
-declare function make(inspec?: any): <T>(inroot?: T | undefined, inctx?: any) => T;
+declare function make(inspec?: any): GubuSchema;
 declare const Required: Builder;
 declare const Optional: Builder;
 declare const Any: Builder;
@@ -55,14 +56,23 @@ declare const Some: Builder;
 declare const All: Builder;
 declare function Custom(validate: Validate): ValSpec;
 declare const Closed: Builder;
-declare const Rename: any;
+declare const Rename: Builder;
 declare function buildize(invs?: any): ValSpec;
+declare type GubuSchema = (<T>(inroot?: T, inctx?: any) => T) & {
+    spec: () => any;
+};
 declare type Gubu = typeof make & {
+    desc: () => any;
     Required: typeof Required;
     Optional: typeof Optional;
     Custom: typeof Custom;
     Any: typeof Any;
+    One: typeof One;
+    Some: typeof Some;
+    All: typeof All;
+    Closed: typeof Closed;
+    Rename: typeof Rename;
 };
-declare function G$(opts: any): ValSpec;
+declare function G$(spec: any): ValSpec;
 declare const gubu: Gubu;
 export { gubu, G$, norm, buildize, Required, Optional, Any, Custom, One, Some, All, Closed, Rename, };

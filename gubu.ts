@@ -1,4 +1,4 @@
-import { Jsonic } from 'jsonic'
+// import { Jsonic } from 'jsonic'
 
 
 /*
@@ -6,14 +6,15 @@ import { Jsonic } from 'jsonic'
  */
 
 
-// TODO: Builder type - allow for opts
-// TODO: define ErrSpec
-// TODO: review Array spec conventions
-// TODO: describe for debugging
+import Pkg from './package.json'
+
+
+
 
 
 // TODO: freeze
-const GUBU = { gubu$: true }
+const GUBU$ = Symbol.for('gubu$')
+const GUBU = { gubu$: GUBU$, version: Pkg.version }
 
 type ValType =
   'any' |
@@ -43,7 +44,8 @@ type ValSpec = {
 }
 
 
-type Builder = (spec?: any) => ValSpec & { [name: string]: Builder | any }
+type Builder = (opts?: any, ...specs: any[]) =>
+  ValSpec & { [name: string]: Builder | any }
 
 type Validate = (val: any, update: Update, state: State) => boolean
 
@@ -112,7 +114,21 @@ const EMPTY_VAL: { [name: string]: any } = {
 
 
 function norm(spec?: any): ValSpec {
-  if (GUBU === spec?.$) return spec
+  if (null != spec && spec.$?.gubu$) {
+    if (GUBU$ === spec.$.gubu$) {
+      return spec
+    }
+    else if (true === spec.$.gubu$) {
+      let vs = { ...spec }
+      vs.$ = { ...vs.$, gubu$: GUBU$ }
+      vs.v = (null != vs.v && 'object' === typeof (vs.v)) ? { ...vs.v } : vs.v
+
+      if (vs.u.list?.specs) {
+        vs.u.list.specs = [...vs.u.list.specs]
+      }
+      return vs
+    }
+  }
 
   let t: ValType | 'undefined' = null === spec ? 'null' : typeof (spec)
   t = (undefined === t ? 'any' : t) as ValType
@@ -140,7 +156,7 @@ function norm(spec?: any): ValSpec {
   let vs: ValSpec = {
     $: GUBU,
     t,
-    v,
+    v: (null != v && 'object' === typeof (v)) ? { ...v } : v,
     r,
     k: '',
     d: -1,
@@ -155,10 +171,10 @@ function norm(spec?: any): ValSpec {
 }
 
 
-function make(inspec?: any) {
+function make(inspec?: any): GubuSchema {
   let spec: ValSpec = norm(inspec) // Tree of validation nodes.
 
-  return function gubu<T>(inroot?: T, inctx?: any): T {
+  let gubuSchema = function GubuSchema<T>(inroot?: T, inctx?: any): T {
     const ctx: any = inctx || {}
     const root: any = inroot || {}
 
@@ -208,9 +224,6 @@ function make(inspec?: any) {
         keys = Object.keys(src)
       }
 
-      // console.log('NODE', node)
-      // console.log('KEYS', keys)
-
       for (let key of keys) {
         path[dI] = key
         let sval = src[key]
@@ -234,7 +247,7 @@ function make(inspec?: any) {
           key = '' + vkey
         }
 
-        let tvs: ValSpec = GUBU === n.$ ? n : (node.v[key] = norm(n))
+        let tvs: ValSpec = GUBU$ === n.$?.gubu$ ? n : (n = node.v[key] = norm(n))
         tvs.k = key
         tvs.d = dI
 
@@ -252,11 +265,13 @@ function make(inspec?: any) {
           vss = [tvs]
         }
 
-        // console.log('LIST', listkind, vss)
-
         let terr: any[] = []
 
-        for (let vs of vss) {
+        for (let vsI = 0; vsI < vss.length; vsI++) {
+          let vs = vss[vsI]
+
+          vs = GUBU$ === vs.$?.gubu$ ? vs : (vss[vsI] = norm(vs))
+
           let t = vs.t
           let pass = true
 
@@ -291,17 +306,9 @@ function make(inspec?: any) {
           }
           else if ('object' === t) {
             if (vs.r && null == sval) {
-              // terr.push({
-              //   node: vs, s: sval, p: pathstr(path, dI), w: 'required',
-              //   m: 1010
-              // })
               terr.push(makeErr('required', sval, path, dI, vs, 1010))
             }
             else if (null != sval && ('object' !== stype || Array.isArray(sval))) {
-              // terr.push({
-              //   node: vs, s: sval, p: pathstr(path, dI), w: 'type',
-              //   m: 1020
-              // })
               terr.push(makeErr('type', sval, path, dI, vs, 1020))
             }
             else {
@@ -314,17 +321,9 @@ function make(inspec?: any) {
 
           else if ('array' === t) {
             if (vs.r && null == sval) {
-              // terr.push({
-              //   node: vs, s: sval, p: pathstr(path, dI), w: 'required',
-              //   m: 1030
-              // })
               terr.push(makeErr('required', sval, path, dI, vs, 1030))
             }
             else if (null != sval && !Array.isArray(sval)) {
-              // terr.push({
-              //   node: vs, s: sval, p: pathstr(path, dI), w: 'type',
-              //   m: 1040
-              // })
               terr.push(makeErr('type', sval, path, dI, vs, 1040))
             }
             else {
@@ -337,10 +336,6 @@ function make(inspec?: any) {
 
           // type from default
           else if ('any' !== t && undefined !== sval && t !== stype) {
-            // terr.push({
-            //   node: vs, s: sval, p: pathstr(path, dI), w: 'type',
-            //   m: 1050
-            // })
             terr.push(makeErr('type', sval, path, dI, vs, 1050))
             pass = false
           }
@@ -348,10 +343,6 @@ function make(inspec?: any) {
           // spec= k:1 // default
           else if (undefined === sval) {
             if (vs.r) {
-              // terr.push({
-              //   node: vs, s: sval, p: pathstr(path, dI), w: 'required',
-              //   m: 1060
-              // })
               terr.push(makeErr('required', sval, path, dI, vs, 1060))
               pass = false
             }
@@ -396,9 +387,11 @@ function make(inspec?: any) {
 
 
       if (0 < cN) {
+        // Follow pointer back to next parent sibling.
         nodes[nI++] = sI
       }
       else {
+        // Next sibling.
         pI = sI
         dI--
       }
@@ -415,18 +408,34 @@ function make(inspec?: any) {
       // console.log('END', 'c=' + cN, 's=' + sI, 'p=' + pI, 'n=' + nI)
     }
 
-    // TODO: collect errors
     if (0 < err.length) {
-      // throw new Error('gubu: ' + JSON.stringify(err))
-
-      // TODO: GubuError
-      let ex: any = new Error(err.map((e: ErrSpec) => e.t).join('\n'))
-      ex.err = err
-      throw ex
+      if (ctx.err) {
+        ctx.err.push(...err)
+      }
+      else {
+        // TODO: GubuError
+        let ex: any = new Error(err.map((e: ErrSpec) => e.t).join('\n'))
+        ex.err = err
+        throw ex
+      }
     }
 
     return root
+  } as GubuSchema
+
+
+  gubuSchema.spec = () => {
+    // Normalize spec, discard errors.
+    gubuSchema(undefined, { err: [] })
+    return JSON.parse(JSON.stringify(spec, (_key, val) => {
+      if (GUBU$ === val) {
+        return true
+      }
+      return val
+    }))
   }
+
+  return gubuSchema
 }
 
 // function J(x: any) {
@@ -462,17 +471,6 @@ function handleValidate(vf: Validate, sval: any, state: State): Update {
   }
 
   return update
-
-  // else {
-  //   if (undefined !== update.val) {
-  //     sval = src[key] = update.val
-  //   }
-  //   nI = undefined === update.nI ? nI : update.nI
-  //   sI = undefined === update.sI ? sI : update.sI
-  //   pI = undefined === update.pI ? pI : update.pI
-  //   cN = undefined === update.cN ? cN : update.cN
-  // }
-  // return pass
 }
 
 
@@ -545,16 +543,9 @@ const Closed: Builder = function(this: ValSpec, spec?: any) {
   let vs = buildize(this || spec)
 
   vs.b = (val: any, update: Update, state: State) => {
-    // console.log('B', val, vs)
     if (null != val && 'object' === typeof (val)) {
       for (let k in val) {
         if (undefined === vs.v[k]) {
-          // TODO: err
-          // update.why = 'closed'
-          // update.err = {
-          //   node: vs, s: val, p: pathstr(state.path, state.dI), w: 'closed',
-          //   u: { k }
-          // }
           update.err =
             makeErr('closed', val, state.path, state.dI, vs, 3010, '', { k })
           return false
@@ -568,8 +559,7 @@ const Closed: Builder = function(this: ValSpec, spec?: any) {
 }
 
 
-// Not a Builder?
-const Rename: any = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
+const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
   let vs = buildize(this || spec)
 
   let opts = 'object' === typeof inopts ? inopts || {} : {}
@@ -577,7 +567,7 @@ const Rename: any = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
 
 
   if (null != name && '' != name) {
-    vs.a = (val: any, update: Update, state: State) => {
+    vs.a = (val: any, _update: Update, state: State) => {
       state.src[name] = val
 
       if (!opts.keep) {
@@ -642,19 +632,35 @@ function makeErr(
 
 
 
+type GubuSchema =
+  (<T>(inroot?: T, inctx?: any) => T) &
+  { spec: () => any }
+
+
 Object.assign(make, {
   Required,
   Optional,
   Custom,
   Any,
+  One,
+  Some,
+  All,
+  Closed,
+  Rename,
 })
 
 
 type Gubu = typeof make & {
-  Required: typeof Required,
-  Optional: typeof Optional,
-  Custom: typeof Custom,
-  Any: typeof Any,
+  desc: () => any
+  Required: typeof Required
+  Optional: typeof Optional
+  Custom: typeof Custom
+  Any: typeof Any
+  One: typeof One
+  Some: typeof Some
+  All: typeof All
+  Closed: typeof Closed
+  Rename: typeof Rename
 }
 
 Object.defineProperty(make, 'name', { value: 'gubu' })
@@ -686,11 +692,11 @@ const G$spec = make({
   },
 })
 
-function G$(opts: any): ValSpec {
+function G$(spec: any): ValSpec {
   let vs = norm()
 
-  if (null != opts) {
-    G$spec(opts, { vs })
+  if (null != spec) {
+    G$spec(spec, { vs })
   }
 
   return vs

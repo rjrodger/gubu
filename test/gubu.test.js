@@ -1,6 +1,10 @@
 "use strict";
 /* Copyright (c) 2021 Richard Rodger and other contributors, MIT License */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+const package_json_1 = __importDefault(require("../package.json"));
 const gubu_1 = require("../gubu");
 describe('gubu', () => {
     test('happy', () => {
@@ -16,62 +20,63 @@ describe('gubu', () => {
         expect(g0({ a: 'bar', b: 999, c: true })).toEqual({ a: 'bar', b: 999, c: true });
     });
     test('buildize-construct', () => {
+        const GUBU$ = Symbol.for('gubu$');
         expect((0, gubu_1.Required)('x')).toMatchObject({
-            '$': { 'gubu$': true },
+            '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: 'x',
             r: true,
         });
         expect((0, gubu_1.Optional)(String)).toMatchObject({
-            '$': { 'gubu$': true },
+            '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
             r: false,
         });
         expect((0, gubu_1.Required)((0, gubu_1.Required)('x'))).toMatchObject({
-            '$': { 'gubu$': true },
+            '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: 'x',
             r: true,
         });
         expect((0, gubu_1.Optional)((0, gubu_1.Required)('x'))).toMatchObject({
-            '$': { 'gubu$': true },
+            '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: 'x',
             r: false,
         });
         expect((0, gubu_1.Required)('x').Required()).toMatchObject({
-            '$': { 'gubu$': true },
+            '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: 'x',
             r: true,
         });
         expect((0, gubu_1.Required)('x').Optional()).toMatchObject({
-            '$': { 'gubu$': true },
+            '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: 'x',
             r: false,
         });
         expect((0, gubu_1.Optional)((0, gubu_1.Optional)(String))).toMatchObject({
-            '$': { 'gubu$': true },
+            '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
             r: false,
         });
         expect((0, gubu_1.Optional)(String).Optional()).toMatchObject({
-            '$': { 'gubu$': true },
+            '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
             r: false,
         });
         expect((0, gubu_1.Optional)(String).Required()).toMatchObject({
-            '$': { 'gubu$': true },
+            '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
             r: true,
         });
         expect((0, gubu_1.Required)((0, gubu_1.Optional)(String))).toMatchObject({
-            '$': { 'gubu$': true },
+            '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
             r: true,
@@ -237,9 +242,120 @@ describe('gubu', () => {
     });
     test('buildize-any', () => {
         let g0 = (0, gubu_1.gubu)({ a: (0, gubu_1.Any)(), b: (0, gubu_1.Any)(true) });
-        expect(g0({ a: 2, b: 1 })).toMatchObject({ a: 2, b: 1 });
-        expect(g0({ a: 'x', b: 'y' })).toMatchObject({ a: 'x', b: 'y' });
-        expect(g0({ b: 1 })).toEqual({ b: 1 });
+        // expect(g0({ a: 2, b: 1 })).toMatchObject({ a: 2, b: 1 })
+        // expect(g0({ a: 'x', b: 'y' })).toMatchObject({ a: 'x', b: 'y' })
+        // expect(g0({ b: 1 })).toEqual({ b: 1 })
+    });
+    test('spec-roundtrip', () => {
+        let m0 = { a: 1 };
+        let g0 = (0, gubu_1.gubu)(m0);
+        // console.log('m0 A', m0)
+        expect(m0).toEqual({ a: 1 });
+        expect(g0({ a: 2 })).toEqual({ a: 2 });
+        expect(m0).toEqual({ a: 1 });
+        // console.log('m0 B', m0)
+        let s0 = g0.spec();
+        expect(m0).toEqual({ a: 1 });
+        // console.log('m0 C', m0)
+        let s0s = {
+            $: {
+                gubu$: true,
+                version: package_json_1.default.version,
+            },
+            d: -1,
+            k: '',
+            r: false,
+            t: 'object',
+            u: {},
+            v: {
+                a: {
+                    $: {
+                        gubu$: true,
+                        version: package_json_1.default.version,
+                    },
+                    d: 1,
+                    k: 'a',
+                    r: false,
+                    t: 'number',
+                    u: {},
+                    v: 1,
+                },
+            },
+        };
+        expect(s0).toEqual(s0s);
+        expect(g0({ a: 2 })).toEqual({ a: 2 });
+        let g0r = (0, gubu_1.gubu)(s0);
+        expect(m0).toEqual({ a: 1 });
+        expect(s0).toEqual(s0s);
+        expect(g0r({ a: 2 })).toEqual({ a: 2 });
+        expect(m0).toEqual({ a: 1 });
+        expect(s0).toEqual(s0s);
+        let s0r = g0r.spec();
+        expect(m0).toEqual({ a: 1 });
+        expect(s0r).toEqual(s0s);
+        expect(s0).toEqual(s0s);
+        expect(g0r({ a: 2 })).toEqual({ a: 2 });
+        expect(g0({ a: 2 })).toEqual({ a: 2 });
+        let s0_2 = g0r.spec();
+        let s0r_2 = g0r.spec();
+        expect(m0).toEqual({ a: 1 });
+        expect(s0r_2).toEqual(s0s);
+        expect(s0_2).toEqual(s0s);
+        let m1 = { a: [1] };
+        let g1 = (0, gubu_1.gubu)(m1);
+        expect(g1({ a: [2] })).toEqual({ a: [2] });
+        expect(m1).toEqual({ a: [1] });
+        let s1 = g1.spec();
+        let s1s = {
+            $: {
+                gubu$: true,
+                version: '0.0.1',
+            },
+            d: -1,
+            k: '',
+            r: false,
+            t: 'object',
+            u: {},
+            v: {
+                a: {
+                    $: {
+                        gubu$: true,
+                        version: package_json_1.default.version,
+                    },
+                    d: 1,
+                    k: 'a',
+                    r: false,
+                    t: 'array',
+                    u: {},
+                    v: {
+                        0: {
+                            $: {
+                                gubu$: true,
+                                version: package_json_1.default.version,
+                            },
+                            d: 2,
+                            k: '0',
+                            r: false,
+                            t: 'number',
+                            u: {},
+                            v: 1,
+                        },
+                    },
+                },
+            },
+        };
+        expect(s1).toEqual(s1s);
+        let g1r = (0, gubu_1.gubu)(s1);
+        expect(g1r({ a: [2] })).toEqual({ a: [2] });
+        expect(g1({ a: [2] })).toEqual({ a: [2] });
+        expect(m1).toEqual({ a: [1] });
+        expect(s1).toEqual(s1s);
+        let s1r = g1r.spec();
+        expect(g1r({ a: [2] })).toEqual({ a: [2] });
+        expect(g1({ a: [2] })).toEqual({ a: [2] });
+        expect(m1).toEqual({ a: [1] });
+        expect(s1).toEqual(s1s);
+        expect(s1r).toEqual(s1s);
     });
 });
 //# sourceMappingURL=gubu.test.js.map
