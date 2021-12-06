@@ -35,6 +35,49 @@ describe('gubu', () => {
   })
 
 
+  test('types-basic', () => {
+    expect(gubu(String)('x')).toEqual('x')
+    expect(gubu(Number)(1)).toEqual(1)
+    expect(gubu(Boolean)(true)).toEqual(true)
+    expect(gubu(Object)({ x: 1 })).toEqual({ x: 1 })
+
+    expect(() => gubu(String)(1)).toThrow(/path "".*not of type string/)
+    expect(() => gubu(Number)('x')).toThrow(/path "".*not of type number/)
+    expect(() => gubu(Boolean)('x')).toThrow(/path "".*not of type boolean/)
+    expect(() => gubu(Object)('x')).toThrow(/path "".*not of type object/)
+
+
+    expect(gubu({ a: String })({ a: 'x' })).toEqual({ a: 'x' })
+    expect(gubu({ a: Number })({ a: 1 })).toEqual({ a: 1 })
+    expect(gubu({ a: Boolean })({ a: true })).toEqual({ a: true })
+    expect(gubu({ a: Object })({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
+
+    expect(() => gubu({ a: String })({ a: 1 }))
+      .toThrow(/path "a".*not of type string/)
+    expect(() => gubu({ a: Number })({ a: 'x' }))
+      .toThrow(/path "a".*not of type number/)
+    expect(() => gubu({ a: Boolean })({ a: 'x' }))
+      .toThrow(/path "a".*not of type boolean/)
+    expect(() => gubu({ a: Object })({ a: 'x' }))
+      .toThrow(/path "a".*not of type object/)
+
+    expect(gubu([String])(['x'])).toEqual(['x'])
+    expect(gubu([Number])([1])).toEqual([1])
+    expect(gubu([Boolean])([true])).toEqual([true])
+    expect(gubu([Object])([{ x: 1 }])).toEqual([{ x: 1 }])
+
+    expect(() => gubu([String])([1]))
+      .toThrow(/path "0".*not of type string/)
+    expect(() => gubu([Number])(['x']))
+      .toThrow(/path "0".*not of type number/)
+    expect(() => gubu([Boolean])(['x']))
+      .toThrow(/path "0".*not of type boolean/)
+    expect(() => gubu([Object])([1]))
+      .toThrow(/path "0".*not of type object/)
+
+  })
+
+
   test('buildize-construct', () => {
     const GUBU$ = Symbol.for('gubu$')
 

@@ -19,6 +19,40 @@ describe('gubu', () => {
         expect(g0({ a: 'bar', b: 999 })).toEqual({ a: 'bar', b: 999 });
         expect(g0({ a: 'bar', b: 999, c: true })).toEqual({ a: 'bar', b: 999, c: true });
     });
+    test('types-basic', () => {
+        expect((0, gubu_1.gubu)(String)('x')).toEqual('x');
+        expect((0, gubu_1.gubu)(Number)(1)).toEqual(1);
+        expect((0, gubu_1.gubu)(Boolean)(true)).toEqual(true);
+        expect((0, gubu_1.gubu)(Object)({ x: 1 })).toEqual({ x: 1 });
+        expect(() => (0, gubu_1.gubu)(String)(1)).toThrow(/path "".*not of type string/);
+        expect(() => (0, gubu_1.gubu)(Number)('x')).toThrow(/path "".*not of type number/);
+        expect(() => (0, gubu_1.gubu)(Boolean)('x')).toThrow(/path "".*not of type boolean/);
+        expect(() => (0, gubu_1.gubu)(Object)('x')).toThrow(/path "".*not of type object/);
+        expect((0, gubu_1.gubu)({ a: String })({ a: 'x' })).toEqual({ a: 'x' });
+        expect((0, gubu_1.gubu)({ a: Number })({ a: 1 })).toEqual({ a: 1 });
+        expect((0, gubu_1.gubu)({ a: Boolean })({ a: true })).toEqual({ a: true });
+        expect((0, gubu_1.gubu)({ a: Object })({ a: { x: 1 } })).toEqual({ a: { x: 1 } });
+        expect(() => (0, gubu_1.gubu)({ a: String })({ a: 1 }))
+            .toThrow(/path "a".*not of type string/);
+        expect(() => (0, gubu_1.gubu)({ a: Number })({ a: 'x' }))
+            .toThrow(/path "a".*not of type number/);
+        expect(() => (0, gubu_1.gubu)({ a: Boolean })({ a: 'x' }))
+            .toThrow(/path "a".*not of type boolean/);
+        expect(() => (0, gubu_1.gubu)({ a: Object })({ a: 'x' }))
+            .toThrow(/path "a".*not of type object/);
+        expect((0, gubu_1.gubu)([String])(['x'])).toEqual(['x']);
+        expect((0, gubu_1.gubu)([Number])([1])).toEqual([1]);
+        expect((0, gubu_1.gubu)([Boolean])([true])).toEqual([true]);
+        expect((0, gubu_1.gubu)([Object])([{ x: 1 }])).toEqual([{ x: 1 }]);
+        expect(() => (0, gubu_1.gubu)([String])([1]))
+            .toThrow(/path "0".*not of type string/);
+        expect(() => (0, gubu_1.gubu)([Number])(['x']))
+            .toThrow(/path "0".*not of type number/);
+        expect(() => (0, gubu_1.gubu)([Boolean])(['x']))
+            .toThrow(/path "0".*not of type boolean/);
+        expect(() => (0, gubu_1.gubu)([Object])([1]))
+            .toThrow(/path "0".*not of type object/);
+    });
     test('buildize-construct', () => {
         const GUBU$ = Symbol.for('gubu$');
         expect((0, gubu_1.Required)('x')).toMatchObject({
