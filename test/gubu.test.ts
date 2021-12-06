@@ -10,7 +10,10 @@ import {
   Optional,
   Any,
   Closed,
-  G$,
+  Before,
+  After,
+  // G$,
+  Update,
 } from '../gubu'
 
 
@@ -107,6 +110,8 @@ describe('gubu', () => {
       r: true,
     })
 
+
+    // console.log(Before(() => true, { a: 1 }))
   })
 
 
@@ -119,7 +124,7 @@ describe('gubu', () => {
       boolean: true,
       object: { x: 2 },
       array: [3],
-      function: G$({ type: 'function', value: f0 })
+      // function: G$({ type: 'function', value: f0 })
     })
 
     expect(g0()).toMatchObject({
@@ -128,7 +133,7 @@ describe('gubu', () => {
       boolean: true,
       object: { x: 2 },
       array: [],
-      function: f0
+      // function: f0
     })
 
     expect(g0({
@@ -137,14 +142,14 @@ describe('gubu', () => {
       boolean: false,
       object: { x: 22 },
       array: [33],
-      function: f0,
+      // function: f0,
     })).toMatchObject({
       string: 'S',
       number: 11,
       boolean: false,
       object: { x: 22 },
       array: [33],
-      function: f0,
+      // function: f0,
     })
 
     // TODO: fails
@@ -208,10 +213,56 @@ describe('gubu', () => {
     expect(() => g0({ a: ['X', 1] })).toThrow(/Validation failed for path "a.1" with value "1" because the value is not of type string\./)
   })
 
+
+  test('custom-basic', () => {
+    let g0 = gubu({ a: (v: any) => v > 10 })
+    expect(g0({ a: 11 })).toMatchObject({ a: 11 })
+    expect(() => g0({ a: 9 })).toThrow(/Validation failed for path "a" with value "9" because check "custom" failed\./)
+
+    let g1 = gubu({ a: Optional((v: any) => v > 10) })
+    expect(g1({ a: 11 })).toMatchObject({ a: 11 })
+    expect(() => g1({ a: 9 })).toThrow(/Validation failed for path "a" with value "9" because check "custom" failed\./)
+    expect(g1({})).toMatchObject({})
+
+    let g2 = gubu({ a: Required((v: any) => v > 10) })
+    expect(g1({ a: 11 })).toMatchObject({ a: 11 })
+    expect(() => g2({ a: 9 })).toThrow(/Validation failed for path "a" with value "9" because check "custom" failed\./)
+    expect(() => g2({})).toThrow(/Validation failed for path "a" with value "" because check "custom" failed\./)
+  })
+
+
+  test('before-after-basic', () => {
+    let g0 = gubu(
+      Before((val: any, _update: Update) => {
+        val.b = 1 + val.a
+        return true
+      }, { a: 1 })
+        .After((val: any, _update: Update) => {
+          val.c = 10 * val.a
+          return true
+        }))
+
+    expect(g0({ a: 2 })).toMatchObject({ a: 2, b: 3, c: 20 })
+
+    let g1 = gubu({
+      x:
+        After((val: any, _update: Update) => {
+          val.c = 10 * val.a
+          return true
+        }, { a: 1 })
+          .Before((val: any, _update: Update) => {
+            val.b = 1 + val.a
+            return true
+          })
+    })
+    expect(g1({ x: { a: 2 } })).toMatchObject({ x: { a: 2, b: 3, c: 20 } })
+  })
+
+
   /*
     test('deep-required', () => {
       let { Required } = gubu
-  
+   
       let g0 = gubu({
         a: 1,
         b: Required({
@@ -226,25 +277,7 @@ describe('gubu', () => {
         }),
       })
     })
-  
-    test('custom-basic', () => {
-      let { Custom } = gubu
-  
-      let g0 = gubu({
-        a: Custom((val: any, root: any) => {
-          if (1 === val) {
-            throw new Error('1')
-          }
-          if (2 === val) {
-            return 'TWO'
-          }
-          if (false === val) {
-            return 0
-          }
-          return val
-        }),
-      })
-    })
+   
   */
 
 
@@ -367,7 +400,8 @@ describe('gubu', () => {
         gubu$: true,
         version: Pkg.version,
       },
-      d: -1,
+      // d: -1,
+      d: 0,
       k: '',
       r: false,
       t: 'object',
@@ -423,7 +457,8 @@ describe('gubu', () => {
         gubu$: true,
         version: '0.0.1',
       },
-      d: -1,
+      // d: -1,
+      d: 0,
       k: '',
       r: false,
       t: 'object',
