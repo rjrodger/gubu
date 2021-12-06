@@ -18,6 +18,7 @@ const GUBU = { gubu$: GUBU$, version: Pkg.version }
 
 type ValType =
   'any' |
+  'node' |
   'custom' |
   'null' |   // TODO: test
   'list' |
@@ -70,6 +71,8 @@ type State = {
 type Update = {
   pass: boolean
   val?: any
+  node?: ValSpec
+  type?: ValType
   nI?: number
   sI?: number
   pI?: number
@@ -337,6 +340,8 @@ function make(inspec?: any): GubuSchema {
           let t = vs.t
           let pass = true
 
+          // TODO: merge before and custom
+          // udpate can set t
           if (vs.b) {
             let update = handleValidate(vs.b, sval, {
               dI, nI, sI, pI, cN,
@@ -345,6 +350,12 @@ function make(inspec?: any): GubuSchema {
             pass = update.pass
             if (undefined !== update.val) {
               sval = src[key] = update.val
+            }
+            if (undefined !== update.node) {
+              vs = update.node
+            }
+            if (undefined !== update.type) {
+              t = update.type
             }
             nI = undefined === update.nI ? nI : update.nI
             sI = undefined === update.sI ? sI : update.sI
@@ -623,12 +634,63 @@ const Closed: Builder = function(this: ValSpec, spec?: any) {
 }
 
 
-const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
+const Define: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
   let vs = buildize(this || spec)
 
   let opts = 'object' === typeof inopts ? inopts || {} : {}
   let name = 'string' === typeof inopts ? inopts : opts.name
 
+
+  if (null != name && '' != name) {
+    vs.b = (val: any, _update: Update, state: State) => {
+      let ref = state.ctx.ref = state.ctx.ref || {}
+
+      // TODO: refers to non-normed original
+      ref[name] = state.node
+
+      return true
+    }
+  }
+
+  return vs
+}
+
+
+const Refer: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
+  let vs = buildize(this || spec)
+
+  let opts = 'object' === typeof inopts ? inopts || {} : {}
+  let name = 'string' === typeof inopts ? inopts : opts.name
+  let fill = !!opts.fill
+
+
+  if (null != name && '' != name) {
+    vs.b = (val: any, update: Update, state: State) => {
+      if (undefined !== val || fill) {
+        let ref = state.ctx.ref = state.ctx.ref || {}
+
+        // TODO: error if non-exist
+        let node = { ...ref[name] }
+        node.k = state.node.k
+        node.t = node.t || 'none'
+
+        update.node = node
+        update.type = node.t
+      }
+
+      return true
+    }
+  }
+
+  return vs
+}
+
+
+const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
+  let vs = buildize(this || spec)
+
+  let opts = 'object' === typeof inopts ? inopts || {} : {}
+  let name = 'string' === typeof inopts ? inopts : opts.name
 
   if (null != name && '' != name) {
     vs.a = (val: any, _update: Update, state: State) => {
@@ -789,6 +851,8 @@ export {
   All,
   Closed,
   Rename,
+  Define,
+  Refer,
 }
 
 

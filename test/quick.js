@@ -9,11 +9,14 @@ const {
   Closed,
   Rename,
   Required,
+  Define,
+  Refer,
+  Optional,
 } = require('../gubu')
 
 
-function J(x) {
-  console.log(null == x ? '' : JSON.stringify(x).replace(/"/g, ''))
+function J(x,s) {
+  console.log(null == x ? '' : JSON.stringify(x,null,s).replace(/"/g, ''))
 }
 
 
@@ -164,12 +167,53 @@ function J(x) {
 // J(r0({a:[{x:1},{x:2}]}))
 // J(r0({a:true}))
 
-let e0 = gubu({ a: Number })
+// let e0 = gubu({ a: Number })
 
-try {
-  J(e0({a:'x'}))
-}
-catch(e) {
-  console.log(e)
-  console.log(e.desc())
-}
+// try {
+//   J(e0({a:'x'}))
+// }
+// catch(e) {
+//   console.log(e)
+//   console.log(e.desc())
+// }
+
+
+
+//let d0 = gubu({ a: Define('A',{x:1}), b: Refer({'A'}) })
+//let d0 = gubu({ a: Define('A',{x:1}), b: Refer({name:'A',fill:true}) })
+//J(d0({a:{x:2},b:{}}))
+//J(d0({a:{x:2}}))
+//J(d0({a:{x:2},b:{x:'z'}}))
+
+
+// let o0 = gubu({ a: Optional({x:1}) })
+// J(o0({a:{}}))
+// J(o0({}))
+
+
+
+let d1 = gubu({
+  a: Define('A',{
+    b: {
+      c: 1,
+      a: Refer('A')
+      // a:{b:{c:11}}
+    }
+  }),
+})
+J(d1({
+  a:{
+    b: {
+      c: 2,
+      a: {
+        b: {
+          c: '3'
+        }
+      }
+    }
+  }
+}),2)
+
+
+
+

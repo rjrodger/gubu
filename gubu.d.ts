@@ -2,7 +2,7 @@ declare const GUBU: {
     gubu$: symbol;
     version: string;
 };
-declare type ValType = 'any' | 'custom' | 'null' | // TODO: test
+declare type ValType = 'any' | 'node' | 'custom' | 'null' | // TODO: test
 'list' | 'string' | 'number' | 'boolean' | 'object' | 'array' | 'bigint' | 'symbol' | 'function';
 declare type ValSpec = {
     $: typeof GUBU;
@@ -39,6 +39,8 @@ declare type State = {
 declare type Update = {
     pass: boolean;
     val?: any;
+    node?: ValSpec;
+    type?: ValType;
     nI?: number;
     sI?: number;
     pI?: number;
@@ -56,6 +58,8 @@ declare const Some: Builder;
 declare const All: Builder;
 declare function Custom(validate: Validate): ValSpec;
 declare const Closed: Builder;
+declare const Define: Builder;
+declare const Refer: Builder;
 declare const Rename: Builder;
 declare function buildize(invs?: any): ValSpec;
 declare type GubuSchema = (<T>(inroot?: T, inctx?: any) => T) & {
@@ -75,4 +79,4 @@ declare type Gubu = typeof make & {
 };
 declare function G$(spec: any): ValSpec;
 declare const gubu: Gubu;
-export { gubu, G$, norm, buildize, Required, Optional, Any, Custom, One, Some, All, Closed, Rename, };
+export { gubu, G$, norm, buildize, Required, Optional, Any, Custom, One, Some, All, Closed, Rename, Define, Refer, };

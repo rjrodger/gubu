@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Rename = exports.Closed = exports.All = exports.Some = exports.One = exports.Custom = exports.Any = exports.Optional = exports.Required = exports.buildize = exports.norm = exports.G$ = exports.gubu = void 0;
+exports.Refer = exports.Define = exports.Rename = exports.Closed = exports.All = exports.Some = exports.One = exports.Custom = exports.Any = exports.Optional = exports.Required = exports.buildize = exports.norm = exports.G$ = exports.gubu = void 0;
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
@@ -203,6 +203,8 @@ function make(inspec) {
                     vs = GUBU$ === ((_d = vs.$) === null || _d === void 0 ? void 0 : _d.gubu$) ? vs : (vss[vsI] = norm(vs));
                     let t = vs.t;
                     let pass = true;
+                    // TODO: merge before and custom
+                    // udpate can set t
                     if (vs.b) {
                         let update = handleValidate(vs.b, sval, {
                             dI, nI, sI, pI, cN,
@@ -211,6 +213,12 @@ function make(inspec) {
                         pass = update.pass;
                         if (undefined !== update.val) {
                             sval = src[key] = update.val;
+                        }
+                        if (undefined !== update.node) {
+                            vs = update.node;
+                        }
+                        if (undefined !== update.type) {
+                            t = update.type;
                         }
                         nI = undefined === update.nI ? nI : update.nI;
                         sI = undefined === update.sI ? sI : update.sI;
@@ -451,6 +459,43 @@ const Closed = function (spec) {
     return vs;
 };
 exports.Closed = Closed;
+const Define = function (inopts, spec) {
+    let vs = buildize(this || spec);
+    let opts = 'object' === typeof inopts ? inopts || {} : {};
+    let name = 'string' === typeof inopts ? inopts : opts.name;
+    if (null != name && '' != name) {
+        vs.b = (val, _update, state) => {
+            let ref = state.ctx.ref = state.ctx.ref || {};
+            // TODO: refers to non-normed original
+            ref[name] = state.node;
+            return true;
+        };
+    }
+    return vs;
+};
+exports.Define = Define;
+const Refer = function (inopts, spec) {
+    let vs = buildize(this || spec);
+    let opts = 'object' === typeof inopts ? inopts || {} : {};
+    let name = 'string' === typeof inopts ? inopts : opts.name;
+    let fill = !!opts.fill;
+    if (null != name && '' != name) {
+        vs.b = (val, update, state) => {
+            if (undefined !== val || fill) {
+                let ref = state.ctx.ref = state.ctx.ref || {};
+                // TODO: error if non-exist
+                let node = { ...ref[name] };
+                node.k = state.node.k;
+                node.t = node.t || 'none';
+                update.node = node;
+                update.type = node.t;
+            }
+            return true;
+        };
+    }
+    return vs;
+};
+exports.Refer = Refer;
 const Rename = function (inopts, spec) {
     let vs = buildize(this || spec);
     let opts = 'object' === typeof inopts ? inopts || {} : {};
