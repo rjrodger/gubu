@@ -90,6 +90,33 @@ type ErrSpec = {
 }
 
 
+
+class GubuError extends TypeError {
+  constructor(
+    code: string,
+    err: ErrSpec[],
+    ctx: any,
+  ) {
+    let message = err.map((e: ErrSpec) => e.t).join('\n')
+    super(message)
+    let name = 'GubuError'
+    let ge = this as unknown as any
+    ge.code = code
+    ge.desc = () => ({ name, code, err, ctx, })
+  }
+
+
+  toJSON() {
+    return {
+      ...this,
+      name: this.name,
+      message: this.message,
+    }
+  }
+}
+
+
+
 const IS_TYPE: { [name: string]: boolean } = {
   String: true,
   Number: true,
@@ -106,7 +133,7 @@ const EMPTY_VAL: { [name: string]: any } = {
   boolean: false,
   object: {},
   array: [],
-  function: () => undefined,
+  // function: () => undefined,
 }
 
 
@@ -145,7 +172,7 @@ function norm(spec?: any): ValSpec {
     if (IS_TYPE[spec.name]) {
       t = (spec.name.toLowerCase() as ValType)
       r = true
-      v = EMPTY_VAL[t]
+      v = clone(EMPTY_VAL[t])
     }
     else {
       t = 'custom'
@@ -176,7 +203,7 @@ function make(inspec?: any): GubuSchema {
 
   let gubuSchema = function GubuSchema<T>(inroot?: T, inctx?: any): T {
     const ctx: any = inctx || {}
-    const root: any = inroot || {}
+    const root: any = inroot || clone(EMPTY_VAL[spec.t])
 
     const nodes: (ValSpec | number)[] = [spec, -1]
     const srcs: any[] = [root, -1]
@@ -220,34 +247,69 @@ function make(inspec?: any): GubuSchema {
       let keys = Object.keys(node.v)
 
       // Treat array indexes as keys.
+      // Inject missing indexes if present in ValSpec.
       if ('array' === node.t) {
         keys = Object.keys(src)
+        for (let vk in node.v) {
+          if ('0' !== vk && !keys.includes(vk)) {
+            keys.splice(parseInt(vk) - 1, 0, '' + (parseInt(vk) - 1))
+          }
+        }
       }
+
+      // console.log('KEYS', keys)
 
       for (let key of keys) {
         path[dI] = key
         let sval = src[key]
         let stype = typeof (sval)
 
-        // First array entry is general type spec.
-        // Following are special case elements offset by +1
-        let vkey = node.y ? 1 + parseInt(key) : key
-        let n = node.v[vkey]
+        // let vkey = 'array' === node.t ? 1 + parseInt(key) : key
+        // let n = node.v[vkey]
+        // console.log('VKEY', n, vkey, node.v)
 
-        if (undefined === n && 'array' === node.t) {
-          n = node.v[0]
+        //if (undefined === n && 'array' === node.t) {
 
-          // No first element defining element type spec, so use Any.
-          if (null == n) {
-            n = node.v[0] = Any()
+        let n = node.v[key]
+        // let vkey = key
+        // let tvs: ValSpec = GUBU$ === n.$?.gubu$ ? n : (n = node.v[key] = norm(n))
+        // let tvs: ValSpec = GUBU$ === n.$?.gubu$ ? n : norm(n)
+        // let tvs: ValSpec = null as unknown as ValSpec
+        let tvs: ValSpec = null as any
+
+        if ('array' === node.t) {
+          // First array entry is general type spec.
+          // Following are special case elements offset by +1.
+          // Use these if src has no corresponding element.
+
+          let akey = '' + (parseInt(key) + 1)
+          n = node.v[akey]
+          if (undefined !== n) {
+            // vkey = akey
+            tvs = n = GUBU$ === n.$?.gubu$ ? n : (n = node.v[akey] = norm(n))
           }
-          key = '' + 0
+          // console.log('Q A', key, parseInt(key) + 1, n)
+
+          if (undefined === n) {
+            n = node.v[0]
+            key = '' + 0
+
+            // No first element defining element type spec, so use Any.
+            if (undefined === n) {
+              n = node.v[0] = Any()
+            }
+
+            tvs = n = GUBU$ === n.$?.gubu$ ? n : (n = node.v[key] = norm(n))
+          }
+
+          // console.log('Q Z', key, n)
         }
         else {
-          key = '' + vkey
+          // node.v[key] = tvs
+          tvs = GUBU$ === n.$?.gubu$ ? n : (n = node.v[key] = norm(n))
         }
 
-        let tvs: ValSpec = GUBU$ === n.$?.gubu$ ? n : (n = node.v[key] = norm(n))
+        // let tvs: ValSpec = GUBU$ === n.$?.gubu$ ? n : (n = node.v[vkey] = norm(n))
         tvs.k = key
         tvs.d = dI
 
@@ -414,9 +476,10 @@ function make(inspec?: any): GubuSchema {
       }
       else {
         // TODO: GubuError
-        let ex: any = new Error(err.map((e: ErrSpec) => e.t).join('\n'))
-        ex.err = err
-        throw ex
+        // let ex: any = new Error(err.map((e: ErrSpec) => e.t).join('\n'))
+        // ex.err = err
+        // throw ex
+        throw new GubuError('shape', err, ctx)
       }
     }
 
@@ -424,6 +487,7 @@ function make(inspec?: any): GubuSchema {
   } as GubuSchema
 
 
+  // TODO: test Number, String, etc also in arrays
   gubuSchema.spec = () => {
     // Normalize spec, discard errors.
     gubuSchema(undefined, { err: [] })
@@ -630,6 +694,10 @@ function makeErr(
   return err
 }
 
+
+function clone(x: any) {
+  return null == x ? x : 'object' !== typeof (x) ? x : JSON.parse(JSON.stringify(x))
+}
 
 
 type GubuSchema =

@@ -160,7 +160,16 @@ function J(x) {
 // J(r0({a:true}))
 
 
-let r0 = gubu({ a: [{x:Number}] })
-J(r0({a:[{x:1},{x:2}]}))
-J(r0({a:true}))
+// let r0 = gubu({ a: [{x:Number}] })
+// J(r0({a:[{x:1},{x:2}]}))
+// J(r0({a:true}))
 
+let e0 = gubu({ a: Number })
+
+try {
+  J(e0({a:'x'}))
+}
+catch(e) {
+  console.log(e)
+  console.log(e.desc())
+}

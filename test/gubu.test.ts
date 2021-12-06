@@ -248,7 +248,7 @@ describe('gubu', () => {
   */
 
 
-  test('deep-basic', () => {
+  test('deep-object-basic', () => {
     let a1 = gubu({ a: 1 })
     expect(a1({})).toMatchObject({ a: 1 })
 
@@ -267,6 +267,42 @@ describe('gubu', () => {
 
     let abc1ade2f3 = gubu({ a: { b: { c: 1 }, d: { e: 2 } }, f: 3 })
     expect(abc1ade2f3({})).toMatchObject({ a: { b: { c: 1 }, d: { e: 2 } }, f: 3 })
+
+
+    let d0 = gubu({
+      a: { b: { c: 1 }, d: { e: { f: 3 } } },
+      h: 3,
+      i: { j: { k: 4 }, l: { m: 5 } },
+      n: { o: 6 }
+    })
+    expect(d0({})).toMatchObject({
+      a: { b: { c: 1 }, d: { e: { f: 3 } } },
+      h: 3,
+      i: { j: { k: 4 }, l: { m: 5 } },
+      n: { o: 6 }
+    })
+
+  })
+
+
+  test('deep-array-basic', () => {
+    let a0 = gubu([1])
+    // console.dir(a0.spec(), { depth: null })
+    expect(a0()).toMatchObject([])
+    expect(a0([])).toMatchObject([])
+    expect(a0([11])).toMatchObject([11])
+    expect(a0([11, 22])).toMatchObject([11, 22])
+
+    let a1 = gubu([-1, 1, 2, 3])
+    // console.dir(a1.spec(), { depth: null })
+    expect(a1()).toMatchObject([1, 2, 3])
+    expect(a1([])).toMatchObject([1, 2, 3])
+    expect(a1([11])).toMatchObject([11, 2, 3])
+    expect(a1([11, 22])).toMatchObject([11, 22, 3])
+    expect(a1([11, 22, 33])).toMatchObject([11, 22, 33])
+    expect(a1([11, 22, 33, 44])).toMatchObject([11, 22, 33, 44])
+    expect(a1([undefined, 22])).toMatchObject([1, 22, 3])
+
   })
 
 

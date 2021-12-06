@@ -12,6 +12,23 @@ const package_json_1 = __importDefault(require("./package.json"));
 // TODO: freeze
 const GUBU$ = Symbol.for('gubu$');
 const GUBU = { gubu$: GUBU$, version: package_json_1.default.version };
+class GubuError extends TypeError {
+    constructor(code, err, ctx) {
+        let message = err.map((e) => e.t).join('\n');
+        super(message);
+        let name = 'GubuError';
+        let ge = this;
+        ge.code = code;
+        ge.desc = () => ({ name, code, err, ctx, });
+    }
+    toJSON() {
+        return {
+            ...this,
+            name: this.name,
+            message: this.message,
+        };
+    }
+}
 const IS_TYPE = {
     String: true,
     Number: true,
@@ -26,7 +43,7 @@ const EMPTY_VAL = {
     boolean: false,
     object: {},
     array: [],
-    function: () => undefined,
+    // function: () => undefined,
 };
 function norm(spec) {
     var _a, _b;
@@ -56,7 +73,7 @@ function norm(spec) {
         if (IS_TYPE[spec.name]) {
             t = spec.name.toLowerCase();
             r = true;
-            v = EMPTY_VAL[t];
+            v = clone(EMPTY_VAL[t]);
         }
         else {
             t = 'custom';
@@ -81,9 +98,9 @@ exports.norm = norm;
 function make(inspec) {
     let spec = norm(inspec); // Tree of validation nodes.
     let gubuSchema = function GubuSchema(inroot, inctx) {
-        var _a, _b;
+        var _a, _b, _c, _d;
         const ctx = inctx || {};
-        const root = inroot || {};
+        const root = inroot || clone(EMPTY_VAL[spec.t]);
         const nodes = [spec, -1];
         const srcs = [root, -1];
         const path = []; // Key path to current node.
@@ -116,29 +133,57 @@ function make(inspec) {
             pI = nI;
             let keys = Object.keys(node.v);
             // Treat array indexes as keys.
+            // Inject missing indexes if present in ValSpec.
             if ('array' === node.t) {
                 keys = Object.keys(src);
+                for (let vk in node.v) {
+                    if ('0' !== vk && !keys.includes(vk)) {
+                        keys.splice(parseInt(vk) - 1, 0, '' + (parseInt(vk) - 1));
+                    }
+                }
             }
+            // console.log('KEYS', keys)
             for (let key of keys) {
                 path[dI] = key;
                 let sval = src[key];
                 let stype = typeof (sval);
-                // First array entry is general type spec.
-                // Following are special case elements offset by +1
-                let vkey = node.y ? 1 + parseInt(key) : key;
-                let n = node.v[vkey];
-                if (undefined === n && 'array' === node.t) {
-                    n = node.v[0];
-                    // No first element defining element type spec, so use Any.
-                    if (null == n) {
-                        n = node.v[0] = Any();
+                // let vkey = 'array' === node.t ? 1 + parseInt(key) : key
+                // let n = node.v[vkey]
+                // console.log('VKEY', n, vkey, node.v)
+                //if (undefined === n && 'array' === node.t) {
+                let n = node.v[key];
+                // let vkey = key
+                // let tvs: ValSpec = GUBU$ === n.$?.gubu$ ? n : (n = node.v[key] = norm(n))
+                // let tvs: ValSpec = GUBU$ === n.$?.gubu$ ? n : norm(n)
+                // let tvs: ValSpec = null as unknown as ValSpec
+                let tvs = null;
+                if ('array' === node.t) {
+                    // First array entry is general type spec.
+                    // Following are special case elements offset by +1.
+                    // Use these if src has no corresponding element.
+                    let akey = '' + (parseInt(key) + 1);
+                    n = node.v[akey];
+                    if (undefined !== n) {
+                        // vkey = akey
+                        tvs = n = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (n = node.v[akey] = norm(n));
                     }
-                    key = '' + 0;
+                    // console.log('Q A', key, parseInt(key) + 1, n)
+                    if (undefined === n) {
+                        n = node.v[0];
+                        key = '' + 0;
+                        // No first element defining element type spec, so use Any.
+                        if (undefined === n) {
+                            n = node.v[0] = Any();
+                        }
+                        tvs = n = GUBU$ === ((_b = n.$) === null || _b === void 0 ? void 0 : _b.gubu$) ? n : (n = node.v[key] = norm(n));
+                    }
+                    // console.log('Q Z', key, n)
                 }
                 else {
-                    key = '' + vkey;
+                    // node.v[key] = tvs
+                    tvs = GUBU$ === ((_c = n.$) === null || _c === void 0 ? void 0 : _c.gubu$) ? n : (n = node.v[key] = norm(n));
                 }
-                let tvs = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (n = node.v[key] = norm(n));
+                // let tvs: ValSpec = GUBU$ === n.$?.gubu$ ? n : (n = node.v[vkey] = norm(n))
                 tvs.k = key;
                 tvs.d = dI;
                 let t = tvs.t;
@@ -155,7 +200,7 @@ function make(inspec) {
                 let terr = [];
                 for (let vsI = 0; vsI < vss.length; vsI++) {
                     let vs = vss[vsI];
-                    vs = GUBU$ === ((_b = vs.$) === null || _b === void 0 ? void 0 : _b.gubu$) ? vs : (vss[vsI] = norm(vs));
+                    vs = GUBU$ === ((_d = vs.$) === null || _d === void 0 ? void 0 : _d.gubu$) ? vs : (vss[vsI] = norm(vs));
                     let t = vs.t;
                     let pass = true;
                     if (vs.b) {
@@ -285,13 +330,15 @@ function make(inspec) {
             }
             else {
                 // TODO: GubuError
-                let ex = new Error(err.map((e) => e.t).join('\n'));
-                ex.err = err;
-                throw ex;
+                // let ex: any = new Error(err.map((e: ErrSpec) => e.t).join('\n'))
+                // ex.err = err
+                // throw ex
+                throw new GubuError('shape', err, ctx);
             }
         }
         return root;
     };
+    // TODO: test Number, String, etc also in arrays
     gubuSchema.spec = () => {
         // Normalize spec, discard errors.
         gubuSchema(undefined, { err: [] });
@@ -451,6 +498,9 @@ function makeErr(w, s, path, dI, n, m, t, u) {
             '.';
     }
     return err;
+}
+function clone(x) {
+    return null == x ? x : 'object' !== typeof (x) ? x : JSON.parse(JSON.stringify(x));
 }
 Object.assign(make, {
     Required,
