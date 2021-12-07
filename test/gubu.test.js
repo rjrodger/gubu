@@ -73,7 +73,24 @@ describe('gubu', () => {
         });
     });
     test('shapes-basic', () => {
+        // expect(() => gubu(Date)(/a/)).toThrow(/path "".*not an instance of Date/)
+        // expect(() => gubu(new Date())(/a/)).toThrow(/path "".*not an instance of Date/)
+        // console.log(gubu(Date).spec())
+        // console.log(gubu(new Date()).spec())
+        // return;
         let tmp = {};
+        class Foo {
+            constructor(a) {
+                this.a = -1;
+                this.a = a;
+            }
+        }
+        class Bar {
+            constructor(b) {
+                this.b = -2;
+                this.b = b;
+            }
+        }
         expect((0, gubu_1.gubu)(String)('x')).toEqual('x');
         expect((0, gubu_1.gubu)(Number)(1)).toEqual(1);
         expect((0, gubu_1.gubu)(Boolean)(true)).toEqual(true);
@@ -83,11 +100,60 @@ describe('gubu', () => {
         expect((0, gubu_1.gubu)(Function)(tmp.f0 = () => true)).toEqual(tmp.f0);
         expect((0, gubu_1.gubu)(Symbol)(tmp.s0 = Symbol('foo'))).toEqual(tmp.s0);
         expect((0, gubu_1.gubu)(Date)(tmp.d0 = new Date())).toEqual(tmp.d0);
-        console.log((0, gubu_1.gubu)(Date).spec());
+        expect((0, gubu_1.gubu)(RegExp)(tmp.r0 = /a/)).toEqual(tmp.r0);
+        expect((0, gubu_1.gubu)(Foo)(tmp.c0 = new Foo(2))).toEqual(tmp.c0);
+        // console.log(gubu(new Date()).spec())
+        expect((0, gubu_1.gubu)('a')('x')).toEqual('x');
+        expect((0, gubu_1.gubu)(0)(1)).toEqual(1);
+        expect((0, gubu_1.gubu)(false)(true)).toEqual(true);
+        expect((0, gubu_1.gubu)(BigInt(-1))(BigInt(1))).toEqual(BigInt(1));
+        expect((0, gubu_1.gubu)({})({ x: 1 })).toEqual({ x: 1 });
+        expect((0, gubu_1.gubu)([])([1])).toEqual([1]);
+        // NOTE: raw function would be a custom validator
+        expect((0, gubu_1.gubu)((0, gubu_1.G$)({ v: () => null }))(tmp.f1 = () => false)).toEqual(tmp.f1);
+        expect((0, gubu_1.gubu)(Symbol('bar'))(tmp.s0)).toEqual(tmp.s0);
+        expect((0, gubu_1.gubu)(new Date())(tmp.d1 = new Date(Date.now() - 1111))).toEqual(tmp.d1);
+        expect((0, gubu_1.gubu)(new RegExp('a'))(tmp.r1 = /b/)).toEqual(tmp.r1);
+        expect((0, gubu_1.gubu)(new Foo(4))(tmp.c1 = new Foo(5))).toEqual(tmp.c1);
+        expect((0, gubu_1.gubu)(new Bar(6))(tmp.c2 = new Bar(7))).toEqual(tmp.c2);
+        expect((0, gubu_1.gubu)(null)(null)).toEqual(null);
+        expect(() => (0, gubu_1.gubu)(null)(1)).toThrow(/path "".*value "1".*not of type null/);
+        expect((0, gubu_1.gubu)((_v, u) => (u.val = 1, true))(null)).toEqual(1);
+        // console.log(gubu(Date).spec())
         expect(() => (0, gubu_1.gubu)(String)(1)).toThrow(/path "".*not of type string/);
         expect(() => (0, gubu_1.gubu)(Number)('x')).toThrow(/path "".*not of type number/);
         expect(() => (0, gubu_1.gubu)(Boolean)('x')).toThrow(/path "".*not of type boolean/);
+        expect(() => (0, gubu_1.gubu)(BigInt)('x')).toThrow(/path "".*not of type bigint/);
         expect(() => (0, gubu_1.gubu)(Object)('x')).toThrow(/path "".*not of type object/);
+        expect(() => (0, gubu_1.gubu)(Array)('x')).toThrow(/path "".*not of type array/);
+        expect(() => (0, gubu_1.gubu)(Function)('x')).toThrow(/path "".*not of type function/);
+        expect(() => (0, gubu_1.gubu)(Symbol)('x')).toThrow(/path "".*not of type symbol/);
+        expect(() => (0, gubu_1.gubu)(Date)(/a/)).toThrow(/path "".*not an instance of Date/);
+        expect(() => (0, gubu_1.gubu)(RegExp)(new Date()))
+            .toThrow(/path "".*not an instance of RegExp/);
+        expect(() => (0, gubu_1.gubu)(Foo)(tmp.c3 = new Bar(8)))
+            .toThrow(/path "".*not an instance of Foo/);
+        expect(() => (0, gubu_1.gubu)(Bar)(tmp.c4 = new Foo(9)))
+            .toThrow(/path "".*not an instance of Bar/);
+        // console.log(gubu(new Date()).spec())
+        expect(() => (0, gubu_1.gubu)('a')(1)).toThrow(/path "".*not of type string/);
+        expect(() => (0, gubu_1.gubu)(0)('x')).toThrow(/path "".*not of type number/);
+        expect(() => (0, gubu_1.gubu)(false)('x')).toThrow(/path "".*not of type boolean/);
+        expect(() => (0, gubu_1.gubu)(BigInt(-1))('x')).toThrow(/path "".*not of type bigint/);
+        expect(() => (0, gubu_1.gubu)({})('x')).toThrow(/path "".* not of type object/);
+        expect(() => (0, gubu_1.gubu)([])('x')).toThrow(/path "".*not of type array/);
+        expect(() => (0, gubu_1.gubu)((0, gubu_1.G$)({ v: () => null }))('x'))
+            .toThrow(/path "".*not of type function/);
+        expect(() => (0, gubu_1.gubu)(Symbol('bar'))('x')).toThrow(/path "".*not of type symbol/);
+        expect(() => (0, gubu_1.gubu)(new Date())('x')).toThrow(/path "".*not an instance of Date/);
+        expect(() => (0, gubu_1.gubu)(new RegExp('a'))('x'))
+            .toThrow(/path "".*not an instance of RegExp/);
+        expect(() => (0, gubu_1.gubu)(new Foo(4))('a')).toThrow(/path "".*not an instance of Foo/);
+        expect(() => (0, gubu_1.gubu)(new Bar(6))('a')).toThrow(/path "".*not an instance of Bar/);
+        expect(() => (0, gubu_1.gubu)(new Foo(10))(new Bar(11)))
+            .toThrow(/path "".*not an instance of Foo/);
+        expect(() => (0, gubu_1.gubu)(new Bar(12))(new Foo(12)))
+            .toThrow(/path "".*not an instance of Bar/);
         expect((0, gubu_1.gubu)({ a: String })({ a: 'x' })).toEqual({ a: 'x' });
         expect((0, gubu_1.gubu)({ a: Number })({ a: 1 })).toEqual({ a: 1 });
         expect((0, gubu_1.gubu)({ a: Boolean })({ a: true })).toEqual({ a: true });
@@ -388,10 +454,13 @@ describe('gubu', () => {
             $: { gubu$: true, v$: package_json_1.default.version },
             d: 0, k: '', r: true, t: 'string', u: {}, v: '',
         });
-        console.log('BigInt', (0, gubu_1.gubu)(BigInt).spec());
         expect((0, gubu_1.gubu)(BigInt).spec()).toMatchObject({
             $: { gubu$: true, v$: package_json_1.default.version },
             d: 0, k: '', r: true, t: 'bigint', u: {}, v: "0",
+        });
+        expect((0, gubu_1.gubu)(null).spec()).toMatchObject({
+            $: { gubu$: true, v$: package_json_1.default.version },
+            d: 0, k: '', r: false, t: 'null', u: {}, v: null,
         });
     });
     test('spec-roundtrip', () => {

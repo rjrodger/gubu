@@ -17,6 +17,8 @@ import {
 } from '../gubu'
 
 
+
+
 describe('gubu', () => {
 
   test('happy', () => {
@@ -94,8 +96,31 @@ describe('gubu', () => {
     })
   })
 
+
+
   test('shapes-basic', () => {
+    // expect(() => gubu(Date)(/a/)).toThrow(/path "".*not an instance of Date/)
+    // expect(() => gubu(new Date())(/a/)).toThrow(/path "".*not an instance of Date/)
+    // console.log(gubu(Date).spec())
+    // console.log(gubu(new Date()).spec())
+    // return;
+
     let tmp: any = {}
+
+    class Foo {
+      a = -1
+      constructor(a: number) {
+        this.a = a
+      }
+    }
+
+    class Bar {
+      b = -2
+      constructor(b: number) {
+        this.b = b
+      }
+    }
+
 
     expect(gubu(String)('x')).toEqual('x')
     expect(gubu(Number)(1)).toEqual(1)
@@ -106,20 +131,78 @@ describe('gubu', () => {
     expect(gubu(Function)(tmp.f0 = () => true)).toEqual(tmp.f0)
     expect(gubu(Symbol)(tmp.s0 = Symbol('foo'))).toEqual(tmp.s0)
     expect(gubu(Date)(tmp.d0 = new Date())).toEqual(tmp.d0)
+    expect(gubu(RegExp)(tmp.r0 = /a/)).toEqual(tmp.r0)
+    expect(gubu(Foo)(tmp.c0 = new Foo(2))).toEqual(tmp.c0)
 
-    console.log(gubu(Date).spec())
+    // console.log(gubu(new Date()).spec())
+
+    expect(gubu('a')('x')).toEqual('x')
+    expect(gubu(0)(1)).toEqual(1)
+    expect(gubu(false)(true)).toEqual(true)
+    expect(gubu(BigInt(-1))(BigInt(1))).toEqual(BigInt(1))
+    expect(gubu({})({ x: 1 })).toEqual({ x: 1 })
+    expect(gubu([])([1])).toEqual([1])
+    // NOTE: raw function would be a custom validator
+    expect(gubu(G$({ v: () => null }))(tmp.f1 = () => false)).toEqual(tmp.f1)
+    expect(gubu(Symbol('bar'))(tmp.s0)).toEqual(tmp.s0)
+    expect(gubu(new Date())(tmp.d1 = new Date(Date.now() - 1111))).toEqual(tmp.d1)
+    expect(gubu(new RegExp('a'))(tmp.r1 = /b/)).toEqual(tmp.r1)
+    expect(gubu(new Foo(4))(tmp.c1 = new Foo(5))).toEqual(tmp.c1)
+    expect(gubu(new Bar(6))(tmp.c2 = new Bar(7))).toEqual(tmp.c2)
+
+    expect(gubu(null)(null)).toEqual(null)
+    expect(() => gubu(null)(1)).toThrow(/path "".*value "1".*not of type null/)
+
+    expect(gubu((_v: any, u: Update) => (u.val = 1, true))(null)).toEqual(1)
+
+    // console.log(gubu(Date).spec())
 
 
     expect(() => gubu(String)(1)).toThrow(/path "".*not of type string/)
     expect(() => gubu(Number)('x')).toThrow(/path "".*not of type number/)
     expect(() => gubu(Boolean)('x')).toThrow(/path "".*not of type boolean/)
+    expect(() => gubu(BigInt)('x')).toThrow(/path "".*not of type bigint/)
     expect(() => gubu(Object)('x')).toThrow(/path "".*not of type object/)
+    expect(() => gubu(Array)('x')).toThrow(/path "".*not of type array/)
+    expect(() => gubu(Function)('x')).toThrow(/path "".*not of type function/)
+    expect(() => gubu(Symbol)('x')).toThrow(/path "".*not of type symbol/)
+    expect(() => gubu(Date)(/a/)).toThrow(/path "".*not an instance of Date/)
+    expect(() => gubu(RegExp)(new Date()))
+      .toThrow(/path "".*not an instance of RegExp/)
+    expect(() => gubu(Foo)(tmp.c3 = new Bar(8)))
+      .toThrow(/path "".*not an instance of Foo/)
+    expect(() => gubu(Bar)(tmp.c4 = new Foo(9)))
+      .toThrow(/path "".*not an instance of Bar/)
+
+
+    // console.log(gubu(new Date()).spec())
+
+    expect(() => gubu('a')(1)).toThrow(/path "".*not of type string/)
+    expect(() => gubu(0)('x')).toThrow(/path "".*not of type number/)
+    expect(() => gubu(false)('x')).toThrow(/path "".*not of type boolean/)
+    expect(() => gubu(BigInt(-1))('x')).toThrow(/path "".*not of type bigint/)
+    expect(() => gubu({})('x')).toThrow(/path "".* not of type object/)
+    expect(() => gubu([])('x')).toThrow(/path "".*not of type array/)
+    expect(() => gubu(G$({ v: () => null }))('x'))
+      .toThrow(/path "".*not of type function/)
+    expect(() => gubu(Symbol('bar'))('x')).toThrow(/path "".*not of type symbol/)
+    expect(() => gubu(new Date())('x')).toThrow(/path "".*not an instance of Date/)
+    expect(() => gubu(new RegExp('a'))('x'))
+      .toThrow(/path "".*not an instance of RegExp/)
+    expect(() => gubu(new Foo(4))('a')).toThrow(/path "".*not an instance of Foo/)
+    expect(() => gubu(new Bar(6))('a')).toThrow(/path "".*not an instance of Bar/)
+    expect(() => gubu(new Foo(10))(new Bar(11)))
+      .toThrow(/path "".*not an instance of Foo/)
+    expect(() => gubu(new Bar(12))(new Foo(12)))
+      .toThrow(/path "".*not an instance of Bar/)
+
 
 
     expect(gubu({ a: String })({ a: 'x' })).toEqual({ a: 'x' })
     expect(gubu({ a: Number })({ a: 1 })).toEqual({ a: 1 })
     expect(gubu({ a: Boolean })({ a: true })).toEqual({ a: true })
     expect(gubu({ a: Object })({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
+
 
     expect(() => gubu({ a: String })({ a: 1 }))
       .toThrow(/path "a".*not of type string/)
@@ -496,11 +579,14 @@ describe('gubu', () => {
       d: 0, k: '', r: true, t: 'string', u: {}, v: '',
     })
 
-    console.log('BigInt', gubu(BigInt).spec())
-
     expect(gubu(BigInt).spec()).toMatchObject({
       $: { gubu$: true, v$: Pkg.version },
       d: 0, k: '', r: true, t: 'bigint', u: {}, v: "0",
+    })
+
+    expect(gubu(null).spec()).toMatchObject({
+      $: { gubu$: true, v$: Pkg.version },
+      d: 0, k: '', r: false, t: 'null', u: {}, v: null,
     })
 
   })

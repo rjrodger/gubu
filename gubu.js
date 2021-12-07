@@ -48,9 +48,10 @@ const EMPTY_VAL = {
     function: () => undefined,
     symbol: Symbol(''),
     bigint: BigInt(0),
+    null: null,
 };
 function norm(spec) {
-    var _a, _b;
+    var _a, _b, _c, _d, _e, _f;
     // Is this a (possibly incomplete) ValSpec?
     if (null != spec && ((_a = spec.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
         // Assume complete if gubu$ has special internal reference.
@@ -78,13 +79,25 @@ function norm(spec) {
         }
     }
     // Not a ValSpec, so build one based on value and its type.
-    let t = null === spec ? 'null' : typeof (spec);
+    let t = (null === spec ? 'null' : typeof (spec));
     t = (undefined === t ? 'any' : t);
+    // console.log('Nt', t)
     let v = spec;
     let r = false; // Optional by default
     let b = undefined;
-    if ('object' === t && Array.isArray(spec)) {
-        t = 'array';
+    let u = {};
+    if ('object' === t) {
+        if (Array.isArray(spec)) {
+            t = 'array';
+        }
+        else if (null != v &&
+            Function !== v.constructor &&
+            Object !== v.constructor &&
+            null != v.constructor) {
+            t = 'instance';
+            u.n = (_c = v.constructor) === null || _c === void 0 ? void 0 : _c.name;
+            u.i = v.constructor;
+        }
     }
     else if ('function' === t) {
         if (IS_TYPE[spec.name]) {
@@ -92,27 +105,29 @@ function norm(spec) {
             r = true;
             v = clone(EMPTY_VAL[t]);
         }
-        else if (Function === spec.constructor &&
-            Function === spec.prototype.constructor) {
+        else if ((undefined === spec.prototype && Function === spec.constructor) ||
+            Function === ((_d = spec.prototype) === null || _d === void 0 ? void 0 : _d.constructor)) {
             t = 'custom';
-            b = spec;
+            b = v;
         }
         else {
             t = 'instance';
+            r = true;
+            u.n = (_f = (_e = v.prototype) === null || _e === void 0 ? void 0 : _e.constructor) === null || _f === void 0 ? void 0 : _f.name;
+            u.i = v;
         }
     }
+    // console.log('Nv', v)
     let vs = {
         $: GUBU,
         t,
-        v: (null != v && 'object' === typeof (v)) ? { ...v } : v,
+        // v: (null != v && 'object' === typeof (v)) ? { ...v } : v,
+        v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
         r,
         k: '',
         d: -1,
-        u: {},
+        u,
     };
-    // if (f) {
-    //   vs.f = f
-    // }
     if (b) {
         vs.b = b;
     }
@@ -126,10 +141,15 @@ function make(inspec, inopts) {
     let top = { '': inspec };
     // let spec: ValSpec = norm(inspec) // Tree of validation nodes.
     let spec = norm(top); // Tree of validation nodes.
+    // console.log(spec)
     let gubuShape = function GubuShape(inroot, inctx) {
         var _a, _b, _c, _d;
         const ctx = inctx || {};
-        const root = { '': inroot || clone(EMPTY_VAL[spec.v[''].t]) };
+        const root = {
+            '': (undefined === inroot && null != spec.v['']) ?
+                clone(EMPTY_VAL[spec.v[''].t]) :
+                inroot
+        };
         const nodes = [spec, -1];
         const srcs = [root, -1];
         const path = []; // Key path to current node.
@@ -202,7 +222,7 @@ function make(inspec, inopts) {
                     }
                 }
                 else {
-                    tvs = GUBU$ === ((_c = n.$) === null || _c === void 0 ? void 0 : _c.gubu$) ? n : (n = node.v[key] = norm(n));
+                    tvs = (null != n && GUBU$ === ((_c = n.$) === null || _c === void 0 ? void 0 : _c.gubu$)) ? n : (n = node.v[key] = norm(n));
                 }
                 tvs.k = key;
                 tvs.d = dI;
@@ -220,7 +240,9 @@ function make(inspec, inopts) {
                 let terr = [];
                 for (let vsI = 0; vsI < vss.length; vsI++) {
                     let vs = vss[vsI];
+                    // console.log('Ta', vs)
                     vs = GUBU$ === ((_d = vs.$) === null || _d === void 0 ? void 0 : _d.gubu$) ? vs : (vss[vsI] = norm(vs));
+                    // console.log('Tb', vs)
                     let t = vs.t;
                     let pass = true;
                     // udpate can set t
@@ -245,21 +267,16 @@ function make(inspec, inopts) {
                         pI = undefined === update.pI ? pI : update.pI;
                         cN = undefined === update.cN ? cN : update.cN;
                     }
-                    // if ('custom' === t && vs.f) {
-                    //   let update = handleValidate(vs.f, sval, {
-                    //     dI, nI, sI, pI, cN,
-                    //     key, node: vs, src, nodes, srcs, path, terr, err, ctx
-                    //   })
-                    //   pass = update.pass
-                    //   if (undefined !== update.val) {
-                    //     sval = src[key] = update.val
-                    //   }
-                    //   nI = undefined === update.nI ? nI : update.nI
-                    //   sI = undefined === update.sI ? sI : update.sI
-                    //   pI = undefined === update.pI ? pI : update.pI
-                    //   cN = undefined === update.cN ? cN : update.cN
-                    // }
-                    // else
+                    // console.log('M', t, stype, sval, vs.v, sval instanceof vs.v,
+                    //   'C',
+                    //   'any' !== t,
+                    //   'custom' !== t,
+                    //   undefined !== sval,
+                    //   t !== stype,
+                    //   !('object' === stype && 'instance' !== t && null != sval),
+                    //   !('instance' === t && sval instanceof vs.v),
+                    //   !('null' === t && null === sval)
+                    // )
                     if ('object' === t) {
                         if (vs.r && null == sval) {
                             terr.push(makeErr('required', sval, path, dI, vs, 1010));
@@ -293,7 +310,10 @@ function make(inspec, inopts) {
                         'custom' !== t &&
                         undefined !== sval &&
                         t !== stype &&
-                        !(sval instanceof vs.v)) {
+                        !('object' === stype && 'instance' !== t && null != sval) &&
+                        // !('instance' === t && sval instanceof vs.v) &&
+                        !('instance' === t && vs.u.i && sval instanceof vs.u.i) &&
+                        !('null' === t && null === sval)) {
                         terr.push(makeErr('type', sval, path, dI, vs, 1050));
                         pass = false;
                     }
@@ -394,21 +414,15 @@ function handleValidate(vf, sval, state) {
         if (!valid || update.err) {
             let w = update.why || 'custom';
             let p = pathstr(state.path, state.dI);
-            // handle a or b functions
-            // let f = (null == vf.name || '' === vf.name) ?
-            //   vf.toString().replace(/\r?\n/g, ' ').substring(0, 33) :
-            //   vf.name
             if ('object' === typeof (update.err)) {
                 // Assumes makeErr already called
                 state.terr.push(...[update.err].flat().map(e => {
                     e.p = null == e.p ? p : e.p;
-                    // e.f = null == e.f ? f : e.f
                     e.m = null == e.m ? 2010 : e.m;
                     return e;
                 }));
             }
             else {
-                // state.terr.push({ node: state.node, s: sval, p, w, f, m: 2020 })
                 state.terr.push(makeErr(w, sval, state.path, state.dI, state.node, 1040));
             }
             update.pass = false;
@@ -463,9 +477,7 @@ const All = makeListBuilder('all');
 exports.All = All;
 const Before = function (validate, spec) {
     let vs = buildize(this || spec);
-    // vs.t = vs.t || 'custom'
     vs.b = validate;
-    // console.log('B', vs)
     return vs;
 };
 exports.Before = Before;
@@ -574,7 +586,8 @@ function makeErr(w, s, path, dI, n, m, t, u, f) {
         valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '');
         err.t = `Validation failed for path "${err.p}" ` +
             `with value "${valstr}" because ` +
-            ('type' === w ? `the value is not of type ${n.t}` :
+            ('type' === w ? ('instance' === n.t ? `the value is not an instance of ${n.u.n}` :
+                `the value is not of type ${n.t}`) :
                 'required' === w ? `the value is required` :
                     'closed' === w ? `the property "${u === null || u === void 0 ? void 0 : u.k}" is not allowed` :
                         `check "${w + (f ? ': ' + f : '')}" failed`) +
