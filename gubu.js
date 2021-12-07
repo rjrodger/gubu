@@ -4,15 +4,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.After = exports.Before = exports.Refer = exports.Define = exports.Rename = exports.Closed = exports.All = exports.Some = exports.One = exports.Any = exports.Optional = exports.Required = exports.buildize = exports.norm = exports.gubu = void 0;
+exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GDefine = exports.GClosed = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Define = exports.Closed = exports.Before = exports.Any = exports.All = exports.After = exports.buildize = exports.norm = exports.G$ = exports.gubu = void 0;
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
+// TODO: BigInt spec roundtrip test
 const package_json_1 = __importDefault(require("./package.json"));
-// TODO: test: One, Some, All, Rename
-// TODO: plain G$
 const GUBU$ = Symbol.for('gubu$');
-const GUBU = { gubu$: GUBU$, version: package_json_1.default.version };
+const GUBU = { gubu$: GUBU$, v$: package_json_1.default.version };
 class GubuError extends TypeError {
     constructor(code, err, ctx) {
         let message = err.map((e) => e.t).join('\n');
@@ -37,6 +36,8 @@ const IS_TYPE = {
     Object: true,
     Array: true,
     Function: true,
+    Symbol: true,
+    BigInt: true,
 };
 const EMPTY_VAL = {
     string: '',
@@ -44,29 +45,43 @@ const EMPTY_VAL = {
     boolean: false,
     object: {},
     array: [],
-    // function: () => undefined,
+    function: () => undefined,
+    symbol: Symbol(''),
+    bigint: BigInt(0),
 };
 function norm(spec) {
     var _a, _b;
+    // Is this a (possibly incomplete) ValSpec?
     if (null != spec && ((_a = spec.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
+        // Assume complete if gubu$ has special internal reference.
         if (GUBU$ === spec.$.gubu$) {
             return spec;
         }
+        // Normalize an incomplete ValSpec, avoiding any recursive calls to norm.
         else if (true === spec.$.gubu$) {
             let vs = { ...spec };
-            vs.$ = { ...vs.$, gubu$: GUBU$ };
+            vs.$ = { v$: package_json_1.default.version, ...vs.$, gubu$: GUBU$ };
             vs.v = (null != vs.v && 'object' === typeof (vs.v)) ? { ...vs.v } : vs.v;
+            vs.t = vs.t || typeof (vs.v);
+            if ('function' === vs.t && IS_TYPE[vs.v.name]) {
+                vs.t = vs.v.name.toLowerCase();
+                vs.v = clone(EMPTY_VAL[vs.t]);
+            }
+            vs.k = null == vs.k ? '' : vs.k;
+            vs.r = !!vs.r;
+            vs.d = null == vs.d ? -1 : vs.d;
+            vs.u = vs.u || {};
             if ((_b = vs.u.list) === null || _b === void 0 ? void 0 : _b.specs) {
                 vs.u.list.specs = [...vs.u.list.specs];
             }
             return vs;
         }
     }
+    // Not a ValSpec, so build one based on value and its type.
     let t = null === spec ? 'null' : typeof (spec);
     t = (undefined === t ? 'any' : t);
     let v = spec;
     let r = false; // Optional by default
-    // let f = undefined
     let b = undefined;
     if ('object' === t && Array.isArray(spec)) {
         t = 'array';
@@ -77,10 +92,13 @@ function norm(spec) {
             r = true;
             v = clone(EMPTY_VAL[t]);
         }
-        else {
+        else if (Function === spec.constructor &&
+            Function === spec.prototype.constructor) {
             t = 'custom';
-            // f = spec
             b = spec;
+        }
+        else {
+            t = 'instance';
         }
     }
     let vs = {
@@ -102,14 +120,15 @@ function norm(spec) {
     return vs;
 }
 exports.norm = norm;
-function make(inspec) {
+function make(inspec, inopts) {
+    const opts = null == inopts ? {} : inopts;
+    opts.name = null == opts.name ? ('' + Math.random()).substring(2) : '' + opts.name;
     let top = { '': inspec };
     // let spec: ValSpec = norm(inspec) // Tree of validation nodes.
     let spec = norm(top); // Tree of validation nodes.
-    let gubuSchema = function GubuSchema(inroot, inctx) {
+    let gubuShape = function GubuShape(inroot, inctx) {
         var _a, _b, _c, _d;
         const ctx = inctx || {};
-        // const root: any = inroot || clone(EMPTY_VAL[spec.t])
         const root = { '': inroot || clone(EMPTY_VAL[spec.v[''].t]) };
         const nodes = [spec, -1];
         const srcs = [root, -1];
@@ -269,15 +288,16 @@ function make(inspec) {
                             cN++;
                         }
                     }
-                    // type from default
+                    // Invalid type.
                     else if ('any' !== t &&
                         'custom' !== t &&
                         undefined !== sval &&
-                        t !== stype) {
+                        t !== stype &&
+                        !(sval instanceof vs.v)) {
                         terr.push(makeErr('type', sval, path, dI, vs, 1050));
                         pass = false;
                     }
-                    // spec= k:1 // default
+                    // Value itself, or default.
                     else if (undefined === sval) {
                         if (vs.r) {
                             terr.push(makeErr('required', sval, path, dI, vs, 1060));
@@ -345,22 +365,24 @@ function make(inspec) {
                 throw new GubuError('shape', err, ctx);
             }
         }
-        // return root
         return root[''];
     };
     // TODO: test Number, String, etc also in arrays
-    gubuSchema.spec = () => {
+    gubuShape.spec = () => {
         // Normalize spec, discard errors.
-        gubuSchema(undefined, { err: [] });
+        gubuShape(undefined, { err: [] });
         // return JSON.parse(JSON.stringify(spec, (_key, val) => {
-        return JSON.parse(JSON.stringify(spec.v[''], (_key, val) => {
+        return JSON.parse(stringify(spec.v[''], (_key, val) => {
             if (GUBU$ === val) {
                 return true;
             }
             return val;
         }));
     };
-    return gubuSchema;
+    gubuShape.toString = () => {
+        return `[Gubu ${opts.name}]`;
+    };
+    return gubuShape;
 }
 // function J(x: any) {
 //   return null == x ? '' : JSON.stringify(x).replace(/"/g, '')
@@ -369,7 +391,6 @@ function handleValidate(vf, sval, state) {
     let update = { pass: true };
     if (undefined !== sval || state.node.r) {
         let valid = vf(sval, update, state);
-        // console.log('HV', sval, valid, update)
         if (!valid || update.err) {
             let w = update.why || 'custom';
             let p = pathstr(state.path, state.dI);
@@ -548,7 +569,7 @@ function makeErr(w, s, path, dI, n, m, t, u, f) {
         t: '',
     };
     if (null == t || '' === t) {
-        let jstr = undefined === s ? '' : JSON.stringify(s);
+        let jstr = undefined === s ? '' : stringify(s);
         let valstr = jstr.replace(/"/g, '');
         valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '');
         err.t = `Validation failed for path "${err.p}" ` +
@@ -560,6 +581,22 @@ function makeErr(w, s, path, dI, n, m, t, u, f) {
             '.';
     }
     return err;
+}
+function stringify(x, r) {
+    try {
+        return JSON.stringify(x, (key, val) => {
+            if (r) {
+                val = r(key, val);
+            }
+            if ('bigint' === typeof (val)) {
+                val = val.toString();
+            }
+            return val;
+        });
+    }
+    catch (e) {
+        return JSON.stringify(String(x));
+    }
 }
 function clone(x) {
     return null == x ? x : 'object' !== typeof (x) ? x : JSON.parse(JSON.stringify(x));
@@ -605,17 +642,33 @@ const G$spec = make({
     return true
   },
 })
- 
-function G$(spec: any): ValSpec {
-  let vs = norm()
- 
-  if (null != spec) {
-    G$spec(spec, { vs })
-  }
- 
-  return vs
-}
 */
+const G$ = (spec) => norm({ ...spec, $: { gubu$: true } });
+exports.G$ = G$;
 const gubu = make;
 exports.gubu = gubu;
+const GRequired = Required;
+exports.GRequired = GRequired;
+const GOptional = Optional;
+exports.GOptional = GOptional;
+const GAny = Any;
+exports.GAny = GAny;
+const GOne = One;
+exports.GOne = GOne;
+const GSome = Some;
+exports.GSome = GSome;
+const GAll = All;
+exports.GAll = GAll;
+const GClosed = Closed;
+exports.GClosed = GClosed;
+const GRename = Rename;
+exports.GRename = GRename;
+const GDefine = Define;
+exports.GDefine = GDefine;
+const GRefer = Refer;
+exports.GRefer = GRefer;
+const GBefore = Before;
+exports.GBefore = GBefore;
+const GAfter = After;
+exports.GAfter = GAfter;
 //# sourceMappingURL=gubu.js.map

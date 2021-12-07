@@ -12,7 +12,7 @@ import {
   Closed,
   Before,
   After,
-  // G$,
+  G$,
   Update,
 } from '../gubu'
 
@@ -21,6 +21,8 @@ describe('gubu', () => {
 
   test('happy', () => {
     expect(gubu()).toBeDefined()
+    expect(gubu().toString()).toMatch(/\[Gubu \d+\]/)
+    expect(gubu(undefined, { name: 'foo' }).toString()).toMatch(/\[Gubu foo\]/)
 
     let g0 = gubu({
       a: 'foo',
@@ -35,11 +37,78 @@ describe('gubu', () => {
   })
 
 
-  test('types-basic', () => {
+  test('G-basic', () => {
+    expect(G$({ v: 11 })).toMatchObject({
+      '$': { v$: Pkg.version },
+      t: 'number',
+      v: 11,
+      r: false,
+      k: '',
+      d: -1,
+      u: {}
+    })
+
+    expect(G$({ v: Number })).toMatchObject({
+      '$': { v$: Pkg.version },
+      t: 'number',
+      v: 0,
+      r: false,
+      k: '',
+      d: -1,
+      u: {}
+    })
+
+    expect(G$({ v: BigInt(11) })).toMatchObject({
+      '$': { v$: Pkg.version },
+      t: 'bigint',
+      v: BigInt(11),
+      r: false,
+      k: '',
+      d: -1,
+      u: {}
+    })
+
+    let s0 = Symbol('foo')
+    expect(G$({ v: s0 })).toMatchObject({
+      '$': { v$: Pkg.version },
+      t: 'symbol',
+      v: s0,
+      r: false,
+      k: '',
+      d: -1,
+      u: {}
+    })
+
+    // NOTE: special case for plain functions.
+    // Normally functions become custom validations.
+    let f0 = () => true
+
+    expect(G$({ v: f0 })).toMatchObject({
+      '$': { v$: Pkg.version },
+      t: 'function',
+      v: f0,
+      r: false,
+      k: '',
+      d: -1,
+      u: {}
+    })
+  })
+
+  test('shapes-basic', () => {
+    let tmp: any = {}
+
     expect(gubu(String)('x')).toEqual('x')
     expect(gubu(Number)(1)).toEqual(1)
     expect(gubu(Boolean)(true)).toEqual(true)
+    expect(gubu(BigInt)(BigInt(1))).toEqual(BigInt(1))
     expect(gubu(Object)({ x: 1 })).toEqual({ x: 1 })
+    expect(gubu(Array)([1])).toEqual([1])
+    expect(gubu(Function)(tmp.f0 = () => true)).toEqual(tmp.f0)
+    expect(gubu(Symbol)(tmp.s0 = Symbol('foo'))).toEqual(tmp.s0)
+    expect(gubu(Date)(tmp.d0 = new Date())).toEqual(tmp.d0)
+
+    console.log(gubu(Date).spec())
+
 
     expect(() => gubu(String)(1)).toThrow(/path "".*not of type string/)
     expect(() => gubu(Number)('x')).toThrow(/path "".*not of type number/)
@@ -167,7 +236,7 @@ describe('gubu', () => {
       boolean: true,
       object: { x: 2 },
       array: [3],
-      // function: G$({ type: 'function', value: f0 })
+      function: G$({ t: 'function', v: f0 })
     })
 
     expect(g0()).toMatchObject({
@@ -176,7 +245,7 @@ describe('gubu', () => {
       boolean: true,
       object: { x: 2 },
       array: [],
-      // function: f0
+      function: f0
     })
 
     expect(g0({
@@ -382,16 +451,6 @@ describe('gubu', () => {
   })
 
 
-  /*
-  test('valspec-basic', () => {
-    const G = (x: any) => x
-    let a1 = gubu({
-      a: G$({ type: 'number', required: true }),
-    })
-    expect(a1({ b: 1 })).toMatchObject({ a: 'A', b: 1 })
-  })
-  */
-
 
   test('closed', () => {
     let g0 = gubu({
@@ -419,9 +478,31 @@ describe('gubu', () => {
 
   test('buildize-any', () => {
     let g0 = gubu({ a: Any(), b: Any(true) })
-    // expect(g0({ a: 2, b: 1 })).toMatchObject({ a: 2, b: 1 })
-    // expect(g0({ a: 'x', b: 'y' })).toMatchObject({ a: 'x', b: 'y' })
-    // expect(g0({ b: 1 })).toEqual({ b: 1 })
+    expect(g0({ a: 2, b: 1 })).toMatchObject({ a: 2, b: 1 })
+    expect(g0({ a: 'x', b: 'y' })).toMatchObject({ a: 'x', b: 'y' })
+    expect(g0({ b: 1 })).toEqual({ b: 1 })
+    expect(() => g0({ a: 1 })).toThrow('Validation failed for path "b" with value "" because the value is required')
+  })
+
+
+  test('spec-basic', () => {
+    expect(gubu(Number).spec()).toMatchObject({
+      $: { gubu$: true, v$: Pkg.version },
+      d: 0, k: '', r: true, t: 'number', u: {}, v: 0,
+    })
+
+    expect(gubu(String).spec()).toMatchObject({
+      $: { gubu$: true, v$: Pkg.version },
+      d: 0, k: '', r: true, t: 'string', u: {}, v: '',
+    })
+
+    console.log('BigInt', gubu(BigInt).spec())
+
+    expect(gubu(BigInt).spec()).toMatchObject({
+      $: { gubu$: true, v$: Pkg.version },
+      d: 0, k: '', r: true, t: 'bigint', u: {}, v: "0",
+    })
+
   })
 
 
@@ -441,7 +522,7 @@ describe('gubu', () => {
     let s0s = {
       $: {
         gubu$: true,
-        version: Pkg.version,
+        v$: Pkg.version,
       },
       // d: -1,
       d: 0,
@@ -453,7 +534,7 @@ describe('gubu', () => {
         a: {
           $: {
             gubu$: true,
-            version: Pkg.version,
+            v$: Pkg.version,
           },
           d: 1,
           k: 'a',
@@ -498,7 +579,7 @@ describe('gubu', () => {
     let s1s = {
       $: {
         gubu$: true,
-        version: '0.0.1',
+        v$: Pkg.version,
       },
       // d: -1,
       d: 0,
@@ -510,7 +591,7 @@ describe('gubu', () => {
         a: {
           $: {
             gubu$: true,
-            version: Pkg.version,
+            v$: Pkg.version,
           },
           d: 1,
           k: 'a',
@@ -521,7 +602,7 @@ describe('gubu', () => {
             0: {
               $: {
                 gubu$: true,
-                version: Pkg.version,
+                v$: Pkg.version,
               },
               d: 2,
               k: '0',

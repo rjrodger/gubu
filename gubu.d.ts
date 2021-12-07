@@ -1,9 +1,15 @@
 declare const GUBU: {
     gubu$: symbol;
-    version: string;
+    v$: string;
+};
+declare type Options = {
+    name?: string;
+};
+declare type Context = Record<string, any> & {
+    err?: ErrDesc[];
 };
 declare type ValType = 'any' | 'node' | 'custom' | 'null' | // TODO: test
-'list' | 'string' | 'number' | 'boolean' | 'object' | 'array' | 'bigint' | 'symbol' | 'function';
+'list' | 'string' | 'number' | 'boolean' | 'object' | 'array' | 'bigint' | 'symbol' | 'function' | 'instance';
 declare type ValSpec = {
     $: typeof GUBU;
     t: ValType;
@@ -44,10 +50,10 @@ declare type Update = {
     sI?: number;
     pI?: number;
     cN?: number;
-    err?: boolean | ErrSpec | ErrSpec[];
+    err?: boolean | ErrDesc | ErrDesc[];
     why?: string;
 };
-declare type ErrSpec = {
+declare type ErrDesc = {
     node: ValSpec;
     s: any;
     p: string;
@@ -56,7 +62,7 @@ declare type ErrSpec = {
     t: string;
 };
 declare function norm(spec?: any): ValSpec;
-declare function make(inspec?: any): GubuSchema;
+declare function make(inspec?: any, inopts?: Options): GubuShape;
 declare const Required: Builder;
 declare const Optional: Builder;
 declare const Any: Builder;
@@ -70,7 +76,7 @@ declare const Define: Builder;
 declare const Refer: Builder;
 declare const Rename: Builder;
 declare function buildize(invs?: any): ValSpec;
-declare type GubuSchema = (<T>(inroot?: T, inctx?: any) => T) & {
+declare type GubuShape = (<T>(inroot?: T, inctx?: any) => T) & {
     spec: () => any;
 };
 declare type Gubu = typeof make & {
@@ -88,6 +94,19 @@ declare type Gubu = typeof make & {
     Before: typeof Before;
     After: typeof After;
 };
+declare const G$: (spec: any) => ValSpec;
 declare const gubu: Gubu;
-export type { Validate, Update, };
-export { gubu, norm, buildize, Required, Optional, Any, One, Some, All, Closed, Rename, Define, Refer, Before, After, };
+declare const GRequired: Builder;
+declare const GOptional: Builder;
+declare const GAny: Builder;
+declare const GOne: Builder;
+declare const GSome: Builder;
+declare const GAll: Builder;
+declare const GClosed: Builder;
+declare const GRename: Builder;
+declare const GDefine: Builder;
+declare const GRefer: Builder;
+declare const GBefore: Builder;
+declare const GAfter: Builder;
+export type { Validate, Update, Context, };
+export { gubu, G$, norm, buildize, After, All, Any, Before, Closed, Define, One, Optional, Refer, Rename, Required, Some, GAfter, GAll, GAny, GBefore, GClosed, GDefine, GOne, GOptional, GRefer, GRename, GRequired, GSome, };

@@ -6,15 +6,23 @@
  */
 
 
+// TODO: BigInt spec roundtrip test
+
+
 import Pkg from './package.json'
 
 
-// TODO: test: One, Some, All, Rename
-// TODO: plain G$
-
-
 const GUBU$ = Symbol.for('gubu$')
-const GUBU = { gubu$: GUBU$, version: Pkg.version }
+const GUBU = { gubu$: GUBU$, v$: Pkg.version }
+
+
+type Options = {
+  name?: string // Name this Gubu shape.
+}
+
+type Context = Record<string, any> & {
+  err?: ErrDesc[] // Provide an array to collect errors, instead of throwing.
+}
 
 type ValType =
   'any' |
@@ -29,7 +37,8 @@ type ValType =
   'array' |
   'bigint' |
   'symbol' |
-  'function'
+  'function' |
+  'instance'
 
 type ValSpec = {
   $: typeof GUBU
@@ -76,12 +85,12 @@ type Update = {
   sI?: number
   pI?: number
   cN?: number
-  err?: boolean | ErrSpec | ErrSpec[]
+  err?: boolean | ErrDesc | ErrDesc[]
   why?: string
 }
 
 
-type ErrSpec = {
+type ErrDesc = {
   node: ValSpec // Failing spec node.
   s: any        // Failing src value.
   p: string     // Key path to src value.
@@ -95,10 +104,10 @@ type ErrSpec = {
 class GubuError extends TypeError {
   constructor(
     code: string,
-    err: ErrSpec[],
+    err: ErrDesc[],
     ctx: any,
   ) {
-    let message = err.map((e: ErrSpec) => e.t).join('\n')
+    let message = err.map((e: ErrDesc) => e.t).join('\n')
     super(message)
     let name = 'GubuError'
     let ge = this as unknown as any
@@ -125,6 +134,8 @@ const IS_TYPE: { [name: string]: boolean } = {
   Object: true,
   Array: true,
   Function: true,
+  Symbol: true,
+  BigInt: true,
 }
 
 
@@ -134,7 +145,9 @@ const EMPTY_VAL: { [name: string]: any } = {
   boolean: false,
   object: {},
   array: [],
-  // function: () => undefined,
+  function: () => undefined,
+  symbol: Symbol(''),
+  bigint: BigInt(0),
 }
 
 
@@ -142,28 +155,47 @@ const EMPTY_VAL: { [name: string]: any } = {
 
 
 function norm(spec?: any): ValSpec {
+  // Is this a (possibly incomplete) ValSpec?
   if (null != spec && spec.$?.gubu$) {
+
+    // Assume complete if gubu$ has special internal reference.
     if (GUBU$ === spec.$.gubu$) {
       return spec
     }
+
+    // Normalize an incomplete ValSpec, avoiding any recursive calls to norm.
     else if (true === spec.$.gubu$) {
       let vs = { ...spec }
-      vs.$ = { ...vs.$, gubu$: GUBU$ }
+      vs.$ = { v$: Pkg.version, ...vs.$, gubu$: GUBU$ }
+
       vs.v = (null != vs.v && 'object' === typeof (vs.v)) ? { ...vs.v } : vs.v
 
+      vs.t = vs.t || typeof (vs.v)
+      if ('function' === vs.t && IS_TYPE[vs.v.name]) {
+        vs.t = (vs.v.name.toLowerCase() as ValType)
+        vs.v = clone(EMPTY_VAL[vs.t])
+      }
+
+      vs.k = null == vs.k ? '' : vs.k
+      vs.r = !!vs.r
+      vs.d = null == vs.d ? -1 : vs.d
+
+      vs.u = vs.u || {}
       if (vs.u.list?.specs) {
         vs.u.list.specs = [...vs.u.list.specs]
       }
+
       return vs
     }
   }
+
+  // Not a ValSpec, so build one based on value and its type.
 
   let t: ValType | 'undefined' = null === spec ? 'null' : typeof (spec)
   t = (undefined === t ? 'any' : t) as ValType
 
   let v = spec
   let r = false // Optional by default
-  // let f = undefined
   let b = undefined
 
   if ('object' === t && Array.isArray(spec)) {
@@ -176,10 +208,13 @@ function norm(spec?: any): ValSpec {
       r = true
       v = clone(EMPTY_VAL[t])
     }
-    else {
+    else if (Function === spec.constructor &&
+      Function === spec.prototype.constructor) {
       t = 'custom'
-      // f = spec
       b = spec
+    }
+    else {
+      t = 'instance'
     }
   }
 
@@ -206,14 +241,16 @@ function norm(spec?: any): ValSpec {
 }
 
 
-function make(inspec?: any): GubuSchema {
+function make(inspec?: any, inopts?: Options): GubuShape {
+  const opts = null == inopts ? {} : inopts
+  opts.name = null == opts.name ? ('' + Math.random()).substring(2) : '' + opts.name
+
   let top = { '': inspec }
   // let spec: ValSpec = norm(inspec) // Tree of validation nodes.
   let spec: ValSpec = norm(top) // Tree of validation nodes.
 
-  let gubuSchema = function GubuSchema<T>(inroot?: T, inctx?: any): T {
+  let gubuShape = function GubuShape<T>(inroot?: T, inctx?: Context): T {
     const ctx: any = inctx || {}
-    // const root: any = inroot || clone(EMPTY_VAL[spec.t])
     const root: any = { '': inroot || clone(EMPTY_VAL[spec.v[''].t]) }
 
     const nodes: (ValSpec | number)[] = [spec, -1]
@@ -405,16 +442,19 @@ function make(inspec?: any): GubuSchema {
             }
           }
 
-          // type from default
-          else if ('any' !== t &&
+          // Invalid type.
+          else if (
+            'any' !== t &&
             'custom' !== t &&
             undefined !== sval &&
-            t !== stype) {
+            t !== stype &&
+            !(sval instanceof vs.v)
+          ) {
             terr.push(makeErr('type', sval, path, dI, vs, 1050))
             pass = false
           }
 
-          // spec= k:1 // default
+          // Value itself, or default.
           else if (undefined === sval) {
             if (vs.r) {
               terr.push(makeErr('required', sval, path, dI, vs, 1060))
@@ -491,17 +531,16 @@ function make(inspec?: any): GubuSchema {
       }
     }
 
-    // return root
     return root['']
-  } as GubuSchema
+  } as GubuShape
 
 
   // TODO: test Number, String, etc also in arrays
-  gubuSchema.spec = () => {
+  gubuShape.spec = () => {
     // Normalize spec, discard errors.
-    gubuSchema(undefined, { err: [] })
+    gubuShape(undefined, { err: [] })
     // return JSON.parse(JSON.stringify(spec, (_key, val) => {
-    return JSON.parse(JSON.stringify(spec.v[''], (_key, val) => {
+    return JSON.parse(stringify(spec.v[''], (_key: string, val: any) => {
       if (GUBU$ === val) {
         return true
       }
@@ -509,7 +548,12 @@ function make(inspec?: any): GubuSchema {
     }))
   }
 
-  return gubuSchema
+
+  gubuShape.toString = () => {
+    return `[Gubu ${opts.name}]`
+  }
+
+  return gubuShape
 }
 
 // function J(x: any) {
@@ -521,8 +565,6 @@ function handleValidate(vf: Validate, sval: any, state: State): Update {
   let update: Update = { pass: true }
   if (undefined !== sval || state.node.r) {
     let valid = vf(sval, update, state)
-
-    // console.log('HV', sval, valid, update)
 
     if (!valid || update.err) {
       let w = update.why || 'custom'
@@ -748,8 +790,8 @@ function makeErr(
   t?: string,
   u?: any,
   f?: string,
-): ErrSpec {
-  let err: ErrSpec = {
+): ErrDesc {
+  let err: ErrDesc = {
     node: n,
     s,
     p: pathstr(path, dI),
@@ -759,7 +801,7 @@ function makeErr(
   }
 
   if (null == t || '' === t) {
-    let jstr = undefined === s ? '' : JSON.stringify(s)
+    let jstr = undefined === s ? '' : stringify(s)
     let valstr = jstr.replace(/"/g, '')
     valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '')
     err.t = `Validation failed for path "${err.p}" ` +
@@ -776,12 +818,30 @@ function makeErr(
 }
 
 
+function stringify(x: any, r?: any) {
+  try {
+    return JSON.stringify(x, (key: any, val: any) => {
+      if (r) {
+        val = r(key, val)
+      }
+      if ('bigint' === typeof (val)) {
+        val = val.toString()
+      }
+      return val
+    })
+  }
+  catch (e: any) {
+    return JSON.stringify(String(x))
+  }
+}
+
+
 function clone(x: any) {
   return null == x ? x : 'object' !== typeof (x) ? x : JSON.parse(JSON.stringify(x))
 }
 
 
-type GubuSchema =
+type GubuShape =
   (<T>(inroot?: T, inctx?: any) => T) &
   { spec: () => any }
 
@@ -848,44 +908,68 @@ const G$spec = make({
     return true
   },
 })
- 
-function G$(spec: any): ValSpec {
-  let vs = norm()
- 
-  if (null != spec) {
-    G$spec(spec, { vs })
-  }
- 
-  return vs
-}
 */
 
+
+const G$ = (spec: any): ValSpec => norm({ ...spec, $: { gubu$: true } })
 
 
 const gubu: Gubu = (make as Gubu)
 
+
+const GRequired = Required
+const GOptional = Optional
+const GAny = Any
+const GOne = One
+const GSome = Some
+const GAll = All
+const GClosed = Closed
+const GRename = Rename
+const GDefine = Define
+const GRefer = Refer
+const GBefore = Before
+const GAfter = After
+
+
+
 export type {
   Validate,
   Update,
+  Context,
 }
 
 export {
   gubu,
-  // G$,
+  G$,
   norm,
   buildize,
-  Required,
-  Optional,
-  Any,
-  One,
-  Some,
-  All,
-  Closed,
-  Rename,
-  Define,
-  Refer,
-  Before,
+
   After,
+  All,
+  Any,
+  Before,
+  Closed,
+  Define,
+  One,
+  Optional,
+  Refer,
+  Rename,
+  Required,
+  Some,
+
+  GAfter,
+  GAll,
+  GAny,
+  GBefore,
+  GClosed,
+  GDefine,
+  GOne,
+  GOptional,
+  GRefer,
+  GRename,
+  GRequired,
+  GSome,
+
 }
 
 

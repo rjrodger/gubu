@@ -9,6 +9,8 @@ const gubu_1 = require("../gubu");
 describe('gubu', () => {
     test('happy', () => {
         expect((0, gubu_1.gubu)()).toBeDefined();
+        expect((0, gubu_1.gubu)().toString()).toMatch(/\[Gubu \d+\]/);
+        expect((0, gubu_1.gubu)(undefined, { name: 'foo' }).toString()).toMatch(/\[Gubu foo\]/);
         let g0 = (0, gubu_1.gubu)({
             a: 'foo',
             b: 100
@@ -19,11 +21,69 @@ describe('gubu', () => {
         expect(g0({ a: 'bar', b: 999 })).toEqual({ a: 'bar', b: 999 });
         expect(g0({ a: 'bar', b: 999, c: true })).toEqual({ a: 'bar', b: 999, c: true });
     });
-    test('types-basic', () => {
+    test('G-basic', () => {
+        expect((0, gubu_1.G$)({ v: 11 })).toMatchObject({
+            '$': { v$: package_json_1.default.version },
+            t: 'number',
+            v: 11,
+            r: false,
+            k: '',
+            d: -1,
+            u: {}
+        });
+        expect((0, gubu_1.G$)({ v: Number })).toMatchObject({
+            '$': { v$: package_json_1.default.version },
+            t: 'number',
+            v: 0,
+            r: false,
+            k: '',
+            d: -1,
+            u: {}
+        });
+        expect((0, gubu_1.G$)({ v: BigInt(11) })).toMatchObject({
+            '$': { v$: package_json_1.default.version },
+            t: 'bigint',
+            v: BigInt(11),
+            r: false,
+            k: '',
+            d: -1,
+            u: {}
+        });
+        let s0 = Symbol('foo');
+        expect((0, gubu_1.G$)({ v: s0 })).toMatchObject({
+            '$': { v$: package_json_1.default.version },
+            t: 'symbol',
+            v: s0,
+            r: false,
+            k: '',
+            d: -1,
+            u: {}
+        });
+        // NOTE: special case for plain functions.
+        // Normally functions become custom validations.
+        let f0 = () => true;
+        expect((0, gubu_1.G$)({ v: f0 })).toMatchObject({
+            '$': { v$: package_json_1.default.version },
+            t: 'function',
+            v: f0,
+            r: false,
+            k: '',
+            d: -1,
+            u: {}
+        });
+    });
+    test('shapes-basic', () => {
+        let tmp = {};
         expect((0, gubu_1.gubu)(String)('x')).toEqual('x');
         expect((0, gubu_1.gubu)(Number)(1)).toEqual(1);
         expect((0, gubu_1.gubu)(Boolean)(true)).toEqual(true);
+        expect((0, gubu_1.gubu)(BigInt)(BigInt(1))).toEqual(BigInt(1));
         expect((0, gubu_1.gubu)(Object)({ x: 1 })).toEqual({ x: 1 });
+        expect((0, gubu_1.gubu)(Array)([1])).toEqual([1]);
+        expect((0, gubu_1.gubu)(Function)(tmp.f0 = () => true)).toEqual(tmp.f0);
+        expect((0, gubu_1.gubu)(Symbol)(tmp.s0 = Symbol('foo'))).toEqual(tmp.s0);
+        expect((0, gubu_1.gubu)(Date)(tmp.d0 = new Date())).toEqual(tmp.d0);
+        console.log((0, gubu_1.gubu)(Date).spec());
         expect(() => (0, gubu_1.gubu)(String)(1)).toThrow(/path "".*not of type string/);
         expect(() => (0, gubu_1.gubu)(Number)('x')).toThrow(/path "".*not of type number/);
         expect(() => (0, gubu_1.gubu)(Boolean)('x')).toThrow(/path "".*not of type boolean/);
@@ -125,7 +185,7 @@ describe('gubu', () => {
             boolean: true,
             object: { x: 2 },
             array: [3],
-            // function: G$({ type: 'function', value: f0 })
+            function: (0, gubu_1.G$)({ t: 'function', v: f0 })
         });
         expect(g0()).toMatchObject({
             string: 's',
@@ -133,7 +193,7 @@ describe('gubu', () => {
             boolean: true,
             object: { x: 2 },
             array: [],
-            // function: f0
+            function: f0
         });
         expect(g0({
             string: 'S',
@@ -294,15 +354,6 @@ describe('gubu', () => {
         expect(a1([11, 22, 33, 44])).toMatchObject([11, 22, 33, 44]);
         expect(a1([undefined, 22])).toMatchObject([1, 22, 3]);
     });
-    /*
-    test('valspec-basic', () => {
-      const G = (x: any) => x
-      let a1 = gubu({
-        a: G$({ type: 'number', required: true }),
-      })
-      expect(a1({ b: 1 })).toMatchObject({ a: 'A', b: 1 })
-    })
-    */
     test('closed', () => {
         let g0 = (0, gubu_1.gubu)({
             a: { b: { c: (0, gubu_1.Closed)({ x: 1 }) } }
@@ -323,9 +374,25 @@ describe('gubu', () => {
     });
     test('buildize-any', () => {
         let g0 = (0, gubu_1.gubu)({ a: (0, gubu_1.Any)(), b: (0, gubu_1.Any)(true) });
-        // expect(g0({ a: 2, b: 1 })).toMatchObject({ a: 2, b: 1 })
-        // expect(g0({ a: 'x', b: 'y' })).toMatchObject({ a: 'x', b: 'y' })
-        // expect(g0({ b: 1 })).toEqual({ b: 1 })
+        expect(g0({ a: 2, b: 1 })).toMatchObject({ a: 2, b: 1 });
+        expect(g0({ a: 'x', b: 'y' })).toMatchObject({ a: 'x', b: 'y' });
+        expect(g0({ b: 1 })).toEqual({ b: 1 });
+        expect(() => g0({ a: 1 })).toThrow('Validation failed for path "b" with value "" because the value is required');
+    });
+    test('spec-basic', () => {
+        expect((0, gubu_1.gubu)(Number).spec()).toMatchObject({
+            $: { gubu$: true, v$: package_json_1.default.version },
+            d: 0, k: '', r: true, t: 'number', u: {}, v: 0,
+        });
+        expect((0, gubu_1.gubu)(String).spec()).toMatchObject({
+            $: { gubu$: true, v$: package_json_1.default.version },
+            d: 0, k: '', r: true, t: 'string', u: {}, v: '',
+        });
+        console.log('BigInt', (0, gubu_1.gubu)(BigInt).spec());
+        expect((0, gubu_1.gubu)(BigInt).spec()).toMatchObject({
+            $: { gubu$: true, v$: package_json_1.default.version },
+            d: 0, k: '', r: true, t: 'bigint', u: {}, v: "0",
+        });
     });
     test('spec-roundtrip', () => {
         let m0 = { a: 1 };
@@ -341,7 +408,7 @@ describe('gubu', () => {
         let s0s = {
             $: {
                 gubu$: true,
-                version: package_json_1.default.version,
+                v$: package_json_1.default.version,
             },
             // d: -1,
             d: 0,
@@ -353,7 +420,7 @@ describe('gubu', () => {
                 a: {
                     $: {
                         gubu$: true,
-                        version: package_json_1.default.version,
+                        v$: package_json_1.default.version,
                     },
                     d: 1,
                     k: 'a',
@@ -391,7 +458,7 @@ describe('gubu', () => {
         let s1s = {
             $: {
                 gubu$: true,
-                version: '0.0.1',
+                v$: package_json_1.default.version,
             },
             // d: -1,
             d: 0,
@@ -403,7 +470,7 @@ describe('gubu', () => {
                 a: {
                     $: {
                         gubu$: true,
-                        version: package_json_1.default.version,
+                        v$: package_json_1.default.version,
                     },
                     d: 1,
                     k: 'a',
@@ -414,7 +481,7 @@ describe('gubu', () => {
                         0: {
                             $: {
                                 gubu$: true,
-                                version: package_json_1.default.version,
+                                v$: package_json_1.default.version,
                             },
                             d: 2,
                             k: '0',
