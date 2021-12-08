@@ -4,11 +4,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GDefine = exports.GClosed = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Define = exports.Closed = exports.Before = exports.Any = exports.All = exports.After = exports.buildize = exports.norm = exports.G$ = exports.gubu = void 0;
+exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNone = exports.GDefine = exports.GClosed = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.None = exports.Define = exports.Closed = exports.Before = exports.Any = exports.All = exports.After = exports.gubuError = exports.buildize = exports.norm = exports.G$ = exports.gubu = void 0;
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
 // TODO: BigInt spec roundtrip test
+// TODO: Only - builder, exact values
+// TODO: Min,Max - builder, depends on value
 const package_json_1 = __importDefault(require("./package.json"));
 const GUBU$ = Symbol.for('gubu$');
 const GUBU = { gubu$: GUBU$, v$: package_json_1.default.version };
@@ -18,12 +20,15 @@ class GubuError extends TypeError {
         super(message);
         let name = 'GubuError';
         let ge = this;
+        ge.gubu = true;
+        ge.name = name;
         ge.code = code;
         ge.desc = () => ({ name, code, err, ctx, });
     }
     toJSON() {
         return {
             ...this,
+            err: this.desc().err,
             name: this.name,
             message: this.message,
         };
@@ -117,6 +122,9 @@ function norm(spec) {
             u.i = v;
         }
     }
+    else if ('number' === t && isNaN(v)) {
+        t = 'nan';
+    }
     // console.log('Nv', v)
     let vs = {
         $: GUBU,
@@ -146,9 +154,10 @@ function make(inspec, inopts) {
         var _a, _b, _c, _d;
         const ctx = inctx || {};
         const root = {
-            '': (undefined === inroot && null != spec.v['']) ?
-                clone(EMPTY_VAL[spec.v[''].t]) :
-                inroot
+            // '': (undefined === inroot && null != spec.v['']) ?
+            //   clone(EMPTY_VAL[spec.v[''].t]) :
+            //   inroot
+            '': inroot
         };
         const nodes = [spec, -1];
         const srcs = [root, -1];
@@ -200,8 +209,12 @@ function make(inspec, inopts) {
                 path[dI] = key;
                 let sval = src[key];
                 let stype = typeof (sval);
+                if ('number' === stype && isNaN(sval)) {
+                    stype = 'nan';
+                }
                 let n = node.v[key];
                 let tvs = null;
+                // NOTE: special case handling for arrays keys.
                 if ('array' === node.t) {
                     // First array entry is general type spec.
                     // Following are special case elements offset by +1.
@@ -245,6 +258,7 @@ function make(inspec, inopts) {
                     // console.log('Tb', vs)
                     let t = vs.t;
                     let pass = true;
+                    let done = false;
                     // udpate can set t
                     if (vs.b) {
                         let update = handleValidate(vs.b, sval, {
@@ -262,12 +276,16 @@ function make(inspec, inopts) {
                         if (undefined !== update.type) {
                             t = update.type;
                         }
+                        if (undefined !== update.done) {
+                            done = update.done;
+                        }
                         nI = undefined === update.nI ? nI : update.nI;
                         sI = undefined === update.sI ? sI : update.sI;
                         pI = undefined === update.pI ? pI : update.pI;
                         cN = undefined === update.cN ? cN : update.cN;
                     }
-                    // console.log('M', t, stype, sval, vs.v, sval instanceof vs.v,
+                    // console.log('M', t, stype, sval, vs.v)
+                    //   // sval instanceof vs.v,
                     //   'C',
                     //   'any' !== t,
                     //   'custom' !== t,
@@ -277,55 +295,76 @@ function make(inspec, inopts) {
                     //   !('instance' === t && sval instanceof vs.v),
                     //   !('null' === t && null === sval)
                     // )
-                    if ('object' === t) {
-                        if (vs.r && null == sval) {
-                            terr.push(makeErr('required', sval, path, dI, vs, 1010));
+                    if (!done) {
+                        if ('none' === t) {
+                            terr.push(makeErr('none', sval, path, dI, vs, 1070));
                         }
-                        else if (null != sval && ('object' !== stype || Array.isArray(sval))) {
-                            terr.push(makeErr('type', sval, path, dI, vs, 1020));
+                        else if ('object' === t) {
+                            // console.log('SVAL', sval, null === sval)
+                            // if (vs.r && null == sval) {
+                            if (vs.r && undefined === sval) {
+                                terr.push(makeErr('required', sval, path, dI, vs, 1010));
+                            }
+                            else if (
+                            //(null != sval && ('object' !== stype || Array.isArray(sval)))
+                            undefined !== sval && (null === sval ||
+                                'object' !== stype ||
+                                Array.isArray(sval))) {
+                                // console.log('SVAL Q')
+                                terr.push(makeErr('type', sval, path, dI, vs, 1020));
+                            }
+                            else {
+                                nodes[nI] = vs;
+                                srcs[nI] = src[key] = (src[key] || {});
+                                nI++;
+                                cN++;
+                            }
                         }
-                        else {
-                            nodes[nI] = vs;
-                            srcs[nI] = src[key] = (src[key] || {});
-                            nI++;
-                            cN++;
+                        else if ('array' === t) {
+                            // if (vs.r && null == sval) {
+                            if (vs.r && undefined === sval) {
+                                terr.push(makeErr('required', sval, path, dI, vs, 1030));
+                            }
+                            // else if (null != sval && !Array.isArray(sval)) {
+                            else if (undefined !== sval && !Array.isArray(sval)) {
+                                terr.push(makeErr('type', sval, path, dI, vs, 1040));
+                            }
+                            else {
+                                nodes[nI] = vs;
+                                srcs[nI] = src[key] = (src[key] || []);
+                                nI++;
+                                cN++;
+                            }
                         }
-                    }
-                    else if ('array' === t) {
-                        if (vs.r && null == sval) {
-                            terr.push(makeErr('required', sval, path, dI, vs, 1030));
-                        }
-                        else if (null != sval && !Array.isArray(sval)) {
-                            terr.push(makeErr('type', sval, path, dI, vs, 1040));
-                        }
-                        else {
-                            nodes[nI] = vs;
-                            srcs[nI] = src[key] = (src[key] || []);
-                            nI++;
-                            cN++;
-                        }
-                    }
-                    // Invalid type.
-                    else if ('any' !== t &&
-                        'custom' !== t &&
-                        undefined !== sval &&
-                        t !== stype &&
-                        !('object' === stype && 'instance' !== t && null != sval) &&
-                        // !('instance' === t && sval instanceof vs.v) &&
-                        !('instance' === t && vs.u.i && sval instanceof vs.u.i) &&
-                        !('null' === t && null === sval)) {
-                        terr.push(makeErr('type', sval, path, dI, vs, 1050));
-                        pass = false;
-                    }
-                    // Value itself, or default.
-                    else if (undefined === sval) {
-                        if (vs.r) {
-                            terr.push(makeErr('required', sval, path, dI, vs, 1060));
+                        // Invalid type.
+                        else if (!('any' === t ||
+                            'custom' === t ||
+                            undefined === sval ||
+                            t === stype ||
+                            ('instance' === t && vs.u.i && sval instanceof vs.u.i) ||
+                            // ('instance' !== t && 'object' === stype && null != sval) ||
+                            ('null' === t && null === sval))) 
+                        // 'any' !== t &&
+                        // 'custom' !== t &&
+                        // undefined !== sval &&
+                        // t !== stype &&
+                        // !('instance' !== t && 'object' === stype && null != sval) &&
+                        // !('instance' === t && vs.u.i && sval instanceof vs.u.i) &&
+                        // !('null' === t && null === sval)
+                        {
+                            terr.push(makeErr('type', sval, path, dI, vs, 1050));
                             pass = false;
                         }
-                        // NOTE: `undefined` is special and cannot be set
-                        else if (undefined !== vs.v) {
-                            src[key] = vs.v;
+                        // Value itself, or default.
+                        else if (undefined === sval) {
+                            if (vs.r) {
+                                terr.push(makeErr('required', sval, path, dI, vs, 1060));
+                                pass = false;
+                            }
+                            // NOTE: `undefined` is special and cannot be set
+                            else if (undefined !== vs.v) {
+                                src[key] = vs.v;
+                            }
                         }
                     }
                     if (vs.a) {
@@ -408,7 +447,7 @@ function make(inspec, inopts) {
 //   return null == x ? '' : JSON.stringify(x).replace(/"/g, '')
 // }
 function handleValidate(vf, sval, state) {
-    let update = { pass: true };
+    let update = { pass: true, done: false };
     if (undefined !== sval || state.node.r) {
         let valid = vf(sval, update, state);
         if (!valid || update.err) {
@@ -428,6 +467,7 @@ function handleValidate(vf, sval, state) {
             update.pass = false;
         }
     }
+    // console.log('HV', update)
     return update;
 }
 function pathstr(path, dI) {
@@ -445,13 +485,22 @@ const Optional = function (spec) {
     return vs;
 };
 exports.Optional = Optional;
+// Optional value provides default.
 const Any = function (spec) {
     let vs = buildize(this || spec);
     vs.t = 'any';
-    vs.r = true === spec; // Special convenience
+    if (undefined !== spec) {
+        vs.v = spec;
+    }
     return vs;
 };
 exports.Any = Any;
+const None = function (spec) {
+    let vs = buildize(this || spec);
+    vs.t = 'none';
+    return vs;
+};
+exports.None = None;
 const makeListBuilder = function (kind) {
     return function (...specs) {
         let vs = buildize();
@@ -493,8 +542,24 @@ const Closed = function (spec) {
     let vs = buildize(this || spec);
     vs.b = (val, update, state) => {
         if (null != val && 'object' === typeof (val)) {
-            for (let k in val) {
-                if (undefined === vs.v[k]) {
+            let vkeys = Object.keys(val);
+            let allowed = vs.v;
+            // For arrays, handle non-index properties, and special element offset.
+            if ('array' === state.node.t) {
+                allowed = Object.keys(vs.v).slice(1)
+                    .map((x) => {
+                    let i = parseInt(x);
+                    if (isNaN(i)) {
+                        return x;
+                    }
+                    else {
+                        return i - 1;
+                    }
+                })
+                    .reduce((a, i) => (a[i] = true, a), {});
+            }
+            for (let k of vkeys) {
+                if (undefined === allowed[k]) {
                     update.err =
                         makeErr('closed', val, state.path, state.dI, vs, 3010, '', { k });
                     return false;
@@ -526,17 +591,22 @@ const Refer = function (inopts, spec) {
     let name = 'string' === typeof inopts ? inopts : opts.name;
     // Fill should be false (the default) if used recursively, to prevent loops.
     let fill = !!opts.fill;
+    // console.log('R0', opts, name, fill)
     if (null != name && '' != name) {
         vs.b = (val, update, state) => {
             if (undefined !== val || fill) {
                 let ref = state.ctx.ref = state.ctx.ref || {};
-                // TODO: error if non-exist
-                let node = { ...ref[name] };
-                node.k = state.node.k;
-                node.t = node.t || 'none';
-                update.node = node;
-                update.type = node.t;
+                if (undefined !== ref[name]) {
+                    // console.log('R1', ref[name])
+                    let node = { ...ref[name] };
+                    node.k = state.node.k;
+                    node.t = node.t || 'none';
+                    update.node = node;
+                    update.type = node.t;
+                    // console.log('R3', update)
+                }
             }
+            // TODO: option to fail if ref not found?
             return true;
         };
     }
@@ -571,27 +641,37 @@ function buildize(invs) {
     });
 }
 exports.buildize = buildize;
-function makeErr(w, s, path, dI, n, m, t, u, f) {
+function gubuError(val, state, text, why) {
+    return makeErr(why || 'custom', val, state.path, state.dI, state.node, 4000, text);
+}
+exports.gubuError = gubuError;
+function makeErr(why, sval, path, dI, node, mark, text, user, fname) {
     let err = {
-        node: n,
-        s,
+        n: node,
+        s: sval,
         p: pathstr(path, dI),
-        w,
-        m,
+        w: why,
+        m: mark,
         t: '',
     };
-    if (null == t || '' === t) {
-        let jstr = undefined === s ? '' : stringify(s);
-        let valstr = jstr.replace(/"/g, '');
-        valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '');
+    let jstr = undefined === sval ? '' : stringify(sval);
+    let valstr = jstr.replace(/"/g, '');
+    valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '');
+    if (null == text || '' === text) {
         err.t = `Validation failed for path "${err.p}" ` +
             `with value "${valstr}" because ` +
-            ('type' === w ? ('instance' === n.t ? `the value is not an instance of ${n.u.n}` :
-                `the value is not of type ${n.t}`) :
-                'required' === w ? `the value is required` :
-                    'closed' === w ? `the property "${u === null || u === void 0 ? void 0 : u.k}" is not allowed` :
-                        `check "${w + (f ? ': ' + f : '')}" failed`) +
+            ('type' === why ? ('instance' === node.t ? `the value is not an instance of ${node.u.n}` :
+                `the value is not of type ${node.t}`) :
+                'required' === why ? `the value is required` :
+                    'closed' === why ? `the property "${user === null || user === void 0 ? void 0 : user.k}" is not allowed` :
+                        'none' === why ? 'no value is allowed' :
+                            `check "${why + (fname ? ': ' + fname : '')}" failed`) +
             '.';
+    }
+    else {
+        err.t = text
+            .replace(/\$VALUE/g, valstr)
+            .replace(/\$PATH/g, err.p);
     }
     return err;
 }
@@ -615,73 +695,48 @@ function clone(x) {
     return null == x ? x : 'object' !== typeof (x) ? x : JSON.parse(JSON.stringify(x));
 }
 Object.assign(make, {
-    Required,
-    Optional,
-    // Custom,
-    Any,
-    One,
-    Some,
-    All,
-    Closed,
-    Rename,
-    Define,
-    Before,
     After,
+    All,
+    Any,
+    Before,
+    Closed,
+    Define,
+    None,
+    One,
+    Optional,
+    Rename,
+    Required,
+    Some,
 });
 Object.defineProperty(make, 'name', { value: 'gubu' });
-/*
-const G$type: { [name: string]: boolean } = {
-  string: true,
-  number: true,
-  boolean: true,
-  object: true,
-  array: true,
-  function: true,
-}
- 
-const G$spec = make({
-  type: (v: string, _u: Update, s: State) => {
-    if (G$type[v]) {
-      s.ctx.vs.t = v
-      return true
-    }
-  },
-  value: (v: string, _u: Update, s: State) => {
-    s.ctx.vs.v = v
-    return true
-  },
-  required: (v: string, _u: Update, s: State) => {
-    s.ctx.vs.r = !!v
-    return true
-  },
-})
-*/
 const G$ = (spec) => norm({ ...spec, $: { gubu$: true } });
 exports.G$ = G$;
 const gubu = make;
 exports.gubu = gubu;
-const GRequired = Required;
-exports.GRequired = GRequired;
-const GOptional = Optional;
-exports.GOptional = GOptional;
-const GAny = Any;
-exports.GAny = GAny;
-const GOne = One;
-exports.GOne = GOne;
-const GSome = Some;
-exports.GSome = GSome;
-const GAll = All;
-exports.GAll = GAll;
-const GClosed = Closed;
-exports.GClosed = GClosed;
-const GRename = Rename;
-exports.GRename = GRename;
-const GDefine = Define;
-exports.GDefine = GDefine;
-const GRefer = Refer;
-exports.GRefer = GRefer;
-const GBefore = Before;
-exports.GBefore = GBefore;
 const GAfter = After;
 exports.GAfter = GAfter;
+const GAll = All;
+exports.GAll = GAll;
+const GAny = Any;
+exports.GAny = GAny;
+const GBefore = Before;
+exports.GBefore = GBefore;
+const GClosed = Closed;
+exports.GClosed = GClosed;
+const GDefine = Define;
+exports.GDefine = GDefine;
+const GNone = None;
+exports.GNone = GNone;
+const GOne = One;
+exports.GOne = GOne;
+const GOptional = Optional;
+exports.GOptional = GOptional;
+const GRefer = Refer;
+exports.GRefer = GRefer;
+const GRename = Rename;
+exports.GRename = GRename;
+const GRequired = Required;
+exports.GRequired = GRequired;
+const GSome = Some;
+exports.GSome = GSome;
 //# sourceMappingURL=gubu.js.map
