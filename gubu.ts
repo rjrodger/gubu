@@ -1,10 +1,10 @@
-// import { Jsonic } from 'jsonic'
-
+/* Copyright (c) 2021 Richard Rodger, MIT License */
 
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
 
+// TODO: test Some, or drop?
 // TODO: BigInt spec roundtrip test
 // TODO: Only - builder, exact values
 // TODO: Min,Max - builder, depends on value

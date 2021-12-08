@@ -1,5 +1,5 @@
 "use strict";
-// import { Jsonic } from 'jsonic'
+/* Copyright (c) 2021 Richard Rodger, MIT License */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -8,6 +8,7 @@ exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.G
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
+// TODO: test Some, or drop?
 // TODO: BigInt spec roundtrip test
 // TODO: Only - builder, exact values
 // TODO: Min,Max - builder, depends on value
