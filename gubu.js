@@ -8,6 +8,7 @@ exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.G
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
+// TODO: function deref?
 // TODO: test Some, or drop?
 // TODO: BigInt spec roundtrip test
 // TODO: Only - builder, exact values
