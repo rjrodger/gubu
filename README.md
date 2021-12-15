@@ -1,10 +1,12 @@
 # Gubu: An object shape validation utility.
 
+NOTE: WORK IN PROGRESS
+
 This is a schema validator in the tradition of [Joi](https://joi.dev) or any JSON-Schema validator, with the key features:
 * Schemas are WYSIWYG - you define a schema with a template matching your object strucure;
 * Covers the most useful cases in a natural way - in particular, defaults are specified directly and the type is inferred from the default;
 * Very light and easily extensible.
-
+  
 Why write yet another validator? I've used `Joi` for a long time, but
 always found its schema definition a little verbose at the syntax
 level. I've never liked JSON-Schema - it's just too noisy to
@@ -220,7 +222,7 @@ Also I like short names.
 
 
 ## License
-Copyright (c) 2011, Richard Rodger and other contributors.
+Copyright (c) 2021, Richard Rodger and other contributors.
 Licensed under [MIT][].
 
 [MIT]: ./LICENSE
