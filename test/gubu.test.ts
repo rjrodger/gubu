@@ -5,13 +5,14 @@ import Pkg from '../package.json'
 
 
 import {
-  gubu,
+  Gubu,
   G$,
   Builder,
   ValSpec,
   State,
   buildize,
-  gubuError,
+  makeErr,
+  Update,
 
   After,
   All,
@@ -19,14 +20,14 @@ import {
   Before,
   Closed,
   Define,
+  Empty,
   None,
   One,
   Optional,
   Refer,
   Rename,
   Required,
-  Some,
-  Update,
+
 
 } from '../gubu'
 
@@ -51,11 +52,11 @@ class Bar {
 describe('gubu', () => {
 
   test('happy', () => {
-    expect(gubu()).toBeDefined()
-    expect(gubu().toString()).toMatch(/\[Gubu \d+\]/)
-    expect(gubu(undefined, { name: 'foo' }).toString()).toMatch(/\[Gubu foo\]/)
+    expect(Gubu()).toBeDefined()
+    expect(Gubu().toString()).toMatch(/\[Gubu \d+\]/)
+    expect(Gubu(undefined, { name: 'foo' }).toString()).toMatch(/\[Gubu foo\]/)
 
-    let g0 = gubu({
+    let g0 = Gubu({
       a: 'foo',
       b: 100
     })
@@ -131,109 +132,109 @@ describe('gubu', () => {
     let tmp: any = {}
 
 
-    expect(gubu(String)('x')).toEqual('x')
-    expect(gubu(Number)(1)).toEqual(1)
-    expect(gubu(Boolean)(true)).toEqual(true)
-    expect(gubu(BigInt)(BigInt(1))).toEqual(BigInt(1))
-    expect(gubu(Object)({ x: 1 })).toEqual({ x: 1 })
-    expect(gubu(Array)([1])).toEqual([1])
-    expect(gubu(Function)(tmp.f0 = () => true)).toEqual(tmp.f0)
-    expect(gubu(Symbol)(tmp.s0 = Symbol('foo'))).toEqual(tmp.s0)
-    expect(gubu(Date)(tmp.d0 = new Date())).toEqual(tmp.d0)
-    expect(gubu(RegExp)(tmp.r0 = /a/)).toEqual(tmp.r0)
-    expect(gubu(Foo)(tmp.c0 = new Foo(2))).toEqual(tmp.c0)
+    expect(Gubu(String)('x')).toEqual('x')
+    expect(Gubu(Number)(1)).toEqual(1)
+    expect(Gubu(Boolean)(true)).toEqual(true)
+    expect(Gubu(BigInt)(BigInt(1))).toEqual(BigInt(1))
+    expect(Gubu(Object)({ x: 1 })).toEqual({ x: 1 })
+    expect(Gubu(Array)([1])).toEqual([1])
+    expect(Gubu(Function)(tmp.f0 = () => true)).toEqual(tmp.f0)
+    expect(Gubu(Symbol)(tmp.s0 = Symbol('foo'))).toEqual(tmp.s0)
+    expect(Gubu(Date)(tmp.d0 = new Date())).toEqual(tmp.d0)
+    expect(Gubu(RegExp)(tmp.r0 = /a/)).toEqual(tmp.r0)
+    expect(Gubu(Foo)(tmp.c0 = new Foo(2))).toEqual(tmp.c0)
 
     // console.log(gubu(new Date()).spec())
 
-    expect(gubu('a')('x')).toEqual('x')
-    expect(gubu(0)(1)).toEqual(1)
-    expect(gubu(false)(true)).toEqual(true)
-    expect(gubu(BigInt(-1))(BigInt(1))).toEqual(BigInt(1))
-    expect(gubu({})({ x: 1 })).toEqual({ x: 1 })
-    expect(gubu([])([1])).toEqual([1])
+    expect(Gubu('a')('x')).toEqual('x')
+    expect(Gubu(0)(1)).toEqual(1)
+    expect(Gubu(false)(true)).toEqual(true)
+    expect(Gubu(BigInt(-1))(BigInt(1))).toEqual(BigInt(1))
+    expect(Gubu({})({ x: 1 })).toEqual({ x: 1 })
+    expect(Gubu([])([1])).toEqual([1])
     // NOTE: raw function would be a custom validator
-    expect(gubu(G$({ v: () => null }))(tmp.f1 = () => false)).toEqual(tmp.f1)
-    expect(gubu(Symbol('bar'))(tmp.s0)).toEqual(tmp.s0)
-    expect(gubu(new Date())(tmp.d1 = new Date(Date.now() - 1111))).toEqual(tmp.d1)
-    expect(gubu(new RegExp('a'))(tmp.r1 = /b/)).toEqual(tmp.r1)
-    expect(gubu(new Foo(4))(tmp.c1 = new Foo(5))).toEqual(tmp.c1)
-    expect(gubu(new Bar(6))(tmp.c2 = new Bar(7))).toEqual(tmp.c2)
+    expect(Gubu(G$({ v: () => null }))(tmp.f1 = () => false)).toEqual(tmp.f1)
+    expect(Gubu(Symbol('bar'))(tmp.s0)).toEqual(tmp.s0)
+    expect(Gubu(new Date())(tmp.d1 = new Date(Date.now() - 1111))).toEqual(tmp.d1)
+    expect(Gubu(new RegExp('a'))(tmp.r1 = /b/)).toEqual(tmp.r1)
+    expect(Gubu(new Foo(4))(tmp.c1 = new Foo(5))).toEqual(tmp.c1)
+    expect(Gubu(new Bar(6))(tmp.c2 = new Bar(7))).toEqual(tmp.c2)
 
-    expect(gubu(null)(null)).toEqual(null)
-    expect(() => gubu(null)(1)).toThrow(/path "".*value "1".*not of type null/)
+    expect(Gubu(null)(null)).toEqual(null)
+    expect(() => Gubu(null)(1)).toThrow(/path "".*value "1".*not of type null/)
 
-    expect(gubu((_v: any, u: Update) => (u.val = 1, true))(null)).toEqual(1)
+    expect(Gubu((_v: any, u: Update) => (u.val = 1, true))(null)).toEqual(1)
 
     // console.log(gubu(Date).spec())
 
 
-    expect(() => gubu(String)(1)).toThrow(/path "".*not of type string/)
-    expect(() => gubu(Number)('x')).toThrow(/path "".*not of type number/)
-    expect(() => gubu(Boolean)('x')).toThrow(/path "".*not of type boolean/)
-    expect(() => gubu(BigInt)('x')).toThrow(/path "".*not of type bigint/)
-    expect(() => gubu(Object)('x')).toThrow(/path "".*not of type object/)
-    expect(() => gubu(Array)('x')).toThrow(/path "".*not of type array/)
-    expect(() => gubu(Function)('x')).toThrow(/path "".*not of type function/)
-    expect(() => gubu(Symbol)('x')).toThrow(/path "".*not of type symbol/)
-    expect(() => gubu(Date)(/a/)).toThrow(/path "".*not an instance of Date/)
-    expect(() => gubu(RegExp)(new Date()))
+    expect(() => Gubu(String)(1)).toThrow(/path "".*not of type string/)
+    expect(() => Gubu(Number)('x')).toThrow(/path "".*not of type number/)
+    expect(() => Gubu(Boolean)('x')).toThrow(/path "".*not of type boolean/)
+    expect(() => Gubu(BigInt)('x')).toThrow(/path "".*not of type bigint/)
+    expect(() => Gubu(Object)('x')).toThrow(/path "".*not of type object/)
+    expect(() => Gubu(Array)('x')).toThrow(/path "".*not of type array/)
+    expect(() => Gubu(Function)('x')).toThrow(/path "".*not of type function/)
+    expect(() => Gubu(Symbol)('x')).toThrow(/path "".*not of type symbol/)
+    expect(() => Gubu(Date)(/a/)).toThrow(/path "".*not an instance of Date/)
+    expect(() => Gubu(RegExp)(new Date()))
       .toThrow(/path "".*not an instance of RegExp/)
-    expect(() => gubu(Foo)(tmp.c3 = new Bar(8)))
+    expect(() => Gubu(Foo)(tmp.c3 = new Bar(8)))
       .toThrow(/path "".*not an instance of Foo/)
-    expect(() => gubu(Bar)(tmp.c4 = new Foo(9)))
+    expect(() => Gubu(Bar)(tmp.c4 = new Foo(9)))
       .toThrow(/path "".*not an instance of Bar/)
 
 
     // console.log(gubu(new Date()).spec())
 
-    expect(() => gubu('a')(1)).toThrow(/path "".*not of type string/)
-    expect(() => gubu(0)('x')).toThrow(/path "".*not of type number/)
-    expect(() => gubu(false)('x')).toThrow(/path "".*not of type boolean/)
-    expect(() => gubu(BigInt(-1))('x')).toThrow(/path "".*not of type bigint/)
-    expect(() => gubu({})('x')).toThrow(/path "".* not of type object/)
-    expect(() => gubu([])('x')).toThrow(/path "".*not of type array/)
-    expect(() => gubu(G$({ v: () => null }))('x'))
+    expect(() => Gubu('a')(1)).toThrow(/path "".*not of type string/)
+    expect(() => Gubu(0)('x')).toThrow(/path "".*not of type number/)
+    expect(() => Gubu(false)('x')).toThrow(/path "".*not of type boolean/)
+    expect(() => Gubu(BigInt(-1))('x')).toThrow(/path "".*not of type bigint/)
+    expect(() => Gubu({})('x')).toThrow(/path "".* not of type object/)
+    expect(() => Gubu([])('x')).toThrow(/path "".*not of type array/)
+    expect(() => Gubu(G$({ v: () => null }))('x'))
       .toThrow(/path "".*not of type function/)
-    expect(() => gubu(Symbol('bar'))('x')).toThrow(/path "".*not of type symbol/)
-    expect(() => gubu(new Date())('x')).toThrow(/path "".*not an instance of Date/)
-    expect(() => gubu(new RegExp('a'))('x'))
+    expect(() => Gubu(Symbol('bar'))('x')).toThrow(/path "".*not of type symbol/)
+    expect(() => Gubu(new Date())('x')).toThrow(/path "".*not an instance of Date/)
+    expect(() => Gubu(new RegExp('a'))('x'))
       .toThrow(/path "".*not an instance of RegExp/)
-    expect(() => gubu(new Foo(4))('a')).toThrow(/path "".*not an instance of Foo/)
-    expect(() => gubu(new Bar(6))('a')).toThrow(/path "".*not an instance of Bar/)
-    expect(() => gubu(new Foo(10))(new Bar(11)))
+    expect(() => Gubu(new Foo(4))('a')).toThrow(/path "".*not an instance of Foo/)
+    expect(() => Gubu(new Bar(6))('a')).toThrow(/path "".*not an instance of Bar/)
+    expect(() => Gubu(new Foo(10))(new Bar(11)))
       .toThrow(/path "".*not an instance of Foo/)
-    expect(() => gubu(new Bar(12))(new Foo(12)))
+    expect(() => Gubu(new Bar(12))(new Foo(12)))
       .toThrow(/path "".*not an instance of Bar/)
 
 
 
-    expect(gubu({ a: String })({ a: 'x' })).toEqual({ a: 'x' })
-    expect(gubu({ a: Number })({ a: 1 })).toEqual({ a: 1 })
-    expect(gubu({ a: Boolean })({ a: true })).toEqual({ a: true })
-    expect(gubu({ a: Object })({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
+    expect(Gubu({ a: String })({ a: 'x' })).toEqual({ a: 'x' })
+    expect(Gubu({ a: Number })({ a: 1 })).toEqual({ a: 1 })
+    expect(Gubu({ a: Boolean })({ a: true })).toEqual({ a: true })
+    expect(Gubu({ a: Object })({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
 
 
-    expect(() => gubu({ a: String })({ a: 1 }))
+    expect(() => Gubu({ a: String })({ a: 1 }))
       .toThrow(/path "a".*not of type string/)
-    expect(() => gubu({ a: Number })({ a: 'x' }))
+    expect(() => Gubu({ a: Number })({ a: 'x' }))
       .toThrow(/path "a".*not of type number/)
-    expect(() => gubu({ a: Boolean })({ a: 'x' }))
+    expect(() => Gubu({ a: Boolean })({ a: 'x' }))
       .toThrow(/path "a".*not of type boolean/)
-    expect(() => gubu({ a: Object })({ a: 'x' }))
+    expect(() => Gubu({ a: Object })({ a: 'x' }))
       .toThrow(/path "a".*not of type object/)
 
-    expect(gubu([String])(['x'])).toEqual(['x'])
-    expect(gubu([Number])([1])).toEqual([1])
-    expect(gubu([Boolean])([true])).toEqual([true])
-    expect(gubu([Object])([{ x: 1 }])).toEqual([{ x: 1 }])
+    expect(Gubu([String])(['x'])).toEqual(['x'])
+    expect(Gubu([Number])([1])).toEqual([1])
+    expect(Gubu([Boolean])([true])).toEqual([true])
+    expect(Gubu([Object])([{ x: 1 }])).toEqual([{ x: 1 }])
 
-    expect(() => gubu([String])([1]))
+    expect(() => Gubu([String])([1]))
       .toThrow(/path "0".*not of type string/)
-    expect(() => gubu([Number])(['x']))
+    expect(() => Gubu([Number])(['x']))
       .toThrow(/path "0".*not of type number/)
-    expect(() => gubu([Boolean])(['x']))
+    expect(() => Gubu([Boolean])(['x']))
       .toThrow(/path "0".*not of type boolean/)
-    expect(() => gubu([Object])([1]))
+    expect(() => Gubu([Object])([1]))
       .toThrow(/path "0".*not of type object/)
 
   })
@@ -242,7 +243,7 @@ describe('gubu', () => {
   test('shapes-fails', () => {
     let tmp: any = {}
 
-    let string0 = gubu(String)
+    let string0 = Gubu(String)
     expect(string0('x')).toEqual('x')
     expect(() => string0(1)).toThrow(/not of type string/)
     expect(() => string0(true)).toThrow(/not of type string/)
@@ -257,7 +258,7 @@ describe('gubu', () => {
     expect(() => string0(new Date())).toThrow(/not of type string/)
     expect(() => string0(new Foo(1))).toThrow(/not of type string/)
 
-    let number0 = gubu(Number)
+    let number0 = Gubu(Number)
     expect(number0(1)).toEqual(1)
     expect(number0(Infinity)).toEqual(Infinity)
     expect(() => number0('x')).toThrow(/not of type number/)
@@ -272,7 +273,7 @@ describe('gubu', () => {
     expect(() => number0(new Date())).toThrow(/not of type number/)
     expect(() => number0(new Foo(1))).toThrow(/not of type number/)
 
-    let object0 = gubu(Object)
+    let object0 = Gubu(Object)
     expect(object0({})).toEqual({})
     expect(object0(tmp.r0 = /a/)).toEqual(tmp.r0)
     expect(object0(tmp.d0 = new Date())).toEqual(tmp.d0)
@@ -286,7 +287,7 @@ describe('gubu', () => {
     expect(() => object0(NaN)).toThrow(/not of type object/)
     expect(() => object0(undefined)).toThrow(/value is required/)
 
-    let array0 = gubu(Array)
+    let array0 = Gubu(Array)
     expect(array0([])).toEqual([])
     expect(() => array0('x')).toThrow(/not of type array/)
     expect(() => array0(true)).toThrow(/not of type array/)
@@ -306,15 +307,28 @@ describe('gubu', () => {
   test('shapes-edges', () => {
 
     // NaN is actually Not-a-Number (whereas 'number' === typeof(NaN))
-    const num0 = gubu(1)
+    const num0 = Gubu(1)
     expect(num0(1)).toEqual(1)
     expect(() => num0(NaN)).toThrow(/not of type number/)
 
-    const nan0 = gubu(NaN)
+    const nan0 = Gubu(NaN)
     expect(nan0(NaN)).toEqual(NaN)
     expect(() => nan0(1)).toThrow(/not of type nan/)
 
 
+    // Empty strings only allowed by Empty() builder.
+
+    const rs0 = Gubu(String)
+    expect(() => rs0('')).toThrow('Validation failed for path "" with value "" because the value is required.')
+
+    const rs0e = Gubu(Empty(String))
+    expect(rs0e('')).toEqual('')
+
+    const os0 = Gubu('x')
+    expect(os0('')).toEqual('x')
+
+    const os0e = Gubu(Empty('x'))
+    expect(os0e('')).toEqual('')
 
   })
 
@@ -402,7 +416,7 @@ describe('gubu', () => {
   test('type-default-optional', () => {
     let f0 = () => true
 
-    let g0 = gubu({
+    let g0 = Gubu({
       string: 's',
       number: 1,
       boolean: true,
@@ -441,7 +455,7 @@ describe('gubu', () => {
 
 
   test('type-native-required', () => {
-    let g0 = gubu({
+    let g0 = Gubu({
       string: String,
       number: Number,
       boolean: Boolean,
@@ -462,7 +476,7 @@ describe('gubu', () => {
     expect(g0(o0)).toMatchObject(o0)
 
 
-    let e0 = gubu({ s0: String, s1: 'x' })
+    let e0 = Gubu({ s0: String, s1: 'x' })
     expect(e0({ s0: 'a' })).toMatchObject({ s0: 'a', s1: 'x' })
 
     expect(() => e0({ s0: 1 })).toThrow(/Validation failed for path "s0" with value "1" because the value is not of type string\./)
@@ -474,9 +488,9 @@ describe('gubu', () => {
 
 
   test('type-native-optional', () => {
-    let { Optional } = gubu
+    let { Optional } = Gubu
 
-    let g0 = gubu({
+    let g0 = Gubu({
       string: Optional(String),
       number: Optional(Number),
       boolean: Optional(Boolean),
@@ -489,7 +503,7 @@ describe('gubu', () => {
 
 
   test('array-elements', () => {
-    let g0 = gubu({
+    let g0 = Gubu({
       a: [String]
     })
 
@@ -497,11 +511,11 @@ describe('gubu', () => {
     expect(() => g0({ a: ['X', 1] })).toThrow(/Validation failed for path "a.1" with value "1" because the value is not of type string\./)
 
 
-    let g1 = gubu([String])
+    let g1 = Gubu([String])
     expect(g1(['X', 'Y'])).toEqual(['X', 'Y'])
     expect(() => g1(['X', 1])).toThrow(/Validation failed for path "1" with value "1" because the value is not of type string\./)
 
-    let g2 = gubu([Any(), { x: 1 }, { y: true }])
+    let g2 = Gubu([Any(), { x: 1 }, { y: true }])
     expect(g2([{ x: 2 }, { y: false }])).toEqual([{ x: 2 }, { y: false }])
     expect(g2([{ x: 2 }, { y: false }, 'Q'])).toEqual([{ x: 2 }, { y: false }, 'Q'])
     expect(() => g2([{ x: 'X' }, { y: false }])).toThrow('Validation failed for path "0.x" with value "X" because the value is not of type number.')
@@ -513,16 +527,16 @@ describe('gubu', () => {
 
 
   test('custom-basic', () => {
-    let g0 = gubu({ a: (v: any) => v > 10 })
+    let g0 = Gubu({ a: (v: any) => v > 10 })
     expect(g0({ a: 11 })).toMatchObject({ a: 11 })
     expect(() => g0({ a: 9 })).toThrow(/Validation failed for path "a" with value "9" because check "custom" failed\./)
 
-    let g1 = gubu({ a: Optional((v: any) => v > 10) })
+    let g1 = Gubu({ a: Optional((v: any) => v > 10) })
     expect(g1({ a: 11 })).toMatchObject({ a: 11 })
     expect(() => g1({ a: 9 })).toThrow(/Validation failed for path "a" with value "9" because check "custom" failed\./)
     expect(g1({})).toMatchObject({})
 
-    let g2 = gubu({ a: Required((v: any) => v > 10) })
+    let g2 = Gubu({ a: Required((v: any) => v > 10) })
     expect(g1({ a: 11 })).toMatchObject({ a: 11 })
     expect(() => g2({ a: 9 })).toThrow(/Validation failed for path "a" with value "9" because check "custom" failed\./)
     expect(() => g2({})).toThrow(/Validation failed for path "a" with value "" because check "custom" failed\./)
@@ -530,7 +544,7 @@ describe('gubu', () => {
 
 
   test('builder-before-after-basic', () => {
-    let g0 = gubu(
+    let g0 = Gubu(
       Before((val: any, _update: Update) => {
         val.b = 1 + val.a
         return true
@@ -542,7 +556,7 @@ describe('gubu', () => {
 
     expect(g0({ a: 2 })).toMatchObject({ a: 2, b: 3, c: 20 })
 
-    let g1 = gubu({
+    let g1 = Gubu({
       x:
         After((val: any, _update: Update) => {
           val.c = 10 * val.a
@@ -580,27 +594,27 @@ describe('gubu', () => {
 
 
   test('deep-object-basic', () => {
-    let a1 = gubu({ a: 1 })
+    let a1 = Gubu({ a: 1 })
     expect(a1({})).toMatchObject({ a: 1 })
 
-    let ab1 = gubu({ a: { b: 1 } })
+    let ab1 = Gubu({ a: { b: 1 } })
     expect(ab1({})).toMatchObject({ a: { b: 1 } })
 
-    let abc1 = gubu({ a: { b: { c: 1 } } })
+    let abc1 = Gubu({ a: { b: { c: 1 } } })
     expect(abc1({})).toMatchObject({ a: { b: { c: 1 } } })
 
 
-    let ab1c2 = gubu({ a: { b: 1 }, c: 2 })
+    let ab1c2 = Gubu({ a: { b: 1 }, c: 2 })
     expect(ab1c2({})).toMatchObject({ a: { b: 1 }, c: 2 })
 
-    let ab1cd2 = gubu({ a: { b: 1 }, c: { d: 2 } })
+    let ab1cd2 = Gubu({ a: { b: 1 }, c: { d: 2 } })
     expect(ab1cd2({})).toMatchObject({ a: { b: 1 }, c: { d: 2 } })
 
-    let abc1ade2f3 = gubu({ a: { b: { c: 1 }, d: { e: 2 } }, f: 3 })
+    let abc1ade2f3 = Gubu({ a: { b: { c: 1 }, d: { e: 2 } }, f: 3 })
     expect(abc1ade2f3({})).toMatchObject({ a: { b: { c: 1 }, d: { e: 2 } }, f: 3 })
 
 
-    let d0 = gubu({
+    let d0 = Gubu({
       a: { b: { c: 1 }, d: { e: { f: 3 } } },
       h: 3,
       i: { j: { k: 4 }, l: { m: 5 } },
@@ -617,14 +631,14 @@ describe('gubu', () => {
 
 
   test('deep-array-basic', () => {
-    let a0 = gubu([1])
+    let a0 = Gubu([1])
     // console.dir(a0.spec(), { depth: null })
     expect(a0()).toMatchObject([])
     expect(a0([])).toMatchObject([])
     expect(a0([11])).toMatchObject([11])
     expect(a0([11, 22])).toMatchObject([11, 22])
 
-    let a1 = gubu([-1, 1, 2, 3])
+    let a1 = Gubu([-1, 1, 2, 3])
     // console.dir(a1.spec(), { depth: null })
     expect(a1()).toMatchObject([1, 2, 3])
     expect(a1([])).toMatchObject([1, 2, 3])
@@ -639,11 +653,11 @@ describe('gubu', () => {
 
 
   test('builder-required', () => {
-    let g0 = gubu({ a: Required({ x: 1 }) })
+    let g0 = Gubu({ a: Required({ x: 1 }) })
     expect(g0({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
     expect(() => g0({})).toThrow('Validation failed for path "a" with value "" because the value is required.')
 
-    let g1 = gubu({ a: Required([1]) })
+    let g1 = Gubu({ a: Required([1]) })
     expect(g1({ a: [11] })).toEqual({ a: [11] })
     expect(() => g1({})).toThrow('Validation failed for path "a" with value "" because the value is required.')
 
@@ -653,11 +667,11 @@ describe('gubu', () => {
   test('builder-closed', () => {
     let tmp: any = {}
 
-    let g0 = gubu({ a: { b: { c: Closed({ x: 1 }) } } })
+    let g0 = Gubu({ a: { b: { c: Closed({ x: 1 }) } } })
     expect(g0({ a: { b: { c: { x: 2 } } } })).toEqual({ a: { b: { c: { x: 2 } } } })
     expect(() => g0({ a: { b: { c: { x: 2, y: 3 } } } })).toThrow(/Validation failed for path "a.b.c" with value "{x:2,y:3}" because the property "y" is not allowed\./)
 
-    let g1 = gubu(Closed([Any(), Date, RegExp]))
+    let g1 = Gubu(Closed([Any(), Date, RegExp]))
     expect(g1(tmp.a0 = [new Date(), /a/])).toEqual(tmp.a0)
     expect(() => g1([new Date(), /a/, 'Q'])).toThrow(/Validation failed for path "" with value "\[[^Z]+Z,{},Q\]" /) // because the property "2" is not allowed\./)
 
@@ -665,17 +679,17 @@ describe('gubu', () => {
 
 
   test('builder-one', () => {
-    let g0 = gubu({ a: One(Number, String) })
+    let g0 = Gubu({ a: One(Number, String) })
     expect(g0({ a: 1 })).toEqual({ a: 1 })
     expect(g0({ a: 'x' })).toEqual({ a: 'x' })
     expect(() => g0({ a: true })).toThrow('Validation failed for path "a" with value "true" because the value is not of type number.\nValidation failed for path "a" with value "true" because the value is not of type string.')
 
-    let g1 = gubu(One(Number, String))
+    let g1 = Gubu(One(Number, String))
     expect(g1(1)).toEqual(1)
     expect(g1('x')).toEqual('x')
     expect(() => g1(true)).toThrow('Validation failed for path "" with value "true" because the value is not of type number.\nValidation failed for path "" with value "true" because the value is not of type string.')
 
-    let g2 = gubu([One(Number, String)])
+    let g2 = Gubu([One(Number, String)])
     expect(g2([1])).toEqual([1])
     expect(g2(['x'])).toEqual(['x'])
     expect(g2([1, 2])).toEqual([1, 2])
@@ -685,17 +699,17 @@ describe('gubu', () => {
     expect(g2(['x', 1, 'y', 2])).toEqual(['x', 1, 'y', 2])
     expect(() => g2([true])).toThrow('Validation failed for path "0" with value "true" because the value is not of type number.\nValidation failed for path "0" with value "true" because the value is not of type string.')
 
-    let g3 = gubu({ a: [One(Number, String)] })
+    let g3 = Gubu({ a: [One(Number, String)] })
     expect(g3({ a: [1] })).toEqual({ a: [1] })
     expect(g3({ a: ['x'] })).toEqual({ a: ['x'] })
     expect(g3({ a: ['x', 1, 'y', 2] })).toEqual({ a: ['x', 1, 'y', 2] })
     expect(() => g3({ a: [1, 2, true] })).toThrow('Validation failed for path "a.2" with value "true" because the value is not of type number.\nValidation failed for path "a.2" with value "true" because the value is not of type string.')
 
-    let g4 = gubu({ a: [One({ x: 1 }, { x: 'X' })] })
+    let g4 = Gubu({ a: [One({ x: 1 }, { x: 'X' })] })
     expect(g4({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] }))
       .toEqual({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] })
 
-    let g5 = gubu({ a: [One({ x: 1 }, Closed({ x: 'X' }))] })
+    let g5 = Gubu({ a: [One({ x: 1 }, Closed({ x: 'X' }))] })
     expect(g5({ a: [{ x: 2 }, { x: 'Q' }] }))
       .toEqual({ a: [{ x: 2 }, { x: 'Q' }] })
 
@@ -742,18 +756,18 @@ describe('gubu', () => {
 
 
   test('builder-all', () => {
-    let g0 = gubu(All({ x: 1 }, { y: 'a' }))
+    let g0 = Gubu(All({ x: 1 }, { y: 'a' }))
     expect(g0({ x: 1, y: 'a' })).toEqual({ x: 1, y: 'a' })
     expect(() => g0({ x: 'b', y: 'a' })).toThrow('Validation failed for path "x" with value "b" because the value is not of type number.')
 
-    let g1 = gubu({ a: All((v: number) => v > 10, (v: number) => v < 20) })
+    let g1 = Gubu({ a: All((v: number) => v > 10, (v: number) => v < 20) })
     expect(g1({ a: 11 })).toEqual({ a: 11 })
     expect(() => g1({ a: 0 })).toThrow('Validation failed for path "a" with value "0" because check "custom" failed.')
   })
 
 
   test('builder-custom-between', () => {
-    const rangeCheck = gubu([None(), Number, Number])
+    const rangeCheck = Gubu([None(), Number, Number])
     const Between: Builder =
       function(this: ValSpec, inopts: any, spec?: any): ValSpec {
         let vs = buildize(this || spec)
@@ -768,7 +782,7 @@ describe('gubu', () => {
           }
           else {
             update.err = [
-              gubuError(val, state,
+              makeErr(val, state,
                 `Value "$VALUE" for path "$PATH" is ` +
                 `not between ${range[0]} and ${range[1]}.`)
             ]
@@ -779,27 +793,27 @@ describe('gubu', () => {
         return vs
       }
 
-    const g0 = gubu({ a: [Between([10, 20])] })
+    const g0 = Gubu({ a: [Between([10, 20])] })
     expect(g0({ a: [11, 12, 13] })).toEqual({ a: [11, 12, 13] })
     expect(() => g0({ a: [11, 9, 13, 'y'] })).toThrow('Value "9" for path "a.1" is not between 10 and 20.\nValue "y" for path "a.3" is not between 10 and 20.')
   })
 
 
   test('builder-required', () => {
-    let g0 = gubu({ a: Required(1) })
+    let g0 = Gubu({ a: Required(1) })
     expect(g0({ a: 2 })).toMatchObject({ a: 2 })
     expect(() => g0({ a: 'x' })).toThrow(/number/)
   })
 
   test('builder-optional', () => {
-    let g0 = gubu({ a: Optional(String) })
+    let g0 = Gubu({ a: Optional(String) })
     expect(g0({ a: 'x' })).toMatchObject({ a: 'x' })
     expect(g0({})).toMatchObject({ a: '' })
     expect(() => g0({ a: 1 })).toThrow(/string/)
   })
 
   test('builder-any', () => {
-    let g0 = gubu({ a: Any(), b: Any('B') })
+    let g0 = Gubu({ a: Any(), b: Any('B') })
     expect(g0({ a: 2, b: 1 })).toMatchObject({ a: 2, b: 1 })
     expect(g0({ a: 'x', b: 'y' })).toMatchObject({ a: 'x', b: 'y' })
     expect(g0({ b: 1 })).toEqual({ b: 1 })
@@ -807,26 +821,26 @@ describe('gubu', () => {
   })
 
   test('builder-none', () => {
-    let g0 = gubu(None())
+    let g0 = Gubu(None())
     expect(() => g0(1)).toThrow('Validation failed for path "" with value "1" because no value is allowed.')
-    let g1 = gubu({ a: None() })
+    let g1 = Gubu({ a: None() })
     expect(() => g1({ a: 'x' })).toThrow('Validation failed for path "a" with value "x" because no value is allowed.')
 
     // Another way to do closed arrays.
-    let g2 = gubu([None(), 1, 'x'])
+    let g2 = Gubu([None(), 1, 'x'])
     expect(g2([2, 'y'])).toEqual([2, 'y'])
     expect(() => g2([2, 'y', true])).toThrow('Validation failed for path "2" with value "true" because no value is allowed.')
   })
 
 
   test('builder-rename', () => {
-    let g0 = gubu({ a: Rename('b', { x: 1 }) })
+    let g0 = Gubu({ a: Rename('b', { x: 1 }) })
     expect(g0({ a: { x: 2 } })).toMatchObject({ b: { x: 2 } })
   })
 
 
   test('builder-define-refer-basic', () => {
-    let g0 = gubu({ a: Define('A', { x: 1 }), b: Refer('A'), c: Refer('A') })
+    let g0 = Gubu({ a: Define('A', { x: 1 }), b: Refer('A'), c: Refer('A') })
     // console.log(g0.spec())
     expect(g0({ a: { x: 2 }, b: { x: 2 } }))
       .toEqual({ a: { x: 2 }, b: { x: 2 } })
@@ -835,7 +849,7 @@ describe('gubu', () => {
     expect(() => g0({ a: { x: 33 }, b: { x: 'X' } }))
       .toThrow('Validation failed for path "b.x" with value "X" because the value is not of type number.')
 
-    let g1 = gubu({
+    let g1 = Gubu({
       a: Define('A', { x: 1 }),
       b: Refer('A'),
       c: Refer({ name: 'A', fill: true })
@@ -851,7 +865,7 @@ describe('gubu', () => {
 
 
   test('builder-define-refer-recursive', () => {
-    let g0 = gubu({
+    let g0 = Gubu({
       a: Define('A', {
         b: {
           c: 1,
@@ -955,7 +969,7 @@ describe('gubu', () => {
     // expect(() => g0({ a: { b: 1 } })).toThrow('path "a.b"')
     // expect(() => g0({ a: { b: { c: 1 } } })).toThrow('path "a.b"')
 
-    let g1 = gubu(String)
+    let g1 = Gubu(String)
     // expect(g1('x')).toEqual('x')
     // expect(() => g1(1)).toThrow('path ""')
     // expect(() => g1(true)).toThrow('path ""')
@@ -968,7 +982,7 @@ describe('gubu', () => {
 
 
   test('error-desc', () => {
-    const g0 = gubu(NaN)
+    const g0 = Gubu(NaN)
     let err: any = []
     let o0 = g0(1, { err })
     expect(o0).toEqual(1)
@@ -1009,22 +1023,22 @@ describe('gubu', () => {
 
 
   test('spec-basic', () => {
-    expect(gubu(Number).spec()).toMatchObject({
+    expect(Gubu(Number).spec()).toMatchObject({
       $: { gubu$: true, v$: Pkg.version },
       d: 0, k: '', r: true, t: 'number', u: {}, v: 0,
     })
 
-    expect(gubu(String).spec()).toMatchObject({
+    expect(Gubu(String).spec()).toMatchObject({
       $: { gubu$: true, v$: Pkg.version },
       d: 0, k: '', r: true, t: 'string', u: {}, v: '',
     })
 
-    expect(gubu(BigInt).spec()).toMatchObject({
+    expect(Gubu(BigInt).spec()).toMatchObject({
       $: { gubu$: true, v$: Pkg.version },
       d: 0, k: '', r: true, t: 'bigint', u: {}, v: "0",
     })
 
-    expect(gubu(null).spec()).toMatchObject({
+    expect(Gubu(null).spec()).toMatchObject({
       $: { gubu$: true, v$: Pkg.version },
       d: 0, k: '', r: false, t: 'null', u: {}, v: null,
     })
@@ -1034,7 +1048,7 @@ describe('gubu', () => {
 
   test('spec-roundtrip', () => {
     let m0 = { a: 1 }
-    let g0 = gubu(m0)
+    let g0 = Gubu(m0)
     // console.log('m0 A', m0)
     expect(m0).toEqual({ a: 1 })
 
@@ -1074,7 +1088,7 @@ describe('gubu', () => {
     expect(s0).toEqual(s0s)
     expect(g0({ a: 2 })).toEqual({ a: 2 })
 
-    let g0r = gubu(s0)
+    let g0r = Gubu(s0)
     expect(m0).toEqual({ a: 1 })
     expect(s0).toEqual(s0s)
 
@@ -1097,7 +1111,7 @@ describe('gubu', () => {
 
 
     let m1 = { a: [1] }
-    let g1 = gubu(m1)
+    let g1 = Gubu(m1)
     expect(g1({ a: [2] })).toEqual({ a: [2] })
     expect(m1).toEqual({ a: [1] })
 
@@ -1143,7 +1157,7 @@ describe('gubu', () => {
     }
     expect(s1).toEqual(s1s)
 
-    let g1r = gubu(s1)
+    let g1r = Gubu(s1)
     expect(g1r({ a: [2] })).toEqual({ a: [2] })
     expect(g1({ a: [2] })).toEqual({ a: [2] })
     expect(m1).toEqual({ a: [1] })
@@ -1157,6 +1171,459 @@ describe('gubu', () => {
     expect(s1r).toEqual(s1s)
   })
 
+
+
+  test('compose', () => {
+    let g0 = Gubu(String)
+    let g1 = Gubu(g0)
+    let g1s = Gubu(g0.spec())
+    // console.log(g1.spec())
+
+    expect(g1('x')).toEqual('x')
+    expect(() => g1(1)).toThrow()
+    expect(g1s('x')).toEqual('x')
+    expect(() => g1s(1)).toThrow()
+
+
+    let g2 = Gubu({ a: Number })
+    let g3 = Gubu({ b: g2 })
+    let g3s = Gubu({ b: g2.spec() })
+    // console.dir(g3.spec(), { depth: null })
+    expect(g3({ b: { a: 1 } })).toEqual({ b: { a: 1 } })
+    expect(() => g3({ b: { a: 'x' } })).toThrow()
+    expect(g3s({ b: { a: 1 } })).toEqual({ b: { a: 1 } })
+    expect(() => g3s({ b: { a: 'x' } })).toThrow()
+  })
+
+
+  test('large', () => {
+    let m0: any = [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
+      String
+    ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+    let g0 = Gubu(m0)
+    let o0 = g0([[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
+      'x', 'y', 'z'
+    ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]])
+    // console.dir(o0, { depth: null })
+    expect(o0).toEqual(
+      [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
+        'x', 'y', 'z'
+      ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]])
+
+
+    let m1: any = {
+      a: {
+        a: {
+          a: {
+            a: {
+              a: {
+                a: {
+                  a: {
+                    a: {
+                      a: {
+                        a: {
+                          a: {
+                            a: {
+                              a: {
+                                a: {
+                                  a: {
+                                    a: {
+                                      a: {
+                                        a: {
+                                          a: {
+                                            a: {
+                                              a: {
+                                                a: {
+                                                  a: {
+                                                    a: {
+                                                      a: {
+                                                        a: {
+                                                          a: {
+                                                            a: {
+                                                              a: {
+                                                                a: {
+                                                                  a: {
+                                                                    a: {
+                                                                      a: {
+                                                                        a: {
+                                                                          a: {
+                                                                            a: {
+                                                                              a: {
+                                                                                a: {
+                                                                                  a: {
+                                                                                    a: {
+                                                                                      a: {
+                                                                                        a: {
+                                                                                          a: {
+                                                                                            a: {
+                                                                                              a: {
+                                                                                                a: {
+                                                                                                  a: {
+                                                                                                    a: {
+                                                                                                      a: {
+                                                                                                        a: {
+                                                                                                          a: {
+                                                                                                            a: {
+                                                                                                              a: {
+                                                                                                                a: {
+                                                                                                                  a: {
+                                                                                                                    a: {
+                                                                                                                      a: {
+                                                                                                                        a: {
+                                                                                                                          a: {
+                                                                                                                            a: {
+                                                                                                                              a: {
+                                                                                                                                a: {
+                                                                                                                                  a: {
+                                                                                                                                    a: {
+                                                                                                                                      a: {
+                                                                                                                                        a: {
+                                                                                                                                          a:
+                                                                                                                                            { x: Number }
+                                                                                                                                        }
+                                                                                                                                      }
+                                                                                                                                    }
+                                                                                                                                  }
+                                                                                                                                }
+                                                                                                                              }
+                                                                                                                            }
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    let g1 = Gubu(m1)
+
+    let o1 = g1({
+      a: {
+        a: {
+          a: {
+            a: {
+              a: {
+                a: {
+                  a: {
+                    a: {
+                      a: {
+                        a: {
+                          a: {
+                            a: {
+                              a: {
+                                a: {
+                                  a: {
+                                    a: {
+                                      a: {
+                                        a: {
+                                          a: {
+                                            a: {
+                                              a: {
+                                                a: {
+                                                  a: {
+                                                    a: {
+                                                      a: {
+                                                        a: {
+                                                          a: {
+                                                            a: {
+                                                              a: {
+                                                                a: {
+                                                                  a: {
+                                                                    a: {
+                                                                      a: {
+                                                                        a: {
+                                                                          a: {
+                                                                            a: {
+                                                                              a: {
+                                                                                a: {
+                                                                                  a: {
+                                                                                    a: {
+                                                                                      a: {
+                                                                                        a: {
+                                                                                          a: {
+                                                                                            a: {
+                                                                                              a: {
+                                                                                                a: {
+                                                                                                  a: {
+                                                                                                    a: {
+                                                                                                      a: {
+                                                                                                        a: {
+                                                                                                          a: {
+                                                                                                            a: {
+                                                                                                              a: {
+                                                                                                                a: {
+                                                                                                                  a: {
+                                                                                                                    a: {
+                                                                                                                      a: {
+                                                                                                                        a: {
+                                                                                                                          a: {
+                                                                                                                            a: {
+                                                                                                                              a: {
+                                                                                                                                a: {
+                                                                                                                                  a: {
+                                                                                                                                    a: {
+                                                                                                                                      a: {
+                                                                                                                                        a: {
+                                                                                                                                          a:
+                                                                                                                                            { x: 1 }
+                                                                                                                                        }
+                                                                                                                                      }
+                                                                                                                                    }
+                                                                                                                                  }
+                                                                                                                                }
+                                                                                                                              }
+                                                                                                                            }
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+
+    expect(o1).toEqual({
+      a: {
+        a: {
+          a: {
+            a: {
+              a: {
+                a: {
+                  a: {
+                    a: {
+                      a: {
+                        a: {
+                          a: {
+                            a: {
+                              a: {
+                                a: {
+                                  a: {
+                                    a: {
+                                      a: {
+                                        a: {
+                                          a: {
+                                            a: {
+                                              a: {
+                                                a: {
+                                                  a: {
+                                                    a: {
+                                                      a: {
+                                                        a: {
+                                                          a: {
+                                                            a: {
+                                                              a: {
+                                                                a: {
+                                                                  a: {
+                                                                    a: {
+                                                                      a: {
+                                                                        a: {
+                                                                          a: {
+                                                                            a: {
+                                                                              a: {
+                                                                                a: {
+                                                                                  a: {
+                                                                                    a: {
+                                                                                      a: {
+                                                                                        a: {
+                                                                                          a: {
+                                                                                            a: {
+                                                                                              a: {
+                                                                                                a: {
+                                                                                                  a: {
+                                                                                                    a: {
+                                                                                                      a: {
+                                                                                                        a: {
+                                                                                                          a: {
+                                                                                                            a: {
+                                                                                                              a: {
+                                                                                                                a: {
+                                                                                                                  a: {
+                                                                                                                    a: {
+                                                                                                                      a: {
+                                                                                                                        a: {
+                                                                                                                          a: {
+                                                                                                                            a: {
+                                                                                                                              a: {
+                                                                                                                                a: {
+                                                                                                                                  a: {
+                                                                                                                                    a: {
+                                                                                                                                      a: {
+                                                                                                                                        a: {
+                                                                                                                                          a:
+                                                                                                                                            { x: 1 }
+                                                                                                                                        }
+                                                                                                                                      }
+                                                                                                                                    }
+                                                                                                                                  }
+                                                                                                                                }
+                                                                                                                              }
+                                                                                                                            }
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                      }
+                                                                                                                    }
+                                                                                                                  }
+                                                                                                                }
+                                                                                                              }
+                                                                                                            }
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    }
+                                                                                                  }
+                                                                                                }
+                                                                                              }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+  })
 })
 
 

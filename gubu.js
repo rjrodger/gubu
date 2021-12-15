@@ -1,15 +1,17 @@
 "use strict";
-/* Copyright (c) 2021 Richard Rodger, MIT License */
+/* Copyright (c) 2021 Richard Rodger and other contributors, MIT License */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNone = exports.GDefine = exports.GClosed = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.None = exports.Define = exports.Closed = exports.Before = exports.Any = exports.All = exports.After = exports.gubuError = exports.buildize = exports.norm = exports.G$ = exports.gubu = void 0;
+exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNone = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.None = exports.Empty = exports.Define = exports.Closed = exports.Before = exports.Any = exports.All = exports.After = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
+// TODO: custom undefined handling?
+// TODO: closed on array
+// TODO: composable?
 // TODO: function deref?
-// TODO: test Some, or drop?
 // TODO: BigInt spec roundtrip test
 // TODO: Only - builder, exact values
 // TODO: Min,Max - builder, depends on value
@@ -58,7 +60,7 @@ const EMPTY_VAL = {
     null: null,
 };
 function norm(spec) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g;
     // Is this a (possibly incomplete) ValSpec?
     if (null != spec && ((_a = spec.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
         // Assume complete if gubu$ has special internal reference.
@@ -112,15 +114,22 @@ function norm(spec) {
             r = true;
             v = clone(EMPTY_VAL[t]);
         }
+        else if (spec.gubu === GUBU || true === ((_d = spec.$) === null || _d === void 0 ? void 0 : _d.gubu)) {
+            let gs = (spec === null || spec === void 0 ? void 0 : spec.spec) ? spec.spec() : spec;
+            t = gs.t;
+            v = gs.v;
+            r = gs.r;
+            u = gs.u;
+        }
         else if ((undefined === spec.prototype && Function === spec.constructor) ||
-            Function === ((_d = spec.prototype) === null || _d === void 0 ? void 0 : _d.constructor)) {
+            Function === ((_e = spec.prototype) === null || _e === void 0 ? void 0 : _e.constructor)) {
             t = 'custom';
             b = v;
         }
         else {
             t = 'instance';
             r = true;
-            u.n = (_f = (_e = v.prototype) === null || _e === void 0 ? void 0 : _e.constructor) === null || _f === void 0 ? void 0 : _f.name;
+            u.n = (_g = (_f = v.prototype) === null || _f === void 0 ? void 0 : _f.constructor) === null || _g === void 0 ? void 0 : _g.name;
             u.i = v;
         }
     }
@@ -299,13 +308,13 @@ function make(inspec, inopts) {
                     // )
                     if (!done) {
                         if ('none' === t) {
-                            terr.push(makeErr('none', sval, path, dI, vs, 1070));
+                            terr.push(makeErrImpl('none', sval, path, dI, vs, 1070));
                         }
                         else if ('object' === t) {
                             // console.log('SVAL', sval, null === sval)
                             // if (vs.r && null == sval) {
                             if (vs.r && undefined === sval) {
-                                terr.push(makeErr('required', sval, path, dI, vs, 1010));
+                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1010));
                             }
                             else if (
                             //(null != sval && ('object' !== stype || Array.isArray(sval)))
@@ -313,7 +322,7 @@ function make(inspec, inopts) {
                                 'object' !== stype ||
                                 Array.isArray(sval))) {
                                 // console.log('SVAL Q')
-                                terr.push(makeErr('type', sval, path, dI, vs, 1020));
+                                terr.push(makeErrImpl('type', sval, path, dI, vs, 1020));
                             }
                             else {
                                 nodes[nI] = vs;
@@ -325,11 +334,11 @@ function make(inspec, inopts) {
                         else if ('array' === t) {
                             // if (vs.r && null == sval) {
                             if (vs.r && undefined === sval) {
-                                terr.push(makeErr('required', sval, path, dI, vs, 1030));
+                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1030));
                             }
                             // else if (null != sval && !Array.isArray(sval)) {
                             else if (undefined !== sval && !Array.isArray(sval)) {
-                                terr.push(makeErr('type', sval, path, dI, vs, 1040));
+                                terr.push(makeErrImpl('type', sval, path, dI, vs, 1040));
                             }
                             else {
                                 nodes[nI] = vs;
@@ -354,17 +363,27 @@ function make(inspec, inopts) {
                         // !('instance' === t && vs.u.i && sval instanceof vs.u.i) &&
                         // !('null' === t && null === sval)
                         {
-                            terr.push(makeErr('type', sval, path, dI, vs, 1050));
+                            terr.push(makeErrImpl('type', sval, path, dI, vs, 1050));
                             pass = false;
                         }
                         // Value itself, or default.
                         else if (undefined === sval) {
                             if (vs.r) {
-                                terr.push(makeErr('required', sval, path, dI, vs, 1060));
+                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1060));
                                 pass = false;
                             }
                             // NOTE: `undefined` is special and cannot be set
                             else if (undefined !== vs.v) {
+                                src[key] = vs.v;
+                            }
+                        }
+                        // Empty strings fail if string is required. Use Empty to allow.
+                        else if ('string' === t && '' === sval) {
+                            if (vs.r && !vs.u.empty) {
+                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1080));
+                            }
+                            // Optional empty strings take the default, unless Empty allows.
+                            else if (!vs.u.empty) {
                                 src[key] = vs.v;
                             }
                         }
@@ -443,6 +462,7 @@ function make(inspec, inopts) {
     gubuShape.toString = () => {
         return `[Gubu ${opts.name}]`;
     };
+    gubuShape.gubu = GUBU;
     return gubuShape;
 }
 // function J(x: any) {
@@ -464,7 +484,7 @@ function handleValidate(vf, sval, state) {
                 }));
             }
             else {
-                state.terr.push(makeErr(w, sval, state.path, state.dI, state.node, 1040));
+                state.terr.push(makeErrImpl(w, sval, state.path, state.dI, state.node, 1040));
             }
             update.pass = false;
         }
@@ -487,6 +507,12 @@ const Optional = function (spec) {
     return vs;
 };
 exports.Optional = Optional;
+const Empty = function (spec) {
+    let vs = buildize(this || spec);
+    vs.u.empty = true;
+    return vs;
+};
+exports.Empty = Empty;
 // Optional value provides default.
 const Any = function (spec) {
     let vs = buildize(this || spec);
@@ -520,9 +546,6 @@ const makeListBuilder = function (kind) {
 // Pass on first match. Short circuits.
 const One = makeListBuilder('one');
 exports.One = One;
-// Pass if some match, but always check each one - does *not* short circuit.
-const Some = makeListBuilder('some');
-exports.Some = Some;
 // Pass only if all match. Short circuits.
 const All = makeListBuilder('all');
 exports.All = All;
@@ -563,7 +586,7 @@ const Closed = function (spec) {
             for (let k of vkeys) {
                 if (undefined === allowed[k]) {
                     update.err =
-                        makeErr('closed', val, state.path, state.dI, vs, 3010, '', { k });
+                        makeErrImpl('closed', val, state.path, state.dI, vs, 3010, '', { k });
                     return false;
                 }
             }
@@ -634,20 +657,29 @@ exports.Rename = Rename;
 function buildize(invs) {
     let vs = norm(invs);
     return Object.assign(vs, {
-        Required,
-        Optional,
-        Any,
-        Closed,
-        Before,
         After,
+        All,
+        Any,
+        Before,
+        Closed,
+        Define,
+        Empty,
+        None,
+        One,
+        Optional,
+        Refer,
+        Rename,
+        Required,
     });
 }
 exports.buildize = buildize;
-function gubuError(val, state, text, why) {
-    return makeErr(why || 'custom', val, state.path, state.dI, state.node, 4000, text);
+// External utility to make ErrDesc objects.
+function makeErr(val, state, text, why) {
+    return makeErrImpl(why || 'custom', val, state.path, state.dI, state.node, 4000, text);
 }
-exports.gubuError = gubuError;
-function makeErr(why, sval, path, dI, node, mark, text, user, fname) {
+exports.makeErr = makeErr;
+// Internal utility to make ErrDesc objects.
+function makeErrImpl(why, sval, path, dI, node, mark, text, user, fname) {
     let err = {
         n: node,
         s: sval,
@@ -703,18 +735,19 @@ Object.assign(make, {
     Before,
     Closed,
     Define,
+    Empty,
     None,
     One,
     Optional,
+    Refer,
     Rename,
     Required,
-    Some,
 });
 Object.defineProperty(make, 'name', { value: 'gubu' });
 const G$ = (spec) => norm({ ...spec, $: { gubu$: true } });
 exports.G$ = G$;
-const gubu = make;
-exports.gubu = gubu;
+const Gubu = make;
+exports.Gubu = Gubu;
 const GAfter = After;
 exports.GAfter = GAfter;
 const GAll = All;
@@ -727,6 +760,8 @@ const GClosed = Closed;
 exports.GClosed = GClosed;
 const GDefine = Define;
 exports.GDefine = GDefine;
+const GEmpty = Empty;
+exports.GEmpty = GEmpty;
 const GNone = None;
 exports.GNone = GNone;
 const GOne = One;
@@ -739,6 +774,4 @@ const GRename = Rename;
 exports.GRename = GRename;
 const GRequired = Required;
 exports.GRequired = GRequired;
-const GSome = Some;
-exports.GSome = GSome;
 //# sourceMappingURL=gubu.js.map

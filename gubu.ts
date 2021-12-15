@@ -1,11 +1,14 @@
-/* Copyright (c) 2021 Richard Rodger, MIT License */
+/* Copyright (c) 2021 Richard Rodger and other contributors, MIT License */
 
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
 
+// TODO: custom undefined handling?
+
+// TODO: closed on array
+// TODO: composable?
 // TODO: function deref?
-// TODO: test Some, or drop?
 // TODO: BigInt spec roundtrip test
 // TODO: Only - builder, exact values
 // TODO: Min,Max - builder, depends on value
@@ -230,6 +233,13 @@ function norm(spec?: any): ValSpec {
       t = (spec.name.toLowerCase() as ValType)
       r = true
       v = clone(EMPTY_VAL[t])
+    }
+    else if (spec.gubu === GUBU || true === spec.$?.gubu) {
+      let gs = spec?.spec ? spec.spec() : spec
+      t = (gs as ValSpec).t
+      v = gs.v
+      r = gs.r
+      u = gs.u
     }
     else if (
       (undefined === spec.prototype && Function === spec.constructor) ||
@@ -461,14 +471,14 @@ function make(inspec?: any, inopts?: Options): GubuShape {
 
           if (!done) {
             if ('none' === t) {
-              terr.push(makeErr('none', sval, path, dI, vs, 1070))
+              terr.push(makeErrImpl('none', sval, path, dI, vs, 1070))
             }
             else if ('object' === t) {
               // console.log('SVAL', sval, null === sval)
 
               // if (vs.r && null == sval) {
               if (vs.r && undefined === sval) {
-                terr.push(makeErr('required', sval, path, dI, vs, 1010))
+                terr.push(makeErrImpl('required', sval, path, dI, vs, 1010))
               }
               else if (
                 //(null != sval && ('object' !== stype || Array.isArray(sval)))
@@ -480,7 +490,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
                 )
               ) {
                 // console.log('SVAL Q')
-                terr.push(makeErr('type', sval, path, dI, vs, 1020))
+                terr.push(makeErrImpl('type', sval, path, dI, vs, 1020))
               }
               else {
                 nodes[nI] = vs
@@ -493,11 +503,11 @@ function make(inspec?: any, inopts?: Options): GubuShape {
             else if ('array' === t) {
               // if (vs.r && null == sval) {
               if (vs.r && undefined === sval) {
-                terr.push(makeErr('required', sval, path, dI, vs, 1030))
+                terr.push(makeErrImpl('required', sval, path, dI, vs, 1030))
               }
               // else if (null != sval && !Array.isArray(sval)) {
               else if (undefined !== sval && !Array.isArray(sval)) {
-                terr.push(makeErr('type', sval, path, dI, vs, 1040))
+                terr.push(makeErrImpl('type', sval, path, dI, vs, 1040))
               }
               else {
                 nodes[nI] = vs
@@ -526,18 +536,29 @@ function make(inspec?: any, inopts?: Options): GubuShape {
             // !('instance' === t && vs.u.i && sval instanceof vs.u.i) &&
             // !('null' === t && null === sval)
             {
-              terr.push(makeErr('type', sval, path, dI, vs, 1050))
+              terr.push(makeErrImpl('type', sval, path, dI, vs, 1050))
               pass = false
             }
 
             // Value itself, or default.
             else if (undefined === sval) {
               if (vs.r) {
-                terr.push(makeErr('required', sval, path, dI, vs, 1060))
+                terr.push(makeErrImpl('required', sval, path, dI, vs, 1060))
                 pass = false
               }
               // NOTE: `undefined` is special and cannot be set
               else if (undefined !== vs.v) {
+                src[key] = vs.v
+              }
+            }
+
+            // Empty strings fail if string is required. Use Empty to allow.
+            else if ('string' === t && '' === sval) {
+              if (vs.r && !vs.u.empty) {
+                terr.push(makeErrImpl('required', sval, path, dI, vs, 1080))
+              }
+              // Optional empty strings take the default, unless Empty allows.
+              else if (!vs.u.empty) {
                 src[key] = vs.v
               }
             }
@@ -629,6 +650,9 @@ function make(inspec?: any, inopts?: Options): GubuShape {
     return `[Gubu ${opts.name}]`
   }
 
+
+  gubuShape.gubu = GUBU
+
   return gubuShape
 }
 
@@ -655,7 +679,7 @@ function handleValidate(vf: Validate, sval: any, state: State): Update {
         }))
       }
       else {
-        state.terr.push(makeErr(
+        state.terr.push(makeErrImpl(
           w, sval, state.path, state.dI, state.node, 1040))
       }
       update.pass = false
@@ -683,6 +707,13 @@ const Optional: Builder = function(this: ValSpec, spec?: any) {
   vs.r = false
   return vs
 }
+
+const Empty: Builder = function(this: ValSpec, spec?: any) {
+  let vs = buildize(this || spec)
+  vs.u.empty = true
+  return vs
+}
+
 
 
 // Optional value provides default.
@@ -723,9 +754,6 @@ const makeListBuilder = function(kind: string) {
 
 // Pass on first match. Short circuits.
 const One: Builder = makeListBuilder('one')
-
-// Pass if some match, but always check each one - does *not* short circuit.
-const Some: Builder = makeListBuilder('some')
 
 // Pass only if all match. Short circuits.
 const All: Builder = makeListBuilder('all')
@@ -776,7 +804,7 @@ const Closed: Builder = function(this: ValSpec, spec?: any) {
       for (let k of vkeys) {
         if (undefined === allowed[k]) {
           update.err =
-            makeErr('closed', val, state.path, state.dI, vs, 3010, '', { k })
+            makeErrImpl('closed', val, state.path, state.dI, vs, 3010, '', { k })
           return false
         }
       }
@@ -873,18 +901,26 @@ const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpe
 function buildize(invs?: any): ValSpec {
   let vs = norm(invs)
   return Object.assign(vs, {
-    Required,
-    Optional,
-    Any,
-    Closed,
-    Before,
     After,
+    All,
+    Any,
+    Before,
+    Closed,
+    Define,
+    Empty,
+    None,
+    One,
+    Optional,
+    Refer,
+    Rename,
+    Required,
   })
 }
 
 
-function gubuError(val: any, state: State, text?: string, why?: string) {
-  return makeErr(
+// External utility to make ErrDesc objects.
+function makeErr(val: any, state: State, text?: string, why?: string) {
+  return makeErrImpl(
     why || 'custom',
     val,
     state.path,
@@ -895,7 +931,9 @@ function gubuError(val: any, state: State, text?: string, why?: string) {
   )
 }
 
-function makeErr(
+
+// Internal utility to make ErrDesc objects.
+function makeErrImpl(
   why: string,
   sval: any,
   path: string[],
@@ -967,7 +1005,10 @@ function clone(x: any) {
 
 type GubuShape =
   (<T>(inroot?: T, inctx?: any) => T) &
-  { spec: () => any }
+  {
+    spec: () => any,
+    gubu: typeof GUBU
+  }
 
 
 Object.assign(make, {
@@ -977,12 +1018,13 @@ Object.assign(make, {
   Before,
   Closed,
   Define,
+  Empty,
   None,
   One,
   Optional,
+  Refer,
   Rename,
   Required,
-  Some,
 })
 
 
@@ -995,13 +1037,13 @@ type Gubu = typeof make & {
   Before: typeof Before
   Closed: typeof Closed
   Define: typeof Define
+  Empty: typeof Empty
   None: typeof None
   One: typeof One
   Optional: typeof Optional
   Refer: typeof Refer
   Rename: typeof Rename
   Required: typeof Required
-  Some: typeof Some
 }
 
 Object.defineProperty(make, 'name', { value: 'gubu' })
@@ -1010,7 +1052,7 @@ Object.defineProperty(make, 'name', { value: 'gubu' })
 const G$ = (spec: any): ValSpec => norm({ ...spec, $: { gubu$: true } })
 
 
-const gubu: Gubu = (make as Gubu)
+const Gubu: Gubu = (make as Gubu)
 
 
 const GAfter = After
@@ -1019,14 +1061,13 @@ const GAny = Any
 const GBefore = Before
 const GClosed = Closed
 const GDefine = Define
+const GEmpty = Empty
 const GNone = None
 const GOne = One
 const GOptional = Optional
 const GRefer = Refer
 const GRename = Rename
 const GRequired = Required
-const GSome = Some
-
 
 
 export type {
@@ -1039,11 +1080,11 @@ export type {
 }
 
 export {
-  gubu,
+  Gubu,
   G$,
   norm,
   buildize,
-  gubuError,
+  makeErr,
 
   After,
   All,
@@ -1051,13 +1092,13 @@ export {
   Before,
   Closed,
   Define,
+  Empty,
   None,
   One,
   Optional,
   Refer,
   Rename,
   Required,
-  Some,
 
   GAfter,
   GAll,
@@ -1065,14 +1106,13 @@ export {
   GBefore,
   GClosed,
   GDefine,
+  GEmpty,
   GNone,
   GOne,
   GOptional,
   GRefer,
   GRename,
   GRequired,
-  GSome,
-
 }
 
 
