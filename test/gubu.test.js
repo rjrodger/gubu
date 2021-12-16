@@ -33,6 +33,18 @@ describe('gubu', () => {
         expect(g0({ a: 'bar', b: 999 })).toEqual({ a: 'bar', b: 999 });
         expect(g0({ a: 'bar', b: 999, c: true })).toEqual({ a: 'bar', b: 999, c: true });
     });
+    test('readme', () => {
+        // Property a is optional, must be a Number, and defaults to 1.
+        // Property b is required, and must be a String.
+        const shape = (0, gubu_1.Gubu)({ a: 1, b: String });
+        // Object shape is good! Prints `{ a: 99, b: 'foo' }`
+        expect(shape({ a: 99, b: 'foo' })).toEqual({ a: 99, b: 'foo' });
+        // Object shape is also good. Prints `{ a: 1, b: 'foo' }`
+        expect(shape({ b: 'foo' })).toEqual({ a: 1, b: 'foo' });
+        // Object shape is bad. Throws an exception:
+        // "TODO: msg"
+        expect(() => shape({ a: 'BAD' })).toThrow('Validation failed for path "a" with value "BAD" because the value is not of type number.\nValidation failed for path "b" with value "" because the value is required.');
+    });
     test('G-basic', () => {
         expect((0, gubu_1.G$)({ v: 11 })).toMatchObject({
             '$': { v$: package_json_1.default.version },

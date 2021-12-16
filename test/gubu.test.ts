@@ -69,6 +69,25 @@ describe('gubu', () => {
   })
 
 
+  test('readme', () => {
+
+    // Property a is optional, must be a Number, and defaults to 1.
+    // Property b is required, and must be a String.
+    const shape = Gubu({ a: 1, b: String })
+
+    // Object shape is good! Prints `{ a: 99, b: 'foo' }`
+    expect(shape({ a: 99, b: 'foo' })).toEqual({ a: 99, b: 'foo' })
+
+    // Object shape is also good. Prints `{ a: 1, b: 'foo' }`
+    expect(shape({ b: 'foo' })).toEqual({ a: 1, b: 'foo' })
+
+    // Object shape is bad. Throws an exception:
+    // "TODO: msg"
+    expect(() => shape({ a: 'BAD' })).toThrow('Validation failed for path "a" with value "BAD" because the value is not of type number.\nValidation failed for path "b" with value "" because the value is required.')
+
+  })
+
+
   test('G-basic', () => {
     expect(G$({ v: 11 })).toMatchObject({
       '$': { v$: Pkg.version },
@@ -1194,6 +1213,8 @@ describe('gubu', () => {
     expect(g3s({ b: { a: 1 } })).toEqual({ b: { a: 1 } })
     expect(() => g3s({ b: { a: 'x' } })).toThrow()
   })
+
+
 
 
   test('large', () => {

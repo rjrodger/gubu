@@ -2,29 +2,37 @@
 
 NOTE: WORK IN PROGRESS
 
-This is a schema validator in the tradition of [Joi](https://joi.dev) or any JSON-Schema validator, with the key features:
-* Schemas are WYSIWYG - you define a schema with a template matching your object strucure;
-* Covers the most useful cases in a natural way - in particular, defaults are specified directly and the type is inferred from the default;
-* Very light and easily extensible.
+This is a schema validator in the tradition of [Joi](https://joi.dev)
+or any JSON-Schema validator, with the key features:
+
+* Schemas are WYSIWYG - you define a schema with a template matching your object structure;
+* The most useful cases are the easiest to specify (e.g. optional defaults are just literal values);
+* The implementation is iterative (just a loop over all properties, no
+  matter how deep) not recursive, so it's nice and fast and can handle
+  any size of data and schema.
   
 Why write yet another validator? I've used `Joi` for a long time, but
 always found its schema definition a little verbose at the syntax
 level. I've never liked JSON-Schema - it's just too noisy to
 eyeball. What I do like is [Vue.js property
 validation](https://vuejs.org/v2/guide/components-props.html#Prop-Validation),
-but that only works at the top level.
+but that only works at the top level. I did write a prototype deep
+[Vue property validator using
+Joi](https://github.com/rjrodger/joiprops), but it's pretty clunky.
 
-I needed this validator for two cases: adding message validation to
-the [Seneca microservices framework](https://senecajs.org), and
-providing deep defaults for complex custom Vue.js components.
+This validator is motivated by two use cases: adding message
+validation to the [Seneca microservices
+framework](https://senecajs.org), and providing deep defaults for
+complex custom Vue.js components. I think it does both jobs rather
+nicely with an easy-to-read syntax.
 
 
 [![npm version](https://img.shields.io/npm/v/gubu.svg)](https://npmjs.com/package/gubu)
 [![build](https://github.com/rjrodger/gubu/actions/workflows/build.yml/badge.svg)](https://github.com/rjrodger/gubu/actions/workflows/build.yml)
 [![Coverage Status](https://coveralls.io/repos/github/rjrodger/gubu/badge.svg?branch=main)](https://coveralls.io/github/rjrodger/gubu?branch=main)
 [![Known Vulnerabilities](https://snyk.io/test/github/rjrodger/gubu/badge.svg)](https://snyk.io/test/github/rjrodger/gubu)
-[![DeepScan grade](https://deepscan.io/api/teams/5016/projects/19459/branches/505694/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=5016&pid=19459&bid=505694)
-[![Maintainability](https://api.codeclimate.com/v1/badges/ee603417bbb953d35ebe/maintainability)](https://codeclimate.com/github/rjrodger/gubu/maintainability)
+[![DeepScan grade](https://deepscan.io/api/teams/5016/projects/19509/branches/508695/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=5016&pid=19509&bid=508695)
+[![Maintainability](https://api.codeclimate.com/v1/badges/de19e425771fb65e98e2/maintainability)](https://codeclimate.com/github/rjrodger/gubu/maintainability)
 
 | ![Voxgig](https://www.voxgig.com/res/img/vgt01r.png) | This open source module is sponsored and supported by [Voxgig](https://www.voxgig.com). |
 |---|---|
@@ -47,15 +55,19 @@ console.log( shape({ a: 99, b: 'foo' }) )
 // Object shape is also good. Prints `{ a: 1, b: 'foo' }`
 console.log( shape({ b: 'foo' }) )
 
-// Object shape is bad. Throws an exception:
-// "TODO: msg"
+// Object shape is bad. Throws an exception with message:
+//   Validation failed for path "a" with value "BAD" because the value is not of type number.
+//   Validation failed for path "b" with value "" because the value is required.'
 console.log( shape({ a: 'BAD' }) )
 
 ```
 
-Use the exported `Gubu` function to create a validation function that
-checks the first argument for validity - does it match the schema shape?
-
+As shown above, you use the exported `Gubu` function to create a
+validation function that checks its first argument for validity (does
+the first argument match the schema shape?). If valid, return the
+first argument, otherwise thrown an exception listing all (not just
+the first!) the validity errors.
+ 
 
 ## Install
 
