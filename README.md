@@ -7,8 +7,8 @@ or any JSON-Schema validator, with the key features:
 
 * Schemas are WYSIWYG - you define a schema with a template matching your object structure;
 * The most useful cases are the easiest to specify (e.g. optional defaults are just literal values);
-* The implementation is iterative (just a loop over all properties, no
-  matter how deep) not recursive, so it's nice and fast and can handle
+* The implementation is iterative (a depth-first loop over the
+  property tree) not recursive, so it's nice and fast and can handle
   any size of data and schema.
   
 Why write yet another validator? I've used `Joi` for a long time, but
