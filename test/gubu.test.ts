@@ -4,32 +4,41 @@
 import Pkg from '../package.json'
 
 
-import {
-  Gubu,
-  G$,
+
+import type {
   Builder,
   ValSpec,
   State,
-  buildize,
-  makeErr,
   Update,
-
-  After,
-  All,
-  Any,
-  Before,
-  Closed,
-  Define,
-  Empty,
-  None,
-  One,
-  Optional,
-  Refer,
-  Rename,
-  Required,
-
-
 } from '../gubu'
+
+
+// Handle web (Gubu) versus node ({Gubu}) export.
+let GubuModule = require('../gubu')
+
+if (GubuModule.Gubu) {
+  GubuModule = GubuModule.Gubu
+}
+
+
+const Gubu = GubuModule
+const G$ = Gubu.G$
+const buildize = Gubu.buildize
+const makeErr = Gubu.makeErr
+const After = Gubu.After
+const All = Gubu.All
+const Any = Gubu.Any
+const Before = Gubu.Before
+const Closed = Gubu.Closed
+const Define = Gubu.Define
+const Empty = Gubu.Empty
+const None = Gubu.None
+const One = Gubu.One
+const Optional = Gubu.Optional
+const Refer = Gubu.Refer
+const Rename = Gubu.Rename
+const Required = Gubu.Required
+
 
 
 

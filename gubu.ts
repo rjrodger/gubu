@@ -163,9 +163,8 @@ const EMPTY_VAL: { [name: string]: any } = {
 
 
 
-
-
 function norm(spec?: any): ValSpec {
+
   // Is this a (possibly incomplete) ValSpec?
   if (null != spec && spec.$?.gubu$) {
 
@@ -204,8 +203,6 @@ function norm(spec?: any): ValSpec {
 
   let t: ValType | 'undefined' = (null === spec ? 'null' : typeof (spec))
   t = (undefined === t ? 'any' : t) as ValType
-
-  // console.log('Nt', t)
 
   let v = spec
   let r = false // Optional by default
@@ -259,8 +256,6 @@ function norm(spec?: any): ValSpec {
     t = 'nan'
   }
 
-  // console.log('Nv', v)
-
   let vs: ValSpec = {
     $: GUBU,
     t,
@@ -276,8 +271,6 @@ function norm(spec?: any): ValSpec {
     vs.b = b
   }
 
-  // console.log('N', vs)
-
   return vs
 }
 
@@ -289,8 +282,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
   let top = { '': inspec }
   // let spec: ValSpec = norm(inspec) // Tree of validation nodes.
   let spec: ValSpec = norm(top) // Tree of validation nodes.
-
-  // console.log(spec)
 
   let gubuShape = function GubuShape<T>(inroot?: T, inctx?: Context): T {
     const ctx: any = inctx || {}
@@ -358,8 +349,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         }
       }
 
-      // console.log('KEYS', keys)
-
       for (let key of keys) {
         path[dI] = key
         let sval = src[key]
@@ -422,9 +411,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         for (let vsI = 0; vsI < vss.length; vsI++) {
           let vs = vss[vsI]
 
-          // console.log('Ta', vs)
           vs = GUBU$ === vs.$?.gubu$ ? vs : (vss[vsI] = norm(vs))
-          // console.log('Tb', vs)
 
           let t = vs.t
           let pass = true
@@ -436,7 +423,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
               dI, nI, sI, pI, cN,
               key, node: vs, src, nodes, srcs, path, terr, err, ctx
             })
-            // console.log('BU', update)
 
             pass = update.pass
             if (undefined !== update.val) {
@@ -457,26 +443,11 @@ function make(inspec?: any, inopts?: Options): GubuShape {
             cN = undefined === update.cN ? cN : update.cN
           }
 
-          // console.log('M', t, stype, sval, vs.v)
-          //   // sval instanceof vs.v,
-          //   'C',
-          //   'any' !== t,
-          //   'custom' !== t,
-          //   undefined !== sval,
-          //   t !== stype,
-          //   !('object' === stype && 'instance' !== t && null != sval),
-          //   !('instance' === t && sval instanceof vs.v),
-          //   !('null' === t && null === sval)
-          // )
-
           if (!done) {
             if ('none' === t) {
               terr.push(makeErrImpl('none', sval, path, dI, vs, 1070))
             }
             else if ('object' === t) {
-              // console.log('SVAL', sval, null === sval)
-
-              // if (vs.r && null == sval) {
               if (vs.r && undefined === sval) {
                 terr.push(makeErrImpl('required', sval, path, dI, vs, 1010))
               }
@@ -489,7 +460,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
                   Array.isArray(sval)
                 )
               ) {
-                // console.log('SVAL Q')
                 terr.push(makeErrImpl('type', sval, path, dI, vs, 1020))
               }
               else {
@@ -607,16 +577,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         dI--
       }
 
-      // console.log('***')
-      // for (let i = 0; i < nodeStack.length; i++) {
-      //   console.log(
-      //     ('' + i).padStart(4),
-      //     J(nodeStack[i]).substring(0, 111).padEnd(112),
-      //     '/',
-      //     J(curStack[i]).substring(0, 33).padEnd(34),
-      //   )
-      // }
-      // console.log('END', 'c=' + cN, 's=' + sI, 'p=' + pI, 'n=' + nI)
     }
 
     if (0 < err.length) {
@@ -686,7 +646,6 @@ function handleValidate(vf: Validate, sval: any, state: State): Update {
     }
   }
 
-  // console.log('HV', update)
   return update
 }
 
@@ -697,19 +656,19 @@ function pathstr(path: string[], dI: number) {
 
 
 const Required: Builder = function(this: ValSpec, spec?: any) {
-  let vs = buildize(this || spec)
+  let vs = buildize(this, spec)
   vs.r = true
   return vs
 }
 
 const Optional: Builder = function(this: ValSpec, spec?: any) {
-  let vs = buildize(this || spec)
+  let vs = buildize(this, spec)
   vs.r = false
   return vs
 }
 
 const Empty: Builder = function(this: ValSpec, spec?: any) {
-  let vs = buildize(this || spec)
+  let vs = buildize(this, spec)
   vs.u.empty = true
   return vs
 }
@@ -718,7 +677,7 @@ const Empty: Builder = function(this: ValSpec, spec?: any) {
 
 // Optional value provides default.
 const Any: Builder = function(this: ValSpec, spec?: any) {
-  let vs = buildize(this || spec)
+  let vs = buildize(this, spec)
   vs.t = 'any'
   if (undefined !== spec) {
     vs.v = spec
@@ -728,7 +687,7 @@ const Any: Builder = function(this: ValSpec, spec?: any) {
 
 
 const None: Builder = function(this: ValSpec, spec?: any) {
-  let vs = buildize(this || spec)
+  let vs = buildize(this, spec)
   vs.t = 'none'
   return vs
 }
@@ -762,14 +721,14 @@ const All: Builder = makeListBuilder('all')
 
 
 const Before: Builder = function(this: ValSpec, validate: Validate, spec?: any) {
-  let vs = buildize(this || spec)
+  let vs = buildize(this, spec)
   vs.b = validate
   return vs
 }
 
 
 const After: Builder = function(this: ValSpec, validate: Validate, spec?: any) {
-  let vs = buildize(this || spec)
+  let vs = buildize(this, spec)
   // vs.t = vs.t || 'custom'
   vs.a = validate
   return vs
@@ -779,7 +738,7 @@ const After: Builder = function(this: ValSpec, validate: Validate, spec?: any) {
 
 // TODO: array needs special handling as first entry is type spec
 const Closed: Builder = function(this: ValSpec, spec?: any) {
-  let vs = buildize(this || spec)
+  let vs = buildize(this, spec)
 
   vs.b = (val: any, update: Update, state: State) => {
     if (null != val && 'object' === typeof (val)) {
@@ -817,7 +776,7 @@ const Closed: Builder = function(this: ValSpec, spec?: any) {
 
 
 const Define: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
-  let vs = buildize(this || spec)
+  let vs = buildize(this, spec)
 
   let opts = 'object' === typeof inopts ? inopts || {} : {}
   let name = 'string' === typeof inopts ? inopts : opts.name
@@ -836,7 +795,7 @@ const Define: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpe
 
 
 const Refer: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
-  let vs = buildize(this || spec)
+  let vs = buildize(this, spec)
 
   let opts = 'object' === typeof inopts ? inopts || {} : {}
   let name = 'string' === typeof inopts ? inopts : opts.name
@@ -844,16 +803,12 @@ const Refer: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec
   // Fill should be false (the default) if used recursively, to prevent loops.
   let fill = !!opts.fill
 
-  // console.log('R0', opts, name, fill)
-
   if (null != name && '' != name) {
     vs.b = (val: any, update: Update, state: State) => {
       if (undefined !== val || fill) {
         let ref = state.ctx.ref = state.ctx.ref || {}
 
         if (undefined !== ref[name]) {
-          // console.log('R1', ref[name])
-
           let node = { ...ref[name] }
           node.k = state.node.k
           node.t = node.t || 'none'
@@ -861,7 +816,6 @@ const Refer: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec
           update.node = node
           update.type = node.t
 
-          // console.log('R3', update)
         }
       }
 
@@ -875,7 +829,7 @@ const Refer: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec
 
 
 const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
-  let vs = buildize(this || spec)
+  let vs = buildize(this, spec)
 
   let opts = 'object' === typeof inopts ? inopts || {} : {}
   let name = 'string' === typeof inopts ? inopts : opts.name
@@ -898,7 +852,9 @@ const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpe
 
 
 
-function buildize(invs?: any): ValSpec {
+function buildize(invs0?: any, invs1?: any): ValSpec {
+  let invs = undefined === invs0 ? invs1 : invs0.window === invs0 ? invs1 : invs0
+
   let vs = norm(invs)
   return Object.assign(vs, {
     After,
@@ -1003,12 +959,17 @@ function clone(x: any) {
 }
 
 
+
+
 type GubuShape =
   (<T>(inroot?: T, inctx?: any) => T) &
   {
     spec: () => any,
     gubu: typeof GUBU
   }
+
+
+const G$ = (spec: any): ValSpec => norm({ ...spec, $: { gubu$: true } })
 
 
 Object.assign(make, {
@@ -1025,11 +986,18 @@ Object.assign(make, {
   Refer,
   Rename,
   Required,
+  G$,
+  buildize,
+  makeErr,
 })
 
 
 type Gubu = typeof make & {
   desc: () => any
+
+  G$: typeof G$,
+  buildize: typeof buildize,
+  makeErr: typeof makeErr,
 
   After: typeof After
   All: typeof All
@@ -1047,9 +1015,6 @@ type Gubu = typeof make & {
 }
 
 Object.defineProperty(make, 'name', { value: 'gubu' })
-
-
-const G$ = (spec: any): ValSpec => norm({ ...spec, $: { gubu$: true } })
 
 
 const Gubu: Gubu = (make as Gubu)
@@ -1114,5 +1079,7 @@ export {
   GRename,
   GRequired,
 }
+
+
 
 

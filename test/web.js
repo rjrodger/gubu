@@ -1,787 +1,14 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-"use strict";
-/* Copyright (c) 2021 Richard Rodger and other contributors, MIT License */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNone = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.None = exports.Empty = exports.Define = exports.Closed = exports.Before = exports.Any = exports.All = exports.After = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
-/*
- * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
- */
-// TODO: custom undefined handling?
-// TODO: closed on array
-// TODO: composable?
-// TODO: function deref?
-// TODO: BigInt spec roundtrip test
-// TODO: Only - builder, exact values
-// TODO: Min,Max - builder, depends on value
-const package_json_1 = __importDefault(require("./package.json"));
-const GUBU$ = Symbol.for('gubu$');
-const GUBU = { gubu$: GUBU$, v$: package_json_1.default.version };
-class GubuError extends TypeError {
-    constructor(code, err, ctx) {
-        let message = err.map((e) => e.t).join('\n');
-        super(message);
-        let name = 'GubuError';
-        let ge = this;
-        ge.gubu = true;
-        ge.name = name;
-        ge.code = code;
-        ge.desc = () => ({ name, code, err, ctx, });
-    }
-    toJSON() {
-        return {
-            ...this,
-            err: this.desc().err,
-            name: this.name,
-            message: this.message,
-        };
-    }
-}
-const IS_TYPE = {
-    String: true,
-    Number: true,
-    Boolean: true,
-    Object: true,
-    Array: true,
-    Function: true,
-    Symbol: true,
-    BigInt: true,
-};
-const EMPTY_VAL = {
-    string: '',
-    number: 0,
-    boolean: false,
-    object: {},
-    array: [],
-    function: () => undefined,
-    symbol: Symbol(''),
-    bigint: BigInt(0),
-    null: null,
-};
-function norm(spec) {
-    var _a, _b, _c, _d, _e, _f, _g;
-    // Is this a (possibly incomplete) ValSpec?
-    if (null != spec && ((_a = spec.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
-        // Assume complete if gubu$ has special internal reference.
-        if (GUBU$ === spec.$.gubu$) {
-            return spec;
-        }
-        // Normalize an incomplete ValSpec, avoiding any recursive calls to norm.
-        else if (true === spec.$.gubu$) {
-            let vs = { ...spec };
-            vs.$ = { v$: package_json_1.default.version, ...vs.$, gubu$: GUBU$ };
-            vs.v = (null != vs.v && 'object' === typeof (vs.v)) ? { ...vs.v } : vs.v;
-            vs.t = vs.t || typeof (vs.v);
-            if ('function' === vs.t && IS_TYPE[vs.v.name]) {
-                vs.t = vs.v.name.toLowerCase();
-                vs.v = clone(EMPTY_VAL[vs.t]);
-            }
-            vs.k = null == vs.k ? '' : vs.k;
-            vs.r = !!vs.r;
-            vs.d = null == vs.d ? -1 : vs.d;
-            vs.u = vs.u || {};
-            if ((_b = vs.u.list) === null || _b === void 0 ? void 0 : _b.specs) {
-                vs.u.list.specs = [...vs.u.list.specs];
-            }
-            return vs;
-        }
-    }
-    // Not a ValSpec, so build one based on value and its type.
-    let t = (null === spec ? 'null' : typeof (spec));
-    t = (undefined === t ? 'any' : t);
-    // console.log('Nt', t)
-    let v = spec;
-    let r = false; // Optional by default
-    let b = undefined;
-    let u = {};
-    if ('object' === t) {
-        if (Array.isArray(spec)) {
-            t = 'array';
-        }
-        else if (null != v &&
-            Function !== v.constructor &&
-            Object !== v.constructor &&
-            null != v.constructor) {
-            t = 'instance';
-            u.n = (_c = v.constructor) === null || _c === void 0 ? void 0 : _c.name;
-            u.i = v.constructor;
-        }
-    }
-    else if ('function' === t) {
-        if (IS_TYPE[spec.name]) {
-            t = spec.name.toLowerCase();
-            r = true;
-            v = clone(EMPTY_VAL[t]);
-        }
-        else if (spec.gubu === GUBU || true === ((_d = spec.$) === null || _d === void 0 ? void 0 : _d.gubu)) {
-            let gs = (spec === null || spec === void 0 ? void 0 : spec.spec) ? spec.spec() : spec;
-            t = gs.t;
-            v = gs.v;
-            r = gs.r;
-            u = gs.u;
-        }
-        else if ((undefined === spec.prototype && Function === spec.constructor) ||
-            Function === ((_e = spec.prototype) === null || _e === void 0 ? void 0 : _e.constructor)) {
-            t = 'custom';
-            b = v;
-        }
-        else {
-            t = 'instance';
-            r = true;
-            u.n = (_g = (_f = v.prototype) === null || _f === void 0 ? void 0 : _f.constructor) === null || _g === void 0 ? void 0 : _g.name;
-            u.i = v;
-        }
-    }
-    else if ('number' === t && isNaN(v)) {
-        t = 'nan';
-    }
-    // console.log('Nv', v)
-    let vs = {
-        $: GUBU,
-        t,
-        // v: (null != v && 'object' === typeof (v)) ? { ...v } : v,
-        v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
-        r,
-        k: '',
-        d: -1,
-        u,
-    };
-    if (b) {
-        vs.b = b;
-    }
-    // console.log('N', vs)
-    return vs;
-}
-exports.norm = norm;
-function make(inspec, inopts) {
-    const opts = null == inopts ? {} : inopts;
-    opts.name = null == opts.name ? ('' + Math.random()).substring(2) : '' + opts.name;
-    let top = { '': inspec };
-    // let spec: ValSpec = norm(inspec) // Tree of validation nodes.
-    let spec = norm(top); // Tree of validation nodes.
-    // console.log(spec)
-    let gubuShape = function GubuShape(inroot, inctx) {
-        var _a, _b, _c, _d;
-        const ctx = inctx || {};
-        const root = {
-            // '': (undefined === inroot && null != spec.v['']) ?
-            //   clone(EMPTY_VAL[spec.v[''].t]) :
-            //   inroot
-            '': inroot
-        };
-        const nodes = [spec, -1];
-        const srcs = [root, -1];
-        const path = []; // Key path to current node.
-        // let dI: number = 0  // Node depth.
-        let dI = -1; // Node depth.
-        let nI = 2; // Next free slot in nodes.
-        let pI = 0; // Pointer to current node.
-        let sI = -1; // Pointer to next sibling node.
-        let cN = 0; // Number of children of current node.
-        let err = []; // Errors collected.
-        let node; // Current node.  
-        let src; // Current source value to validate.
-        // Iterative depth-first traversal of the spec.
-        while (true) {
-            // Dereference the back pointers to ancestor siblings.
-            // Only objects|arrays can be nodes, so a number is a back pointer.
-            // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
-            node = nodes[pI];
-            while (+node) {
-                pI = node;
-                node = nodes[pI];
-                dI--;
-            }
-            sI = pI + 1;
-            src = srcs[pI];
-            if (!node) {
-                break;
-            }
-            if (-1 < dI) {
-                path[dI] = node.k;
-            }
-            dI++;
-            cN = 0;
-            pI = nI;
-            let keys = Object.keys(node.v);
-            // Treat array indexes as keys.
-            // Inject missing indexes if present in ValSpec.
-            if ('array' === node.t) {
-                keys = Object.keys(src);
-                for (let vk in node.v) {
-                    if ('0' !== vk && !keys.includes(vk)) {
-                        keys.splice(parseInt(vk) - 1, 0, '' + (parseInt(vk) - 1));
-                    }
-                }
-            }
-            // console.log('KEYS', keys)
-            for (let key of keys) {
-                path[dI] = key;
-                let sval = src[key];
-                let stype = typeof (sval);
-                if ('number' === stype && isNaN(sval)) {
-                    stype = 'nan';
-                }
-                let n = node.v[key];
-                let tvs = null;
-                // NOTE: special case handling for arrays keys.
-                if ('array' === node.t) {
-                    // First array entry is general type spec.
-                    // Following are special case elements offset by +1.
-                    // Use these if src has no corresponding element.
-                    let akey = '' + (parseInt(key) + 1);
-                    n = node.v[akey];
-                    if (undefined !== n) {
-                        tvs = n = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (n = node.v[akey] = norm(n));
-                    }
-                    if (undefined === n) {
-                        n = node.v[0];
-                        key = '' + 0;
-                        // No first element defining element type spec, so use Any.
-                        if (undefined === n) {
-                            n = node.v[0] = Any();
-                        }
-                        tvs = n = GUBU$ === ((_b = n.$) === null || _b === void 0 ? void 0 : _b.gubu$) ? n : (n = node.v[key] = norm(n));
-                    }
-                }
-                else {
-                    tvs = (null != n && GUBU$ === ((_c = n.$) === null || _c === void 0 ? void 0 : _c.gubu$)) ? n : (n = node.v[key] = norm(n));
-                }
-                tvs.k = key;
-                tvs.d = dI;
-                let t = tvs.t;
-                let vss;
-                let listkind = '';
-                let failN = 0;
-                if ('list' === t) {
-                    vss = tvs.u.list.specs;
-                    listkind = tvs.u.list.kind;
-                }
-                else {
-                    vss = [tvs];
-                }
-                let terr = [];
-                for (let vsI = 0; vsI < vss.length; vsI++) {
-                    let vs = vss[vsI];
-                    // console.log('Ta', vs)
-                    vs = GUBU$ === ((_d = vs.$) === null || _d === void 0 ? void 0 : _d.gubu$) ? vs : (vss[vsI] = norm(vs));
-                    // console.log('Tb', vs)
-                    let t = vs.t;
-                    let pass = true;
-                    let done = false;
-                    // udpate can set t
-                    if (vs.b) {
-                        let update = handleValidate(vs.b, sval, {
-                            dI, nI, sI, pI, cN,
-                            key, node: vs, src, nodes, srcs, path, terr, err, ctx
-                        });
-                        // console.log('BU', update)
-                        pass = update.pass;
-                        if (undefined !== update.val) {
-                            sval = src[key] = update.val;
-                        }
-                        if (undefined !== update.node) {
-                            vs = update.node;
-                        }
-                        if (undefined !== update.type) {
-                            t = update.type;
-                        }
-                        if (undefined !== update.done) {
-                            done = update.done;
-                        }
-                        nI = undefined === update.nI ? nI : update.nI;
-                        sI = undefined === update.sI ? sI : update.sI;
-                        pI = undefined === update.pI ? pI : update.pI;
-                        cN = undefined === update.cN ? cN : update.cN;
-                    }
-                    // console.log('M', t, stype, sval, vs.v)
-                    //   // sval instanceof vs.v,
-                    //   'C',
-                    //   'any' !== t,
-                    //   'custom' !== t,
-                    //   undefined !== sval,
-                    //   t !== stype,
-                    //   !('object' === stype && 'instance' !== t && null != sval),
-                    //   !('instance' === t && sval instanceof vs.v),
-                    //   !('null' === t && null === sval)
-                    // )
-                    if (!done) {
-                        if ('none' === t) {
-                            terr.push(makeErrImpl('none', sval, path, dI, vs, 1070));
-                        }
-                        else if ('object' === t) {
-                            // console.log('SVAL', sval, null === sval)
-                            // if (vs.r && null == sval) {
-                            if (vs.r && undefined === sval) {
-                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1010));
-                            }
-                            else if (
-                            //(null != sval && ('object' !== stype || Array.isArray(sval)))
-                            undefined !== sval && (null === sval ||
-                                'object' !== stype ||
-                                Array.isArray(sval))) {
-                                // console.log('SVAL Q')
-                                terr.push(makeErrImpl('type', sval, path, dI, vs, 1020));
-                            }
-                            else {
-                                nodes[nI] = vs;
-                                srcs[nI] = src[key] = (src[key] || {});
-                                nI++;
-                                cN++;
-                            }
-                        }
-                        else if ('array' === t) {
-                            // if (vs.r && null == sval) {
-                            if (vs.r && undefined === sval) {
-                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1030));
-                            }
-                            // else if (null != sval && !Array.isArray(sval)) {
-                            else if (undefined !== sval && !Array.isArray(sval)) {
-                                terr.push(makeErrImpl('type', sval, path, dI, vs, 1040));
-                            }
-                            else {
-                                nodes[nI] = vs;
-                                srcs[nI] = src[key] = (src[key] || []);
-                                nI++;
-                                cN++;
-                            }
-                        }
-                        // Invalid type.
-                        else if (!('any' === t ||
-                            'custom' === t ||
-                            undefined === sval ||
-                            t === stype ||
-                            ('instance' === t && vs.u.i && sval instanceof vs.u.i) ||
-                            // ('instance' !== t && 'object' === stype && null != sval) ||
-                            ('null' === t && null === sval))) 
-                        // 'any' !== t &&
-                        // 'custom' !== t &&
-                        // undefined !== sval &&
-                        // t !== stype &&
-                        // !('instance' !== t && 'object' === stype && null != sval) &&
-                        // !('instance' === t && vs.u.i && sval instanceof vs.u.i) &&
-                        // !('null' === t && null === sval)
-                        {
-                            terr.push(makeErrImpl('type', sval, path, dI, vs, 1050));
-                            pass = false;
-                        }
-                        // Value itself, or default.
-                        else if (undefined === sval) {
-                            if (vs.r) {
-                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1060));
-                                pass = false;
-                            }
-                            // NOTE: `undefined` is special and cannot be set
-                            else if (undefined !== vs.v) {
-                                src[key] = vs.v;
-                            }
-                        }
-                        // Empty strings fail if string is required. Use Empty to allow.
-                        else if ('string' === t && '' === sval) {
-                            if (vs.r && !vs.u.empty) {
-                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1080));
-                            }
-                            // Optional empty strings take the default, unless Empty allows.
-                            else if (!vs.u.empty) {
-                                src[key] = vs.v;
-                            }
-                        }
-                    }
-                    if (vs.a) {
-                        let update = handleValidate(vs.a, sval, {
-                            dI, nI, sI, pI, cN,
-                            key, node: vs, src, nodes, srcs, path, terr, err, ctx
-                        });
-                        pass = update.pass;
-                        if (undefined !== update.val) {
-                            sval = src[key] = update.val;
-                        }
-                        nI = undefined === update.nI ? nI : update.nI;
-                        sI = undefined === update.sI ? sI : update.sI;
-                        pI = undefined === update.pI ? pI : update.pI;
-                        cN = undefined === update.cN ? cN : update.cN;
-                    }
-                    if (!pass) {
-                        failN++;
-                        if ('all' === listkind) {
-                            break;
-                        }
-                    }
-                    else if ('one' === listkind) {
-                        break;
-                    }
-                }
-                if (0 < terr.length &&
-                    !(('one' === listkind || 'some' === listkind) && failN < vss.length)) {
-                    err.push(...terr);
-                }
-            }
-            if (0 < cN) {
-                // Follow pointer back to next parent sibling.
-                nodes[nI++] = sI;
-            }
-            else {
-                // Next sibling.
-                pI = sI;
-                dI--;
-            }
-            // console.log('***')
-            // for (let i = 0; i < nodeStack.length; i++) {
-            //   console.log(
-            //     ('' + i).padStart(4),
-            //     J(nodeStack[i]).substring(0, 111).padEnd(112),
-            //     '/',
-            //     J(curStack[i]).substring(0, 33).padEnd(34),
-            //   )
-            // }
-            // console.log('END', 'c=' + cN, 's=' + sI, 'p=' + pI, 'n=' + nI)
-        }
-        if (0 < err.length) {
-            if (ctx.err) {
-                ctx.err.push(...err);
-            }
-            else {
-                throw new GubuError('shape', err, ctx);
-            }
-        }
-        return root[''];
-    };
-    // TODO: test Number, String, etc also in arrays
-    gubuShape.spec = () => {
-        // Normalize spec, discard errors.
-        gubuShape(undefined, { err: [] });
-        // return JSON.parse(JSON.stringify(spec, (_key, val) => {
-        return JSON.parse(stringify(spec.v[''], (_key, val) => {
-            if (GUBU$ === val) {
-                return true;
-            }
-            return val;
-        }));
-    };
-    gubuShape.toString = () => {
-        return `[Gubu ${opts.name}]`;
-    };
-    gubuShape.gubu = GUBU;
-    return gubuShape;
-}
-// function J(x: any) {
-//   return null == x ? '' : JSON.stringify(x).replace(/"/g, '')
-// }
-function handleValidate(vf, sval, state) {
-    let update = { pass: true, done: false };
-    if (undefined !== sval || state.node.r) {
-        let valid = vf(sval, update, state);
-        if (!valid || update.err) {
-            let w = update.why || 'custom';
-            let p = pathstr(state.path, state.dI);
-            if ('object' === typeof (update.err)) {
-                // Assumes makeErr already called
-                state.terr.push(...[update.err].flat().map(e => {
-                    e.p = null == e.p ? p : e.p;
-                    e.m = null == e.m ? 2010 : e.m;
-                    return e;
-                }));
-            }
-            else {
-                state.terr.push(makeErrImpl(w, sval, state.path, state.dI, state.node, 1040));
-            }
-            update.pass = false;
-        }
-    }
-    // console.log('HV', update)
-    return update;
-}
-function pathstr(path, dI) {
-    return path.slice(1, dI + 1).filter(s => null != s).join('.');
-}
-const Required = function (spec) {
-    let vs = buildize(this || spec);
-    vs.r = true;
-    return vs;
-};
-exports.Required = Required;
-const Optional = function (spec) {
-    let vs = buildize(this || spec);
-    vs.r = false;
-    return vs;
-};
-exports.Optional = Optional;
-const Empty = function (spec) {
-    let vs = buildize(this || spec);
-    vs.u.empty = true;
-    return vs;
-};
-exports.Empty = Empty;
-// Optional value provides default.
-const Any = function (spec) {
-    let vs = buildize(this || spec);
-    vs.t = 'any';
-    if (undefined !== spec) {
-        vs.v = spec;
-    }
-    return vs;
-};
-exports.Any = Any;
-const None = function (spec) {
-    let vs = buildize(this || spec);
-    vs.t = 'none';
-    return vs;
-};
-exports.None = None;
-const makeListBuilder = function (kind) {
-    return function (...specs) {
-        let vs = buildize();
-        vs.t = 'list';
-        vs.u.list = {
-            specs: specs.map(s => buildize(s)).map(s => (s.u.list = {
-                kind
-            },
-                s)),
-            kind
-        };
-        return vs;
-    };
-};
-// Pass on first match. Short circuits.
-const One = makeListBuilder('one');
-exports.One = One;
-// Pass only if all match. Short circuits.
-const All = makeListBuilder('all');
-exports.All = All;
-const Before = function (validate, spec) {
-    let vs = buildize(this || spec);
-    vs.b = validate;
-    return vs;
-};
-exports.Before = Before;
-const After = function (validate, spec) {
-    let vs = buildize(this || spec);
-    // vs.t = vs.t || 'custom'
-    vs.a = validate;
-    return vs;
-};
-exports.After = After;
-// TODO: array needs special handling as first entry is type spec
-const Closed = function (spec) {
-    let vs = buildize(this || spec);
-    vs.b = (val, update, state) => {
-        if (null != val && 'object' === typeof (val)) {
-            let vkeys = Object.keys(val);
-            let allowed = vs.v;
-            // For arrays, handle non-index properties, and special element offset.
-            if ('array' === state.node.t) {
-                allowed = Object.keys(vs.v).slice(1)
-                    .map((x) => {
-                    let i = parseInt(x);
-                    if (isNaN(i)) {
-                        return x;
-                    }
-                    else {
-                        return i - 1;
-                    }
-                })
-                    .reduce((a, i) => (a[i] = true, a), {});
-            }
-            for (let k of vkeys) {
-                if (undefined === allowed[k]) {
-                    update.err =
-                        makeErrImpl('closed', val, state.path, state.dI, vs, 3010, '', { k });
-                    return false;
-                }
-            }
-        }
-        return true;
-    };
-    return vs;
-};
-exports.Closed = Closed;
-const Define = function (inopts, spec) {
-    let vs = buildize(this || spec);
-    let opts = 'object' === typeof inopts ? inopts || {} : {};
-    let name = 'string' === typeof inopts ? inopts : opts.name;
-    if (null != name && '' != name) {
-        vs.b = (_val, _update, state) => {
-            let ref = state.ctx.ref = state.ctx.ref || {};
-            ref[name] = state.node;
-            return true;
-        };
-    }
-    return vs;
-};
-exports.Define = Define;
-const Refer = function (inopts, spec) {
-    let vs = buildize(this || spec);
-    let opts = 'object' === typeof inopts ? inopts || {} : {};
-    let name = 'string' === typeof inopts ? inopts : opts.name;
-    // Fill should be false (the default) if used recursively, to prevent loops.
-    let fill = !!opts.fill;
-    // console.log('R0', opts, name, fill)
-    if (null != name && '' != name) {
-        vs.b = (val, update, state) => {
-            if (undefined !== val || fill) {
-                let ref = state.ctx.ref = state.ctx.ref || {};
-                if (undefined !== ref[name]) {
-                    // console.log('R1', ref[name])
-                    let node = { ...ref[name] };
-                    node.k = state.node.k;
-                    node.t = node.t || 'none';
-                    update.node = node;
-                    update.type = node.t;
-                    // console.log('R3', update)
-                }
-            }
-            // TODO: option to fail if ref not found?
-            return true;
-        };
-    }
-    return vs;
-};
-exports.Refer = Refer;
-const Rename = function (inopts, spec) {
-    let vs = buildize(this || spec);
-    let opts = 'object' === typeof inopts ? inopts || {} : {};
-    let name = 'string' === typeof inopts ? inopts : opts.name;
-    if (null != name && '' != name) {
-        vs.a = (val, _update, state) => {
-            state.src[name] = val;
-            if (!opts.keep) {
-                delete state.src[state.key];
-            }
-            return true;
-        };
-    }
-    return vs;
-};
-exports.Rename = Rename;
-function buildize(invs) {
-    let vs = norm(invs);
-    return Object.assign(vs, {
-        After,
-        All,
-        Any,
-        Before,
-        Closed,
-        Define,
-        Empty,
-        None,
-        One,
-        Optional,
-        Refer,
-        Rename,
-        Required,
-    });
-}
-exports.buildize = buildize;
-// External utility to make ErrDesc objects.
-function makeErr(val, state, text, why) {
-    return makeErrImpl(why || 'custom', val, state.path, state.dI, state.node, 4000, text);
-}
-exports.makeErr = makeErr;
-// Internal utility to make ErrDesc objects.
-function makeErrImpl(why, sval, path, dI, node, mark, text, user, fname) {
-    let err = {
-        n: node,
-        s: sval,
-        p: pathstr(path, dI),
-        w: why,
-        m: mark,
-        t: '',
-    };
-    let jstr = undefined === sval ? '' : stringify(sval);
-    let valstr = jstr.replace(/"/g, '');
-    valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '');
-    if (null == text || '' === text) {
-        err.t = `Validation failed for path "${err.p}" ` +
-            `with value "${valstr}" because ` +
-            ('type' === why ? ('instance' === node.t ? `the value is not an instance of ${node.u.n}` :
-                `the value is not of type ${node.t}`) :
-                'required' === why ? `the value is required` :
-                    'closed' === why ? `the property "${user === null || user === void 0 ? void 0 : user.k}" is not allowed` :
-                        'none' === why ? 'no value is allowed' :
-                            `check "${why + (fname ? ': ' + fname : '')}" failed`) +
-            '.';
-    }
-    else {
-        err.t = text
-            .replace(/\$VALUE/g, valstr)
-            .replace(/\$PATH/g, err.p);
-    }
-    return err;
-}
-function stringify(x, r) {
-    try {
-        return JSON.stringify(x, (key, val) => {
-            if (r) {
-                val = r(key, val);
-            }
-            if ('bigint' === typeof (val)) {
-                val = val.toString();
-            }
-            return val;
-        });
-    }
-    catch (e) {
-        return JSON.stringify(String(x));
-    }
-}
-function clone(x) {
-    return null == x ? x : 'object' !== typeof (x) ? x : JSON.parse(JSON.stringify(x));
-}
-Object.assign(make, {
-    After,
-    All,
-    Any,
-    Before,
-    Closed,
-    Define,
-    Empty,
-    None,
-    One,
-    Optional,
-    Refer,
-    Rename,
-    Required,
-});
-Object.defineProperty(make, 'name', { value: 'gubu' });
-const G$ = (spec) => norm({ ...spec, $: { gubu$: true } });
-exports.G$ = G$;
-const Gubu = make;
-exports.Gubu = Gubu;
-const GAfter = After;
-exports.GAfter = GAfter;
-const GAll = All;
-exports.GAll = GAll;
-const GAny = Any;
-exports.GAny = GAny;
-const GBefore = Before;
-exports.GBefore = GBefore;
-const GClosed = Closed;
-exports.GClosed = GClosed;
-const GDefine = Define;
-exports.GDefine = GDefine;
-const GEmpty = Empty;
-exports.GEmpty = GEmpty;
-const GNone = None;
-exports.GNone = GNone;
-const GOne = One;
-exports.GOne = GOne;
-const GOptional = Optional;
-exports.GOptional = GOptional;
-const GRefer = Refer;
-exports.GRefer = GRefer;
-const GRename = Rename;
-exports.GRename = GRename;
-const GRequired = Required;
-exports.GRequired = GRequired;
-
-},{"./package.json":2}],2:[function(require,module,exports){
+(function (global){(function (){
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{("undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:this).Gubu=e()}}((function(){var e={},t=this&&this.__importDefault||function(e){return e&&e.__esModule?e:{default:e}};Object.defineProperty(e,"__esModule",{value:!0}),e.Gubu=void 0;const n=t({name:"gubu",version:"0.0.3",description:"An object shape validation utility.",main:"gubu.js",browser:"gubu.min.js",type:"commonjs",types:"gubu.d.ts",homepage:"https://github.com/rjrodger/gubu",keywords:["gubu"],author:"Richard Rodger (http://richardrodger.com)",repository:{type:"git",url:"git://github.com/rjrodger/gubu.git"},scripts:{test:"jest --coverage","test-some":"jest -t","test-watch":"jest --coverage --watchAll","test-web":"npm run build-web && browserify -o test/web.js -e test/entry.js -im && open test/web.html",watch:"tsc -w -d",build:"tsc -d","build-web":"cp gubu.js gubu.min.js && browserify -o gubu.min.js -e gubu.web.js -s Gubu -im -p tinyify",clean:"rm -rf node_modules yarn.lock package-lock.json",reset:"npm run clean && npm i && npm test","repo-tag":"REPO_VERSION=`node -e \"console.log(require('./package').version)\"` && echo TAG: v$REPO_VERSION && git commit -a -m v$REPO_VERSION && git push && git tag v$REPO_VERSION && git push --tags;","repo-publish":"npm run clean && npm i && npm run repo-publish-quick","repo-publish-quick":"npm run build && npm run test && npm run build-web && npm run test-web && npm run repo-tag && npm publish --access public --registry https://registry.npmjs.org "},license:"MIT",engines:{node:">=12"},files:["*.ts","*.js","*.map","LICENSE"],devDependencies:{"@types/jest":"^27.0.3",jest:"^27.4.5","ts-jest":"^27.1.2",typescript:"^4.5.4",browserify:"^17.0.0",tinyify:"^3.0.0"},dependencies:{}}),r=Symbol.for("gubu$"),o={gubu$:r,v$:n.default.version};class i extends TypeError{constructor(e,t,n){super(t.map(e=>e.t).join("\n")),this.gubu=!0,this.name="GubuError",this.code=e,this.desc=()=>({name:"GubuError",code:e,err:t,ctx:n})}toJSON(){return{...this,err:this.desc().err,name:this.name,message:this.message}}}const u={String:!0,Number:!0,Boolean:!0,Object:!0,Array:!0,Function:!0,Symbol:!0,BigInt:!0},s={string:"",number:0,boolean:!1,object:{},array:[],function:()=>{},symbol:Symbol(""),bigint:BigInt(0),null:null};function l(e){var t,i,l,c,d,a,p;if(null!=e&&(null===(t=e.$)||void 0===t?void 0:t.gubu$)){if(r===e.$.gubu$)return e;if(!0===e.$.gubu$){let t={...e};return t.$={v$:n.default.version,...t.$,gubu$:r},t.v=null!=t.v&&"object"==typeof t.v?{...t.v}:t.v,t.t=t.t||typeof t.v,"function"===t.t&&u[t.v.name]&&(t.t=t.v.name.toLowerCase(),t.v=R(s[t.t])),t.k=null==t.k?"":t.k,t.r=!!t.r,t.d=null==t.d?-1:t.d,t.u=t.u||{},(null===(i=t.u.list)||void 0===i?void 0:i.specs)&&(t.u.list.specs=[...t.u.list.specs]),t}}let f=null===e?"null":typeof e,v=e,b=!1,y=void 0,m={};if("object"===(f=void 0===f?"any":f))Array.isArray(e)?f="array":null!=v&&Function!==v.constructor&&Object!==v.constructor&&null!=v.constructor&&(f="instance",m.n=null===(l=v.constructor)||void 0===l?void 0:l.name,m.i=v.constructor);else if("function"===f)if(u[e.name])f=e.name.toLowerCase(),b=!0,v=R(s[f]);else if(e.gubu===o||!0===(null===(c=e.$)||void 0===c?void 0:c.gubu)){let t=(null==e?void 0:e.spec)?e.spec():e;f=t.t,v=t.v,b=t.r,m=t.u}else void 0===e.prototype&&Function===e.constructor||Function===(null===(d=e.prototype)||void 0===d?void 0:d.constructor)?(f="custom",y=v):(f="instance",b=!0,m.n=null===(p=null===(a=v.prototype)||void 0===a?void 0:a.constructor)||void 0===p?void 0:p.name,m.i=v);else"number"===f&&isNaN(v)&&(f="nan");let g={$:o,t:f,v:null==v||"object"!==f&&"array"!==f?v:{...v},r:b,k:"",d:-1,u:m};return y&&(g.b=y),g}function c(e,t){const n=null==t?{}:t;n.name=null==n.name?(""+Math.random()).substring(2):""+n.name;let u=l({"":e}),s=function(e,t){var n,o,s,c;const a=t||{},p={"":e},f=[u,-1],v=[p,-1],y=[];let m,g,h=-1,j=2,I=0,$=-1,k=0,w=[];for(;;){for(m=f[I];+m;)m=f[I=m],h--;if($=I+1,g=v[I],!m)break;-1<h&&(y[h]=m.k),h++,k=0,I=j;let e=Object.keys(m.v);if("array"===m.t){e=Object.keys(g);for(let t in m.v)"0"===t||e.includes(t)||e.splice(parseInt(t)-1,0,""+(parseInt(t)-1))}for(let t of e){y[h]=t;let e=g[t],i=typeof e;"number"===i&&isNaN(e)&&(i="nan");let u=m.v[t],p=null;if("array"===m.t){let e=""+(parseInt(t)+1);void 0!==(u=m.v[e])&&(p=u=r===(null===(n=u.$)||void 0===n?void 0:n.gubu$)?u:u=m.v[e]=l(u)),void 0===u&&(u=m.v[0],t="0",void 0===u&&(u=m.v[0]=b()),p=u=r===(null===(o=u.$)||void 0===o?void 0:o.gubu$)?u:u=m.v[t]=l(u))}else p=null!=u&&r===(null===(s=u.$)||void 0===s?void 0:s.gubu$)?u:u=m.v[t]=l(u);p.k=t,p.d=h;let O,N="",A=0;"list"===p.t?(O=p.u.list.specs,N=p.u.list.kind):O=[p];let E=[];for(let n=0;n<O.length;n++){let o=O[n],u=(o=r===(null===(c=o.$)||void 0===c?void 0:c.gubu$)?o:O[n]=l(o)).t,s=!0,p=!1;if(o.b){let n=d(o.b,e,{dI:h,nI:j,sI:$,pI:I,cN:k,key:t,node:o,src:g,nodes:f,srcs:v,path:y,terr:E,err:w,ctx:a});s=n.pass,void 0!==n.val&&(e=g[t]=n.val),void 0!==n.node&&(o=n.node),void 0!==n.type&&(u=n.type),void 0!==n.done&&(p=n.done),j=void 0===n.nI?j:n.nI,$=void 0===n.sI?$:n.sI,I=void 0===n.pI?I:n.pI,k=void 0===n.cN?k:n.cN}if(p||("none"===u?E.push(S("none",e,y,h,o,1070)):"object"===u?o.r&&void 0===e?E.push(S("required",e,y,h,o,1010)):void 0===e||null!==e&&"object"===i&&!Array.isArray(e)?(f[j]=o,v[j]=g[t]=g[t]||{},j++,k++):E.push(S("type",e,y,h,o,1020)):"array"===u?o.r&&void 0===e?E.push(S("required",e,y,h,o,1030)):void 0===e||Array.isArray(e)?(f[j]=o,v[j]=g[t]=g[t]||[],j++,k++):E.push(S("type",e,y,h,o,1040)):"any"===u||"custom"===u||void 0===e||u===i||"instance"===u&&o.u.i&&e instanceof o.u.i||"null"===u&&null===e?void 0===e?o.r?(E.push(S("required",e,y,h,o,1060)),s=!1):void 0!==o.v&&(g[t]=o.v):"string"===u&&""===e&&(o.r&&!o.u.empty?E.push(S("required",e,y,h,o,1080)):o.u.empty||(g[t]=o.v)):(E.push(S("type",e,y,h,o,1050)),s=!1)),o.a){let n=d(o.a,e,{dI:h,nI:j,sI:$,pI:I,cN:k,key:t,node:o,src:g,nodes:f,srcs:v,path:y,terr:E,err:w,ctx:a});s=n.pass,void 0!==n.val&&(e=g[t]=n.val),j=void 0===n.nI?j:n.nI,$=void 0===n.sI?$:n.sI,I=void 0===n.pI?I:n.pI,k=void 0===n.cN?k:n.cN}if(s){if("one"===N)break}else if(A++,"all"===N)break}0<E.length&&("one"!==N&&"some"!==N||!(A<O.length))&&w.push(...E)}0<k?f[j++]=$:(I=$,h--)}if(0<w.length){if(!a.err)throw new i("shape",w,a);a.err.push(...w)}return p[""]};return s.spec=()=>(s(void 0,{err:[]}),JSON.parse(E(u.v[""],(e,t)=>r===t||t))),s.toString=()=>`[Gubu ${n.name}]`,s.gubu=o,s}function d(e,t,n){let r={pass:!0,done:!1};if((void 0!==t||n.node.r)&&(!e(t,r,n)||r.err)){let e=r.why||"custom",o=a(n.path,n.dI);"object"==typeof r.err?n.terr.push(...[r.err].flat().map(e=>(e.p=null==e.p?o:e.p,e.m=null==e.m?2010:e.m,e))):n.terr.push(S(e,t,n.path,n.dI,n.node,1040)),r.pass=!1}return r}function a(e,t){return e.slice(1,t+1).filter(e=>null!=e).join(".")}const p=function(e){let t=N(this,e);return t.r=!0,t},f=function(e){let t=N(this,e);return t.r=!1,t},v=function(e){let t=N(this,e);return t.u.empty=!0,t},b=function(e){let t=N(this,e);return t.t="any",void 0!==e&&(t.v=e),t},y=function(e){let t=N(this,e);return t.t="none",t},m=function(e){return function(...t){let n=N();return n.t="list",n.u.list={specs:t.map(e=>N(e)).map(t=>(t.u.list={kind:e},t)),kind:e},n}},g=m("one"),h=m("all"),j=function(e,t){let n=N(this,t);return n.b=e,n},I=function(e,t){let n=N(this,t);return n.a=e,n},$=function(e){let t=N(this,e);return t.b=(e,n,r)=>{if(null!=e&&"object"==typeof e){let o=Object.keys(e),i=t.v;"array"===r.node.t&&(i=Object.keys(t.v).slice(1).map(e=>{let t=parseInt(e);return isNaN(t)?e:t-1}).reduce((e,t)=>(e[t]=!0,e),{}));for(let u of o)if(void 0===i[u])return n.err=S("closed",e,r.path,r.dI,t,3010,"",{k:u}),!1}return!0},t},k=function(e,t){let n=N(this,t),r="string"==typeof e?e:("object"==typeof e&&e||{}).name;return null!=r&&""!=r&&(n.b=(e,t,n)=>((n.ctx.ref=n.ctx.ref||{})[r]=n.node,!0)),n},w=function(e,t){let n=N(this,t),r="object"==typeof e&&e||{},o="string"==typeof e?e:r.name,i=!!r.fill;return null!=o&&""!=o&&(n.b=(e,t,n)=>{if(void 0!==e||i){let e=n.ctx.ref=n.ctx.ref||{};if(void 0!==e[o]){let r={...e[o]};r.k=n.node.k,r.t=r.t||"none",t.node=r,t.type=r.t}}return!0}),n},O=function(e,t){let n=N(this,t),r="object"==typeof e&&e||{},o="string"==typeof e?e:r.name;return null!=o&&""!=o&&(n.a=(e,t,n)=>(n.src[o]=e,r.keep||delete n.src[n.key],!0)),n};function N(e,t){let n=l(void 0===e||e.window===e?t:e);return Object.assign(n,{After:I,All:h,Any:b,Before:j,Closed:$,Define:k,Empty:v,None:y,One:g,Optional:f,Refer:w,Rename:O,Required:p})}function A(e,t,n,r){return S(r||"custom",e,t.path,t.dI,t.node,4e3,n)}function S(e,t,n,r,o,i,u,s,l){let c={n:o,s:t,p:a(n,r),w:e,m:i,t:""},d=(void 0===t?"":E(t)).replace(/"/g,"");return d=d.substring(0,77)+(77<d.length?"...":""),c.t=null==u||""===u?`Validation failed for path "${c.p}" with value "${d}" because `+("type"===e?"instance"===o.t?"the value is not an instance of "+o.u.n:"the value is not of type "+o.t:"required"===e?"the value is required":"closed"===e?`the property "${null==s?void 0:s.k}" is not allowed`:"none"===e?"no value is allowed":`check "${e+(l?": "+l:"")}" failed`)+".":u.replace(/\$VALUE/g,d).replace(/\$PATH/g,c.p),c}function E(e,t){try{return JSON.stringify(e,(e,n)=>(t&&(n=t(e,n)),"bigint"==typeof n&&(n=n.toString()),n))}catch(n){return JSON.stringify(String(e))}}function R(e){return null==e||"object"!=typeof e?e:JSON.parse(JSON.stringify(e))}const q=e=>l({...e,$:{gubu$:!0}});Object.assign(c,{After:I,All:h,Any:b,Before:j,Closed:$,Define:k,Empty:v,None:y,One:g,Optional:f,Refer:w,Rename:O,Required:p,G$:q,buildize:N,makeErr:A}),Object.defineProperty(c,"name",{value:"gubu"});const _=c;e.Gubu=_;const{Gubu:x}=e;return x}));
+}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],2:[function(require,module,exports){
 module.exports={
   "name": "gubu",
   "version": "0.0.3",
   "description": "An object shape validation utility.",
   "main": "gubu.js",
+  "browser": "gubu.min.js",
   "type": "commonjs",
   "types": "gubu.d.ts",
   "homepage": "https://github.com/rjrodger/gubu",
@@ -797,15 +24,15 @@ module.exports={
     "test": "jest --coverage",
     "test-some": "jest -t",
     "test-watch": "jest --coverage --watchAll",
-    "test-web": "browserify -o test/web.js -e test/entry.js -im && open test/web.html",
+    "test-web": "npm run build-web && browserify -o test/web.js -e test/entry.js -im && open test/web.html",
     "watch": "tsc -w -d",
     "build": "tsc -d",
-    "build-web": "cp gubu.js gubu.min.js && browserify -o gubu.min.js -e gubu.js -s Gubu -im -i assert -p tinyify",
+    "build-web": "cp gubu.js gubu.min.js && browserify -o gubu.min.js -e gubu.web.js -s Gubu -im -p tinyify",
     "clean": "rm -rf node_modules yarn.lock package-lock.json",
     "reset": "npm run clean && npm i && npm test",
     "repo-tag": "REPO_VERSION=`node -e \"console.log(require('./package').version)\"` && echo TAG: v$REPO_VERSION && git commit -a -m v$REPO_VERSION && git push && git tag v$REPO_VERSION && git push --tags;",
     "repo-publish": "npm run clean && npm i && npm run repo-publish-quick",
-    "repo-publish-quick": "npm run build && npm run test && npm run repo-tag && npm publish --access public --registry https://registry.npmjs.org "
+    "repo-publish-quick": "npm run build && npm run test && npm run build-web && npm run test-web && npm run repo-tag && npm publish --access public --registry https://registry.npmjs.org "
   },
   "license": "MIT",
   "engines": {
@@ -829,6 +56,8 @@ module.exports={
 }
 
 },{}],3:[function(require,module,exports){
+// Run: npm run test-web
+
 // A quick and dirty abomination to partially run the unit tests inside an
 // actual browser by simulating some of the Jest API.
 
@@ -931,7 +160,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const package_json_1 = __importDefault(require("../package.json"));
-const gubu_1 = require("../gubu");
+let GubuModule = require('../gubu');
+if (GubuModule.Gubu) {
+    GubuModule = GubuModule.Gubu;
+}
+const Gubu = GubuModule;
+const G$ = Gubu.G$;
+const buildize = Gubu.buildize;
+const makeErr = Gubu.makeErr;
+const After = Gubu.After;
+const All = Gubu.All;
+const Any = Gubu.Any;
+const Before = Gubu.Before;
+const Closed = Gubu.Closed;
+const Define = Gubu.Define;
+const Empty = Gubu.Empty;
+const None = Gubu.None;
+const One = Gubu.One;
+const Optional = Gubu.Optional;
+const Refer = Gubu.Refer;
+const Rename = Gubu.Rename;
+const Required = Gubu.Required;
 class Foo {
     constructor(a) {
         this.a = -1;
@@ -946,10 +195,10 @@ class Bar {
 }
 describe('gubu', () => {
     test('happy', () => {
-        expect((0, gubu_1.Gubu)()).toBeDefined();
-        expect((0, gubu_1.Gubu)().toString()).toMatch(/\[Gubu \d+\]/);
-        expect((0, gubu_1.Gubu)(undefined, { name: 'foo' }).toString()).toMatch(/\[Gubu foo\]/);
-        let g0 = (0, gubu_1.Gubu)({
+        expect(Gubu()).toBeDefined();
+        expect(Gubu().toString()).toMatch(/\[Gubu \d+\]/);
+        expect(Gubu(undefined, { name: 'foo' }).toString()).toMatch(/\[Gubu foo\]/);
+        let g0 = Gubu({
             a: 'foo',
             b: 100
         });
@@ -962,7 +211,7 @@ describe('gubu', () => {
     test('readme', () => {
         // Property a is optional, must be a Number, and defaults to 1.
         // Property b is required, and must be a String.
-        const shape = (0, gubu_1.Gubu)({ a: 1, b: String });
+        const shape = Gubu({ a: 1, b: String });
         // Object shape is good! Prints `{ a: 99, b: 'foo' }`
         expect(shape({ a: 99, b: 'foo' })).toEqual({ a: 99, b: 'foo' });
         // Object shape is also good. Prints `{ a: 1, b: 'foo' }`
@@ -972,7 +221,7 @@ describe('gubu', () => {
         expect(() => shape({ a: 'BAD' })).toThrow('Validation failed for path "a" with value "BAD" because the value is not of type number.\nValidation failed for path "b" with value "" because the value is required.');
     });
     test('G-basic', () => {
-        expect((0, gubu_1.G$)({ v: 11 })).toMatchObject({
+        expect(G$({ v: 11 })).toMatchObject({
             '$': { v$: package_json_1.default.version },
             t: 'number',
             v: 11,
@@ -981,7 +230,7 @@ describe('gubu', () => {
             d: -1,
             u: {}
         });
-        expect((0, gubu_1.G$)({ v: Number })).toMatchObject({
+        expect(G$({ v: Number })).toMatchObject({
             '$': { v$: package_json_1.default.version },
             t: 'number',
             v: 0,
@@ -990,7 +239,7 @@ describe('gubu', () => {
             d: -1,
             u: {}
         });
-        expect((0, gubu_1.G$)({ v: BigInt(11) })).toMatchObject({
+        expect(G$({ v: BigInt(11) })).toMatchObject({
             '$': { v$: package_json_1.default.version },
             t: 'bigint',
             v: BigInt(11),
@@ -1000,7 +249,7 @@ describe('gubu', () => {
             u: {}
         });
         let s0 = Symbol('foo');
-        expect((0, gubu_1.G$)({ v: s0 })).toMatchObject({
+        expect(G$({ v: s0 })).toMatchObject({
             '$': { v$: package_json_1.default.version },
             t: 'symbol',
             v: s0,
@@ -1012,7 +261,7 @@ describe('gubu', () => {
         // NOTE: special case for plain functions.
         // Normally functions become custom validations.
         let f0 = () => true;
-        expect((0, gubu_1.G$)({ v: f0 })).toMatchObject({
+        expect(G$({ v: f0 })).toMatchObject({
             '$': { v$: package_json_1.default.version },
             t: 'function',
             v: f0,
@@ -1024,97 +273,97 @@ describe('gubu', () => {
     });
     test('shapes-basic', () => {
         let tmp = {};
-        expect((0, gubu_1.Gubu)(String)('x')).toEqual('x');
-        expect((0, gubu_1.Gubu)(Number)(1)).toEqual(1);
-        expect((0, gubu_1.Gubu)(Boolean)(true)).toEqual(true);
-        expect((0, gubu_1.Gubu)(BigInt)(BigInt(1))).toEqual(BigInt(1));
-        expect((0, gubu_1.Gubu)(Object)({ x: 1 })).toEqual({ x: 1 });
-        expect((0, gubu_1.Gubu)(Array)([1])).toEqual([1]);
-        expect((0, gubu_1.Gubu)(Function)(tmp.f0 = () => true)).toEqual(tmp.f0);
-        expect((0, gubu_1.Gubu)(Symbol)(tmp.s0 = Symbol('foo'))).toEqual(tmp.s0);
-        expect((0, gubu_1.Gubu)(Date)(tmp.d0 = new Date())).toEqual(tmp.d0);
-        expect((0, gubu_1.Gubu)(RegExp)(tmp.r0 = /a/)).toEqual(tmp.r0);
-        expect((0, gubu_1.Gubu)(Foo)(tmp.c0 = new Foo(2))).toEqual(tmp.c0);
+        expect(Gubu(String)('x')).toEqual('x');
+        expect(Gubu(Number)(1)).toEqual(1);
+        expect(Gubu(Boolean)(true)).toEqual(true);
+        expect(Gubu(BigInt)(BigInt(1))).toEqual(BigInt(1));
+        expect(Gubu(Object)({ x: 1 })).toEqual({ x: 1 });
+        expect(Gubu(Array)([1])).toEqual([1]);
+        expect(Gubu(Function)(tmp.f0 = () => true)).toEqual(tmp.f0);
+        expect(Gubu(Symbol)(tmp.s0 = Symbol('foo'))).toEqual(tmp.s0);
+        expect(Gubu(Date)(tmp.d0 = new Date())).toEqual(tmp.d0);
+        expect(Gubu(RegExp)(tmp.r0 = /a/)).toEqual(tmp.r0);
+        expect(Gubu(Foo)(tmp.c0 = new Foo(2))).toEqual(tmp.c0);
         // console.log(gubu(new Date()).spec())
-        expect((0, gubu_1.Gubu)('a')('x')).toEqual('x');
-        expect((0, gubu_1.Gubu)(0)(1)).toEqual(1);
-        expect((0, gubu_1.Gubu)(false)(true)).toEqual(true);
-        expect((0, gubu_1.Gubu)(BigInt(-1))(BigInt(1))).toEqual(BigInt(1));
-        expect((0, gubu_1.Gubu)({})({ x: 1 })).toEqual({ x: 1 });
-        expect((0, gubu_1.Gubu)([])([1])).toEqual([1]);
+        expect(Gubu('a')('x')).toEqual('x');
+        expect(Gubu(0)(1)).toEqual(1);
+        expect(Gubu(false)(true)).toEqual(true);
+        expect(Gubu(BigInt(-1))(BigInt(1))).toEqual(BigInt(1));
+        expect(Gubu({})({ x: 1 })).toEqual({ x: 1 });
+        expect(Gubu([])([1])).toEqual([1]);
         // NOTE: raw function would be a custom validator
-        expect((0, gubu_1.Gubu)((0, gubu_1.G$)({ v: () => null }))(tmp.f1 = () => false)).toEqual(tmp.f1);
-        expect((0, gubu_1.Gubu)(Symbol('bar'))(tmp.s0)).toEqual(tmp.s0);
-        expect((0, gubu_1.Gubu)(new Date())(tmp.d1 = new Date(Date.now() - 1111))).toEqual(tmp.d1);
-        expect((0, gubu_1.Gubu)(new RegExp('a'))(tmp.r1 = /b/)).toEqual(tmp.r1);
-        expect((0, gubu_1.Gubu)(new Foo(4))(tmp.c1 = new Foo(5))).toEqual(tmp.c1);
-        expect((0, gubu_1.Gubu)(new Bar(6))(tmp.c2 = new Bar(7))).toEqual(tmp.c2);
-        expect((0, gubu_1.Gubu)(null)(null)).toEqual(null);
-        expect(() => (0, gubu_1.Gubu)(null)(1)).toThrow(/path "".*value "1".*not of type null/);
-        expect((0, gubu_1.Gubu)((_v, u) => (u.val = 1, true))(null)).toEqual(1);
+        expect(Gubu(G$({ v: () => null }))(tmp.f1 = () => false)).toEqual(tmp.f1);
+        expect(Gubu(Symbol('bar'))(tmp.s0)).toEqual(tmp.s0);
+        expect(Gubu(new Date())(tmp.d1 = new Date(Date.now() - 1111))).toEqual(tmp.d1);
+        expect(Gubu(new RegExp('a'))(tmp.r1 = /b/)).toEqual(tmp.r1);
+        expect(Gubu(new Foo(4))(tmp.c1 = new Foo(5))).toEqual(tmp.c1);
+        expect(Gubu(new Bar(6))(tmp.c2 = new Bar(7))).toEqual(tmp.c2);
+        expect(Gubu(null)(null)).toEqual(null);
+        expect(() => Gubu(null)(1)).toThrow(/path "".*value "1".*not of type null/);
+        expect(Gubu((_v, u) => (u.val = 1, true))(null)).toEqual(1);
         // console.log(gubu(Date).spec())
-        expect(() => (0, gubu_1.Gubu)(String)(1)).toThrow(/path "".*not of type string/);
-        expect(() => (0, gubu_1.Gubu)(Number)('x')).toThrow(/path "".*not of type number/);
-        expect(() => (0, gubu_1.Gubu)(Boolean)('x')).toThrow(/path "".*not of type boolean/);
-        expect(() => (0, gubu_1.Gubu)(BigInt)('x')).toThrow(/path "".*not of type bigint/);
-        expect(() => (0, gubu_1.Gubu)(Object)('x')).toThrow(/path "".*not of type object/);
-        expect(() => (0, gubu_1.Gubu)(Array)('x')).toThrow(/path "".*not of type array/);
-        expect(() => (0, gubu_1.Gubu)(Function)('x')).toThrow(/path "".*not of type function/);
-        expect(() => (0, gubu_1.Gubu)(Symbol)('x')).toThrow(/path "".*not of type symbol/);
-        expect(() => (0, gubu_1.Gubu)(Date)(/a/)).toThrow(/path "".*not an instance of Date/);
-        expect(() => (0, gubu_1.Gubu)(RegExp)(new Date()))
+        expect(() => Gubu(String)(1)).toThrow(/path "".*not of type string/);
+        expect(() => Gubu(Number)('x')).toThrow(/path "".*not of type number/);
+        expect(() => Gubu(Boolean)('x')).toThrow(/path "".*not of type boolean/);
+        expect(() => Gubu(BigInt)('x')).toThrow(/path "".*not of type bigint/);
+        expect(() => Gubu(Object)('x')).toThrow(/path "".*not of type object/);
+        expect(() => Gubu(Array)('x')).toThrow(/path "".*not of type array/);
+        expect(() => Gubu(Function)('x')).toThrow(/path "".*not of type function/);
+        expect(() => Gubu(Symbol)('x')).toThrow(/path "".*not of type symbol/);
+        expect(() => Gubu(Date)(/a/)).toThrow(/path "".*not an instance of Date/);
+        expect(() => Gubu(RegExp)(new Date()))
             .toThrow(/path "".*not an instance of RegExp/);
-        expect(() => (0, gubu_1.Gubu)(Foo)(tmp.c3 = new Bar(8)))
+        expect(() => Gubu(Foo)(tmp.c3 = new Bar(8)))
             .toThrow(/path "".*not an instance of Foo/);
-        expect(() => (0, gubu_1.Gubu)(Bar)(tmp.c4 = new Foo(9)))
+        expect(() => Gubu(Bar)(tmp.c4 = new Foo(9)))
             .toThrow(/path "".*not an instance of Bar/);
         // console.log(gubu(new Date()).spec())
-        expect(() => (0, gubu_1.Gubu)('a')(1)).toThrow(/path "".*not of type string/);
-        expect(() => (0, gubu_1.Gubu)(0)('x')).toThrow(/path "".*not of type number/);
-        expect(() => (0, gubu_1.Gubu)(false)('x')).toThrow(/path "".*not of type boolean/);
-        expect(() => (0, gubu_1.Gubu)(BigInt(-1))('x')).toThrow(/path "".*not of type bigint/);
-        expect(() => (0, gubu_1.Gubu)({})('x')).toThrow(/path "".* not of type object/);
-        expect(() => (0, gubu_1.Gubu)([])('x')).toThrow(/path "".*not of type array/);
-        expect(() => (0, gubu_1.Gubu)((0, gubu_1.G$)({ v: () => null }))('x'))
+        expect(() => Gubu('a')(1)).toThrow(/path "".*not of type string/);
+        expect(() => Gubu(0)('x')).toThrow(/path "".*not of type number/);
+        expect(() => Gubu(false)('x')).toThrow(/path "".*not of type boolean/);
+        expect(() => Gubu(BigInt(-1))('x')).toThrow(/path "".*not of type bigint/);
+        expect(() => Gubu({})('x')).toThrow(/path "".* not of type object/);
+        expect(() => Gubu([])('x')).toThrow(/path "".*not of type array/);
+        expect(() => Gubu(G$({ v: () => null }))('x'))
             .toThrow(/path "".*not of type function/);
-        expect(() => (0, gubu_1.Gubu)(Symbol('bar'))('x')).toThrow(/path "".*not of type symbol/);
-        expect(() => (0, gubu_1.Gubu)(new Date())('x')).toThrow(/path "".*not an instance of Date/);
-        expect(() => (0, gubu_1.Gubu)(new RegExp('a'))('x'))
+        expect(() => Gubu(Symbol('bar'))('x')).toThrow(/path "".*not of type symbol/);
+        expect(() => Gubu(new Date())('x')).toThrow(/path "".*not an instance of Date/);
+        expect(() => Gubu(new RegExp('a'))('x'))
             .toThrow(/path "".*not an instance of RegExp/);
-        expect(() => (0, gubu_1.Gubu)(new Foo(4))('a')).toThrow(/path "".*not an instance of Foo/);
-        expect(() => (0, gubu_1.Gubu)(new Bar(6))('a')).toThrow(/path "".*not an instance of Bar/);
-        expect(() => (0, gubu_1.Gubu)(new Foo(10))(new Bar(11)))
+        expect(() => Gubu(new Foo(4))('a')).toThrow(/path "".*not an instance of Foo/);
+        expect(() => Gubu(new Bar(6))('a')).toThrow(/path "".*not an instance of Bar/);
+        expect(() => Gubu(new Foo(10))(new Bar(11)))
             .toThrow(/path "".*not an instance of Foo/);
-        expect(() => (0, gubu_1.Gubu)(new Bar(12))(new Foo(12)))
+        expect(() => Gubu(new Bar(12))(new Foo(12)))
             .toThrow(/path "".*not an instance of Bar/);
-        expect((0, gubu_1.Gubu)({ a: String })({ a: 'x' })).toEqual({ a: 'x' });
-        expect((0, gubu_1.Gubu)({ a: Number })({ a: 1 })).toEqual({ a: 1 });
-        expect((0, gubu_1.Gubu)({ a: Boolean })({ a: true })).toEqual({ a: true });
-        expect((0, gubu_1.Gubu)({ a: Object })({ a: { x: 1 } })).toEqual({ a: { x: 1 } });
-        expect(() => (0, gubu_1.Gubu)({ a: String })({ a: 1 }))
+        expect(Gubu({ a: String })({ a: 'x' })).toEqual({ a: 'x' });
+        expect(Gubu({ a: Number })({ a: 1 })).toEqual({ a: 1 });
+        expect(Gubu({ a: Boolean })({ a: true })).toEqual({ a: true });
+        expect(Gubu({ a: Object })({ a: { x: 1 } })).toEqual({ a: { x: 1 } });
+        expect(() => Gubu({ a: String })({ a: 1 }))
             .toThrow(/path "a".*not of type string/);
-        expect(() => (0, gubu_1.Gubu)({ a: Number })({ a: 'x' }))
+        expect(() => Gubu({ a: Number })({ a: 'x' }))
             .toThrow(/path "a".*not of type number/);
-        expect(() => (0, gubu_1.Gubu)({ a: Boolean })({ a: 'x' }))
+        expect(() => Gubu({ a: Boolean })({ a: 'x' }))
             .toThrow(/path "a".*not of type boolean/);
-        expect(() => (0, gubu_1.Gubu)({ a: Object })({ a: 'x' }))
+        expect(() => Gubu({ a: Object })({ a: 'x' }))
             .toThrow(/path "a".*not of type object/);
-        expect((0, gubu_1.Gubu)([String])(['x'])).toEqual(['x']);
-        expect((0, gubu_1.Gubu)([Number])([1])).toEqual([1]);
-        expect((0, gubu_1.Gubu)([Boolean])([true])).toEqual([true]);
-        expect((0, gubu_1.Gubu)([Object])([{ x: 1 }])).toEqual([{ x: 1 }]);
-        expect(() => (0, gubu_1.Gubu)([String])([1]))
+        expect(Gubu([String])(['x'])).toEqual(['x']);
+        expect(Gubu([Number])([1])).toEqual([1]);
+        expect(Gubu([Boolean])([true])).toEqual([true]);
+        expect(Gubu([Object])([{ x: 1 }])).toEqual([{ x: 1 }]);
+        expect(() => Gubu([String])([1]))
             .toThrow(/path "0".*not of type string/);
-        expect(() => (0, gubu_1.Gubu)([Number])(['x']))
+        expect(() => Gubu([Number])(['x']))
             .toThrow(/path "0".*not of type number/);
-        expect(() => (0, gubu_1.Gubu)([Boolean])(['x']))
+        expect(() => Gubu([Boolean])(['x']))
             .toThrow(/path "0".*not of type boolean/);
-        expect(() => (0, gubu_1.Gubu)([Object])([1]))
+        expect(() => Gubu([Object])([1]))
             .toThrow(/path "0".*not of type object/);
     });
     test('shapes-fails', () => {
         let tmp = {};
-        let string0 = (0, gubu_1.Gubu)(String);
+        let string0 = Gubu(String);
         expect(string0('x')).toEqual('x');
         expect(() => string0(1)).toThrow(/not of type string/);
         expect(() => string0(true)).toThrow(/not of type string/);
@@ -1128,7 +377,7 @@ describe('gubu', () => {
         expect(() => string0(undefined)).toThrow(/value is required/);
         expect(() => string0(new Date())).toThrow(/not of type string/);
         expect(() => string0(new Foo(1))).toThrow(/not of type string/);
-        let number0 = (0, gubu_1.Gubu)(Number);
+        let number0 = Gubu(Number);
         expect(number0(1)).toEqual(1);
         expect(number0(Infinity)).toEqual(Infinity);
         expect(() => number0('x')).toThrow(/not of type number/);
@@ -1142,7 +391,7 @@ describe('gubu', () => {
         expect(() => number0(undefined)).toThrow(/value is required/);
         expect(() => number0(new Date())).toThrow(/not of type number/);
         expect(() => number0(new Foo(1))).toThrow(/not of type number/);
-        let object0 = (0, gubu_1.Gubu)(Object);
+        let object0 = Gubu(Object);
         expect(object0({})).toEqual({});
         expect(object0(tmp.r0 = /a/)).toEqual(tmp.r0);
         expect(object0(tmp.d0 = new Date())).toEqual(tmp.d0);
@@ -1155,7 +404,7 @@ describe('gubu', () => {
         expect(() => object0([])).toThrow(/not of type object/);
         expect(() => object0(NaN)).toThrow(/not of type object/);
         expect(() => object0(undefined)).toThrow(/value is required/);
-        let array0 = (0, gubu_1.Gubu)(Array);
+        let array0 = Gubu(Array);
         expect(array0([])).toEqual([]);
         expect(() => array0('x')).toThrow(/not of type array/);
         expect(() => array0(true)).toThrow(/not of type array/);
@@ -1170,79 +419,79 @@ describe('gubu', () => {
     });
     test('shapes-edges', () => {
         // NaN is actually Not-a-Number (whereas 'number' === typeof(NaN))
-        const num0 = (0, gubu_1.Gubu)(1);
+        const num0 = Gubu(1);
         expect(num0(1)).toEqual(1);
         expect(() => num0(NaN)).toThrow(/not of type number/);
-        const nan0 = (0, gubu_1.Gubu)(NaN);
+        const nan0 = Gubu(NaN);
         expect(nan0(NaN)).toEqual(NaN);
         expect(() => nan0(1)).toThrow(/not of type nan/);
         // Empty strings only allowed by Empty() builder.
-        const rs0 = (0, gubu_1.Gubu)(String);
+        const rs0 = Gubu(String);
         expect(() => rs0('')).toThrow('Validation failed for path "" with value "" because the value is required.');
-        const rs0e = (0, gubu_1.Gubu)((0, gubu_1.Empty)(String));
+        const rs0e = Gubu(Empty(String));
         expect(rs0e('')).toEqual('');
-        const os0 = (0, gubu_1.Gubu)('x');
+        const os0 = Gubu('x');
         expect(os0('')).toEqual('x');
-        const os0e = (0, gubu_1.Gubu)((0, gubu_1.Empty)('x'));
+        const os0e = Gubu(Empty('x'));
         expect(os0e('')).toEqual('');
     });
     test('builder-construct', () => {
         const GUBU$ = Symbol.for('gubu$');
-        expect((0, gubu_1.Required)('x')).toMatchObject({
+        expect(Required('x')).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: 'x',
             r: true,
         });
-        expect((0, gubu_1.Optional)(String)).toMatchObject({
+        expect(Optional(String)).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
             r: false,
         });
-        expect((0, gubu_1.Required)((0, gubu_1.Required)('x'))).toMatchObject({
+        expect(Required(Required('x'))).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: 'x',
             r: true,
         });
-        expect((0, gubu_1.Optional)((0, gubu_1.Required)('x'))).toMatchObject({
+        expect(Optional(Required('x'))).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: 'x',
             r: false,
         });
-        expect((0, gubu_1.Required)('x').Required()).toMatchObject({
+        expect(Required('x').Required()).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: 'x',
             r: true,
         });
-        expect((0, gubu_1.Required)('x').Optional()).toMatchObject({
+        expect(Required('x').Optional()).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: 'x',
             r: false,
         });
-        expect((0, gubu_1.Optional)((0, gubu_1.Optional)(String))).toMatchObject({
+        expect(Optional(Optional(String))).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
             r: false,
         });
-        expect((0, gubu_1.Optional)(String).Optional()).toMatchObject({
+        expect(Optional(String).Optional()).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
             r: false,
         });
-        expect((0, gubu_1.Optional)(String).Required()).toMatchObject({
+        expect(Optional(String).Required()).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
             r: true,
         });
-        expect((0, gubu_1.Required)((0, gubu_1.Optional)(String))).toMatchObject({
+        expect(Required(Optional(String))).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
@@ -1252,13 +501,13 @@ describe('gubu', () => {
     });
     test('type-default-optional', () => {
         let f0 = () => true;
-        let g0 = (0, gubu_1.Gubu)({
+        let g0 = Gubu({
             string: 's',
             number: 1,
             boolean: true,
             object: { x: 2 },
             array: [3],
-            function: (0, gubu_1.G$)({ t: 'function', v: f0 })
+            function: G$({ t: 'function', v: f0 })
         });
         expect(g0({})).toMatchObject({
             string: 's',
@@ -1286,7 +535,7 @@ describe('gubu', () => {
         // TODO: fails
     });
     test('type-native-required', () => {
-        let g0 = (0, gubu_1.Gubu)({
+        let g0 = Gubu({
             string: String,
             number: Number,
             boolean: Boolean,
@@ -1304,15 +553,15 @@ describe('gubu', () => {
             function: () => true
         };
         expect(g0(o0)).toMatchObject(o0);
-        let e0 = (0, gubu_1.Gubu)({ s0: String, s1: 'x' });
+        let e0 = Gubu({ s0: String, s1: 'x' });
         expect(e0({ s0: 'a' })).toMatchObject({ s0: 'a', s1: 'x' });
         expect(() => e0({ s0: 1 })).toThrow(/Validation failed for path "s0" with value "1" because the value is not of type string\./);
         expect(() => e0({ s1: 1 })).toThrow(/Validation failed for path "s0" with value "" because the value is required\.\nValidation failed for path "s1" with value "1" because the value is not of type string\./);
         // TODO: more fails
     });
     test('type-native-optional', () => {
-        let { Optional } = gubu_1.Gubu;
-        let g0 = (0, gubu_1.Gubu)({
+        let { Optional } = Gubu;
+        let g0 = Gubu({
             string: Optional(String),
             number: Optional(Number),
             boolean: Optional(Boolean),
@@ -1323,15 +572,15 @@ describe('gubu', () => {
         });
     });
     test('array-elements', () => {
-        let g0 = (0, gubu_1.Gubu)({
+        let g0 = Gubu({
             a: [String]
         });
         expect(g0({ a: ['X', 'Y'] })).toEqual({ a: ['X', 'Y'] });
         expect(() => g0({ a: ['X', 1] })).toThrow(/Validation failed for path "a.1" with value "1" because the value is not of type string\./);
-        let g1 = (0, gubu_1.Gubu)([String]);
+        let g1 = Gubu([String]);
         expect(g1(['X', 'Y'])).toEqual(['X', 'Y']);
         expect(() => g1(['X', 1])).toThrow(/Validation failed for path "1" with value "1" because the value is not of type string\./);
-        let g2 = (0, gubu_1.Gubu)([(0, gubu_1.Any)(), { x: 1 }, { y: true }]);
+        let g2 = Gubu([Any(), { x: 1 }, { y: true }]);
         expect(g2([{ x: 2 }, { y: false }])).toEqual([{ x: 2 }, { y: false }]);
         expect(g2([{ x: 2 }, { y: false }, 'Q'])).toEqual([{ x: 2 }, { y: false }, 'Q']);
         expect(() => g2([{ x: 'X' }, { y: false }])).toThrow('Validation failed for path "0.x" with value "X" because the value is not of type number.');
@@ -1340,20 +589,20 @@ describe('gubu', () => {
         expect(g2([undefined, { y: false }, 'Q'])).toEqual([{ x: 1 }, { y: false }, 'Q']);
     });
     test('custom-basic', () => {
-        let g0 = (0, gubu_1.Gubu)({ a: (v) => v > 10 });
+        let g0 = Gubu({ a: (v) => v > 10 });
         expect(g0({ a: 11 })).toMatchObject({ a: 11 });
         expect(() => g0({ a: 9 })).toThrow(/Validation failed for path "a" with value "9" because check "custom" failed\./);
-        let g1 = (0, gubu_1.Gubu)({ a: (0, gubu_1.Optional)((v) => v > 10) });
+        let g1 = Gubu({ a: Optional((v) => v > 10) });
         expect(g1({ a: 11 })).toMatchObject({ a: 11 });
         expect(() => g1({ a: 9 })).toThrow(/Validation failed for path "a" with value "9" because check "custom" failed\./);
         expect(g1({})).toMatchObject({});
-        let g2 = (0, gubu_1.Gubu)({ a: (0, gubu_1.Required)((v) => v > 10) });
+        let g2 = Gubu({ a: Required((v) => v > 10) });
         expect(g1({ a: 11 })).toMatchObject({ a: 11 });
         expect(() => g2({ a: 9 })).toThrow(/Validation failed for path "a" with value "9" because check "custom" failed\./);
         expect(() => g2({})).toThrow(/Validation failed for path "a" with value "" because check "custom" failed\./);
     });
     test('builder-before-after-basic', () => {
-        let g0 = (0, gubu_1.Gubu)((0, gubu_1.Before)((val, _update) => {
+        let g0 = Gubu(Before((val, _update) => {
             val.b = 1 + val.a;
             return true;
         }, { a: 1 })
@@ -1362,8 +611,8 @@ describe('gubu', () => {
             return true;
         }));
         expect(g0({ a: 2 })).toMatchObject({ a: 2, b: 3, c: 20 });
-        let g1 = (0, gubu_1.Gubu)({
-            x: (0, gubu_1.After)((val, _update) => {
+        let g1 = Gubu({
+            x: After((val, _update) => {
                 val.c = 10 * val.a;
                 return true;
             }, { a: 1 })
@@ -1395,19 +644,19 @@ describe('gubu', () => {
      
     */
     test('deep-object-basic', () => {
-        let a1 = (0, gubu_1.Gubu)({ a: 1 });
+        let a1 = Gubu({ a: 1 });
         expect(a1({})).toMatchObject({ a: 1 });
-        let ab1 = (0, gubu_1.Gubu)({ a: { b: 1 } });
+        let ab1 = Gubu({ a: { b: 1 } });
         expect(ab1({})).toMatchObject({ a: { b: 1 } });
-        let abc1 = (0, gubu_1.Gubu)({ a: { b: { c: 1 } } });
+        let abc1 = Gubu({ a: { b: { c: 1 } } });
         expect(abc1({})).toMatchObject({ a: { b: { c: 1 } } });
-        let ab1c2 = (0, gubu_1.Gubu)({ a: { b: 1 }, c: 2 });
+        let ab1c2 = Gubu({ a: { b: 1 }, c: 2 });
         expect(ab1c2({})).toMatchObject({ a: { b: 1 }, c: 2 });
-        let ab1cd2 = (0, gubu_1.Gubu)({ a: { b: 1 }, c: { d: 2 } });
+        let ab1cd2 = Gubu({ a: { b: 1 }, c: { d: 2 } });
         expect(ab1cd2({})).toMatchObject({ a: { b: 1 }, c: { d: 2 } });
-        let abc1ade2f3 = (0, gubu_1.Gubu)({ a: { b: { c: 1 }, d: { e: 2 } }, f: 3 });
+        let abc1ade2f3 = Gubu({ a: { b: { c: 1 }, d: { e: 2 } }, f: 3 });
         expect(abc1ade2f3({})).toMatchObject({ a: { b: { c: 1 }, d: { e: 2 } }, f: 3 });
-        let d0 = (0, gubu_1.Gubu)({
+        let d0 = Gubu({
             a: { b: { c: 1 }, d: { e: { f: 3 } } },
             h: 3,
             i: { j: { k: 4 }, l: { m: 5 } },
@@ -1421,13 +670,13 @@ describe('gubu', () => {
         });
     });
     test('deep-array-basic', () => {
-        let a0 = (0, gubu_1.Gubu)([1]);
+        let a0 = Gubu([1]);
         // console.dir(a0.spec(), { depth: null })
         expect(a0()).toMatchObject([]);
         expect(a0([])).toMatchObject([]);
         expect(a0([11])).toMatchObject([11]);
         expect(a0([11, 22])).toMatchObject([11, 22]);
-        let a1 = (0, gubu_1.Gubu)([-1, 1, 2, 3]);
+        let a1 = Gubu([-1, 1, 2, 3]);
         // console.dir(a1.spec(), { depth: null })
         expect(a1()).toMatchObject([1, 2, 3]);
         expect(a1([])).toMatchObject([1, 2, 3]);
@@ -1438,32 +687,32 @@ describe('gubu', () => {
         expect(a1([undefined, 22])).toMatchObject([1, 22, 3]);
     });
     test('builder-required', () => {
-        let g0 = (0, gubu_1.Gubu)({ a: (0, gubu_1.Required)({ x: 1 }) });
+        let g0 = Gubu({ a: Required({ x: 1 }) });
         expect(g0({ a: { x: 1 } })).toEqual({ a: { x: 1 } });
         expect(() => g0({})).toThrow('Validation failed for path "a" with value "" because the value is required.');
-        let g1 = (0, gubu_1.Gubu)({ a: (0, gubu_1.Required)([1]) });
+        let g1 = Gubu({ a: Required([1]) });
         expect(g1({ a: [11] })).toEqual({ a: [11] });
         expect(() => g1({})).toThrow('Validation failed for path "a" with value "" because the value is required.');
     });
     test('builder-closed', () => {
         let tmp = {};
-        let g0 = (0, gubu_1.Gubu)({ a: { b: { c: (0, gubu_1.Closed)({ x: 1 }) } } });
+        let g0 = Gubu({ a: { b: { c: Closed({ x: 1 }) } } });
         expect(g0({ a: { b: { c: { x: 2 } } } })).toEqual({ a: { b: { c: { x: 2 } } } });
         expect(() => g0({ a: { b: { c: { x: 2, y: 3 } } } })).toThrow(/Validation failed for path "a.b.c" with value "{x:2,y:3}" because the property "y" is not allowed\./);
-        let g1 = (0, gubu_1.Gubu)((0, gubu_1.Closed)([(0, gubu_1.Any)(), Date, RegExp]));
+        let g1 = Gubu(Closed([Any(), Date, RegExp]));
         expect(g1(tmp.a0 = [new Date(), /a/])).toEqual(tmp.a0);
         expect(() => g1([new Date(), /a/, 'Q'])).toThrow(/Validation failed for path "" with value "\[[^Z]+Z,{},Q\]" /); // because the property "2" is not allowed\./)
     });
     test('builder-one', () => {
-        let g0 = (0, gubu_1.Gubu)({ a: (0, gubu_1.One)(Number, String) });
+        let g0 = Gubu({ a: One(Number, String) });
         expect(g0({ a: 1 })).toEqual({ a: 1 });
         expect(g0({ a: 'x' })).toEqual({ a: 'x' });
         expect(() => g0({ a: true })).toThrow('Validation failed for path "a" with value "true" because the value is not of type number.\nValidation failed for path "a" with value "true" because the value is not of type string.');
-        let g1 = (0, gubu_1.Gubu)((0, gubu_1.One)(Number, String));
+        let g1 = Gubu(One(Number, String));
         expect(g1(1)).toEqual(1);
         expect(g1('x')).toEqual('x');
         expect(() => g1(true)).toThrow('Validation failed for path "" with value "true" because the value is not of type number.\nValidation failed for path "" with value "true" because the value is not of type string.');
-        let g2 = (0, gubu_1.Gubu)([(0, gubu_1.One)(Number, String)]);
+        let g2 = Gubu([One(Number, String)]);
         expect(g2([1])).toEqual([1]);
         expect(g2(['x'])).toEqual(['x']);
         expect(g2([1, 2])).toEqual([1, 2]);
@@ -1472,15 +721,15 @@ describe('gubu', () => {
         expect(g2(['x', 'y'])).toEqual(['x', 'y']);
         expect(g2(['x', 1, 'y', 2])).toEqual(['x', 1, 'y', 2]);
         expect(() => g2([true])).toThrow('Validation failed for path "0" with value "true" because the value is not of type number.\nValidation failed for path "0" with value "true" because the value is not of type string.');
-        let g3 = (0, gubu_1.Gubu)({ a: [(0, gubu_1.One)(Number, String)] });
+        let g3 = Gubu({ a: [One(Number, String)] });
         expect(g3({ a: [1] })).toEqual({ a: [1] });
         expect(g3({ a: ['x'] })).toEqual({ a: ['x'] });
         expect(g3({ a: ['x', 1, 'y', 2] })).toEqual({ a: ['x', 1, 'y', 2] });
         expect(() => g3({ a: [1, 2, true] })).toThrow('Validation failed for path "a.2" with value "true" because the value is not of type number.\nValidation failed for path "a.2" with value "true" because the value is not of type string.');
-        let g4 = (0, gubu_1.Gubu)({ a: [(0, gubu_1.One)({ x: 1 }, { x: 'X' })] });
+        let g4 = Gubu({ a: [One({ x: 1 }, { x: 'X' })] });
         expect(g4({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] }))
             .toEqual({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] });
-        let g5 = (0, gubu_1.Gubu)({ a: [(0, gubu_1.One)({ x: 1 }, (0, gubu_1.Closed)({ x: 'X' }))] });
+        let g5 = Gubu({ a: [One({ x: 1 }, Closed({ x: 'X' }))] });
         expect(g5({ a: [{ x: 2 }, { x: 'Q' }] }))
             .toEqual({ a: [{ x: 2 }, { x: 'Q' }] });
     });
@@ -1515,17 +764,17 @@ describe('gubu', () => {
     //     .toEqual({ a: [{ x: 2 }, { x: 'Q' }] })
     // })
     test('builder-all', () => {
-        let g0 = (0, gubu_1.Gubu)((0, gubu_1.All)({ x: 1 }, { y: 'a' }));
+        let g0 = Gubu(All({ x: 1 }, { y: 'a' }));
         expect(g0({ x: 1, y: 'a' })).toEqual({ x: 1, y: 'a' });
         expect(() => g0({ x: 'b', y: 'a' })).toThrow('Validation failed for path "x" with value "b" because the value is not of type number.');
-        let g1 = (0, gubu_1.Gubu)({ a: (0, gubu_1.All)((v) => v > 10, (v) => v < 20) });
+        let g1 = Gubu({ a: All((v) => v > 10, (v) => v < 20) });
         expect(g1({ a: 11 })).toEqual({ a: 11 });
         expect(() => g1({ a: 0 })).toThrow('Validation failed for path "a" with value "0" because check "custom" failed.');
     });
     test('builder-custom-between', () => {
-        const rangeCheck = (0, gubu_1.Gubu)([(0, gubu_1.None)(), Number, Number]);
+        const rangeCheck = Gubu([None(), Number, Number]);
         const Between = function (inopts, spec) {
-            let vs = (0, gubu_1.buildize)(this || spec);
+            let vs = buildize(this || spec);
             let range = rangeCheck(inopts);
             vs.b = (val, update, state) => {
                 // Don't run any more checks after this.
@@ -1535,7 +784,7 @@ describe('gubu', () => {
                 }
                 else {
                     update.err = [
-                        (0, gubu_1.makeErr)(val, state, `Value "$VALUE" for path "$PATH" is ` +
+                        makeErr(val, state, `Value "$VALUE" for path "$PATH" is ` +
                             `not between ${range[0]} and ${range[1]}.`)
                     ];
                     return false;
@@ -1543,44 +792,44 @@ describe('gubu', () => {
             };
             return vs;
         };
-        const g0 = (0, gubu_1.Gubu)({ a: [Between([10, 20])] });
+        const g0 = Gubu({ a: [Between([10, 20])] });
         expect(g0({ a: [11, 12, 13] })).toEqual({ a: [11, 12, 13] });
         expect(() => g0({ a: [11, 9, 13, 'y'] })).toThrow('Value "9" for path "a.1" is not between 10 and 20.\nValue "y" for path "a.3" is not between 10 and 20.');
     });
     test('builder-required', () => {
-        let g0 = (0, gubu_1.Gubu)({ a: (0, gubu_1.Required)(1) });
+        let g0 = Gubu({ a: Required(1) });
         expect(g0({ a: 2 })).toMatchObject({ a: 2 });
         expect(() => g0({ a: 'x' })).toThrow(/number/);
     });
     test('builder-optional', () => {
-        let g0 = (0, gubu_1.Gubu)({ a: (0, gubu_1.Optional)(String) });
+        let g0 = Gubu({ a: Optional(String) });
         expect(g0({ a: 'x' })).toMatchObject({ a: 'x' });
         expect(g0({})).toMatchObject({ a: '' });
         expect(() => g0({ a: 1 })).toThrow(/string/);
     });
     test('builder-any', () => {
-        let g0 = (0, gubu_1.Gubu)({ a: (0, gubu_1.Any)(), b: (0, gubu_1.Any)('B') });
+        let g0 = Gubu({ a: Any(), b: Any('B') });
         expect(g0({ a: 2, b: 1 })).toMatchObject({ a: 2, b: 1 });
         expect(g0({ a: 'x', b: 'y' })).toMatchObject({ a: 'x', b: 'y' });
         expect(g0({ b: 1 })).toEqual({ b: 1 });
         expect(g0({ a: 1, b: 'B' })).toEqual({ a: 1, b: 'B' });
     });
     test('builder-none', () => {
-        let g0 = (0, gubu_1.Gubu)((0, gubu_1.None)());
+        let g0 = Gubu(None());
         expect(() => g0(1)).toThrow('Validation failed for path "" with value "1" because no value is allowed.');
-        let g1 = (0, gubu_1.Gubu)({ a: (0, gubu_1.None)() });
+        let g1 = Gubu({ a: None() });
         expect(() => g1({ a: 'x' })).toThrow('Validation failed for path "a" with value "x" because no value is allowed.');
         // Another way to do closed arrays.
-        let g2 = (0, gubu_1.Gubu)([(0, gubu_1.None)(), 1, 'x']);
+        let g2 = Gubu([None(), 1, 'x']);
         expect(g2([2, 'y'])).toEqual([2, 'y']);
         expect(() => g2([2, 'y', true])).toThrow('Validation failed for path "2" with value "true" because no value is allowed.');
     });
     test('builder-rename', () => {
-        let g0 = (0, gubu_1.Gubu)({ a: (0, gubu_1.Rename)('b', { x: 1 }) });
+        let g0 = Gubu({ a: Rename('b', { x: 1 }) });
         expect(g0({ a: { x: 2 } })).toMatchObject({ b: { x: 2 } });
     });
     test('builder-define-refer-basic', () => {
-        let g0 = (0, gubu_1.Gubu)({ a: (0, gubu_1.Define)('A', { x: 1 }), b: (0, gubu_1.Refer)('A'), c: (0, gubu_1.Refer)('A') });
+        let g0 = Gubu({ a: Define('A', { x: 1 }), b: Refer('A'), c: Refer('A') });
         // console.log(g0.spec())
         expect(g0({ a: { x: 2 }, b: { x: 2 } }))
             .toEqual({ a: { x: 2 }, b: { x: 2 } });
@@ -1588,10 +837,10 @@ describe('gubu', () => {
             .toEqual({ a: { x: 33 }, b: { x: 44 }, c: { x: 55 } });
         expect(() => g0({ a: { x: 33 }, b: { x: 'X' } }))
             .toThrow('Validation failed for path "b.x" with value "X" because the value is not of type number.');
-        let g1 = (0, gubu_1.Gubu)({
-            a: (0, gubu_1.Define)('A', { x: 1 }),
-            b: (0, gubu_1.Refer)('A'),
-            c: (0, gubu_1.Refer)({ name: 'A', fill: true })
+        let g1 = Gubu({
+            a: Define('A', { x: 1 }),
+            b: Refer('A'),
+            c: Refer({ name: 'A', fill: true })
         });
         expect(g1({ a: { x: 2 }, b: { x: 2 } }))
             .toEqual({ a: { x: 2 }, b: { x: 2 } });
@@ -1601,11 +850,11 @@ describe('gubu', () => {
             .toEqual({ a: { x: 33 }, b: { x: 44 }, c: { x: 2 } });
     });
     test('builder-define-refer-recursive', () => {
-        let g0 = (0, gubu_1.Gubu)({
-            a: (0, gubu_1.Define)('A', {
+        let g0 = Gubu({
+            a: Define('A', {
                 b: {
                     c: 1,
-                    a: (0, gubu_1.Refer)('A')
+                    a: Refer('A')
                 }
             }),
         });
@@ -1698,7 +947,7 @@ describe('gubu', () => {
         // expect(() => g0({ a: 1 })).toThrow('path "a"')
         // expect(() => g0({ a: { b: 1 } })).toThrow('path "a.b"')
         // expect(() => g0({ a: { b: { c: 1 } } })).toThrow('path "a.b"')
-        let g1 = (0, gubu_1.Gubu)(String);
+        let g1 = Gubu(String);
         // expect(g1('x')).toEqual('x')
         // expect(() => g1(1)).toThrow('path ""')
         // expect(() => g1(true)).toThrow('path ""')
@@ -1709,7 +958,7 @@ describe('gubu', () => {
         // expect(() => g1(new Date())).toThrow('path ""')
     });
     test('error-desc', () => {
-        const g0 = (0, gubu_1.Gubu)(NaN);
+        const g0 = Gubu(NaN);
         let err = [];
         let o0 = g0(1, { err });
         expect(o0).toEqual(1);
@@ -1747,26 +996,26 @@ describe('gubu', () => {
         }
     });
     test('spec-basic', () => {
-        expect((0, gubu_1.Gubu)(Number).spec()).toMatchObject({
+        expect(Gubu(Number).spec()).toMatchObject({
             $: { gubu$: true, v$: package_json_1.default.version },
             d: 0, k: '', r: true, t: 'number', u: {}, v: 0,
         });
-        expect((0, gubu_1.Gubu)(String).spec()).toMatchObject({
+        expect(Gubu(String).spec()).toMatchObject({
             $: { gubu$: true, v$: package_json_1.default.version },
             d: 0, k: '', r: true, t: 'string', u: {}, v: '',
         });
-        expect((0, gubu_1.Gubu)(BigInt).spec()).toMatchObject({
+        expect(Gubu(BigInt).spec()).toMatchObject({
             $: { gubu$: true, v$: package_json_1.default.version },
             d: 0, k: '', r: true, t: 'bigint', u: {}, v: "0",
         });
-        expect((0, gubu_1.Gubu)(null).spec()).toMatchObject({
+        expect(Gubu(null).spec()).toMatchObject({
             $: { gubu$: true, v$: package_json_1.default.version },
             d: 0, k: '', r: false, t: 'null', u: {}, v: null,
         });
     });
     test('spec-roundtrip', () => {
         let m0 = { a: 1 };
-        let g0 = (0, gubu_1.Gubu)(m0);
+        let g0 = Gubu(m0);
         // console.log('m0 A', m0)
         expect(m0).toEqual({ a: 1 });
         expect(g0({ a: 2 })).toEqual({ a: 2 });
@@ -1803,7 +1052,7 @@ describe('gubu', () => {
         };
         expect(s0).toEqual(s0s);
         expect(g0({ a: 2 })).toEqual({ a: 2 });
-        let g0r = (0, gubu_1.Gubu)(s0);
+        let g0r = Gubu(s0);
         expect(m0).toEqual({ a: 1 });
         expect(s0).toEqual(s0s);
         expect(g0r({ a: 2 })).toEqual({ a: 2 });
@@ -1821,7 +1070,7 @@ describe('gubu', () => {
         expect(s0r_2).toEqual(s0s);
         expect(s0_2).toEqual(s0s);
         let m1 = { a: [1] };
-        let g1 = (0, gubu_1.Gubu)(m1);
+        let g1 = Gubu(m1);
         expect(g1({ a: [2] })).toEqual({ a: [2] });
         expect(m1).toEqual({ a: [1] });
         let s1 = g1.spec();
@@ -1865,7 +1114,7 @@ describe('gubu', () => {
             },
         };
         expect(s1).toEqual(s1s);
-        let g1r = (0, gubu_1.Gubu)(s1);
+        let g1r = Gubu(s1);
         expect(g1r({ a: [2] })).toEqual({ a: [2] });
         expect(g1({ a: [2] })).toEqual({ a: [2] });
         expect(m1).toEqual({ a: [1] });
@@ -1878,17 +1127,17 @@ describe('gubu', () => {
         expect(s1r).toEqual(s1s);
     });
     test('compose', () => {
-        let g0 = (0, gubu_1.Gubu)(String);
-        let g1 = (0, gubu_1.Gubu)(g0);
-        let g1s = (0, gubu_1.Gubu)(g0.spec());
+        let g0 = Gubu(String);
+        let g1 = Gubu(g0);
+        let g1s = Gubu(g0.spec());
         // console.log(g1.spec())
         expect(g1('x')).toEqual('x');
         expect(() => g1(1)).toThrow();
         expect(g1s('x')).toEqual('x');
         expect(() => g1s(1)).toThrow();
-        let g2 = (0, gubu_1.Gubu)({ a: Number });
-        let g3 = (0, gubu_1.Gubu)({ b: g2 });
-        let g3s = (0, gubu_1.Gubu)({ b: g2.spec() });
+        let g2 = Gubu({ a: Number });
+        let g3 = Gubu({ b: g2 });
+        let g3s = Gubu({ b: g2.spec() });
         // console.dir(g3.spec(), { depth: null })
         expect(g3({ b: { a: 1 } })).toEqual({ b: { a: 1 } });
         expect(() => g3({ b: { a: 'x' } })).toThrow();
@@ -1899,7 +1148,7 @@ describe('gubu', () => {
         let m0 = [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
                                                                                                                                                                                                                                                                                     String
                                                                                                                                                                                                                                                                                 ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]];
-        let g0 = (0, gubu_1.Gubu)(m0);
+        let g0 = Gubu(m0);
         let o0 = g0([[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
                                                                                                                                                                                                                                                                                     'x', 'y', 'z'
                                                                                                                                                                                                                                                                                 ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]);
@@ -2042,7 +1291,7 @@ describe('gubu', () => {
                 }
             }
         };
-        let g1 = (0, gubu_1.Gubu)(m1);
+        let g1 = Gubu(m1);
         let o1 = g1({
             a: {
                 a: {

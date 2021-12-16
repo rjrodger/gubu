@@ -96,7 +96,13 @@ Types are provided in [gubu.d.ts](gubu.d.ts).
 
 ### Browser
 
-TODO
+A minified version is provided as [gubu.min.js](gubu.min.js), which
+can be directly loaded into a web page and exports a `Gubu` global
+object.
+
+However you're probably better off importing this module in the usual
+manner for your build process and bundling it together with everything
+else.
 
 
 ### Shape Rules

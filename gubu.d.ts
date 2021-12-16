@@ -76,14 +76,18 @@ declare const Closed: Builder;
 declare const Define: Builder;
 declare const Refer: Builder;
 declare const Rename: Builder;
-declare function buildize(invs?: any): ValSpec;
+declare function buildize(invs0?: any, invs1?: any): ValSpec;
 declare function makeErr(val: any, state: State, text?: string, why?: string): ErrDesc;
 declare type GubuShape = (<T>(inroot?: T, inctx?: any) => T) & {
     spec: () => any;
     gubu: typeof GUBU;
 };
+declare const G$: (spec: any) => ValSpec;
 declare type Gubu = typeof make & {
     desc: () => any;
+    G$: typeof G$;
+    buildize: typeof buildize;
+    makeErr: typeof makeErr;
     After: typeof After;
     All: typeof All;
     Any: typeof Any;
@@ -98,7 +102,6 @@ declare type Gubu = typeof make & {
     Rename: typeof Rename;
     Required: typeof Required;
 };
-declare const G$: (spec: any) => ValSpec;
 declare const Gubu: Gubu;
 declare const GAfter: Builder;
 declare const GAll: Builder;
