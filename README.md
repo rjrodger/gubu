@@ -78,7 +78,9 @@ $ npm install gubu
 
 ## Usage
 
-The *Gubu* module has no dependencies. A single function named `Gubu` is exported.
+The *Gubu* module has no dependencies. A single function named `Gubu`
+is exported.  Utility functions are provided as properties of `Gubu`
+or can be exported separately.
 
 
 ### TypeScript
@@ -88,6 +90,8 @@ The *Gubu* module has no dependencies. A single function named `Gubu` is exporte
 ```
 import { Gubu } from 'gubu' 
 ```
+
+Types are provided in [gubu.d.ts](gubu.d.ts).
 
 
 ### Browser
