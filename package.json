@@ -27,6 +27,9 @@
     "repo-publish-quick": "npm run build && npm run test && npm run repo-tag && npm publish --access public --registry https://registry.npmjs.org "
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=12"
+  }
   "files": [
     "*.ts",
     "*.js",
