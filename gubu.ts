@@ -52,6 +52,7 @@ type ValSpec = {
   d: number    // Depth.
   v: any
   r: boolean   // Value is required.
+  o: boolean   // Value is explicitly optional.
   k: string    // Key of this node.
   u?: any      // Custom meta data
   b?: Validate // Custom before validation function.
@@ -188,6 +189,7 @@ function norm(spec?: any): ValSpec {
 
       vs.k = null == vs.k ? '' : vs.k
       vs.r = !!vs.r
+      vs.o = !!vs.o
       vs.d = null == vs.d ? -1 : vs.d
 
       vs.u = vs.u || {}
@@ -205,7 +207,8 @@ function norm(spec?: any): ValSpec {
   t = (undefined === t ? 'any' : t) as ValType
 
   let v = spec
-  let r = false // Optional by default
+  let r = false // Optional by default.
+  let o = false // Only true when Optional builder is used.
   let b = undefined
   let u: any = {}
 
@@ -230,6 +233,7 @@ function norm(spec?: any): ValSpec {
       t = (spec.name.toLowerCase() as ValType)
       r = true
       v = clone(EMPTY_VAL[t])
+      // v = undefined
     }
     else if (spec.gubu === GUBU || true === spec.$?.gubu) {
       let gs = spec?.spec ? spec.spec() : spec
@@ -262,6 +266,7 @@ function norm(spec?: any): ValSpec {
     // v: (null != v && 'object' === typeof (v)) ? { ...v } : v,
     v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
     r,
+    o,
     k: '',
     d: -1,
     u,
@@ -285,13 +290,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
 
   let gubuShape = function GubuShape<T>(inroot?: T, inctx?: Context): T {
     const ctx: any = inctx || {}
-    const root: any =
-    {
-      // '': (undefined === inroot && null != spec.v['']) ?
-      //   clone(EMPTY_VAL[spec.v[''].t]) :
-      //   inroot
-      '': inroot
-    }
+    const root: any = { '': inroot }
 
     const nodes: (ValSpec | number)[] = [spec, -1]
     const srcs: any[] = [root, -1]
@@ -336,7 +335,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
       cN = 0
       pI = nI
 
-      let keys = Object.keys(node.v)
+      let keys = null == node.v ? [] : Object.keys(node.v)
 
       // Treat array indexes as keys.
       // Inject missing indexes if present in ValSpec.
@@ -382,11 +381,12 @@ function make(inspec?: any, inopts?: Options): GubuShape {
               n = node.v[0] = Any()
             }
 
-            tvs = n = GUBU$ === n.$?.gubu$ ? n : (n = node.v[key] = norm(n))
+            tvs = null === n ? norm(n) :
+              GUBU$ === n.$?.gubu$ ? n : (n = node.v[key] = norm(n))
           }
         }
         else {
-          tvs = (null != n && GUBU$ === n.$?.gubu$) ? n : (n = node.v[key] = norm(n))
+          tvs = (null != n && GUBU$ === n.$?.gubu$) ? n : (node.v[key] = norm(n))
         }
 
         tvs.k = key
@@ -462,7 +462,8 @@ function make(inspec?: any, inopts?: Options): GubuShape {
               ) {
                 terr.push(makeErrImpl('type', sval, path, dI, vs, 1020))
               }
-              else {
+              // else {
+              else if (null != src[key] || !vs.o) {
                 nodes[nI] = vs
                 srcs[nI] = src[key] = (src[key] || {})
                 nI++
@@ -471,15 +472,14 @@ function make(inspec?: any, inopts?: Options): GubuShape {
             }
 
             else if ('array' === t) {
-              // if (vs.r && null == sval) {
               if (vs.r && undefined === sval) {
                 terr.push(makeErrImpl('required', sval, path, dI, vs, 1030))
               }
-              // else if (null != sval && !Array.isArray(sval)) {
               else if (undefined !== sval && !Array.isArray(sval)) {
                 terr.push(makeErrImpl('type', sval, path, dI, vs, 1040))
               }
-              else {
+              //else {
+              else if (null != src[key] || !vs.o) {
                 nodes[nI] = vs
                 srcs[nI] = src[key] = (src[key] || [])
                 nI++
@@ -517,7 +517,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
                 pass = false
               }
               // NOTE: `undefined` is special and cannot be set
-              else if (undefined !== vs.v) {
+              else if (undefined !== vs.v && !vs.o) {
                 src[key] = vs.v
               }
             }
@@ -664,6 +664,10 @@ const Required: Builder = function(this: ValSpec, spec?: any) {
 const Optional: Builder = function(this: ValSpec, spec?: any) {
   let vs = buildize(this, spec)
   vs.r = false
+
+  // Mark Optional as explicit, this do not insert empty arrays and objects.
+  vs.o = true
+
   return vs
 }
 
@@ -760,13 +764,16 @@ const Closed: Builder = function(this: ValSpec, spec?: any) {
           .reduce((a: any, i: any) => (a[i] = true, a), {})
       }
 
+      update.err = []
       for (let k of vkeys) {
         if (undefined === allowed[k]) {
-          update.err =
+          update.err.push(
             makeErrImpl('closed', val, state.path, state.dI, vs, 3010, '', { k })
-          return false
+          )
         }
       }
+
+      return 0 === update.err.length
     }
     return true
   }

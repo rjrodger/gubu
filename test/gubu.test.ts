@@ -5,12 +5,17 @@ import Pkg from '../package.json'
 
 
 
+
 import type {
   Builder,
   ValSpec,
   State,
   Update,
 } from '../gubu'
+
+
+const Large = require('./large')
+const Long = require('./long')
 
 
 // Handle web (Gubu) versus node ({Gubu}) export.
@@ -95,65 +100,6 @@ describe('gubu', () => {
     expect(() => shape({ a: 'BAD' })).toThrow('Validation failed for path "a" with value "BAD" because the value is not of type number.\nValidation failed for path "b" with value "" because the value is required.')
 
   })
-
-
-  test('G-basic', () => {
-    expect(G$({ v: 11 })).toMatchObject({
-      '$': { v$: Pkg.version },
-      t: 'number',
-      v: 11,
-      r: false,
-      k: '',
-      d: -1,
-      u: {}
-    })
-
-    expect(G$({ v: Number })).toMatchObject({
-      '$': { v$: Pkg.version },
-      t: 'number',
-      v: 0,
-      r: false,
-      k: '',
-      d: -1,
-      u: {}
-    })
-
-    expect(G$({ v: BigInt(11) })).toMatchObject({
-      '$': { v$: Pkg.version },
-      t: 'bigint',
-      v: BigInt(11),
-      r: false,
-      k: '',
-      d: -1,
-      u: {}
-    })
-
-    let s0 = Symbol('foo')
-    expect(G$({ v: s0 })).toMatchObject({
-      '$': { v$: Pkg.version },
-      t: 'symbol',
-      v: s0,
-      r: false,
-      k: '',
-      d: -1,
-      u: {}
-    })
-
-    // NOTE: special case for plain functions.
-    // Normally functions become custom validations.
-    let f0 = () => true
-
-    expect(G$({ v: f0 })).toMatchObject({
-      '$': { v$: Pkg.version },
-      t: 'function',
-      v: f0,
-      r: false,
-      k: '',
-      d: -1,
-      u: {}
-    })
-  })
-
 
 
   test('shapes-basic', () => {
@@ -358,6 +304,7 @@ describe('gubu', () => {
     const os0e = Gubu(Empty('x'))
     expect(os0e('')).toEqual('')
 
+    expect(() => Gubu(Number)('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toThrow('Validation failed for path "" with value "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..." because the value is not of type number.')
   })
 
 
@@ -435,9 +382,6 @@ describe('gubu', () => {
       v: '',
       r: true,
     })
-
-
-    // console.log(Before(() => true, { a: 1 }))
   })
 
 
@@ -518,6 +462,7 @@ describe('gubu', () => {
   test('type-native-optional', () => {
     let { Optional } = Gubu
 
+    // Explicit Optional over native type sets no value.
     let g0 = Gubu({
       string: Optional(String),
       number: Optional(Number),
@@ -525,8 +470,9 @@ describe('gubu', () => {
       object: Optional(Object),
       array: Optional(Array),
       function: Optional(Function),
-      // TODO: any type? Date, RegExp, Custom ???
     })
+
+    expect(g0({})).toEqual({})
   })
 
 
@@ -551,6 +497,28 @@ describe('gubu', () => {
     expect(g2([{ x: 2 }])).toEqual([{ x: 2 }, { y: true }])
     expect(g2([undefined, { y: false }, 'Q'])).toEqual([{ x: 1 }, { y: false }, 'Q'])
 
+
+    let g3 = Gubu([null])
+    expect(g3([null, null])).toEqual([null, null])
+
+
+    // NOTE: array without spec can hold anything.
+    let g4 = Gubu([])
+    expect(g4([null, 1, 'x', true])).toEqual([null, 1, 'x', true])
+
+  })
+
+
+  test('object-properties', () => {
+
+    // NOTE: unclosed object without props can hold anything
+    let g0 = Gubu({})
+    expect(g0({ a: null, b: 1, c: 'x', d: true }))
+      .toEqual({ a: null, b: 1, c: 'x', d: true })
+
+    let g1 = Gubu(Closed({}))
+    expect(g1({})).toEqual({})
+    expect(() => g1({ a: null, b: 1, c: 'x', d: true })).toThrow('Validation failed for path "" with value "{a:null,b:1,c:x,d:true}" because the property "a" is not allowed.\nValidation failed for path "" with value "{a:null,b:1,c:x,d:true}" because the property "b" is not allowed.\nValidation failed for path "" with value "{a:null,b:1,c:x,d:true}" because the property "c" is not allowed.\nValidation failed for path "" with value "{a:null,b:1,c:x,d:true}" because the property "d" is not allowed.')
   })
 
 
@@ -568,6 +536,7 @@ describe('gubu', () => {
     expect(g1({ a: 11 })).toMatchObject({ a: 11 })
     expect(() => g2({ a: 9 })).toThrow(/Validation failed for path "a" with value "9" because check "custom" failed\./)
     expect(() => g2({})).toThrow(/Validation failed for path "a" with value "" because check "custom" failed\./)
+
   })
 
 
@@ -598,27 +567,6 @@ describe('gubu', () => {
     expect(g1({ x: { a: 2 } })).toMatchObject({ x: { a: 2, b: 3, c: 20 } })
   })
 
-
-  /*
-    test('deep-required', () => {
-      let { Required } = gubu
-   
-      let g0 = gubu({
-        a: 1,
-        b: Required({
-          c: [1],
-          d: 'x',
-          e: {
-            f: [{
-              g: true,
-              h: 2
-            }]
-          }
-        }),
-      })
-    })
-   
-  */
 
 
   test('deep-object-basic', () => {
@@ -740,47 +688,7 @@ describe('gubu', () => {
     let g5 = Gubu({ a: [One({ x: 1 }, Closed({ x: 'X' }))] })
     expect(g5({ a: [{ x: 2 }, { x: 'Q' }] }))
       .toEqual({ a: [{ x: 2 }, { x: 'Q' }] })
-
   })
-
-
-
-  // test('builder-some', () => {
-  //   let g0 = gubu({ a: Some(Number, String) })
-  //   expect(g0({ a: 1 })).toEqual({ a: 1 })
-  //   expect(g0({ a: 'x' })).toEqual({ a: 'x' })
-  //   expect(() => g0({ a: true })).toThrow('Validation failed for path "a" with value "true" because the value is not of type number.\nValidation failed for path "a" with value "true" because the value is not of type string.')
-
-  //   let g1 = gubu(Some(Number, String))
-  //   expect(g1(1)).toEqual(1)
-  //   expect(g1('x')).toEqual('x')
-  //   expect(() => g1(true)).toThrow('Validation failed for path "" with value "true" because the value is not of type number.\nValidation failed for path "" with value "true" because the value is not of type string.')
-
-  //   let g2 = gubu([Some(Number, String)])
-  //   expect(g2([1])).toEqual([1])
-  //   expect(g2(['x'])).toEqual(['x'])
-  //   expect(g2([1, 2])).toEqual([1, 2])
-  //   expect(g2([1, 'x'])).toEqual([1, 'x'])
-  //   expect(g2(['x', 1])).toEqual(['x', 1])
-  //   expect(g2(['x', 'y'])).toEqual(['x', 'y'])
-  //   expect(g2(['x', 1, 'y', 2])).toEqual(['x', 1, 'y', 2])
-  //   expect(() => g2([true])).toThrow('Validation failed for path "0" with value "true" because the value is not of type number.\nValidation failed for path "0" with value "true" because the value is not of type string.')
-
-  //   let g3 = gubu({ a: [Some(Number, String)] })
-  //   expect(g3({ a: [1] })).toEqual({ a: [1] })
-  //   expect(g3({ a: ['x'] })).toEqual({ a: ['x'] })
-  //   expect(g3({ a: ['x', 1, 'y', 2] })).toEqual({ a: ['x', 1, 'y', 2] })
-  //   expect(() => g3({ a: [1, 2, true] })).toThrow('Validation failed for path "a.2" with value "true" because the value is not of type number.\nValidation failed for path "a.2" with value "true" because the value is not of type string.')
-
-  //   let g4 = gubu({ a: [Some({ x: 1 }, { x: 'X' })] })
-  //   expect(g4({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] }))
-  //     .toEqual({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] })
-
-  //   let g5 = gubu({ a: [Some({ x: 1 }, Closed({ x: 'X' }))] })
-  //   expect(g5({ a: [{ x: 2 }, { x: 'Q' }] }))
-  //     .toEqual({ a: [{ x: 2 }, { x: 'Q' }] })
-
-  // })
 
 
   test('builder-all', () => {
@@ -836,7 +744,9 @@ describe('gubu', () => {
   test('builder-optional', () => {
     let g0 = Gubu({ a: Optional(String) })
     expect(g0({ a: 'x' })).toMatchObject({ a: 'x' })
-    expect(g0({})).toMatchObject({ a: '' })
+
+    // NOTE: Optional(Type) does not insert a default value.
+    expect(g0({})).toMatchObject({})
     expect(() => g0({ a: 1 })).toThrow(/string/)
   })
 
@@ -990,22 +900,22 @@ describe('gubu', () => {
 
 
   test('error-path', () => {
-    // let g0 = gubu({ a: { b: String } })
-    // expect(g0({ a: { b: 'x' } })).toEqual({ a: { b: 'x' } })
-    // expect(() => g0(1)).toThrow('path ""')
-    // expect(() => g0({ a: 1 })).toThrow('path "a"')
-    // expect(() => g0({ a: { b: 1 } })).toThrow('path "a.b"')
-    // expect(() => g0({ a: { b: { c: 1 } } })).toThrow('path "a.b"')
+    let g0 = Gubu({ a: { b: String } })
+    expect(g0({ a: { b: 'x' } })).toEqual({ a: { b: 'x' } })
+    expect(() => g0(1)).toThrow('path ""')
+    expect(() => g0({ a: 1 })).toThrow('path "a"')
+    expect(() => g0({ a: { b: 1 } })).toThrow('path "a.b"')
+    expect(() => g0({ a: { b: { c: 1 } } })).toThrow('path "a.b"')
 
     let g1 = Gubu(String)
-    // expect(g1('x')).toEqual('x')
-    // expect(() => g1(1)).toThrow('path ""')
-    // expect(() => g1(true)).toThrow('path ""')
-    // expect(() => g1(null)).toThrow('path ""')
-    // expect(() => g1(undefined)).toThrow('path ""')
-    // expect(() => g1([])).toThrow('path ""')
+    expect(g1('x')).toEqual('x')
+    expect(() => g1(1)).toThrow('path ""')
+    expect(() => g1(true)).toThrow('path ""')
+    expect(() => g1(null)).toThrow('path ""')
+    expect(() => g1(undefined)).toThrow('path ""')
+    expect(() => g1([])).toThrow('path ""')
     expect(() => g1({})).toThrow('path ""')
-    // expect(() => g1(new Date())).toThrow('path ""')
+    expect(() => g1(new Date())).toThrow('path ""')
   })
 
 
@@ -1045,7 +955,7 @@ describe('gubu', () => {
           }
         ]
       })
-      expect(JSON.stringify(e)).toEqual("{\"gubu\":true,\"name\":\"GubuError\",\"code\":\"shape\",\"err\":[{\"n\":{\"$\":{\"v$\":\"" + Pkg.version + "\"},\"t\":\"nan\",\"v\":null,\"r\":false,\"k\":\"\",\"d\":0,\"u\":{}},\"s\":1,\"p\":\"\",\"w\":\"type\",\"m\":1050,\"t\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}],\"message\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}")
+      expect(JSON.stringify(e)).toEqual("{\"gubu\":true,\"name\":\"GubuError\",\"code\":\"shape\",\"err\":[{\"n\":{\"$\":{\"v$\":\"" + Pkg.version + "\"},\"t\":\"nan\",\"v\":null,\"r\":false,\"o\":false,\"k\":\"\",\"d\":0,\"u\":{}},\"s\":1,\"p\":\"\",\"w\":\"type\",\"m\":1050,\"t\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}],\"message\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}")
     }
   })
 
@@ -1096,6 +1006,7 @@ describe('gubu', () => {
       d: 0,
       k: '',
       r: false,
+      o: false,
       t: 'object',
       u: {},
       v: {
@@ -1107,6 +1018,7 @@ describe('gubu', () => {
           d: 1,
           k: 'a',
           r: false,
+          o: false,
           t: 'number',
           u: {},
           v: 1,
@@ -1153,6 +1065,7 @@ describe('gubu', () => {
       d: 0,
       k: '',
       r: false,
+      o: false,
       t: 'object',
       u: {},
       v: {
@@ -1164,6 +1077,7 @@ describe('gubu', () => {
           d: 1,
           k: 'a',
           r: false,
+          o: false,
           t: 'array',
           u: {},
           v: {
@@ -1175,6 +1089,7 @@ describe('gubu', () => {
               d: 2,
               k: '0',
               r: false,
+              o: false,
               t: 'number',
               u: {},
               v: 1,
@@ -1224,435 +1139,105 @@ describe('gubu', () => {
   })
 
 
+  test('G-basic', () => {
+    expect(G$({ v: 11 })).toMatchObject({
+      '$': { v$: Pkg.version },
+      t: 'number',
+      v: 11,
+      r: false,
+      o: false,
+      k: '',
+      d: -1,
+      u: {}
+    })
+
+    expect(G$({ v: Number })).toMatchObject({
+      '$': { v$: Pkg.version },
+      t: 'number',
+      v: 0,
+      r: false,
+      o: false,
+      k: '',
+      d: -1,
+      u: {}
+    })
+
+    expect(G$({ v: BigInt(11) })).toMatchObject({
+      '$': { v$: Pkg.version },
+      t: 'bigint',
+      v: BigInt(11),
+      r: false,
+      o: false,
+      k: '',
+      d: -1,
+      u: {}
+    })
+
+    let s0 = Symbol('foo')
+    expect(G$({ v: s0 })).toMatchObject({
+      '$': { v$: Pkg.version },
+      t: 'symbol',
+      v: s0,
+      r: false,
+      o: false,
+      k: '',
+      d: -1,
+      u: {}
+    })
+
+    // NOTE: special case for plain functions.
+    // Normally functions become custom validations.
+    let f0 = () => true
+
+    expect(G$({ v: f0 })).toMatchObject({
+      '$': { v$: Pkg.version },
+      t: 'function',
+      v: f0,
+      r: false,
+      o: false,
+      k: '',
+      d: -1,
+      u: {}
+    })
+  })
 
 
-  test('large', () => {
-    let m0: any = [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
-      String
-    ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+  test('just-large', () => {
+    let m0: any = Large.m0
     let g0 = Gubu(m0)
-    let o0 = g0([[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
-      'x', 'y', 'z'
-    ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]])
-    // console.dir(o0, { depth: null })
-    expect(o0).toEqual(
-      [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
-        'x', 'y', 'z'
-      ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]])
+    let o0 = g0(Large.i0)
+    expect(o0).toEqual(Large.c0)
 
-
-    let m1: any = {
-      a: {
-        a: {
-          a: {
-            a: {
-              a: {
-                a: {
-                  a: {
-                    a: {
-                      a: {
-                        a: {
-                          a: {
-                            a: {
-                              a: {
-                                a: {
-                                  a: {
-                                    a: {
-                                      a: {
-                                        a: {
-                                          a: {
-                                            a: {
-                                              a: {
-                                                a: {
-                                                  a: {
-                                                    a: {
-                                                      a: {
-                                                        a: {
-                                                          a: {
-                                                            a: {
-                                                              a: {
-                                                                a: {
-                                                                  a: {
-                                                                    a: {
-                                                                      a: {
-                                                                        a: {
-                                                                          a: {
-                                                                            a: {
-                                                                              a: {
-                                                                                a: {
-                                                                                  a: {
-                                                                                    a: {
-                                                                                      a: {
-                                                                                        a: {
-                                                                                          a: {
-                                                                                            a: {
-                                                                                              a: {
-                                                                                                a: {
-                                                                                                  a: {
-                                                                                                    a: {
-                                                                                                      a: {
-                                                                                                        a: {
-                                                                                                          a: {
-                                                                                                            a: {
-                                                                                                              a: {
-                                                                                                                a: {
-                                                                                                                  a: {
-                                                                                                                    a: {
-                                                                                                                      a: {
-                                                                                                                        a: {
-                                                                                                                          a: {
-                                                                                                                            a: {
-                                                                                                                              a: {
-                                                                                                                                a: {
-                                                                                                                                  a: {
-                                                                                                                                    a: {
-                                                                                                                                      a: {
-                                                                                                                                        a: {
-                                                                                                                                          a:
-                                                                                                                                            { x: Number }
-                                                                                                                                        }
-                                                                                                                                      }
-                                                                                                                                    }
-                                                                                                                                  }
-                                                                                                                                }
-                                                                                                                              }
-                                                                                                                            }
-                                                                                                                          }
-                                                                                                                        }
-                                                                                                                      }
-                                                                                                                    }
-                                                                                                                  }
-                                                                                                                }
-                                                                                                              }
-                                                                                                            }
-                                                                                                          }
-                                                                                                        }
-                                                                                                      }
-                                                                                                    }
-                                                                                                  }
-                                                                                                }
-                                                                                              }
-                                                                                            }
-                                                                                          }
-                                                                                        }
-                                                                                      }
-                                                                                    }
-                                                                                  }
-                                                                                }
-                                                                              }
-                                                                            }
-                                                                          }
-                                                                        }
-                                                                      }
-                                                                    }
-                                                                  }
-                                                                }
-                                                              }
-                                                            }
-                                                          }
-                                                        }
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
+    let m1 = Large.m1
     let g1 = Gubu(m1)
+    let o1 = g1(Large.i1)
+    expect(o1).toEqual(Large.c1)
+  })
 
-    let o1 = g1({
-      a: {
-        a: {
-          a: {
-            a: {
-              a: {
-                a: {
-                  a: {
-                    a: {
-                      a: {
-                        a: {
-                          a: {
-                            a: {
-                              a: {
-                                a: {
-                                  a: {
-                                    a: {
-                                      a: {
-                                        a: {
-                                          a: {
-                                            a: {
-                                              a: {
-                                                a: {
-                                                  a: {
-                                                    a: {
-                                                      a: {
-                                                        a: {
-                                                          a: {
-                                                            a: {
-                                                              a: {
-                                                                a: {
-                                                                  a: {
-                                                                    a: {
-                                                                      a: {
-                                                                        a: {
-                                                                          a: {
-                                                                            a: {
-                                                                              a: {
-                                                                                a: {
-                                                                                  a: {
-                                                                                    a: {
-                                                                                      a: {
-                                                                                        a: {
-                                                                                          a: {
-                                                                                            a: {
-                                                                                              a: {
-                                                                                                a: {
-                                                                                                  a: {
-                                                                                                    a: {
-                                                                                                      a: {
-                                                                                                        a: {
-                                                                                                          a: {
-                                                                                                            a: {
-                                                                                                              a: {
-                                                                                                                a: {
-                                                                                                                  a: {
-                                                                                                                    a: {
-                                                                                                                      a: {
-                                                                                                                        a: {
-                                                                                                                          a: {
-                                                                                                                            a: {
-                                                                                                                              a: {
-                                                                                                                                a: {
-                                                                                                                                  a: {
-                                                                                                                                    a: {
-                                                                                                                                      a: {
-                                                                                                                                        a: {
-                                                                                                                                          a:
-                                                                                                                                            { x: 1 }
-                                                                                                                                        }
-                                                                                                                                      }
-                                                                                                                                    }
-                                                                                                                                  }
-                                                                                                                                }
-                                                                                                                              }
-                                                                                                                            }
-                                                                                                                          }
-                                                                                                                        }
-                                                                                                                      }
-                                                                                                                    }
-                                                                                                                  }
-                                                                                                                }
-                                                                                                              }
-                                                                                                            }
-                                                                                                          }
-                                                                                                        }
-                                                                                                      }
-                                                                                                    }
-                                                                                                  }
-                                                                                                }
-                                                                                              }
-                                                                                            }
-                                                                                          }
-                                                                                        }
-                                                                                      }
-                                                                                    }
-                                                                                  }
-                                                                                }
-                                                                              }
-                                                                            }
-                                                                          }
-                                                                        }
-                                                                      }
-                                                                    }
-                                                                  }
-                                                                }
-                                                              }
-                                                            }
-                                                          }
-                                                        }
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    })
 
-    expect(o1).toEqual({
-      a: {
-        a: {
-          a: {
-            a: {
-              a: {
-                a: {
-                  a: {
-                    a: {
-                      a: {
-                        a: {
-                          a: {
-                            a: {
-                              a: {
-                                a: {
-                                  a: {
-                                    a: {
-                                      a: {
-                                        a: {
-                                          a: {
-                                            a: {
-                                              a: {
-                                                a: {
-                                                  a: {
-                                                    a: {
-                                                      a: {
-                                                        a: {
-                                                          a: {
-                                                            a: {
-                                                              a: {
-                                                                a: {
-                                                                  a: {
-                                                                    a: {
-                                                                      a: {
-                                                                        a: {
-                                                                          a: {
-                                                                            a: {
-                                                                              a: {
-                                                                                a: {
-                                                                                  a: {
-                                                                                    a: {
-                                                                                      a: {
-                                                                                        a: {
-                                                                                          a: {
-                                                                                            a: {
-                                                                                              a: {
-                                                                                                a: {
-                                                                                                  a: {
-                                                                                                    a: {
-                                                                                                      a: {
-                                                                                                        a: {
-                                                                                                          a: {
-                                                                                                            a: {
-                                                                                                              a: {
-                                                                                                                a: {
-                                                                                                                  a: {
-                                                                                                                    a: {
-                                                                                                                      a: {
-                                                                                                                        a: {
-                                                                                                                          a: {
-                                                                                                                            a: {
-                                                                                                                              a: {
-                                                                                                                                a: {
-                                                                                                                                  a: {
-                                                                                                                                    a: {
-                                                                                                                                      a: {
-                                                                                                                                        a: {
-                                                                                                                                          a:
-                                                                                                                                            { x: 1 }
-                                                                                                                                        }
-                                                                                                                                      }
-                                                                                                                                    }
-                                                                                                                                  }
-                                                                                                                                }
-                                                                                                                              }
-                                                                                                                            }
-                                                                                                                          }
-                                                                                                                        }
-                                                                                                                      }
-                                                                                                                    }
-                                                                                                                  }
-                                                                                                                }
-                                                                                                              }
-                                                                                                            }
-                                                                                                          }
-                                                                                                        }
-                                                                                                      }
-                                                                                                    }
-                                                                                                  }
-                                                                                                }
-                                                                                              }
-                                                                                            }
-                                                                                          }
-                                                                                        }
-                                                                                      }
-                                                                                    }
-                                                                                  }
-                                                                                }
-                                                                              }
-                                                                            }
-                                                                          }
-                                                                        }
-                                                                      }
-                                                                    }
-                                                                  }
-                                                                }
-                                                              }
-                                                            }
-                                                          }
-                                                        }
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    })
+  test('just-long', () => {
+    expect(Gubu(Long.m0)(Long.i0)).toEqual(Long.i0)
+    expect(Gubu(Long.m1)(Long.i1)).toEqual(Long.i1)
+  })
+
+
+  test('even-larger', () => {
+    let m0: any = {}
+    let c0 = m0
+    for (let i = 0; i < 11111; i++) {
+      c0 = c0.a = {}
+    }
+    let g0 = Gubu(m0)
+    expect(g0(m0)).toEqual(m0)
+
+    // let m1: any = []
+    // let c1 = m1
+    // for (let i = 0; i < 11111; i++) {
+    //   c1 = c0.a = {}
+    // }
+    // let g0 = Gubu(m0)
+    // expect(g0(m0)).toEqual(m0)
+
   })
 })
 

@@ -79,6 +79,7 @@ function norm(spec) {
             }
             vs.k = null == vs.k ? '' : vs.k;
             vs.r = !!vs.r;
+            vs.o = !!vs.o;
             vs.d = null == vs.d ? -1 : vs.d;
             vs.u = vs.u || {};
             if ((_b = vs.u.list) === null || _b === void 0 ? void 0 : _b.specs) {
@@ -91,7 +92,8 @@ function norm(spec) {
     let t = (null === spec ? 'null' : typeof (spec));
     t = (undefined === t ? 'any' : t);
     let v = spec;
-    let r = false; // Optional by default
+    let r = false; // Optional by default.
+    let o = false; // Only true when Optional builder is used.
     let b = undefined;
     let u = {};
     if ('object' === t) {
@@ -112,6 +114,7 @@ function norm(spec) {
             t = spec.name.toLowerCase();
             r = true;
             v = clone(EMPTY_VAL[t]);
+            // v = undefined
         }
         else if (spec.gubu === GUBU || true === ((_d = spec.$) === null || _d === void 0 ? void 0 : _d.gubu)) {
             let gs = (spec === null || spec === void 0 ? void 0 : spec.spec) ? spec.spec() : spec;
@@ -141,6 +144,7 @@ function norm(spec) {
         // v: (null != v && 'object' === typeof (v)) ? { ...v } : v,
         v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
         r,
+        o,
         k: '',
         d: -1,
         u,
@@ -160,12 +164,7 @@ function make(inspec, inopts) {
     let gubuShape = function GubuShape(inroot, inctx) {
         var _a, _b, _c, _d;
         const ctx = inctx || {};
-        const root = {
-            // '': (undefined === inroot && null != spec.v['']) ?
-            //   clone(EMPTY_VAL[spec.v[''].t]) :
-            //   inroot
-            '': inroot
-        };
+        const root = { '': inroot };
         const nodes = [spec, -1];
         const srcs = [root, -1];
         const path = []; // Key path to current node.
@@ -200,7 +199,7 @@ function make(inspec, inopts) {
             dI++;
             cN = 0;
             pI = nI;
-            let keys = Object.keys(node.v);
+            let keys = null == node.v ? [] : Object.keys(node.v);
             // Treat array indexes as keys.
             // Inject missing indexes if present in ValSpec.
             if ('array' === node.t) {
@@ -237,11 +236,12 @@ function make(inspec, inopts) {
                         if (undefined === n) {
                             n = node.v[0] = Any();
                         }
-                        tvs = n = GUBU$ === ((_b = n.$) === null || _b === void 0 ? void 0 : _b.gubu$) ? n : (n = node.v[key] = norm(n));
+                        tvs = null === n ? norm(n) :
+                            GUBU$ === ((_b = n.$) === null || _b === void 0 ? void 0 : _b.gubu$) ? n : (n = node.v[key] = norm(n));
                     }
                 }
                 else {
-                    tvs = (null != n && GUBU$ === ((_c = n.$) === null || _c === void 0 ? void 0 : _c.gubu$)) ? n : (n = node.v[key] = norm(n));
+                    tvs = (null != n && GUBU$ === ((_c = n.$) === null || _c === void 0 ? void 0 : _c.gubu$)) ? n : (node.v[key] = norm(n));
                 }
                 tvs.k = key;
                 tvs.d = dI;
@@ -302,7 +302,8 @@ function make(inspec, inopts) {
                                 Array.isArray(sval))) {
                                 terr.push(makeErrImpl('type', sval, path, dI, vs, 1020));
                             }
-                            else {
+                            // else {
+                            else if (null != src[key] || !vs.o) {
                                 nodes[nI] = vs;
                                 srcs[nI] = src[key] = (src[key] || {});
                                 nI++;
@@ -310,15 +311,14 @@ function make(inspec, inopts) {
                             }
                         }
                         else if ('array' === t) {
-                            // if (vs.r && null == sval) {
                             if (vs.r && undefined === sval) {
                                 terr.push(makeErrImpl('required', sval, path, dI, vs, 1030));
                             }
-                            // else if (null != sval && !Array.isArray(sval)) {
                             else if (undefined !== sval && !Array.isArray(sval)) {
                                 terr.push(makeErrImpl('type', sval, path, dI, vs, 1040));
                             }
-                            else {
+                            //else {
+                            else if (null != src[key] || !vs.o) {
                                 nodes[nI] = vs;
                                 srcs[nI] = src[key] = (src[key] || []);
                                 nI++;
@@ -351,7 +351,7 @@ function make(inspec, inopts) {
                                 pass = false;
                             }
                             // NOTE: `undefined` is special and cannot be set
-                            else if (undefined !== vs.v) {
+                            else if (undefined !== vs.v && !vs.o) {
                                 src[key] = vs.v;
                             }
                         }
@@ -471,6 +471,8 @@ exports.Required = Required;
 const Optional = function (spec) {
     let vs = buildize(this, spec);
     vs.r = false;
+    // Mark Optional as explicit, this do not insert empty arrays and objects.
+    vs.o = true;
     return vs;
 };
 exports.Optional = Optional;
@@ -550,13 +552,13 @@ const Closed = function (spec) {
                 })
                     .reduce((a, i) => (a[i] = true, a), {});
             }
+            update.err = [];
             for (let k of vkeys) {
                 if (undefined === allowed[k]) {
-                    update.err =
-                        makeErrImpl('closed', val, state.path, state.dI, vs, 3010, '', { k });
-                    return false;
+                    update.err.push(makeErrImpl('closed', val, state.path, state.dI, vs, 3010, '', { k }));
                 }
             }
+            return 0 === update.err.length;
         }
         return true;
     };

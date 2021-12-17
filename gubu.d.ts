@@ -15,6 +15,7 @@ declare type ValSpec = {
     d: number;
     v: any;
     r: boolean;
+    o: boolean;
     k: string;
     u?: any;
     b?: Validate;
