@@ -60,7 +60,7 @@ const EMPTY_VAL = {
     null: null,
 };
 function norm(spec) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f;
     // Is this a (possibly incomplete) ValSpec?
     if (null != spec && ((_a = spec.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
         // Assume complete if gubu$ has special internal reference.
@@ -90,7 +90,8 @@ function norm(spec) {
     }
     // Not a ValSpec, so build one based on value and its type.
     let t = (null === spec ? 'null' : typeof (spec));
-    t = (undefined === t ? 'any' : t);
+    // t = (undefined === t ? 'any' : t) as ValType
+    t = ('undefined' === t ? 'any' : t);
     let v = spec;
     let r = false; // Optional by default.
     let o = false; // Only true when Optional builder is used.
@@ -105,7 +106,7 @@ function norm(spec) {
             Object !== v.constructor &&
             null != v.constructor) {
             t = 'instance';
-            u.n = (_c = v.constructor) === null || _c === void 0 ? void 0 : _c.name;
+            u.n = v.constructor.name;
             u.i = v.constructor;
         }
     }
@@ -116,7 +117,7 @@ function norm(spec) {
             v = clone(EMPTY_VAL[t]);
             // v = undefined
         }
-        else if (spec.gubu === GUBU || true === ((_d = spec.$) === null || _d === void 0 ? void 0 : _d.gubu)) {
+        else if (spec.gubu === GUBU || true === ((_c = spec.$) === null || _c === void 0 ? void 0 : _c.gubu)) {
             let gs = (spec === null || spec === void 0 ? void 0 : spec.spec) ? spec.spec() : spec;
             t = gs.t;
             v = gs.v;
@@ -124,14 +125,14 @@ function norm(spec) {
             u = gs.u;
         }
         else if ((undefined === spec.prototype && Function === spec.constructor) ||
-            Function === ((_e = spec.prototype) === null || _e === void 0 ? void 0 : _e.constructor)) {
+            Function === ((_d = spec.prototype) === null || _d === void 0 ? void 0 : _d.constructor)) {
             t = 'custom';
             b = v;
         }
         else {
             t = 'instance';
             r = true;
-            u.n = (_g = (_f = v.prototype) === null || _f === void 0 ? void 0 : _f.constructor) === null || _g === void 0 ? void 0 : _g.name;
+            u.n = (_f = (_e = v.prototype) === null || _e === void 0 ? void 0 : _e.constructor) === null || _f === void 0 ? void 0 : _f.name;
             u.i = v;
         }
     }

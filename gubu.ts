@@ -204,7 +204,8 @@ function norm(spec?: any): ValSpec {
   // Not a ValSpec, so build one based on value and its type.
 
   let t: ValType | 'undefined' = (null === spec ? 'null' : typeof (spec))
-  t = (undefined === t ? 'any' : t) as ValType
+  // t = (undefined === t ? 'any' : t) as ValType
+  t = ('undefined' === t ? 'any' : t) as ValType
 
   let v = spec
   let r = false // Optional by default.
@@ -223,7 +224,7 @@ function norm(spec?: any): ValSpec {
       null != v.constructor
     ) {
       t = 'instance'
-      u.n = v.constructor?.name
+      u.n = v.constructor.name
       u.i = v.constructor
     }
   }
