@@ -118,7 +118,8 @@ function norm(spec) {
             // v = undefined
         }
         else if (spec.gubu === GUBU || true === ((_c = spec.$) === null || _c === void 0 ? void 0 : _c.gubu)) {
-            let gs = (spec === null || spec === void 0 ? void 0 : spec.spec) ? spec.spec() : spec;
+            // let gs = spec?.spec ? spec.spec() : spec
+            let gs = spec.spec ? spec.spec() : spec;
             t = gs.t;
             v = gs.v;
             r = gs.r;

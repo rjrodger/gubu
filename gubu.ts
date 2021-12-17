@@ -237,7 +237,8 @@ function norm(spec?: any): ValSpec {
       // v = undefined
     }
     else if (spec.gubu === GUBU || true === spec.$?.gubu) {
-      let gs = spec?.spec ? spec.spec() : spec
+      // let gs = spec?.spec ? spec.spec() : spec
+      let gs = spec.spec ? spec.spec() : spec
       t = (gs as ValSpec).t
       v = gs.v
       r = gs.r
