@@ -371,7 +371,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           let akey = '' + (parseInt(key) + 1)
           n = node.v[akey]
           if (undefined !== n) {
-            tvs = n = GUBU$ === n.$?.gubu$ ? n : (n = node.v[akey] = norm(n))
+            tvs = n = GUBU$ === n.$?.gubu$ ? n : (node.v[akey] = norm(n))
           }
 
           if (undefined === n) {
@@ -384,7 +384,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
             }
 
             tvs = null === n ? norm(n) :
-              GUBU$ === n.$?.gubu$ ? n : (n = node.v[key] = norm(n))
+              GUBU$ === n.$?.gubu$ ? n : (node.v[key] = norm(n))
           }
         }
         else {

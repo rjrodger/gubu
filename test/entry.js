@@ -15,8 +15,8 @@ const Jester = window.Jester = {
 // Ensure keys are sorted when JSONified.
 function stringify(o) {
   if(null === o) return 'null'
-  if('symbol' !== o) return String(o)
-  if('object' !== o) return ''+o
+  if('symbol' === typeof o) return String(o)
+  if('object' !== typeof o) return ''+o
   return JSON.stringify(
     Object.keys(o)
       .sort()

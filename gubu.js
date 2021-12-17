@@ -229,7 +229,7 @@ function make(inspec, inopts) {
                     let akey = '' + (parseInt(key) + 1);
                     n = node.v[akey];
                     if (undefined !== n) {
-                        tvs = n = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (n = node.v[akey] = norm(n));
+                        tvs = n = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (node.v[akey] = norm(n));
                     }
                     if (undefined === n) {
                         n = node.v[0];
@@ -239,7 +239,7 @@ function make(inspec, inopts) {
                             n = node.v[0] = Any();
                         }
                         tvs = null === n ? norm(n) :
-                            GUBU$ === ((_b = n.$) === null || _b === void 0 ? void 0 : _b.gubu$) ? n : (n = node.v[key] = norm(n));
+                            GUBU$ === ((_b = n.$) === null || _b === void 0 ? void 0 : _b.gubu$) ? n : (node.v[key] = norm(n));
                     }
                 }
                 else {
