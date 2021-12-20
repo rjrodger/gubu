@@ -63,10 +63,9 @@ console.log( shape({ a: 'BAD' }) )
 ```
 
 As shown above, you use the exported `Gubu` function to create a
-validation function that checks its first argument for validity (does
-the first argument match the schema shape?). If valid, return the
-first argument, otherwise thrown an exception listing all (not just
-the first!) the validity errors.
+validation checker (does the argument match the schema shape?). If
+valid, the checker returns its first argument, otherwise it throws an
+exception listing all (not just the first!) the validity errors.
  
 
 ## Install
@@ -107,25 +106,28 @@ else.
 
 ### Shape Rules
 
-The general principle is that the schema shape should match valid
-object as closely as possible.
+The general principle of Gubu's design is that the schema shape should
+match a valid object or value as closely as possible.
 
 For scalar values you can provide a native type object to make the value required:
 * `Gubu(String)` matches strings: `'foo'`
 * `Gubu(Number)` matches numbers: `123`
 * `Gubu(Boolean)` matches booleans: `true`
 
-Empty strings are not considered to be valid if a string is required
-(this is usually what you want). To allow empty string, use
-`Gubu(Empty(String))` (where `Empty` is exported by the `Gubu` module).
-
 Or defaults to make the value optional:
-* `Gubu('bar')` matches strings: `'foo'`, and `undefined` (becoming `'bar'`), but not `null`
-* `Gubu(0)` matches numbers: `123`, and `undefined` (becoming `0`), but not `null`
-* `Gubu(false)` matches booleans: `true`, and `undefined` (becoming `false`), but not `null`
+* `Gubu('bar')` matches strings: `'foo'`, and `undefined`
+* `Gubu(0)` matches numbers: `123`, and `undefined`
+* `Gubu(false)` matches booleans: `true`, and `undefined`
+
+If a value is optional and `undefined`, the default value is returned:
+`Gubu('bar')()` returns `'bar'`.
 
 The values `null` and `NaN` must match exactly. The value `undefined`
 is special - it literally means no value.
+
+Empty strings are not considered to be valid if a string is required
+(this is usually what you want). To allow empty string, use
+`Gubu(Empty(String))` (where `Empty` is exported by the `Gubu` module).
 
 For objects, write them as you want them:
 
@@ -140,16 +142,34 @@ let shape = Gubu({
 })
 ```
 
-For arrays, the first elements is treated as the shape that all elements must match:
+The above shape will match:
+
+```
+{
+  foo: {
+    bar: {
+      zed: 'x',
+      qaz: 1
+    }
+  }
+}
+```
+
+
+For arrays, the first elements is treated as the shape that all
+elements in the array must match:
 
 * `Gubu([String])` matches `['a', 'b', 'c']`
 * `Gubu([{x:1}])` matches `[{x: 11}, {x: 22}, {x: 33}]`
 
 
-Elements after the first are treated a special cases, defined specific
-shapes for each element (offset by 1):
+If you need specific elements to match specific shapes, add these
+shapes after the first element:
 
 * `Gubu([String,Number])` matches `[1, 'b', 'c']` - the first element is a `Number`, the rest `Strings`.
+
+Thus, the element `0` of a shape array defines the general element,
+and following elements define special cases (offset by 1).
 
 
 You can specify custom validation using functions:
@@ -173,8 +193,8 @@ shape({ a: { x: 1 } })
 
 *Gubu* exports shape "builder" utility functions that let you further
 refine the shape (You've already seen the `Empty` builder above that
-allows strings to be empty). Wrap your value with the function
-in-place in the shape.
+allows strings to be empty). You wrap your value with the builder
+function to apply the desired effect.
 
 
 The `Required` builder makes a value required:
@@ -200,10 +220,9 @@ const shape = Gubu(Closed({
 }))
 ```
 
-You can access builders as properties of the main `Gubu` function to
-keep them namespaced. You can also chain most builders. Thus a
-required, closed object can be specificied with:
-
+You can also access builders as properties of the main `Gubu`
+function, and you can also chain most builders. Thus a `Required` and
+`Closed` object can be specified with:
 
 ```
 const { Gubu } = require(`gubu`)
@@ -216,12 +235,31 @@ const shape = Gubu({
 
 You can also write your own builders - see the [API Builders](#builders) section.
 
-
 In addition to this README, the [unit tests](lib/gubu.test.ts) are
 comprehensive and provide many usage examples.
 
 
 ## API
+
+
+### Shape
+
+A shape specification can either be at the root of a JSON structure,
+an array element, or the value of an object property.  To pass
+validation, a value is compared to the shape, and must match the
+constraints of the shape. If the shape has elements or properties,
+these must also match, and are validated recursively in a depth-first
+manner [^1].
+
+
+* Required Scalars
+** `String`
+
+
+### Gubu function
+
+
+### Errors
 
 
 ### Builders
@@ -236,9 +274,10 @@ comprehensive and provide many usage examples.
 The name comes from a sort of in-joke in Irish politics. It is
 [grotesque, unbelievable, bizarre and
 unprecedented](https://en.wikipedia.org/wiki/GUBU), that anyone would
-write yet another validation library for JavaSCript, let alone a
-second one (The first one I wrote is
-[parambulator](https://github.com/rjrodger/parambulator)).
+write yet another validation library for JavaScript, let alone a third
+one! (See [parambulator](https://github.com/rjrodger/parambulator) and
+[norma](https://github.com/rjrodger/norma) - but don't use those,
+*Gubu* is better!).
 
 Also I like short names.
 
@@ -249,3 +288,7 @@ Licensed under [MIT][].
 
 [MIT]: ./LICENSE
 
+
+## Foot notes
+
+[^1]: test
