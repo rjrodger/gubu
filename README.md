@@ -245,8 +245,8 @@ comprehensive and provide many usage examples.
 ### Shape
 
 A shape specification can either be at the root of a JSON structure,
-an array element, or the value of an object property.  To pass
-validation, a value is compared to the shape, and must match the
+an array element, or the value of an object property.  For a value to
+pass validation, it is compared to the shape, and must match the
 constraints of the shape. If the shape has elements or properties,
 these must also match, and are validated recursively in a depth-first
 manner [^1].
@@ -289,6 +289,7 @@ Licensed under [MIT][].
 [MIT]: ./LICENSE
 
 
-## Foot notes
+## Footnotes
 
-[^1]: test
+[^1]: The implementation algorithm is iterative, 
+just a loop that processes values in depth-first order.
