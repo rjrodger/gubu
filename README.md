@@ -254,7 +254,7 @@ manner [^1].
 
 #### Required Scalars
 
-The value must be of the indicated type, and cannot be missing or `undefined`.
+The value must be of the indicated type, and must exist.
 
 * `String`: match any string, but not the empty string [^2].
 * `Number`: match any number, but not BigInts.
@@ -302,6 +302,6 @@ Licensed under [MIT][].
 [^1]: The implementation algorithm is iterative, just a loop that
       processes values in depth-first order.
 
-[^2]: As empty strings are *falsy*, an empty string is not considered
+[^2]: As empty strings are *falsy*—an empty string is not considered
       to match the `string` type. To allow empty strings, use
       `Empty(String)`.

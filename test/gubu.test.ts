@@ -330,6 +330,17 @@ describe('gubu', () => {
     const os0e = Gubu(Empty('x'))
     expect(os0e('')).toEqual('')
 
+    const os1e = Gubu(Optional(Empty(String)))
+    expect(os1e()).toEqual(undefined)
+    expect(os1e('')).toEqual('')
+    expect(os1e('x')).toEqual('x')
+
+    const os1eO = Gubu({ a: Optional(Empty(String)) })
+    expect(os1eO({})).toEqual({})
+    expect(os1eO({ a: '' })).toEqual({ a: '' })
+    expect(os1eO({ a: 'x' })).toEqual({ a: 'x' })
+
+
 
     // Long values are truncated in error descriptions.
     expect(() => Gubu(Number)('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toThrow('Validation failed for path "" with value "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..." because the value is not of type number.')
