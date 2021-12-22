@@ -277,6 +277,32 @@ describe('gubu', () => {
   })
 
 
+  test('shapes-builtins', () => {
+    let d0 = new Date(2121, 1, 1)
+    let g0 = Gubu({ a: Date })
+    expect(g0({ a: d0 })).toEqual({ a: d0 })
+    expect(() => g0({})).toThrow('required')
+    expect(() => g0({ a: Date })).toThrow('instance')
+    expect(() => g0({ a: /QXQ/ })).toThrow(/QXQ.*instance/)
+
+    let g1 = Gubu({ a: Optional(Date) })
+    expect(g1({ a: d0 })).toEqual({ a: d0 })
+    expect(g1({})).toEqual({})
+
+
+    let r0 = /a/
+    let g2 = Gubu({ a: RegExp })
+    expect(g2({ a: r0 })).toEqual({ a: r0 })
+    expect(() => g2({})).toThrow('required')
+    expect(() => g2({ a: RegExp })).toThrow('instance')
+    expect(() => g2({ a: d0 })).toThrow(/2121.*instance/)
+
+    let g3 = Gubu({ a: Optional(RegExp) })
+    expect(g3({ a: r0 })).toEqual({ a: r0 })
+    expect(g3({})).toEqual({})
+
+  })
+
 
   test('shapes-edges', () => {
 
@@ -304,7 +330,29 @@ describe('gubu', () => {
     const os0e = Gubu(Empty('x'))
     expect(os0e('')).toEqual('')
 
+
+    // Long values are truncated in error descriptions.
     expect(() => Gubu(Number)('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toThrow('Validation failed for path "" with value "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..." because the value is not of type number.')
+
+
+    // Explicit `undefined` and `null`
+
+    const u0 = Gubu({ a: undefined })
+    expect(u0({ a: undefined })).toEqual({ a: undefined })
+    expect(u0({})).toEqual({ a: undefined })
+
+    const u0n = Gubu({ a: null })
+    expect(u0n({ a: null })).toEqual({ a: null })
+    expect(u0n({})).toEqual({ a: null })
+
+    const u1 = Gubu({ a: Required(undefined) })
+    // expect(u1({ a: undefined })).toEqual({ a: undefined })
+    expect(() => u1({})).toThrow('required')
+
+    const u1n = Gubu({ a: Required(null) })
+    expect(u1n({ a: null })).toEqual({ a: null })
+    expect(() => u1n({})).toThrow('required')
+
   })
 
 
@@ -649,7 +697,7 @@ describe('gubu', () => {
 
     let g1 = Gubu(Closed([Any(), Date, RegExp]))
     expect(g1(tmp.a0 = [new Date(), /a/])).toEqual(tmp.a0)
-    expect(() => g1([new Date(), /a/, 'Q'])).toThrow(/Validation failed for path "" with value "\[[^Z]+Z,{},Q\]" /) // because the property "2" is not allowed\./)
+    expect(() => g1([new Date(), /a/, 'Q'])).toThrow(/Validation failed for path "" with value "\[[^Z]+Z,\/a\/,Q\]" /) // because the property "2" is not allowed\./)
 
   })
 
@@ -1230,15 +1278,32 @@ describe('gubu', () => {
     let g0 = Gubu(m0)
     expect(g0(m0)).toEqual(m0)
 
-    // let m1: any = []
-    // let c1 = m1
-    // for (let i = 0; i < 11111; i++) {
-    //   c1 = c0.a = {}
-    // }
-    // let g0 = Gubu(m0)
-    // expect(g0(m0)).toEqual(m0)
-
+    let m1: any = []
+    let c1 = m1
+    for (let i = 0; i < 11111; i++) {
+      c1 = c1[0] = []
+    }
+    let g1 = Gubu(m1)
+    expect(g1(m1)).toEqual(m1)
   })
+
+
+  test('even-longer', () => {
+    let m0: any = {}
+    for (let i = 0; i < 11111; i++) {
+      m0['a' + i] = true
+    }
+    let g0 = Gubu(m0)
+    expect(g0(m0)).toEqual(m0)
+
+    let m1: any = {}
+    for (let i = 0; i < 11111; i++) {
+      m1[i] = true
+    }
+    let g1 = Gubu(m1)
+    expect(g1(m1)).toEqual(m1)
+  })
+
 })
 
 

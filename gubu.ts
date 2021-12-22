@@ -31,9 +31,10 @@ type Context = Record<string, any> & {
 type ValType =
   'any' |
   'none' |
-  'node' |
+  // 'node' |
   'custom' |
   'null' |
+  'undefined' |
   'list' |
   'string' |
   'number' |
@@ -164,7 +165,9 @@ const EMPTY_VAL: { [name: string]: any } = {
 
 
 
-function norm(spec?: any): ValSpec {
+function norm(spec?: any
+  // , parent?: any, parentKey?: string
+): ValSpec {
 
   // Is this a (possibly incomplete) ValSpec?
   if (null != spec && spec.$?.gubu$) {
@@ -234,7 +237,6 @@ function norm(spec?: any): ValSpec {
       t = (spec.name.toLowerCase() as ValType)
       r = true
       v = clone(EMPTY_VAL[t])
-      // v = undefined
     }
     else if (spec.gubu === GUBU || true === spec.$?.gubu) {
       // let gs = spec?.spec ? spec.spec() : spec
@@ -261,6 +263,15 @@ function norm(spec?: any): ValSpec {
   else if ('number' === t && isNaN(v)) {
     t = 'nan'
   }
+  // else if (
+  //   undefined === v &&
+  //   'any' === t &&
+  //   parent &&
+  //   parent.hasOwnProperty(parentKey)
+  // ) {
+  //   t = 'undefined'
+  //   v = undefined
+  // }
 
   let vs: ValSpec = {
     $: GUBU,
@@ -297,6 +308,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
     const nodes: (ValSpec | number)[] = [spec, -1]
     const srcs: any[] = [root, -1]
     const path: string[] = [] // Key path to current node.
+    const parent: any[] = []
 
     // let dI: number = 0  // Node depth.
     let dI: number = -1  // Node depth.
@@ -358,7 +370,8 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           stype = 'nan'
         }
 
-        let n = node.v[key]
+        let nv = node.v
+        let n = nv[key]
         let tvs: ValSpec = null as any
 
 
@@ -369,26 +382,26 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           // Use these if src has no corresponding element.
 
           let akey = '' + (parseInt(key) + 1)
-          n = node.v[akey]
+          n = nv[akey]
           if (undefined !== n) {
-            tvs = n = GUBU$ === n.$?.gubu$ ? n : (node.v[akey] = norm(n))
+            tvs = n = GUBU$ === n.$?.gubu$ ? n : (nv[akey] = norm(n))
           }
 
           if (undefined === n) {
-            n = node.v[0]
+            n = nv[0]
             key = '' + 0
 
             // No first element defining element type spec, so use Any.
             if (undefined === n) {
-              n = node.v[0] = Any()
+              n = nv[0] = Any()
             }
 
             tvs = null === n ? norm(n) :
-              GUBU$ === n.$?.gubu$ ? n : (node.v[key] = norm(n))
+              GUBU$ === n.$?.gubu$ ? n : (nv[key] = norm(n))
           }
         }
         else {
-          tvs = (null != n && GUBU$ === n.$?.gubu$) ? n : (node.v[key] = norm(n))
+          tvs = (null != n && GUBU$ === n.$?.gubu$) ? n : (nv[key] = norm(n))
         }
 
         tvs.k = key
@@ -454,20 +467,19 @@ function make(inspec?: any, inopts?: Options): GubuShape {
                 terr.push(makeErrImpl('required', sval, path, dI, vs, 1010))
               }
               else if (
-                //(null != sval && ('object' !== stype || Array.isArray(sval)))
                 undefined !== sval && (
                   null === sval ||
-
                   'object' !== stype ||
                   Array.isArray(sval)
                 )
               ) {
                 terr.push(makeErrImpl('type', sval, path, dI, vs, 1020))
               }
-              // else {
+
               else if (null != src[key] || !vs.o) {
                 nodes[nI] = vs
                 srcs[nI] = src[key] = (src[key] || {})
+                parent[nI] = src[key]
                 nI++
                 cN++
               }
@@ -480,7 +492,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
               else if (undefined !== sval && !Array.isArray(sval)) {
                 terr.push(makeErrImpl('type', sval, path, dI, vs, 1040))
               }
-              //else {
               else if (null != src[key] || !vs.o) {
                 nodes[nI] = vs
                 srcs[nI] = src[key] = (src[key] || [])
@@ -498,30 +509,34 @@ function make(inspec?: any, inopts?: Options): GubuShape {
               ('instance' === t && vs.u.i && sval instanceof vs.u.i) ||
               // ('instance' !== t && 'object' === stype && null != sval) ||
               ('null' === t && null === sval)
-            ))
-
-            // 'any' !== t &&
-            // 'custom' !== t &&
-            // undefined !== sval &&
-            // t !== stype &&
-            // !('instance' !== t && 'object' === stype && null != sval) &&
-            // !('instance' === t && vs.u.i && sval instanceof vs.u.i) &&
-            // !('null' === t && null === sval)
-            {
+            )) {
               terr.push(makeErrImpl('type', sval, path, dI, vs, 1050))
               pass = false
             }
 
             // Value itself, or default.
             else if (undefined === sval) {
-              if (vs.r) {
+              let parentKey = path[dI]
+              // console.log('QQQ', t, parentKey, src.hasOwnProperty(parentKey), src)
+              // if (vs.r) {
+              if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
                 terr.push(makeErrImpl('required', sval, path, dI, vs, 1060))
                 pass = false
               }
               // NOTE: `undefined` is special and cannot be set
-              else if (undefined !== vs.v && !vs.o) {
+              // else if (undefined !== vs.v && !vs.o || ('undefined' === t && !nv.hasOwnProperty(parentKey))) {
+              else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
+                // console.log('RRR')
                 src[key] = vs.v
               }
+              // else if ('undefined' === t && !nv.hasOwnProperty(parentKey)) {
+              //   // console.log('WWW')
+              //   // src[key] = undefined
+              //   pass = false
+              // }
+              // else {
+              //   pass = false
+              // }
             }
 
             // Empty strings fail if string is required. Use Empty to allow.
@@ -660,6 +675,14 @@ function pathstr(path: string[], dI: number) {
 const Required: Builder = function(this: ValSpec, spec?: any) {
   let vs = buildize(this, spec)
   vs.r = true
+
+  // console.log('REQ', spec, arguments)
+
+  if (undefined === spec && 1 === arguments.length) {
+    vs.t = 'undefined'
+    vs.v = undefined
+  }
+
   return vs
 }
 
@@ -947,15 +970,32 @@ function makeErrImpl(
 
 function stringify(x: any, r?: any) {
   try {
-    return JSON.stringify(x, (key: any, val: any) => {
+    let str = JSON.stringify(x, (key: any, val: any) => {
       if (r) {
         val = r(key, val)
       }
-      if ('bigint' === typeof (val)) {
-        val = val.toString()
+
+      if (
+        null != val &&
+        'object' === typeof (val) &&
+        val.constructor &&
+        'Object' !== val.constructor.name &&
+        'Array' !== val.constructor.name
+      ) {
+        val =
+          // 'RegExp' === val.constructor.name ? val.toString() : val.constructor.name
+          'function' === typeof val.toString ? val.toString() : val.constructor.name
+      }
+      else if ('function' === typeof (val)) {
+        val = val.name
+      }
+      else if ('bigint' === typeof (val)) {
+        val = String(val.toString())
       }
       return val
     })
+
+    return String(str)
   }
   catch (e: any) {
     return JSON.stringify(String(x))

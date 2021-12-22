@@ -8,7 +8,7 @@ declare type Options = {
 declare type Context = Record<string, any> & {
     err?: ErrDesc[];
 };
-declare type ValType = 'any' | 'none' | 'node' | 'custom' | 'null' | 'list' | 'string' | 'number' | 'boolean' | 'object' | 'array' | 'bigint' | 'symbol' | 'function' | 'instance' | 'nan';
+declare type ValType = 'any' | 'none' | 'custom' | 'null' | 'undefined' | 'list' | 'string' | 'number' | 'boolean' | 'object' | 'array' | 'bigint' | 'symbol' | 'function' | 'instance' | 'nan';
 declare type ValSpec = {
     $: typeof GUBU;
     t: ValType;

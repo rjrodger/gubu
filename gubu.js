@@ -59,7 +59,9 @@ const EMPTY_VAL = {
     bigint: BigInt(0),
     null: null,
 };
-function norm(spec) {
+function norm(spec
+// , parent?: any, parentKey?: string
+) {
     var _a, _b, _c, _d, _e, _f;
     // Is this a (possibly incomplete) ValSpec?
     if (null != spec && ((_a = spec.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
@@ -115,7 +117,6 @@ function norm(spec) {
             t = spec.name.toLowerCase();
             r = true;
             v = clone(EMPTY_VAL[t]);
-            // v = undefined
         }
         else if (spec.gubu === GUBU || true === ((_c = spec.$) === null || _c === void 0 ? void 0 : _c.gubu)) {
             // let gs = spec?.spec ? spec.spec() : spec
@@ -140,6 +141,15 @@ function norm(spec) {
     else if ('number' === t && isNaN(v)) {
         t = 'nan';
     }
+    // else if (
+    //   undefined === v &&
+    //   'any' === t &&
+    //   parent &&
+    //   parent.hasOwnProperty(parentKey)
+    // ) {
+    //   t = 'undefined'
+    //   v = undefined
+    // }
     let vs = {
         $: GUBU,
         t,
@@ -170,6 +180,7 @@ function make(inspec, inopts) {
         const nodes = [spec, -1];
         const srcs = [root, -1];
         const path = []; // Key path to current node.
+        const parent = [];
         // let dI: number = 0  // Node depth.
         let dI = -1; // Node depth.
         let nI = 2; // Next free slot in nodes.
@@ -219,7 +230,8 @@ function make(inspec, inopts) {
                 if ('number' === stype && isNaN(sval)) {
                     stype = 'nan';
                 }
-                let n = node.v[key];
+                let nv = node.v;
+                let n = nv[key];
                 let tvs = null;
                 // NOTE: special case handling for arrays keys.
                 if ('array' === node.t) {
@@ -227,23 +239,23 @@ function make(inspec, inopts) {
                     // Following are special case elements offset by +1.
                     // Use these if src has no corresponding element.
                     let akey = '' + (parseInt(key) + 1);
-                    n = node.v[akey];
+                    n = nv[akey];
                     if (undefined !== n) {
-                        tvs = n = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (node.v[akey] = norm(n));
+                        tvs = n = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (nv[akey] = norm(n));
                     }
                     if (undefined === n) {
-                        n = node.v[0];
+                        n = nv[0];
                         key = '' + 0;
                         // No first element defining element type spec, so use Any.
                         if (undefined === n) {
-                            n = node.v[0] = Any();
+                            n = nv[0] = Any();
                         }
                         tvs = null === n ? norm(n) :
-                            GUBU$ === ((_b = n.$) === null || _b === void 0 ? void 0 : _b.gubu$) ? n : (node.v[key] = norm(n));
+                            GUBU$ === ((_b = n.$) === null || _b === void 0 ? void 0 : _b.gubu$) ? n : (nv[key] = norm(n));
                     }
                 }
                 else {
-                    tvs = (null != n && GUBU$ === ((_c = n.$) === null || _c === void 0 ? void 0 : _c.gubu$)) ? n : (node.v[key] = norm(n));
+                    tvs = (null != n && GUBU$ === ((_c = n.$) === null || _c === void 0 ? void 0 : _c.gubu$)) ? n : (nv[key] = norm(n));
                 }
                 tvs.k = key;
                 tvs.d = dI;
@@ -297,17 +309,15 @@ function make(inspec, inopts) {
                             if (vs.r && undefined === sval) {
                                 terr.push(makeErrImpl('required', sval, path, dI, vs, 1010));
                             }
-                            else if (
-                            //(null != sval && ('object' !== stype || Array.isArray(sval)))
-                            undefined !== sval && (null === sval ||
+                            else if (undefined !== sval && (null === sval ||
                                 'object' !== stype ||
                                 Array.isArray(sval))) {
                                 terr.push(makeErrImpl('type', sval, path, dI, vs, 1020));
                             }
-                            // else {
                             else if (null != src[key] || !vs.o) {
                                 nodes[nI] = vs;
                                 srcs[nI] = src[key] = (src[key] || {});
+                                parent[nI] = src[key];
                                 nI++;
                                 cN++;
                             }
@@ -319,7 +329,6 @@ function make(inspec, inopts) {
                             else if (undefined !== sval && !Array.isArray(sval)) {
                                 terr.push(makeErrImpl('type', sval, path, dI, vs, 1040));
                             }
-                            //else {
                             else if (null != src[key] || !vs.o) {
                                 nodes[nI] = vs;
                                 srcs[nI] = src[key] = (src[key] || []);
@@ -334,28 +343,33 @@ function make(inspec, inopts) {
                             t === stype ||
                             ('instance' === t && vs.u.i && sval instanceof vs.u.i) ||
                             // ('instance' !== t && 'object' === stype && null != sval) ||
-                            ('null' === t && null === sval))) 
-                        // 'any' !== t &&
-                        // 'custom' !== t &&
-                        // undefined !== sval &&
-                        // t !== stype &&
-                        // !('instance' !== t && 'object' === stype && null != sval) &&
-                        // !('instance' === t && vs.u.i && sval instanceof vs.u.i) &&
-                        // !('null' === t && null === sval)
-                        {
+                            ('null' === t && null === sval))) {
                             terr.push(makeErrImpl('type', sval, path, dI, vs, 1050));
                             pass = false;
                         }
                         // Value itself, or default.
                         else if (undefined === sval) {
-                            if (vs.r) {
+                            let parentKey = path[dI];
+                            // console.log('QQQ', t, parentKey, src.hasOwnProperty(parentKey), src)
+                            // if (vs.r) {
+                            if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
                                 terr.push(makeErrImpl('required', sval, path, dI, vs, 1060));
                                 pass = false;
                             }
                             // NOTE: `undefined` is special and cannot be set
-                            else if (undefined !== vs.v && !vs.o) {
+                            // else if (undefined !== vs.v && !vs.o || ('undefined' === t && !nv.hasOwnProperty(parentKey))) {
+                            else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
+                                // console.log('RRR')
                                 src[key] = vs.v;
                             }
+                            // else if ('undefined' === t && !nv.hasOwnProperty(parentKey)) {
+                            //   // console.log('WWW')
+                            //   // src[key] = undefined
+                            //   pass = false
+                            // }
+                            // else {
+                            //   pass = false
+                            // }
                         }
                         // Empty strings fail if string is required. Use Empty to allow.
                         else if ('string' === t && '' === sval) {
@@ -467,6 +481,11 @@ function pathstr(path, dI) {
 const Required = function (spec) {
     let vs = buildize(this, spec);
     vs.r = true;
+    // console.log('REQ', spec, arguments)
+    if (undefined === spec && 1 === arguments.length) {
+        vs.t = 'undefined';
+        vs.v = undefined;
+    }
     return vs;
 };
 exports.Required = Required;
@@ -680,15 +699,28 @@ function makeErrImpl(why, sval, path, dI, node, mark, text, user, fname) {
 }
 function stringify(x, r) {
     try {
-        return JSON.stringify(x, (key, val) => {
+        let str = JSON.stringify(x, (key, val) => {
             if (r) {
                 val = r(key, val);
             }
-            if ('bigint' === typeof (val)) {
-                val = val.toString();
+            if (null != val &&
+                'object' === typeof (val) &&
+                val.constructor &&
+                'Object' !== val.constructor.name &&
+                'Array' !== val.constructor.name) {
+                val =
+                    // 'RegExp' === val.constructor.name ? val.toString() : val.constructor.name
+                    'function' === typeof val.toString ? val.toString() : val.constructor.name;
+            }
+            else if ('function' === typeof (val)) {
+                val = val.name;
+            }
+            else if ('bigint' === typeof (val)) {
+                val = String(val.toString());
             }
             return val;
         });
+        return String(str);
     }
     catch (e) {
         return JSON.stringify(String(x));

@@ -252,8 +252,16 @@ these must also match, and are validated recursively in a depth-first
 manner [^1].
 
 
-* Required Scalars
-** `String`
+#### Required Scalars
+
+The value must be of the indicated type, and cannot be missing or `undefined`.
+
+* `String`: match any string, but not the empty string [^2].
+* `Number`: match any number, but not BigInts.
+* `Boolean`: match any boolean.
+* `BigInt`: match any BigInt (including the `1n` syntax form).
+* `Date`: match an object created with `new Date(...)`
+* `RegExp`: match an object created with `/.../` or `new RegExp(...)`
 
 
 ### Gubu function
@@ -291,5 +299,9 @@ Licensed under [MIT][].
 
 ## Footnotes
 
-[^1]: The implementation algorithm is iterative, 
-just a loop that processes values in depth-first order.
+[^1]: The implementation algorithm is iterative, just a loop that
+      processes values in depth-first order.
+
+[^2]: As empty strings are *falsy*, an empty string is not considered
+      to match the `string` type. To allow empty strings, use
+      `Empty(String)`.
