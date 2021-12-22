@@ -1,4 +1,12 @@
+<a name="top"></a>
+
 # Gubu: An object shape validation utility.
+
+[Quick Example](#quick-example) | 
+[Install and Usage](#install) | 
+[Shape Rules](#shape-rules) | 
+[API](#api)
+
 
 NOTE: WORK IN PROGRESS
 
@@ -38,6 +46,8 @@ nicely with an easy-to-read syntax.
 |---|---|
 
 
+
+<a href="#top" style="font-size:small; float:right; margin-top:1em;">[top]</a>
 ## Quick Example
 
 
@@ -68,6 +78,7 @@ valid, the checker returns its first argument, otherwise it throws an
 exception listing all (not just the first!) the validity errors.
  
 
+<a href="#top" style="font-size:small; float:right; margin-top:1em;">[top]</a>
 ## Install
 
 ```sh
@@ -104,6 +115,8 @@ manner for your build process and bundling it together with everything
 else.
 
 
+
+<a href="#top" style="font-size:small; float:right; margin-top:1em;">[top]</a>
 ### Shape Rules
 
 The general principle of Gubu's design is that the schema shape should
@@ -239,6 +252,8 @@ In addition to this README, the [unit tests](lib/gubu.test.ts) are
 comprehensive and provide many usage examples.
 
 
+
+<a href="#top" style="font-size:small; float:right; margin-top:1em;">[top]</a>
 ## API
 
 
@@ -257,9 +272,9 @@ manner [^1].
 The value must be of the indicated type, and must exist.
 
 * `String`: match any string, but not the empty string [^2].
-* `Number`: match any number, but not BigInts.
+* `Number`: match any number, but not `BigInt` values.
 * `Boolean`: match any boolean.
-* `BigInt`: match any BigInt (including the `1n` syntax form).
+* `BigInt`: match any `BigInt` (including the `1n` syntax form).
 * `Date`: match an object created with `new Date(...)`
 * `RegExp`: match an object created with `/.../` or `new RegExp(...)`
 
