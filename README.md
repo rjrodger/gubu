@@ -274,9 +274,28 @@ The value must be of the indicated type, and must exist.
 * `String`: match any string, but not the empty string [^2].
 * `Number`: match any number, but not `BigInt` values.
 * `Boolean`: match any boolean.
+* `Symbol`: match any symbol.
 * `BigInt`: match any `BigInt` (including the `1n` syntax form).
 * `Date`: match an object created with `new Date(...)`
 * `RegExp`: match an object created with `/.../` or `new RegExp(...)`
+
+
+#### Optional Scalars with Defaults
+
+
+#### Objects
+
+
+#### Arrays
+
+
+#### Functions
+
+
+#### Validations
+
+
+#### Custom Validations
 
 
 ### Gubu function
