@@ -29,6 +29,7 @@ const Optional = Gubu.Optional;
 const Refer = Gubu.Refer;
 const Rename = Gubu.Rename;
 const Required = Gubu.Required;
+const Exact = Gubu.Exact;
 class Foo {
     constructor(a) {
         this.a = -1;
@@ -56,7 +57,7 @@ describe('gubu', () => {
         expect(g0({ a: 'bar', b: 999 })).toEqual({ a: 'bar', b: 999 });
         expect(g0({ a: 'bar', b: 999, c: true })).toEqual({ a: 'bar', b: 999, c: true });
     });
-    test('readme', () => {
+    test('readme-quick', () => {
         // Property a is optional, must be a Number, and defaults to 1.
         // Property b is required, and must be a String.
         const shape = Gubu({ a: 1, b: String });
@@ -67,6 +68,61 @@ describe('gubu', () => {
         // Object shape is bad. Throws an exception:
         // "TODO: msg"
         expect(() => shape({ a: 'BAD' })).toThrow('Validation failed for path "a" with value "BAD" because the value is not of type number.\nValidation failed for path "b" with value "" because the value is required.');
+    });
+    test('readme-common', () => {
+        const optionShape = Gubu({
+            host: 'localhost',
+            port: 8080
+        });
+        // console.log(optionShape({}))
+        expect(optionShape()).toEqual({
+            host: 'localhost',
+            port: 8080
+        });
+        expect(optionShape({})).toEqual({
+            host: 'localhost',
+            port: 8080
+        });
+        expect(optionShape({ host: 'foo' })).toEqual({
+            host: 'foo',
+            port: 8080
+        });
+        expect(optionShape({ host: 'foo', port: undefined })).toEqual({
+            host: 'foo',
+            port: 8080
+        });
+        expect(optionShape({ host: 'foo', port: 9090 })).toEqual({
+            host: 'foo',
+            port: 9090
+        });
+        expect(() => optionShape({ host: 9090 })).toThrow('type');
+        expect(() => optionShape({ port: '9090' })).toThrow('type');
+        expect(() => optionShape({ host: '' })).toThrow('required');
+        const productListShape = Gubu({
+            v: { p: [{ name: String, price: Number }] }
+            // view: {
+            // discounts: [{ name: String, percent: (v: any) => 0 < v && v < 100 }],
+            // products: [
+            //   { name: String, price: Number }
+            // ]
+            // }
+        });
+        // expect(productListShape({})).toEqual({ view: { discounts: [], products: [] } })
+        let update = { err: [] };
+        let result = productListShape({
+            // FIX - ARRAYS BROKEN!
+            v: { p: [{ name: 'x', price: 1 }, { name: 'foo', price: undefined }] }
+            // view: {
+            // products: [
+            //   { name: 'Apple', price: 100 },
+            //   { name: 'Pear', price: 200 },
+            //   // { name: 'Banana', price: undefined }
+            //   { name: 'Banana', price: 'x' }
+            // ]
+            // }
+        }); // , update)
+        console.dir(result, { depth: null });
+        console.log(update);
     });
     test('shapes-basic', () => {
         let tmp = {};
@@ -244,13 +300,24 @@ describe('gubu', () => {
         expect(() => nan0(1)).toThrow(/not of type nan/);
         // Empty strings only allowed by Empty() builder.
         const rs0 = Gubu(String);
+        expect(rs0('x')).toEqual('x');
         expect(() => rs0('')).toThrow('Validation failed for path "" with value "" because the value is required.');
         const rs0e = Gubu(Empty(String));
+        expect(rs0e('x')).toEqual('x');
         expect(rs0e('')).toEqual('');
         const os0 = Gubu('x');
-        expect(os0('')).toEqual('x');
+        // expect(os0('')).toEqual('x')
+        expect(() => os0('')).toThrow('required');
+        expect(os0()).toEqual('x');
+        expect(os0(undefined)).toEqual('x');
+        expect(os0('x')).toEqual('x');
+        expect(os0('y')).toEqual('y');
         const os0e = Gubu(Empty('x'));
         expect(os0e('')).toEqual('');
+        expect(os0e()).toEqual('x');
+        expect(os0e(undefined)).toEqual('x');
+        expect(os0e('x')).toEqual('x');
+        expect(os0e('y')).toEqual('y');
         const os1e = Gubu(Optional(Empty(String)));
         expect(os1e()).toEqual(undefined);
         expect(os1e('')).toEqual('');
@@ -268,12 +335,17 @@ describe('gubu', () => {
         const u0n = Gubu({ a: null });
         expect(u0n({ a: null })).toEqual({ a: null });
         expect(u0n({})).toEqual({ a: null });
+        expect(() => u0n({ a: 1 })).toThrow('type');
         const u1 = Gubu({ a: Required(undefined) });
-        // expect(u1({ a: undefined })).toEqual({ a: undefined })
+        expect(u1({ a: undefined })).toEqual({ a: undefined });
         expect(() => u1({})).toThrow('required');
         const u1n = Gubu({ a: Required(null) });
         expect(u1n({ a: null })).toEqual({ a: null });
         expect(() => u1n({})).toThrow('required');
+        expect(() => u1n({ a: 1 })).toThrow('type');
+        const u2 = Gubu({ a: Required(NaN) });
+        expect(u2({ a: NaN })).toEqual({ a: NaN });
+        expect(() => u2({})).toThrow('required');
     });
     test('builder-construct', () => {
         const GUBU$ = Symbol.for('gubu$');
@@ -527,6 +599,9 @@ describe('gubu', () => {
         let g1 = Gubu({ a: Required([1]) });
         expect(g1({ a: [11] })).toEqual({ a: [11] });
         expect(() => g1({})).toThrow('Validation failed for path "a" with value "" because the value is required.');
+        let g2 = Gubu(Required(1));
+        expect(g2(1)).toEqual(1);
+        expect(g2(2)).toEqual(2);
     });
     test('builder-closed', () => {
         let tmp = {};
@@ -632,6 +707,15 @@ describe('gubu', () => {
     test('builder-rename', () => {
         let g0 = Gubu({ a: Rename('b', { x: 1 }) });
         expect(g0({ a: { x: 2 } })).toMatchObject({ b: { x: 2 } });
+    });
+    test('builder-exact', () => {
+        let g0 = Gubu({ a: Exact(null) });
+        expect(g0({ a: null })).toMatchObject({ a: null });
+        expect(() => g0({ a: 1 })).toThrow('exactly one of: null');
+        let g1 = Gubu(Exact('foo', 'bar'));
+        expect(g1('foo')).toEqual('foo');
+        expect(g1('bar')).toEqual('bar');
+        expect(() => g1('zed')).toThrow('exactly one of: "foo", "bar"');
     });
     test('builder-define-refer-basic', () => {
         let g0 = Gubu({ a: Define('A', { x: 1 }), b: Refer('A'), c: Refer('A') });

@@ -4,16 +4,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNone = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.None = exports.Empty = exports.Define = exports.Closed = exports.Before = exports.Any = exports.All = exports.After = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
+exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNone = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.None = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Before = exports.Any = exports.All = exports.After = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
 /*
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
+// TODO: Shape for object values
 // TODO: custom undefined handling?
 // TODO: closed on array
-// TODO: composable?
 // TODO: function deref?
 // TODO: BigInt spec roundtrip test
-// TODO: Only - builder, exact values
 // TODO: Min,Max - builder, depends on value
 const package_json_1 = __importDefault(require("./package.json"));
 const GUBU$ = Symbol.for('gubu$');
@@ -350,35 +349,21 @@ function make(inspec, inopts) {
                         // Value itself, or default.
                         else if (undefined === sval) {
                             let parentKey = path[dI];
-                            // console.log('QQQ', t, parentKey, src.hasOwnProperty(parentKey), src)
-                            // if (vs.r) {
                             if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
                                 terr.push(makeErrImpl('required', sval, path, dI, vs, 1060));
                                 pass = false;
                             }
-                            // NOTE: `undefined` is special and cannot be set
-                            // else if (undefined !== vs.v && !vs.o || ('undefined' === t && !nv.hasOwnProperty(parentKey))) {
                             else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
-                                // console.log('RRR')
                                 src[key] = vs.v;
                             }
-                            // else if ('undefined' === t && !nv.hasOwnProperty(parentKey)) {
-                            //   // console.log('WWW')
-                            //   // src[key] = undefined
-                            //   pass = false
-                            // }
-                            // else {
-                            //   pass = false
-                            // }
                         }
-                        // Empty strings fail if string is required. Use Empty to allow.
+                        // Empty strings fail even if string is optional. Use Empty to allow.
                         else if ('string' === t && '' === sval) {
-                            if (vs.r && !vs.u.empty) {
-                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1080));
+                            if (vs.u.empty) {
+                                src[key] = sval;
                             }
-                            // Optional empty strings take the default, unless Empty allows.
-                            else if (!vs.u.empty) {
-                                src[key] = vs.v;
+                            else {
+                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1080));
                             }
                         }
                     }
@@ -539,6 +524,22 @@ exports.One = One;
 // Pass only if all match. Short circuits.
 const All = makeListBuilder('all');
 exports.All = All;
+const Exact = function (...vals) {
+    let vs = buildize();
+    vs.b = (val, update, state) => {
+        for (let i = 0; i < vals.length; i++) {
+            if (val === vals[i]) {
+                return true;
+            }
+        }
+        update.err =
+            makeErr(val, state, `Value "$VALUE" for path "$PATH" must be exactly one of: ` +
+                `${vals.map(v => stringify(v)).join(', ')}.`);
+        return false;
+    };
+    return vs;
+};
+exports.Exact = Exact;
 const Before = function (validate, spec) {
     let vs = buildize(this, spec);
     vs.b = validate;
@@ -547,7 +548,6 @@ const Before = function (validate, spec) {
 exports.Before = Before;
 const After = function (validate, spec) {
     let vs = buildize(this, spec);
-    // vs.t = vs.t || 'custom'
     vs.a = validate;
     return vs;
 };
@@ -652,6 +652,7 @@ function buildize(invs0, invs1) {
         Closed,
         Define,
         Empty,
+        Exact,
         None,
         One,
         Optional,
@@ -739,6 +740,7 @@ Object.assign(make, {
     Closed,
     Define,
     Empty,
+    Exact,
     None,
     One,
     Optional,
@@ -766,6 +768,8 @@ const GDefine = Define;
 exports.GDefine = GDefine;
 const GEmpty = Empty;
 exports.GEmpty = GEmpty;
+const GExact = Exact;
+exports.GExact = GExact;
 const GNone = None;
 exports.GNone = GNone;
 const GOne = One;

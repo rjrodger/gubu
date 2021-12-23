@@ -3,6 +3,7 @@
 # Gubu: An object shape validation utility.
 
 [Quick Example](#quick-example) | 
+[Common Use Cases](#common-use-cases) | 
 [Install and Usage](#install) | 
 [Shape Rules](#shape-rules) | 
 [API](#api)
@@ -77,6 +78,76 @@ validation checker (does the argument match the schema shape?). If
 valid, the checker returns its first argument, otherwise it throws an
 exception listing all (not just the first!) the validity errors.
  
+
+## Common Use Cases
+
+### Option defaults and validation
+
+Let's say you have a server that needs to run on a given host and
+port, but by default should run on *localhost* on port 8080. The host should
+be a non-empty string, and the port should be a number.
+
+```js
+const optionShape = Gubu({
+  host: 'localhost',
+  port: 8080
+})
+
+// These print: { host: 'localhost', port: 8080 }
+console.log(optionShape())
+console.log(optionShape({}))
+
+// Prints: { host: 'localhost', port: 9090 }
+console.log(optionShape({ port: 9090 }))
+
+// All of these throw an error.
+console.log(optionShape({ host: 9090 }))   // Not a string.
+console.log(optionShape({ port: '9090' })) // Not a number.
+console.log(optionShape({ host: '' }))     // Not really a usable string!
+
+```
+
+### Deep structures
+
+You're building a front end component that displays data from the back
+end, and you want to handle bad data gracefully.
+
+```
+const productListShape = Gubu({
+  view: {
+    discounts: [
+      // All elements must match this shape.
+      { 
+        name: String, 
+
+        // A custom validation!
+        percent: (v: any) => 0 < v && v < 100 
+      }
+    ],
+    products: [
+      { 
+        name: String, 
+        price: Number, 
+      }
+    ]
+  }
+})
+
+
+// Oh noes! The back end gave me nothing! Luckily I can still work with a
+// valid, if empty, data structure.
+
+productListShape({}) // returns:
+{ view: { discounts: [], products: [] } }
+
+
+
+
+
+```
+
+
+
 
 <a href="#top" style="font-size:small; float:right; margin-top:1em;">[top]</a>
 ## Install
@@ -282,6 +353,17 @@ The value must be of the indicated type, and must exist.
 
 #### Optional Scalars with Defaults
 
+The value must be of the indicated type, and is derived from the given
+default. If the value does not exist, the default value is inserted.
+
+* `foo`: match any string, but replace an empty string [^3].
+* `123`: match any number, but not `BigInt` values.
+* `true`: match any boolean.
+* `new Symbol('bar')`: match any symbol.
+* `new BigInt(456)`: match any `BigInt` (including the `1n` syntax form).
+* `new Date()`: match an object created with `new Date(...)`
+* `/x/`: match an object created with `/.../` or `new RegExp(...)`
+
 
 #### Objects
 
@@ -307,8 +389,32 @@ The value must be of the indicated type, and must exist.
 ### Builders
 
 
+### Edge Cases
+
+#### Empty Strings
+
+Unfortunately the empty string is not really a subtype of the `string`
+type, since it evaluates to `false`. In the case of HTTP input,
+missing parameters values are often provided as empty strings, when
+they are in fact `undefined`. There are heartfelt arguments on both
+sides of this issue.
+
+The engineering compromise is based on the priniciple of explicit
+notice. Since reasonable people have a reasonable disagreement about
+this behaviour, a mitigation of the issue is to make it
+explicit. Thus, the `Empty(String)`, or `Empty('foo')` shapes need to
+be used if you want to accept empty strngs.
+
+As a shortcut, you can use `''` directly for optional strings, and
+that shape will accept empty strings, and give you an empty string as
+a default.
+
 
 ## Credits
+
+This module is inspired by [Joi](https://joi.dev), which I used for
+many years. It also draws from the way [Vue](https://vuejs.com) does
+property validation.
 
 
 ## GUBU
@@ -336,6 +442,11 @@ Licensed under [MIT][].
 [^1]: The implementation algorithm is iterative, just a loop that
       processes values in depth-first order.
 
-[^2]: As empty strings are *falsy*—an empty string is not considered
-      to match the `string` type. To allow empty strings, use
-      `Empty(String)`.
+[^2]: An empty string is not considered to match the `string` type. To
+      allow empty strings, use `Empty(String)`. See [Empty
+      Strings](#empty-strings).
+
+[^3]: An empty string is not considered to match the `string` type. To
+      allow empty strings, use `Empty('some-default')`. See [Empty
+      Strings](#empty-strings).
+

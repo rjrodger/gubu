@@ -12,6 +12,8 @@ const {
   Define,
   Refer,
   Optional,
+  Empty,
+  Exact,
 } = require('../gubu')
 
 
@@ -242,8 +244,26 @@ function J(x,s) {
 // // console.log(n3({}))
 
 
-let d0 = Gubu({a:1})
-console.log(d0({a:/x/}))
+// let d0 = Gubu({a:1})
+// console.log(d0({a:/x/}))
 
 
+// let s0 = Gubu({a:'foo'})
+// console.log(s0({a:''}))
 
+// let s1 = Gubu({a:Empty('foo')})
+// console.log(s1({a:''}))
+
+// let s2 = Gubu({a:Empty('')})
+// console.log(s2({a:''}))
+// console.log(s2({a:'x'}))
+
+// let s3 = Gubu({a:''})
+// console.log(s3({a:''}))
+// console.log(s3({a:'x'}))
+
+
+let x0 = Gubu(Exact(1,'a'))
+console.log(x0(1))
+console.log(x0('a'))
+console.log(x0(2))

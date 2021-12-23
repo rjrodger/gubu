@@ -4,13 +4,11 @@
  * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
  */
 
+// TODO: Shape for object values
 // TODO: custom undefined handling?
-
 // TODO: closed on array
-// TODO: composable?
 // TODO: function deref?
 // TODO: BigInt spec roundtrip test
-// TODO: Only - builder, exact values
 // TODO: Min,Max - builder, depends on value
 
 import Pkg from './package.json'
@@ -31,7 +29,6 @@ type Context = Record<string, any> & {
 type ValType =
   'any' |
   'none' |
-  // 'node' |
   'custom' |
   'null' |
   'undefined' |
@@ -517,36 +514,22 @@ function make(inspec?: any, inopts?: Options): GubuShape {
             // Value itself, or default.
             else if (undefined === sval) {
               let parentKey = path[dI]
-              // console.log('QQQ', t, parentKey, src.hasOwnProperty(parentKey), src)
-              // if (vs.r) {
               if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
                 terr.push(makeErrImpl('required', sval, path, dI, vs, 1060))
                 pass = false
               }
-              // NOTE: `undefined` is special and cannot be set
-              // else if (undefined !== vs.v && !vs.o || ('undefined' === t && !nv.hasOwnProperty(parentKey))) {
               else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
-                // console.log('RRR')
                 src[key] = vs.v
               }
-              // else if ('undefined' === t && !nv.hasOwnProperty(parentKey)) {
-              //   // console.log('WWW')
-              //   // src[key] = undefined
-              //   pass = false
-              // }
-              // else {
-              //   pass = false
-              // }
             }
 
-            // Empty strings fail if string is required. Use Empty to allow.
+            // Empty strings fail even if string is optional. Use Empty to allow.
             else if ('string' === t && '' === sval) {
-              if (vs.r && !vs.u.empty) {
-                terr.push(makeErrImpl('required', sval, path, dI, vs, 1080))
+              if (vs.u.empty) {
+                src[key] = sval
               }
-              // Optional empty strings take the default, unless Empty allows.
-              else if (!vs.u.empty) {
-                src[key] = vs.v
+              else {
+                terr.push(makeErrImpl('required', sval, path, dI, vs, 1080))
               }
             }
           }
@@ -747,6 +730,24 @@ const One: Builder = makeListBuilder('one')
 const All: Builder = makeListBuilder('all')
 
 
+const Exact: Builder = function(this: ValSpec, ...vals: any[]) {
+  let vs = buildize()
+  vs.b = (val: any, update: Update, state: State) => {
+    for (let i = 0; i < vals.length; i++) {
+      if (val === vals[i]) {
+        return true
+      }
+    }
+    update.err =
+      makeErr(val, state,
+        `Value "$VALUE" for path "$PATH" must be exactly one of: ` +
+        `${vals.map(v => stringify(v)).join(', ')}.`)
+
+    return false
+  }
+  return vs
+}
+
 
 
 const Before: Builder = function(this: ValSpec, validate: Validate, spec?: any) {
@@ -758,7 +759,6 @@ const Before: Builder = function(this: ValSpec, validate: Validate, spec?: any) 
 
 const After: Builder = function(this: ValSpec, validate: Validate, spec?: any) {
   let vs = buildize(this, spec)
-  // vs.t = vs.t || 'custom'
   vs.a = validate
   return vs
 }
@@ -896,6 +896,7 @@ function buildize(invs0?: any, invs1?: any): ValSpec {
     Closed,
     Define,
     Empty,
+    Exact,
     None,
     One,
     Optional,
@@ -1029,6 +1030,7 @@ Object.assign(make, {
   Closed,
   Define,
   Empty,
+  Exact,
   None,
   One,
   Optional,
@@ -1055,6 +1057,7 @@ type Gubu = typeof make & {
   Closed: typeof Closed
   Define: typeof Define
   Empty: typeof Empty
+  Exact: typeof Exact
   None: typeof None
   One: typeof One
   Optional: typeof Optional
@@ -1076,6 +1079,7 @@ const GBefore = Before
 const GClosed = Closed
 const GDefine = Define
 const GEmpty = Empty
+const GExact = Exact
 const GNone = None
 const GOne = One
 const GOptional = Optional
@@ -1107,6 +1111,7 @@ export {
   Closed,
   Define,
   Empty,
+  Exact,
   None,
   One,
   Optional,
@@ -1121,6 +1126,7 @@ export {
   GClosed,
   GDefine,
   GEmpty,
+  GExact,
   GNone,
   GOne,
   GOptional,
