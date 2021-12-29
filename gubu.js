@@ -4,13 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GNever = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Never = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Before = exports.Any = exports.All = exports.After = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
-/*
- * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
- */
-// TODO: Shape for object values
-// TODO: custom undefined handling?
-// TODO: closed on array
+exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNever = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Never = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Before = exports.Any = exports.All = exports.After = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
 // TODO: function deref?
 // TODO: BigInt spec roundtrip test
 // TODO: Min,Max - builder, depends on value
@@ -59,9 +53,7 @@ const EMPTY_VAL = {
     bigint: BigInt(0),
     null: null,
 };
-function norm(spec
-// , parent?: any, parentKey?: string
-) {
+function norm(spec) {
     var _a, _b, _c, _d, _e, _f;
     // Is this a (possibly incomplete) ValSpec?
     if (null != spec && ((_a = spec.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
@@ -92,14 +84,11 @@ function norm(spec
     }
     // Not a ValSpec, so build one based on value and its type.
     let t = (null === spec ? 'null' : typeof (spec));
-    // t = (undefined === t ? 'any' : t) as ValType
     t = ('undefined' === t ? 'any' : t);
     let v = spec;
     let r = false; // Optional by default.
     let o = false; // Only true when Optional builder is used.
     let b = undefined;
-    // let b = spec?.b
-    // let a = spec?.a
     let u = {};
     if ('object' === t) {
         if (Array.isArray(spec)) {
@@ -121,7 +110,6 @@ function norm(spec
             v = clone(EMPTY_VAL[t]);
         }
         else if (spec.gubu === GUBU || true === ((_c = spec.$) === null || _c === void 0 ? void 0 : _c.gubu)) {
-            // let gs = spec?.spec ? spec.spec() : spec
             let gs = spec.spec ? spec.spec() : spec;
             t = gs.t;
             v = gs.v;
@@ -143,19 +131,9 @@ function norm(spec
     else if ('number' === t && isNaN(v)) {
         t = 'nan';
     }
-    // else if (
-    //   undefined === v &&
-    //   'any' === t &&
-    //   parent &&
-    //   parent.hasOwnProperty(parentKey)
-    // ) {
-    //   t = 'undefined'
-    //   v = undefined
-    // }
     let vs = {
         $: GUBU,
         t,
-        // v: (null != v && 'object' === typeof (v)) ? { ...v } : v,
         v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
         r,
         o,
@@ -166,9 +144,6 @@ function norm(spec
     if (b) {
         vs.b = b;
     }
-    // if (a) {
-    //   vs.a = a
-    // }
     return vs;
 }
 exports.norm = norm;
@@ -177,7 +152,6 @@ function make(inspec, inopts) {
     opts.name =
         null == opts.name ? 'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name;
     let top = { '': inspec };
-    // let spec: ValSpec = norm(inspec) // Tree of validation nodes.
     let spec = norm(top); // Tree of validation nodes.
     let gubuShape = function GubuShape(inroot, inctx) {
         var _a, _b, _c, _d;
@@ -187,7 +161,6 @@ function make(inspec, inopts) {
         const srcs = [root, -1];
         const path = []; // Key path to current node.
         const parent = [];
-        // let dI: number = 0  // Node depth.
         let dI = -1; // Node depth.
         let nI = 2; // Next free slot in nodes.
         let pI = 0; // Pointer to current node.
@@ -229,7 +202,6 @@ function make(inspec, inopts) {
                     }
                 }
             }
-            // console.log('T', node.t, 'PATH', pathstr(path, dI), 'KEYS', keys)
             for (let key of keys) {
                 path[dI] = key;
                 let sval = src[key];
@@ -237,7 +209,6 @@ function make(inspec, inopts) {
                 if ('number' === stype && isNaN(sval)) {
                     stype = 'nan';
                 }
-                // console.log('KEY', key, stype, sval)
                 let nv = node.v;
                 let n = nv[key];
                 let tvs = null;
@@ -248,11 +219,11 @@ function make(inspec, inopts) {
                     // Use these if src has no corresponding element.
                     let akey = '' + (parseInt(key) + 1);
                     n = nv[akey];
-                    // console.log('ARR', akey, n)
                     if (undefined !== n) {
                         tvs = n = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (nv[akey] = norm(n));
                     }
-                    if (undefined === n) {
+                    //if (undefined === n) {
+                    else {
                         n = nv[0];
                         // key = '' + 0
                         akey = '' + 0;
@@ -267,153 +238,123 @@ function make(inspec, inopts) {
                 else {
                     tvs = (null != n && GUBU$ === ((_c = n.$) === null || _c === void 0 ? void 0 : _c.gubu$)) ? n : (nv[key] = norm(n));
                 }
-                // tvs = (null != n && GUBU$ === n.$?.gubu$) ? n : (nv[key] = norm(n))
                 tvs.k = key;
                 tvs.d = dI;
                 let t = tvs.t;
-                let vss;
-                let listkind = '';
-                let failN = 0;
-                if ('list' === t) {
-                    vss = tvs.u.list.specs;
-                    // APPEND current to end
-                    // TRACK pass of each
-                    listkind = tvs.u.list.kind;
-                }
-                else {
-                    vss = [tvs];
-                }
                 let terr = [];
-                // console.log('VKEY', key)
-                for (let vsI = 0; vsI < vss.length; vsI++) {
-                    let vs = vss[vsI];
-                    vs = GUBU$ === ((_d = vs.$) === null || _d === void 0 ? void 0 : _d.gubu$) ? vs : (vss[vsI] = norm(vs));
-                    let t = vs.t;
-                    let pass = true;
-                    let done = false;
-                    // udpate can set t
-                    if (vs.b) {
-                        let update = handleValidate(vs.b, sval, {
-                            dI, nI, sI, pI, cN,
-                            key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-                            pass
-                        });
-                        pass = update.pass;
-                        if (undefined !== update.val) {
-                            sval = src[key] = update.val;
-                        }
-                        if (undefined !== update.node) {
-                            vs = update.node;
-                        }
-                        if (undefined !== update.type) {
-                            t = update.type;
-                        }
-                        if (undefined !== update.done) {
-                            done = update.done;
-                        }
-                        nI = undefined === update.nI ? nI : update.nI;
-                        sI = undefined === update.sI ? sI : update.sI;
-                        pI = undefined === update.pI ? pI : update.pI;
-                        cN = undefined === update.cN ? cN : update.cN;
+                let vs = tvs;
+                vs = GUBU$ === ((_d = vs.$) === null || _d === void 0 ? void 0 : _d.gubu$) ? vs : (tvs = norm(vs));
+                // let t = vs.t
+                let pass = true;
+                let done = false;
+                // udpate can set t
+                if (vs.b) {
+                    let update = handleValidate(vs.b, sval, {
+                        dI, nI, sI, pI, cN,
+                        key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+                        pass
+                    });
+                    pass = update.pass;
+                    if (undefined !== update.val) {
+                        sval = src[key] = update.val;
                     }
-                    if (!done) {
-                        if ('never' === t) {
-                            terr.push(makeErrImpl('never', sval, path, dI, vs, 1070));
+                    if (undefined !== update.node) {
+                        vs = update.node;
+                    }
+                    if (undefined !== update.type) {
+                        t = update.type;
+                    }
+                    if (undefined !== update.done) {
+                        done = update.done;
+                    }
+                    nI = undefined === update.nI ? nI : update.nI;
+                    sI = undefined === update.sI ? sI : update.sI;
+                    pI = undefined === update.pI ? pI : update.pI;
+                    cN = undefined === update.cN ? cN : update.cN;
+                }
+                if (!done) {
+                    if ('never' === t) {
+                        terr.push(makeErrImpl('never', sval, path, dI, vs, 1070));
+                    }
+                    else if ('object' === t) {
+                        if (vs.r && undefined === sval) {
+                            terr.push(makeErrImpl('required', sval, path, dI, vs, 1010));
                         }
-                        else if ('object' === t) {
-                            if (vs.r && undefined === sval) {
-                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1010));
-                            }
-                            else if (undefined !== sval && (null === sval ||
-                                'object' !== stype ||
-                                Array.isArray(sval))) {
-                                terr.push(makeErrImpl('type', sval, path, dI, vs, 1020));
-                            }
-                            else if (null != src[key] || !vs.o) {
-                                nodes[nI] = vs;
-                                srcs[nI] = src[key] = (src[key] || {});
-                                parent[nI] = src[key];
-                                nI++;
-                                cN++;
-                            }
+                        else if (undefined !== sval && (null === sval ||
+                            'object' !== stype ||
+                            Array.isArray(sval))) {
+                            terr.push(makeErrImpl('type', sval, path, dI, vs, 1020));
                         }
-                        else if ('array' === t) {
-                            if (vs.r && undefined === sval) {
-                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1030));
-                            }
-                            else if (undefined !== sval && !Array.isArray(sval)) {
-                                terr.push(makeErrImpl('type', sval, path, dI, vs, 1040));
-                            }
-                            else if (null != src[key] || !vs.o) {
-                                nodes[nI] = vs;
-                                srcs[nI] = src[key] = (src[key] || []);
-                                nI++;
-                                cN++;
-                            }
+                        else if (null != src[key] || !vs.o) {
+                            nodes[nI] = vs;
+                            srcs[nI] = src[key] = (src[key] || {});
+                            parent[nI] = src[key];
+                            nI++;
+                            cN++;
                         }
-                        // Invalid type.
-                        else if (!('any' === t ||
-                            'custom' === t ||
-                            undefined === sval ||
-                            t === stype ||
-                            ('instance' === t && vs.u.i && sval instanceof vs.u.i) ||
-                            // ('instance' !== t && 'object' === stype && null != sval) ||
-                            ('null' === t && null === sval))) {
-                            terr.push(makeErrImpl('type', sval, path, dI, vs, 1050));
+                    }
+                    else if ('array' === t) {
+                        if (vs.r && undefined === sval) {
+                            terr.push(makeErrImpl('required', sval, path, dI, vs, 1030));
+                        }
+                        else if (undefined !== sval && !Array.isArray(sval)) {
+                            terr.push(makeErrImpl('type', sval, path, dI, vs, 1040));
+                        }
+                        else if (null != src[key] || !vs.o) {
+                            nodes[nI] = vs;
+                            srcs[nI] = src[key] = (src[key] || []);
+                            nI++;
+                            cN++;
+                        }
+                    }
+                    // Invalid type.
+                    else if (!('any' === t ||
+                        'custom' === t ||
+                        'list' === t ||
+                        undefined === sval ||
+                        t === stype ||
+                        ('instance' === t && vs.u.i && sval instanceof vs.u.i) ||
+                        ('null' === t && null === sval))) {
+                        terr.push(makeErrImpl('type', sval, path, dI, vs, 1050));
+                        pass = false;
+                    }
+                    // Value itself, or default.
+                    else if (undefined === sval) {
+                        let parentKey = path[dI];
+                        if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
+                            terr.push(makeErrImpl('required', sval, path, dI, vs, 1060));
                             pass = false;
                         }
-                        // Value itself, or default.
-                        else if (undefined === sval) {
-                            let parentKey = path[dI];
-                            if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
-                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1060));
-                                pass = false;
-                            }
-                            else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
-                                src[key] = vs.v;
-                            }
-                        }
-                        // Empty strings fail even if string is optional. Use Empty to allow.
-                        else if ('string' === t && '' === sval) {
-                            if (vs.u.empty) {
-                                src[key] = sval;
-                            }
-                            else {
-                                terr.push(makeErrImpl('required', sval, path, dI, vs, 1080));
-                            }
+                        else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
+                            src[key] = vs.v;
                         }
                     }
-                    // console.log('VSA', vs)
-                    if (vs.a) {
-                        let update = handleValidate(vs.a, sval, {
-                            dI, nI, sI, pI, cN,
-                            key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-                            pass
-                        });
-                        pass = update.pass;
-                        if (undefined !== update.val) {
-                            sval = src[key] = update.val;
+                    // Empty strings fail even if string is optional. Use Empty to allow.
+                    else if ('string' === t && '' === sval) {
+                        if (vs.u.empty) {
+                            src[key] = sval;
                         }
-                        nI = undefined === update.nI ? nI : update.nI;
-                        sI = undefined === update.sI ? sI : update.sI;
-                        pI = undefined === update.pI ? pI : update.pI;
-                        cN = undefined === update.cN ? cN : update.cN;
-                        if (update.break) {
-                            break;
+                        else {
+                            terr.push(makeErrImpl('required', sval, path, dI, vs, 1080));
                         }
                     }
-                    // if (!pass) {
-                    //   failN++
-                    //   if ('all' === listkind) {
-                    //     break
-                    //   }
-                    // }
-                    // else if ('one' === listkind) {
-                    //   break
-                    // }
+                }
+                if (vs.a) {
+                    let update = handleValidate(vs.a, sval, {
+                        dI, nI, sI, pI, cN,
+                        key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+                        pass
+                    });
+                    pass = update.pass;
+                    if (undefined !== update.val) {
+                        sval = src[key] = update.val;
+                    }
+                    nI = undefined === update.nI ? nI : update.nI;
+                    sI = undefined === update.sI ? sI : update.sI;
+                    pI = undefined === update.pI ? pI : update.pI;
+                    cN = undefined === update.cN ? cN : update.cN;
                 }
                 if (0 < terr.length) {
-                    // !(('one' === listkind || 'some' === listkind) && failN < vss.length)) {
                     err.push(...terr);
                 }
             }
@@ -448,18 +389,18 @@ function make(inspec, inopts) {
             return val;
         }));
     };
-    // TODO: abbrev of shape?
-    let aspec = '';
+    let desc = '';
     gubuShape.toString = gubuShape[util_1.inspect.custom] = () => {
-        aspec = '' === aspec ? stringify(inspec) : aspec;
-        return `[Gubu ${opts.name} ${aspec}]`;
+        desc = '' === desc ?
+            stringify((inspec &&
+                inspec.$ &&
+                (GUBU$ === inspec.$.gubu$ || true === inspec.$.gubu$)) ? inspec.v : inspec) :
+            desc;
+        return `[Gubu ${opts.name} ${desc}]`;
     };
     gubuShape.gubu = GUBU;
     return gubuShape;
 }
-// function J(x: any) {
-//   return null == x ? '' : JSON.stringify(x).replace(/"/g, '')
-// }
 function handleValidate(vf, sval, state) {
     let update = { pass: true, done: false };
     if (undefined !== sval || state.node.r) {
@@ -476,12 +417,16 @@ function handleValidate(vf, sval, state) {
                 }));
             }
             else {
-                state.terr.push(makeErrImpl(w, sval, state.path, state.dI, state.node, 1040));
+                let fname = vf.name;
+                if (null == fname || '' == fname) {
+                    fname = vf.toString().replace(/[ \t\r\n]+/g, ' ');
+                    fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname;
+                }
+                state.terr.push(makeErrImpl(w, sval, state.path, state.dI, state.node, 1045, undefined, {}, fname));
             }
             update.pass = false;
         }
     }
-    // console.log('UPDATE', update)
     return update;
 }
 function pathstr(path, dI) {
@@ -527,27 +472,12 @@ const Never = function (spec) {
     return vs;
 };
 exports.Never = Never;
-const makeListBuilder = function (kind) {
-    return function (...specs) {
-        let vs = buildize();
-        vs.t = 'list';
-        vs.u.list = {
-            specs: specs.map(s => buildize(s)).map(s => (s.u.list = {
-                kind
-            },
-                s)),
-            kind
-        };
-        return vs;
-    };
-};
 // Pass only if all match. Does not short circuit (as defaults may be missed).
 const All = function (...specs) {
     let vs = buildize();
-    vs.t = 'custom';
+    vs.t = 'list';
     let shapes = specs.map(s => Gubu(s));
-    // console.log('SHAPES', shapes)
-    vs.u.all = specs;
+    vs.u.list = specs;
     vs.b = (val, update, state) => {
         let pass = true;
         let err = [];
@@ -560,11 +490,11 @@ const All = function (...specs) {
             }
         }
         if (!pass) {
+            update.why = 'all';
             update.err = [
                 makeErr(val, state, `Value "$VALUE" for path "$PATH" does not satisfy All shape:`),
                 ...err
             ];
-            // console.log('AU', update)
         }
         return pass;
     };
@@ -574,10 +504,9 @@ exports.All = All;
 // Pass if some match. Does not short circuit (as defaults may be missed).
 const Some = function (...specs) {
     let vs = buildize();
-    vs.t = 'custom';
+    vs.t = 'list';
     let shapes = specs.map(s => Gubu(s));
-    // console.log('SHAPES', shapes)
-    vs.u.all = specs;
+    vs.u.list = specs;
     vs.b = (val, update, state) => {
         let pass = false;
         let err = [];
@@ -593,17 +522,46 @@ const Some = function (...specs) {
             }
         }
         if (!pass) {
+            update.why = 'some';
             update.err = [
                 makeErr(val, state, `Value "$VALUE" for path "$PATH" does not satisfy Some shape:`),
                 ...err
             ];
-            // console.log('AU', update)
         }
         return pass;
     };
     return vs;
 };
 exports.Some = Some;
+// Pass if exactly one matches. Does not short circuit (as defaults may be missed).
+const One = function (...specs) {
+    let vs = buildize();
+    vs.t = 'list';
+    let shapes = specs.map(s => Gubu(s));
+    vs.u.list = specs;
+    vs.b = (val, update, state) => {
+        let passN = 0;
+        let err = [];
+        for (let shape of shapes) {
+            let subctx = { ...state.ctx, err: [] };
+            shape(val, subctx);
+            if (0 < subctx.err.length) {
+                passN++;
+                err.push(...subctx.err);
+            }
+        }
+        if (1 !== passN) {
+            update.why = 'one';
+            update.err = [
+                makeErr(val, state, `Value "$VALUE" for path "$PATH" does not satisfy One shape:`),
+                ...err
+            ];
+        }
+        return true;
+    };
+    return vs;
+};
+exports.One = One;
 const Exact = function (...vals) {
     let vs = buildize();
     vs.b = (val, update, state) => {
@@ -632,7 +590,6 @@ const After = function (validate, spec) {
     return vs;
 };
 exports.After = After;
-// TODO: array needs special handling as first entry is type spec
 const Closed = function (spec) {
     let vs = buildize(this, spec);
     vs.b = (val, update, state) => {
@@ -821,6 +778,7 @@ Object.assign(make, {
     Empty,
     Exact,
     Never,
+    One,
     Optional,
     Refer,
     Rename,
@@ -851,6 +809,8 @@ const GExact = Exact;
 exports.GExact = GExact;
 const GNever = Never;
 exports.GNever = GNever;
+const GOne = One;
+exports.GOne = GOne;
 const GOptional = Optional;
 exports.GOptional = GOptional;
 const GRefer = Refer;

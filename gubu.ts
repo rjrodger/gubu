@@ -1,19 +1,12 @@
 /* Copyright (c) 2021 Richard Rodger and other contributors, MIT License */
 
-/*
- * NOTE: `undefined` is not considered a value or type, and thus means 'any'.
- */
 
-// TODO: Shape for object values
-// TODO: custom undefined handling?
-// TODO: closed on array
 // TODO: function deref?
 // TODO: BigInt spec roundtrip test
 // TODO: Min,Max - builder, depends on value
 
 
 import { inspect } from 'util'
-
 import Pkg from './package.json'
 
 
@@ -25,9 +18,11 @@ type Options = {
   name?: string // Name this Gubu shape.
 }
 
+
 type Context = Record<string, any> & {
   err?: ErrDesc[] // Provide an array to collect errors, instead of throwing.
 }
+
 
 type ValType =
   'any' |
@@ -47,6 +42,7 @@ type ValType =
   'instance' |
   'nan'
 
+
 type ValSpec = {
   $: typeof GUBU
   t: ValType
@@ -63,6 +59,7 @@ type ValSpec = {
 
 type Builder = (opts?: any, ...specs: any[]) =>
   ValSpec & { [name: string]: Builder | any }
+
 
 type Validate = (val: any, update: Update, state: State) => boolean
 
@@ -85,10 +82,10 @@ type State = {
   pass: boolean
 }
 
+
 type Update = {
   pass: boolean
   done?: boolean
-  break?: boolean
   val?: any
   node?: ValSpec
   type?: ValType
@@ -111,7 +108,6 @@ type ErrDesc = {
 }
 
 
-
 class GubuError extends TypeError {
   constructor(
     code: string,
@@ -128,7 +124,6 @@ class GubuError extends TypeError {
     ge.desc = () => ({ name, code, err, ctx, })
   }
 
-
   toJSON() {
     return {
       ...this,
@@ -138,7 +133,6 @@ class GubuError extends TypeError {
     }
   }
 }
-
 
 
 const IS_TYPE: { [name: string]: boolean } = {
@@ -166,10 +160,7 @@ const EMPTY_VAL: { [name: string]: any } = {
 }
 
 
-
-function norm(spec?: any
-  // , parent?: any, parentKey?: string
-): ValSpec {
+function norm(spec?: any): ValSpec {
 
   // Is this a (possibly incomplete) ValSpec?
   if (null != spec && spec.$?.gubu$) {
@@ -207,17 +198,13 @@ function norm(spec?: any
   }
 
   // Not a ValSpec, so build one based on value and its type.
-
   let t: ValType | 'undefined' = (null === spec ? 'null' : typeof (spec))
-  // t = (undefined === t ? 'any' : t) as ValType
   t = ('undefined' === t ? 'any' : t) as ValType
 
   let v = spec
   let r = false // Optional by default.
   let o = false // Only true when Optional builder is used.
   let b = undefined
-  // let b = spec?.b
-  // let a = spec?.a
   let u: any = {}
 
   if ('object' === t) {
@@ -243,7 +230,6 @@ function norm(spec?: any
       v = clone(EMPTY_VAL[t])
     }
     else if (spec.gubu === GUBU || true === spec.$?.gubu) {
-      // let gs = spec?.spec ? spec.spec() : spec
       let gs = spec.spec ? spec.spec() : spec
       t = (gs as ValSpec).t
       v = gs.v
@@ -267,20 +253,10 @@ function norm(spec?: any
   else if ('number' === t && isNaN(v)) {
     t = 'nan'
   }
-  // else if (
-  //   undefined === v &&
-  //   'any' === t &&
-  //   parent &&
-  //   parent.hasOwnProperty(parentKey)
-  // ) {
-  //   t = 'undefined'
-  //   v = undefined
-  // }
 
   let vs: ValSpec = {
     $: GUBU,
     t,
-    // v: (null != v && 'object' === typeof (v)) ? { ...v } : v,
     v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
     r,
     o,
@@ -293,10 +269,6 @@ function norm(spec?: any
     vs.b = b
   }
 
-  // if (a) {
-  //   vs.a = a
-  // }
-
   return vs
 }
 
@@ -307,7 +279,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
     null == opts.name ? 'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name
 
   let top = { '': inspec }
-  // let spec: ValSpec = norm(inspec) // Tree of validation nodes.
   let spec: ValSpec = norm(top) // Tree of validation nodes.
 
   let gubuShape = function GubuShape<T>(inroot?: T, inctx?: Context): T {
@@ -319,7 +290,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
     const path: string[] = [] // Key path to current node.
     const parent: any[] = []
 
-    // let dI: number = 0  // Node depth.
     let dI: number = -1  // Node depth.
     let nI: number = 2  // Next free slot in nodes.
     let pI: number = 0  // Pointer to current node.
@@ -371,8 +341,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         }
       }
 
-      // console.log('T', node.t, 'PATH', pathstr(path, dI), 'KEYS', keys)
-
       for (let key of keys) {
         path[dI] = key
         let sval = src[key]
@@ -380,8 +348,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         if ('number' === stype && isNaN(sval)) {
           stype = 'nan'
         }
-
-        // console.log('KEY', key, stype, sval)
 
         let nv = node.v
         let n = nv[key]
@@ -396,13 +362,12 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           let akey = '' + (parseInt(key) + 1)
           n = nv[akey]
 
-          // console.log('ARR', akey, n)
-
           if (undefined !== n) {
             tvs = n = GUBU$ === n.$?.gubu$ ? n : (nv[akey] = norm(n))
           }
 
-          if (undefined === n) {
+          //if (undefined === n) {
+          else {
             n = nv[0]
             // key = '' + 0
             akey = '' + 0
@@ -420,181 +385,142 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           tvs = (null != n && GUBU$ === n.$?.gubu$) ? n : (nv[key] = norm(n))
         }
 
-        // tvs = (null != n && GUBU$ === n.$?.gubu$) ? n : (nv[key] = norm(n))
-
         tvs.k = key
         tvs.d = dI
 
         let t = tvs.t
-
-        let vss: ValSpec[]
-        let listkind: string = ''
-        let failN = 0
-
-        if ('list' === t) {
-          vss = tvs.u.list.specs
-          // APPEND current to end
-          // TRACK pass of each
-
-          listkind = tvs.u.list.kind
-        }
-        else {
-          vss = [tvs]
-        }
-
         let terr: any[] = []
+        let vs = tvs
 
-        // console.log('VKEY', key)
+        vs = GUBU$ === vs.$?.gubu$ ? vs : (tvs = norm(vs))
 
-        for (let vsI = 0; vsI < vss.length; vsI++) {
-          let vs = vss[vsI]
+        // let t = vs.t
+        let pass = true
+        let done = false
 
-          vs = GUBU$ === vs.$?.gubu$ ? vs : (vss[vsI] = norm(vs))
+        // udpate can set t
+        if (vs.b) {
+          let update = handleValidate(vs.b, sval, {
+            dI, nI, sI, pI, cN,
+            key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+            pass
+          })
 
-          let t = vs.t
-          let pass = true
-          let done = false
+          pass = update.pass
+          if (undefined !== update.val) {
+            sval = src[key] = update.val
+          }
+          if (undefined !== update.node) {
+            vs = update.node
+          }
+          if (undefined !== update.type) {
+            t = update.type
+          }
+          if (undefined !== update.done) {
+            done = update.done
+          }
+          nI = undefined === update.nI ? nI : update.nI
+          sI = undefined === update.sI ? sI : update.sI
+          pI = undefined === update.pI ? pI : update.pI
+          cN = undefined === update.cN ? cN : update.cN
+        }
 
-          // udpate can set t
-          if (vs.b) {
-            let update = handleValidate(vs.b, sval, {
-              dI, nI, sI, pI, cN,
-              key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-              pass
-            })
-
-            pass = update.pass
-            if (undefined !== update.val) {
-              sval = src[key] = update.val
+        if (!done) {
+          if ('never' === t) {
+            terr.push(makeErrImpl('never', sval, path, dI, vs, 1070))
+          }
+          else if ('object' === t) {
+            if (vs.r && undefined === sval) {
+              terr.push(makeErrImpl('required', sval, path, dI, vs, 1010))
             }
-            if (undefined !== update.node) {
-              vs = update.node
+            else if (
+              undefined !== sval && (
+                null === sval ||
+                'object' !== stype ||
+                Array.isArray(sval)
+              )
+            ) {
+              terr.push(makeErrImpl('type', sval, path, dI, vs, 1020))
             }
-            if (undefined !== update.type) {
-              t = update.type
+
+            else if (null != src[key] || !vs.o) {
+              nodes[nI] = vs
+              srcs[nI] = src[key] = (src[key] || {})
+              parent[nI] = src[key]
+              nI++
+              cN++
             }
-            if (undefined !== update.done) {
-              done = update.done
-            }
-            nI = undefined === update.nI ? nI : update.nI
-            sI = undefined === update.sI ? sI : update.sI
-            pI = undefined === update.pI ? pI : update.pI
-            cN = undefined === update.cN ? cN : update.cN
           }
 
-          if (!done) {
-            if ('never' === t) {
-              terr.push(makeErrImpl('never', sval, path, dI, vs, 1070))
+          else if ('array' === t) {
+            if (vs.r && undefined === sval) {
+              terr.push(makeErrImpl('required', sval, path, dI, vs, 1030))
             }
-            else if ('object' === t) {
-              if (vs.r && undefined === sval) {
-                terr.push(makeErrImpl('required', sval, path, dI, vs, 1010))
-              }
-              else if (
-                undefined !== sval && (
-                  null === sval ||
-                  'object' !== stype ||
-                  Array.isArray(sval)
-                )
-              ) {
-                terr.push(makeErrImpl('type', sval, path, dI, vs, 1020))
-              }
-
-              else if (null != src[key] || !vs.o) {
-                nodes[nI] = vs
-                srcs[nI] = src[key] = (src[key] || {})
-                parent[nI] = src[key]
-                nI++
-                cN++
-              }
+            else if (undefined !== sval && !Array.isArray(sval)) {
+              terr.push(makeErrImpl('type', sval, path, dI, vs, 1040))
             }
-
-            else if ('array' === t) {
-              if (vs.r && undefined === sval) {
-                terr.push(makeErrImpl('required', sval, path, dI, vs, 1030))
-              }
-              else if (undefined !== sval && !Array.isArray(sval)) {
-                terr.push(makeErrImpl('type', sval, path, dI, vs, 1040))
-              }
-              else if (null != src[key] || !vs.o) {
-                nodes[nI] = vs
-                srcs[nI] = src[key] = (src[key] || [])
-                nI++
-                cN++
-              }
+            else if (null != src[key] || !vs.o) {
+              nodes[nI] = vs
+              srcs[nI] = src[key] = (src[key] || [])
+              nI++
+              cN++
             }
+          }
 
-            // Invalid type.
-            else if (!(
-              'any' === t ||
-              'custom' === t ||
-              undefined === sval ||
-              t === stype ||
-              ('instance' === t && vs.u.i && sval instanceof vs.u.i) ||
-              // ('instance' !== t && 'object' === stype && null != sval) ||
-              ('null' === t && null === sval)
-            )) {
-              terr.push(makeErrImpl('type', sval, path, dI, vs, 1050))
+          // Invalid type.
+          else if (!(
+            'any' === t ||
+            'custom' === t ||
+            'list' === t ||
+            undefined === sval ||
+            t === stype ||
+            ('instance' === t && vs.u.i && sval instanceof vs.u.i) ||
+            ('null' === t && null === sval)
+          )) {
+            terr.push(makeErrImpl('type', sval, path, dI, vs, 1050))
+            pass = false
+          }
+
+          // Value itself, or default.
+          else if (undefined === sval) {
+            let parentKey = path[dI]
+            if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
+              terr.push(makeErrImpl('required', sval, path, dI, vs, 1060))
               pass = false
             }
-
-            // Value itself, or default.
-            else if (undefined === sval) {
-              let parentKey = path[dI]
-              if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
-                terr.push(makeErrImpl('required', sval, path, dI, vs, 1060))
-                pass = false
-              }
-              else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
-                src[key] = vs.v
-              }
-            }
-
-            // Empty strings fail even if string is optional. Use Empty to allow.
-            else if ('string' === t && '' === sval) {
-              if (vs.u.empty) {
-                src[key] = sval
-              }
-              else {
-                terr.push(makeErrImpl('required', sval, path, dI, vs, 1080))
-              }
+            else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
+              src[key] = vs.v
             }
           }
 
-          // console.log('VSA', vs)
-          if (vs.a) {
-            let update = handleValidate(vs.a, sval, {
-              dI, nI, sI, pI, cN,
-              key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-              pass
-            })
-            pass = update.pass
-            if (undefined !== update.val) {
-              sval = src[key] = update.val
+          // Empty strings fail even if string is optional. Use Empty to allow.
+          else if ('string' === t && '' === sval) {
+            if (vs.u.empty) {
+              src[key] = sval
             }
-            nI = undefined === update.nI ? nI : update.nI
-            sI = undefined === update.sI ? sI : update.sI
-            pI = undefined === update.pI ? pI : update.pI
-            cN = undefined === update.cN ? cN : update.cN
-
-            if (update.break) {
-              break
+            else {
+              terr.push(makeErrImpl('required', sval, path, dI, vs, 1080))
             }
           }
+        }
 
-          // if (!pass) {
-          //   failN++
-          //   if ('all' === listkind) {
-          //     break
-          //   }
-          // }
-          // else if ('one' === listkind) {
-          //   break
-          // }
+        if (vs.a) {
+          let update = handleValidate(vs.a, sval, {
+            dI, nI, sI, pI, cN,
+            key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+            pass
+          })
+          pass = update.pass
+          if (undefined !== update.val) {
+            sval = src[key] = update.val
+          }
+          nI = undefined === update.nI ? nI : update.nI
+          sI = undefined === update.sI ? sI : update.sI
+          pI = undefined === update.pI ? pI : update.pI
+          cN = undefined === update.cN ? cN : update.cN
         }
 
         if (0 < terr.length) {
-          // !(('one' === listkind || 'some' === listkind) && failN < vss.length)) {
           err.push(...terr)
         }
       }
@@ -638,24 +564,24 @@ function make(inspec?: any, inopts?: Options): GubuShape {
   }
 
 
-  // TODO: abbrev of shape?
-  let aspec: string = ''
-
+  let desc: string = ''
   gubuShape.toString = (gubuShape as any)[inspect.custom] = () => {
-    aspec = '' === aspec ? stringify(inspec) : aspec
-    return `[Gubu ${opts.name} ${aspec}]`
+    desc = '' === desc ?
+      stringify(
+        (
+          inspec &&
+          inspec.$ &&
+          (GUBU$ === inspec.$.gubu$ || true === inspec.$.gubu$)
+        ) ? inspec.v : inspec) :
+      desc
+    return `[Gubu ${opts.name} ${desc}]`
   }
-
 
 
   gubuShape.gubu = GUBU
 
   return gubuShape
 }
-
-// function J(x: any) {
-//   return null == x ? '' : JSON.stringify(x).replace(/"/g, '')
-// }
 
 
 function handleValidate(vf: Validate, sval: any, state: State): Update {
@@ -676,14 +602,18 @@ function handleValidate(vf: Validate, sval: any, state: State): Update {
         }))
       }
       else {
+        let fname = vf.name
+        if (null == fname || '' == fname) {
+          fname = vf.toString().replace(/[ \t\r\n]+/g, ' ')
+          fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname
+        }
         state.terr.push(makeErrImpl(
-          w, sval, state.path, state.dI, state.node, 1040))
+          w, sval, state.path, state.dI, state.node, 1045, undefined, {}, fname))
       }
       update.pass = false
     }
   }
 
-  // console.log('UPDATE', update)
   return update
 }
 
@@ -741,35 +671,12 @@ const Never: Builder = function(this: ValSpec, spec?: any) {
 }
 
 
-
-const makeListBuilder = function(kind: string) {
-  return function(this: ValSpec, ...specs: any[]) {
-    let vs = buildize()
-    vs.t = 'list'
-    vs.u.list = {
-      specs: specs.map(s =>
-        buildize(s)).map(s => (
-          s.u.list = {
-            kind
-          },
-          s)),
-      kind
-    }
-    return vs
-  }
-}
-
-
-
 // Pass only if all match. Does not short circuit (as defaults may be missed).
 const All: Builder = function(this: ValSpec, ...specs: any[]) {
   let vs = buildize()
-  vs.t = 'custom'
+  vs.t = 'list'
   let shapes = specs.map(s => Gubu(s))
-
-  // console.log('SHAPES', shapes)
-
-  vs.u.all = specs
+  vs.u.list = specs
 
   vs.b = (val: any, update: Update, state: State) => {
     let pass = true
@@ -785,12 +692,11 @@ const All: Builder = function(this: ValSpec, ...specs: any[]) {
     }
 
     if (!pass) {
+      update.why = 'all'
       update.err = [
         makeErr(val, state,
           `Value "$VALUE" for path "$PATH" does not satisfy All shape:`),
         ...err]
-
-      // console.log('AU', update)
     }
 
     return pass
@@ -803,12 +709,9 @@ const All: Builder = function(this: ValSpec, ...specs: any[]) {
 // Pass if some match. Does not short circuit (as defaults may be missed).
 const Some: Builder = function(this: ValSpec, ...specs: any[]) {
   let vs = buildize()
-  vs.t = 'custom'
+  vs.t = 'list'
   let shapes = specs.map(s => Gubu(s))
-
-  // console.log('SHAPES', shapes)
-
-  vs.u.all = specs
+  vs.u.list = specs
 
   vs.b = (val: any, update: Update, state: State) => {
     let pass = false
@@ -827,15 +730,49 @@ const Some: Builder = function(this: ValSpec, ...specs: any[]) {
     }
 
     if (!pass) {
+      update.why = 'some'
       update.err = [
         makeErr(val, state,
           `Value "$VALUE" for path "$PATH" does not satisfy Some shape:`),
         ...err]
-
-      // console.log('AU', update)
     }
 
     return pass
+  }
+
+  return vs
+}
+
+
+// Pass if exactly one matches. Does not short circuit (as defaults may be missed).
+const One: Builder = function(this: ValSpec, ...specs: any[]) {
+  let vs = buildize()
+  vs.t = 'list'
+  let shapes = specs.map(s => Gubu(s))
+  vs.u.list = specs
+
+  vs.b = (val: any, update: Update, state: State) => {
+    let passN = 0
+
+    let err: any = []
+    for (let shape of shapes) {
+      let subctx = { ...state.ctx, err: [] }
+      shape(val, subctx)
+      if (0 < subctx.err.length) {
+        passN++
+        err.push(...subctx.err)
+      }
+    }
+
+    if (1 !== passN) {
+      update.why = 'one'
+      update.err = [
+        makeErr(val, state,
+          `Value "$VALUE" for path "$PATH" does not satisfy One shape:`),
+        ...err]
+    }
+
+    return true
   }
 
   return vs
@@ -877,8 +814,6 @@ const After: Builder = function(this: ValSpec, validate: Validate, spec?: any) {
 }
 
 
-
-// TODO: array needs special handling as first entry is type spec
 const Closed: Builder = function(this: ValSpec, spec?: any) {
   let vs = buildize(this, spec)
 
@@ -993,8 +928,6 @@ const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpe
 
   return vs
 }
-
-
 
 
 function buildize(invs0?: any, invs1?: any): ValSpec {
@@ -1144,6 +1077,7 @@ Object.assign(make, {
   Empty,
   Exact,
   Never,
+  One,
   Optional,
   Refer,
   Rename,
@@ -1171,6 +1105,7 @@ type Gubu = typeof make & {
   Empty: typeof Empty
   Exact: typeof Exact
   Never: typeof Never
+  One: typeof One
   Optional: typeof Optional
   Refer: typeof Refer
   Rename: typeof Rename
@@ -1193,6 +1128,7 @@ const GDefine = Define
 const GEmpty = Empty
 const GExact = Exact
 const GNever = Never
+const GOne = One
 const GOptional = Optional
 const GRefer = Refer
 const GRename = Rename
@@ -1225,6 +1161,7 @@ export {
   Empty,
   Exact,
   Never,
+  One,
   Optional,
   Refer,
   Rename,
@@ -1240,6 +1177,7 @@ export {
   GEmpty,
   GExact,
   GNever,
+  GOne,
   GOptional,
   GRefer,
   GRename,

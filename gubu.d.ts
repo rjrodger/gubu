@@ -45,7 +45,6 @@ declare type State = {
 declare type Update = {
     pass: boolean;
     done?: boolean;
-    break?: boolean;
     val?: any;
     node?: ValSpec;
     type?: ValType;
@@ -73,6 +72,7 @@ declare const Any: Builder;
 declare const Never: Builder;
 declare const All: Builder;
 declare const Some: Builder;
+declare const One: Builder;
 declare const Exact: Builder;
 declare const Before: Builder;
 declare const After: Builder;
@@ -101,6 +101,7 @@ declare type Gubu = typeof make & {
     Empty: typeof Empty;
     Exact: typeof Exact;
     Never: typeof Never;
+    One: typeof One;
     Optional: typeof Optional;
     Refer: typeof Refer;
     Rename: typeof Rename;
@@ -117,10 +118,11 @@ declare const GDefine: Builder;
 declare const GEmpty: Builder;
 declare const GExact: Builder;
 declare const GNever: Builder;
+declare const GOne: Builder;
 declare const GOptional: Builder;
 declare const GRefer: Builder;
 declare const GRename: Builder;
 declare const GRequired: Builder;
 declare const GSome: Builder;
 export type { Validate, Update, Context, Builder, ValSpec, State, };
-export { Gubu, G$, norm, buildize, makeErr, After, All, Any, Before, Closed, Define, Empty, Exact, Never, Optional, Refer, Rename, Required, Some, GAfter, GAll, GAny, GBefore, GClosed, GDefine, GEmpty, GExact, GNever, GOptional, GRefer, GRename, GRequired, GSome, };
+export { Gubu, G$, norm, buildize, makeErr, After, All, Any, Before, Closed, Define, Empty, Exact, Never, One, Optional, Refer, Rename, Required, Some, GAfter, GAll, GAny, GBefore, GClosed, GDefine, GEmpty, GExact, GNever, GOne, GOptional, GRefer, GRename, GRequired, GSome, };
