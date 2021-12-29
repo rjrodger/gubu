@@ -263,7 +263,20 @@ function J(x,s) {
 // console.log(s3({a:'x'}))
 
 
-let x0 = Gubu(Exact(1,'a'))
-console.log(x0(1))
-console.log(x0('a'))
-console.log(x0(2))
+// let x0 = Gubu(Exact(1,'a'))
+// console.log(x0(1))
+// console.log(x0('a'))
+// console.log(x0(2))
+
+
+// let a0 = Gubu([{x:1}])
+// console.log(a0(['q',{x:99}]))
+// console.log(a0([{x:99},'q']))
+
+
+let a0 = Gubu(All({x:1},{y:2}))
+console.log(a0)
+console.log(a0.spec())
+console.log(a0({x:11,y:22}))
+// console.log(a0({x:'X',y:22}))
+console.log(a0({x:11,y:'Y'}))

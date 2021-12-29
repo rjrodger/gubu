@@ -30,6 +30,7 @@ const Gubu = GubuModule
 const G$ = Gubu.G$
 const buildize = Gubu.buildize
 const makeErr = Gubu.makeErr
+
 const After = Gubu.After
 const All = Gubu.All
 const Any = Gubu.Any
@@ -37,13 +38,13 @@ const Before = Gubu.Before
 const Closed = Gubu.Closed
 const Define = Gubu.Define
 const Empty = Gubu.Empty
-const None = Gubu.None
-const One = Gubu.One
+const Exact = Gubu.Exact
+const Never = Gubu.Never
 const Optional = Gubu.Optional
 const Refer = Gubu.Refer
 const Rename = Gubu.Rename
 const Required = Gubu.Required
-const Exact = Gubu.Exact
+const Some = Gubu.Some
 
 
 
@@ -68,8 +69,9 @@ describe('gubu', () => {
 
   test('happy', () => {
     expect(Gubu()).toBeDefined()
-    expect(Gubu().toString()).toMatch(/\[Gubu \d+\]/)
-    expect(Gubu(undefined, { name: 'foo' }).toString()).toMatch(/\[Gubu foo\]/)
+    expect(Gubu().toString()).toMatch(/\[Gubu G\d+ undefined\]/)
+    expect(Gubu(undefined, { name: 'foo' }).toString()).toMatch(/\[Gubu foo undefined\]/)
+    expect(Gubu('x', { name: 'bar' }).toString()).toMatch(/\[Gubu bar "x"\]/)
 
     let g0 = Gubu({
       a: 'foo',
@@ -141,34 +143,36 @@ describe('gubu', () => {
     expect(() => optionShape({ host: '' })).toThrow('required')
 
 
-    const productListShape = Gubu({
-      v: { p: [{ name: String, price: Number }] }
-      // view: {
-      // discounts: [{ name: String, percent: (v: any) => 0 < v && v < 100 }],
-      // products: [
-      //   { name: String, price: Number }
-      // ]
-      // }
-    })
+    // TODO: better example to show deep structure defaults
 
-    // expect(productListShape({})).toEqual({ view: { discounts: [], products: [] } })
+    // const productListShape = Gubu({
+    //   v: { p: [{ name: String, price: Number }] }
+    //   // view: {
+    //   // discounts: [{ name: String, percent: (v: any) => 0 < v && v < 100 }],
+    //   // products: [
+    //   //   { name: String, price: Number }
+    //   // ]
+    //   // }
+    // })
 
-    let update = { err: [] }
-    let result = productListShape({
-      FIX - ARRAYS BROKEN!
-      v: { p: [{ name: 'x', price: 1 }, { name: 'foo', price: undefined }] }
-      // view: {
-      // products: [
-      //   { name: 'Apple', price: 100 },
-      //   { name: 'Pear', price: 200 },
-      //   // { name: 'Banana', price: undefined }
-      //   { name: 'Banana', price: 'x' }
-      // ]
-      // }
-    })// , update)
+    // // expect(productListShape({})).toEqual({ view: { discounts: [], products: [] } })
 
-    console.dir(result, { depth: null })
-    console.log(update)
+    // let update = { err: [] }
+    // let result = productListShape({
+    //   // FIX - ARRAYS BROKEN!
+    //   v: { p: [{ name: 'x', price: 1 }, { name: 'foo', price: undefined }] }
+    //   // view: {
+    //   // products: [
+    //   //   { name: 'Apple', price: 100 },
+    //   //   { name: 'Pear', price: 200 },
+    //   //   // { name: 'Banana', price: undefined }
+    //   //   { name: 'Banana', price: 'x' }
+    //   // ]
+    //   // }
+    // })// , update)
+
+    // console.dir(result, { depth: null })
+    // console.log(update)
   })
 
 
@@ -626,8 +630,29 @@ describe('gubu', () => {
       a: [String]
     })
 
+    expect(g0({ a: [] })).toEqual({ a: [] })
+    expect(g0({ a: ['X'] })).toEqual({ a: ['X'] })
     expect(g0({ a: ['X', 'Y'] })).toEqual({ a: ['X', 'Y'] })
-    expect(() => g0({ a: ['X', 1] })).toThrow(/Validation failed for path "a.1" with value "1" because the value is not of type string\./)
+    expect(g0({ a: ['X', 'Y', 'Z'] })).toEqual({ a: ['X', 'Y', 'Z'] })
+
+    expect(() => g0({ a: [null] })).toThrow(/"a.0".*"null".*type string/)
+    expect(() => g0({ a: [''] })).toThrow(/"a.0".*"".*required/)
+
+    expect(() => g0({ a: [11] })).toThrow(/"a.0".*"11".*type string/)
+    expect(() => g0({ a: ['X', 11] })).toThrow(/"a.1".*"11".*type string/)
+    expect(() => g0({ a: ['X', 'Y', 11] })).toThrow(/"a.2".*"11".*type string/)
+    expect(() => g0({ a: ['X', 'Y', 'Z', 11] })).toThrow(/"a.3".*"11".*type string/)
+
+    expect(() => g0({ a: ['X', null] })).toThrow(/"a.1".*"null".*type string/)
+    expect(() => g0({ a: ['X', ''] })).toThrow(/"a.1".*"".*required/)
+
+    expect(() => g0({ a: [11, 'K'] })).toThrow(/"a.0".*"11".*string/)
+    expect(() => g0({ a: ['X', 11, 'K'] })).toThrow(/"a.1".*"11".*string/)
+    expect(() => g0({ a: ['X', 'Y', 11, 'K'] })).toThrow(/"a.2".*"11".*string/)
+    expect(() => g0({ a: ['X', 'Y', 'Z', 11, 'K'] })).toThrow(/"a.3".*"11".*string/)
+
+    expect(() => g0({ a: [22, 'Y', 11, 'K'] })).toThrow(/"a.0".*"22".*"a.2".*"11"/s)
+    expect(() => g0({ a: ['X', 'Y', 'Z', 11, 'K', 'L'] })).toThrow(/"a.3".*"11"/)
 
 
     let g1 = Gubu([String])
@@ -651,6 +676,28 @@ describe('gubu', () => {
     let g4 = Gubu([])
     expect(g4([null, 1, 'x', true])).toEqual([null, 1, 'x', true])
 
+
+    expect(() => Gubu({ x: 1 })('q')).toThrow(/type object/)
+    expect(() => Gubu({ y: { x: 1 } })({ y: 'q' })).toThrow(/type object/)
+
+    let g5 = Gubu([{ x: 1 }])
+    expect(g5([])).toEqual([])
+    expect(g5([{ x: 11 }])).toEqual([{ x: 11 }])
+    expect(g5([{ x: 11 }, { x: 22 }])).toEqual([{ x: 11 }, { x: 22 }])
+    expect(g5([{ x: 11 }, { x: 22 }, { x: 33 }]))
+      .toEqual([{ x: 11 }, { x: 22 }, { x: 33 }])
+
+    expect(() => g5(['q'])).toThrow(/"0".*"q".*type object/)
+    expect(() => g5([{ x: 11 }, 'q'])).toThrow(/"1".*"q".*type object/)
+    expect(() => g5([{ x: 11 }, { y: 22 }, 'q'])).toThrow(/"2".*"q".*type object/)
+    expect(() => g5([{ x: 11 }, { y: 22 }, { z: 33 }, 'q'])).toThrow(/"3".*"q".*type object/)
+
+    expect(() => g5(['q', { k: 99 }])).toThrow(/"0".*"q".*type object/)
+    expect(() => g5([{ x: 11 }, 'q', { k: 99 }])).toThrow(/"1".*"q".*type object/)
+    expect(() => g5([{ x: 11 }, { y: 22 }, 'q', { k: 99 }]))
+      .toThrow(/"2".*"q".*type object/)
+    expect(() => g5([{ x: 11 }, { y: 22 }, { z: 33 }, 'q', { k: 99 }]))
+      .toThrow(/"3".*"q".*type object/)
   })
 
 
@@ -681,6 +728,10 @@ describe('gubu', () => {
     expect(g1({ a: 11 })).toMatchObject({ a: 11 })
     expect(() => g2({ a: 9 })).toThrow(/Validation failed for path "a" with value "9" because check "custom" failed\./)
     expect(() => g2({})).toThrow(/Validation failed for path "a" with value "" because check "custom" failed\./)
+
+    let g3 = Gubu((v: any) => v > 10)
+    expect(g3(11)).toEqual(11)
+    expect(() => g3(9)).toThrow(/Validation failed for path "" with value "9" because check "custom" failed\./)
 
   })
 
@@ -803,18 +854,20 @@ describe('gubu', () => {
   })
 
 
-  test('builder-one', () => {
-    let g0 = Gubu({ a: One(Number, String) })
+  test('builder-some', () => {
+    let g0 = Gubu({ a: Some(Number, String) })
     expect(g0({ a: 1 })).toEqual({ a: 1 })
     expect(g0({ a: 'x' })).toEqual({ a: 'x' })
-    expect(() => g0({ a: true })).toThrow('Validation failed for path "a" with value "true" because the value is not of type number.\nValidation failed for path "a" with value "true" because the value is not of type string.')
+    expect(() => g0({ a: true })).toThrow(`Value "true" for path "a" does not satisfy Some shape:
+Validation failed for path "" with value "true" because the value is not of type number.
+Validation failed for path "" with value "true" because the value is not of type string.`)
 
-    let g1 = Gubu(One(Number, String))
+    let g1 = Gubu(Some(Number, String))
     expect(g1(1)).toEqual(1)
     expect(g1('x')).toEqual('x')
     expect(() => g1(true)).toThrow('Validation failed for path "" with value "true" because the value is not of type number.\nValidation failed for path "" with value "true" because the value is not of type string.')
 
-    let g2 = Gubu([One(Number, String)])
+    let g2 = Gubu([Some(Number, String)])
     expect(g2([1])).toEqual([1])
     expect(g2(['x'])).toEqual(['x'])
     expect(g2([1, 2])).toEqual([1, 2])
@@ -822,19 +875,23 @@ describe('gubu', () => {
     expect(g2(['x', 1])).toEqual(['x', 1])
     expect(g2(['x', 'y'])).toEqual(['x', 'y'])
     expect(g2(['x', 1, 'y', 2])).toEqual(['x', 1, 'y', 2])
-    expect(() => g2([true])).toThrow('Validation failed for path "0" with value "true" because the value is not of type number.\nValidation failed for path "0" with value "true" because the value is not of type string.')
+    expect(() => g2([true])).toThrow(`Value "true" for path "0" does not satisfy Some shape:
+Validation failed for path "" with value "true" because the value is not of type number.
+Validation failed for path "" with value "true" because the value is not of type string.`)
 
-    let g3 = Gubu({ a: [One(Number, String)] })
+    let g3 = Gubu({ a: [Some(Number, String)] })
     expect(g3({ a: [1] })).toEqual({ a: [1] })
     expect(g3({ a: ['x'] })).toEqual({ a: ['x'] })
     expect(g3({ a: ['x', 1, 'y', 2] })).toEqual({ a: ['x', 1, 'y', 2] })
-    expect(() => g3({ a: [1, 2, true] })).toThrow('Validation failed for path "a.2" with value "true" because the value is not of type number.\nValidation failed for path "a.2" with value "true" because the value is not of type string.')
+    expect(() => g3({ a: [1, 2, true] })).toThrow(`Value "true" for path "a.2" does not satisfy Some shape:
+Validation failed for path "" with value "true" because the value is not of type number.
+Validation failed for path "" with value "true" because the value is not of type string.`)
 
-    let g4 = Gubu({ a: [One({ x: 1 }, { x: 'X' })] })
+    let g4 = Gubu({ a: [Some({ x: 1 }, { x: 'X' })] })
     expect(g4({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] }))
       .toEqual({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] })
 
-    let g5 = Gubu({ a: [One({ x: 1 }, Closed({ x: 'X' }))] })
+    let g5 = Gubu({ a: [Some({ x: 1 }, Closed({ x: 'X' }))] })
     expect(g5({ a: [{ x: 2 }, { x: 'Q' }] }))
       .toEqual({ a: [{ x: 2 }, { x: 'Q' }] })
   })
@@ -843,16 +900,32 @@ describe('gubu', () => {
   test('builder-all', () => {
     let g0 = Gubu(All({ x: 1 }, { y: 'a' }))
     expect(g0({ x: 1, y: 'a' })).toEqual({ x: 1, y: 'a' })
-    expect(() => g0({ x: 'b', y: 'a' })).toThrow('Validation failed for path "x" with value "b" because the value is not of type number.')
+    expect(() => g0({ x: 'b', y: 'a' })).toThrow(
+      `Value "{x:b,y:a}" for path "" does not satisfy All shape:
+Validation failed for path "x" with value "b" because the value is not of type number.`)
 
     let g1 = Gubu({ a: All((v: number) => v > 10, (v: number) => v < 20) })
     expect(g1({ a: 11 })).toEqual({ a: 11 })
-    expect(() => g1({ a: 0 })).toThrow('Validation failed for path "a" with value "0" because check "custom" failed.')
+    expect(() => g1({ a: 0 })).toThrow(
+      `Value "0" for path "a" does not satisfy All shape:
+Validation failed for path "" with value "0" because check "custom" failed.`)
+
+    let g2 = Gubu(All({ x: 1 }, { y: { z: 'a' } }))
+    expect(g2({ x: 11, y: { z: 'AA' } })).toEqual({ x: 11, y: { z: 'AA' } })
+    expect(() => g2({ x: 11, y: { z: true } })).toThrow(/path "y.z".*"true".*string/)
+
+    let g3 = Gubu(All({ x: 1 }, { y: 2 }))
+    expect(g3({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 })
+    expect(() => g3({ x: 'X', y: 'Y' })).toThrow(
+      `Value "{x:X,y:Y}" for path "" does not satisfy All shape:
+Validation failed for path "x" with value "X" because the value is not of type number.
+Validation failed for path "y" with value "Y" because the value is not of type number.`)
+
   })
 
 
   test('builder-custom-between', () => {
-    const rangeCheck = Gubu([None(), Number, Number])
+    const rangeCheck = Gubu([Never(), Number, Number])
     const Between: Builder =
       function(this: ValSpec, inopts: any, spec?: any): ValSpec {
         let vs = buildize(this || spec)
@@ -907,14 +980,14 @@ describe('gubu', () => {
     expect(g0({ a: 1, b: 'B' })).toEqual({ a: 1, b: 'B' })
   })
 
-  test('builder-none', () => {
-    let g0 = Gubu(None())
+  test('builder-never', () => {
+    let g0 = Gubu(Never())
     expect(() => g0(1)).toThrow('Validation failed for path "" with value "1" because no value is allowed.')
-    let g1 = Gubu({ a: None() })
+    let g1 = Gubu({ a: Never() })
     expect(() => g1({ a: 'x' })).toThrow('Validation failed for path "a" with value "x" because no value is allowed.')
 
     // Another way to do closed arrays.
-    let g2 = Gubu([None(), 1, 'x'])
+    let g2 = Gubu([Never(), 1, 'x'])
     expect(g2([2, 'y'])).toEqual([2, 'y'])
     expect(() => g2([2, 'y', true])).toThrow('Validation failed for path "2" with value "true" because no value is allowed.')
   })

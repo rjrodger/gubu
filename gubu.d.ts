@@ -8,7 +8,7 @@ declare type Options = {
 declare type Context = Record<string, any> & {
     err?: ErrDesc[];
 };
-declare type ValType = 'any' | 'none' | 'custom' | 'null' | 'undefined' | 'list' | 'string' | 'number' | 'boolean' | 'object' | 'array' | 'bigint' | 'symbol' | 'function' | 'instance' | 'nan';
+declare type ValType = 'any' | 'never' | 'custom' | 'null' | 'undefined' | 'list' | 'string' | 'number' | 'boolean' | 'object' | 'array' | 'bigint' | 'symbol' | 'function' | 'instance' | 'nan';
 declare type ValSpec = {
     $: typeof GUBU;
     t: ValType;
@@ -40,10 +40,12 @@ declare type State = {
     terr: any[];
     err: any[];
     ctx: any;
+    pass: boolean;
 };
 declare type Update = {
     pass: boolean;
     done?: boolean;
+    break?: boolean;
     val?: any;
     node?: ValSpec;
     type?: ValType;
@@ -68,9 +70,9 @@ declare const Required: Builder;
 declare const Optional: Builder;
 declare const Empty: Builder;
 declare const Any: Builder;
-declare const None: Builder;
-declare const One: Builder;
+declare const Never: Builder;
 declare const All: Builder;
+declare const Some: Builder;
 declare const Exact: Builder;
 declare const Before: Builder;
 declare const After: Builder;
@@ -98,12 +100,12 @@ declare type Gubu = typeof make & {
     Define: typeof Define;
     Empty: typeof Empty;
     Exact: typeof Exact;
-    None: typeof None;
-    One: typeof One;
+    Never: typeof Never;
     Optional: typeof Optional;
     Refer: typeof Refer;
     Rename: typeof Rename;
     Required: typeof Required;
+    Some: typeof Some;
 };
 declare const Gubu: Gubu;
 declare const GAfter: Builder;
@@ -114,11 +116,11 @@ declare const GClosed: Builder;
 declare const GDefine: Builder;
 declare const GEmpty: Builder;
 declare const GExact: Builder;
-declare const GNone: Builder;
-declare const GOne: Builder;
+declare const GNever: Builder;
 declare const GOptional: Builder;
 declare const GRefer: Builder;
 declare const GRename: Builder;
 declare const GRequired: Builder;
+declare const GSome: Builder;
 export type { Validate, Update, Context, Builder, ValSpec, State, };
-export { Gubu, G$, norm, buildize, makeErr, After, All, Any, Before, Closed, Define, Empty, Exact, None, One, Optional, Refer, Rename, Required, GAfter, GAll, GAny, GBefore, GClosed, GDefine, GEmpty, GExact, GNone, GOne, GOptional, GRefer, GRename, GRequired, };
+export { Gubu, G$, norm, buildize, makeErr, After, All, Any, Before, Closed, Define, Empty, Exact, Never, Optional, Refer, Rename, Required, Some, GAfter, GAll, GAny, GBefore, GClosed, GDefine, GEmpty, GExact, GNever, GOptional, GRefer, GRename, GRequired, GSome, };
