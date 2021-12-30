@@ -41,6 +41,7 @@ declare type State = {
     err: any[];
     ctx: any;
     pass: boolean;
+    oval: any;
 };
 declare type Update = {
     pass: boolean;
@@ -117,6 +118,7 @@ declare type Gubu = typeof make & {
     Some: typeof Some;
 };
 declare const Gubu: Gubu;
+declare function Args(spec: any, wrapped: any): (this: any) => any;
 declare const GAbove: Builder;
 declare const GAfter: Builder;
 declare const GAll: Builder;
@@ -137,4 +139,4 @@ declare const GRename: Builder;
 declare const GRequired: Builder;
 declare const GSome: Builder;
 export type { Validate, Update, Context, Builder, ValSpec, State, };
-export { Gubu, G$, norm, buildize, makeErr, Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Optional, Refer, Rename, Required, Some, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GOptional, GRefer, GRename, GRequired, GSome, };
+export { Gubu, G$, norm, buildize, makeErr, Args, Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Optional, Refer, Rename, Required, Some, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GOptional, GRefer, GRename, GRequired, GSome, };

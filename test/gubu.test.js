@@ -813,6 +813,19 @@ Validation failed for path "y" with value "Y" because the value is not of type n
     test('builder-rename', () => {
         let g0 = Gubu({ a: Rename('b', { x: 1 }) });
         expect(g0({ a: { x: 2 } })).toMatchObject({ b: { x: 2 } });
+        let g1 = Gubu([
+            Never(),
+            Rename('a', String),
+            Rename('b', 2),
+            Rename({ name: 'c', keep: false }, true)
+        ]);
+        expect(g1(['x', 22])).toMatchObject({ 0: 'x', 1: 22, a: 'x', b: 22 });
+        expect('' + g1(['x', 22])).toEqual('x,22,');
+        expect(g1(['x'])).toMatchObject({ 0: 'x', a: 'x', b: 2 });
+        expect('' + g1(['x'])).toEqual('x,2,');
+        expect(() => g1([])).toThrow('required');
+        expect(g1(['x', 22, false]))
+            .toMatchObject({ 0: 'x', 1: 22, a: 'x', b: 22, c: false });
     });
     test('builder-exact', () => {
         let g0 = Gubu({ a: Exact(null) });

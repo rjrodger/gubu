@@ -4,10 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
+exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.Args = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
+// TODO: Default to explicitly set default (allows you to force value to bad type such as undefined)
 // TODO: function deref?
 // TODO: BigInt spec roundtrip test
-// TODO: Min,Max - builder, depends on value
 const util_1 = require("util");
 const package_json_1 = __importDefault(require("./package.json"));
 const GUBU$ = Symbol.for('gubu$');
@@ -196,15 +196,22 @@ function make(inspec, inopts) {
             // Inject missing indexes if present in ValSpec.
             if ('array' === node.t) {
                 keys = Object.keys(src);
+                // console.log('AKEYS', keys)
                 for (let vk in node.v) {
-                    if ('0' !== vk && !keys.includes(vk)) {
-                        keys.splice(parseInt(vk) - 1, 0, '' + (parseInt(vk) - 1));
+                    let vko = '' + (parseInt(vk) - 1);
+                    // console.log('VK', vk, vko)
+                    // if ('0' !== vk && !keys.includes(vk)) {
+                    if ('0' !== vk && !keys.includes(vko)) {
+                        keys.splice(parseInt(vk) - 1, 0, vko);
                     }
                 }
+                // console.log('AKEYS2', keys)
             }
             for (let key of keys) {
+                // console.log('KEY', key, keys)
                 path[dI] = key;
                 let sval = src[key];
+                let oval = sval;
                 let stype = typeof (sval);
                 if ('number' === stype && isNaN(sval)) {
                     stype = 'nan';
@@ -221,7 +228,6 @@ function make(inspec, inopts) {
                     let akey = '' + (parseInt(key) + 1);
                     n = nv[akey];
                     if (undefined !== n) {
-                        // tvs = n = GUBU$ === n.$?.gubu$ ? n : (nv[akey] = norm(n))
                         tvs = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (nv[akey] = norm(n));
                     }
                     else {
@@ -248,16 +254,17 @@ function make(inspec, inopts) {
                 // let t = vs.t
                 let pass = true;
                 let done = false;
-                // udpate can set t
+                // update can set t
                 if (vs.b) {
                     let update = handleValidate(vs.b, sval, {
                         dI, nI, sI, pI, cN,
                         key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-                        pass
+                        pass, oval
                     });
                     pass = update.pass;
                     if (undefined !== update.val) {
                         sval = src[key] = update.val;
+                        stype = typeof (sval);
                     }
                     if (undefined !== update.node) {
                         vs = update.node;
@@ -273,6 +280,7 @@ function make(inspec, inopts) {
                     pI = undefined === update.pI ? pI : update.pI;
                     cN = undefined === update.cN ? cN : update.cN;
                 }
+                // console.log('KEY2', key, pass, done, sval, vs.a)
                 if (!done) {
                     if ('never' === t) {
                         terr.push(makeErrImpl('never', sval, path, dI, vs, 1070));
@@ -321,14 +329,19 @@ function make(inspec, inopts) {
                     }
                     // Value itself, or default.
                     else if (undefined === sval) {
+                        // console.log('DEF')
                         let parentKey = path[dI];
                         if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
                             terr.push(makeErrImpl('required', sval, path, dI, vs, 1060));
                             pass = false;
                         }
                         else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
-                            src[key] = vs.v;
+                            // console.log('AAA', key, vs.v)
+                            sval = src[key] = vs.v;
                         }
+                        // else {
+                        //   console.log('BBB')
+                        // }
                     }
                     // Empty strings fail even if string is optional. Use Empty to allow.
                     else if ('string' === t && '' === sval) {
@@ -340,16 +353,13 @@ function make(inspec, inopts) {
                         }
                     }
                 }
+                // console.log('KEY3', key, pass, done, vs.a)
                 if (vs.a) {
                     let update = handleValidate(vs.a, sval, {
                         dI, nI, sI, pI, cN,
                         key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-                        pass
+                        pass, oval
                     });
-                    // pass = update.pass
-                    // if (undefined !== update.val) {
-                    //   sval = src[key] = update.val
-                    // }
                     nI = undefined === update.nI ? nI : update.nI;
                     sI = undefined === update.sI ? sI : update.sI;
                     pI = undefined === update.pI ? pI : update.pI;
@@ -397,6 +407,7 @@ function make(inspec, inopts) {
                 inspec.$ &&
                 (GUBU$ === inspec.$.gubu$ || true === inspec.$.gubu$)) ? inspec.v : inspec) :
             desc;
+        desc = desc.substring(0, 33) + (33 < desc.length ? '...' : '');
         return `[Gubu ${opts.name} ${desc}]`;
     };
     gubuShape.gubu = GUBU;
@@ -404,30 +415,33 @@ function make(inspec, inopts) {
 }
 function handleValidate(vf, sval, state) {
     let update = { pass: true, done: false };
-    if (undefined !== sval || state.node.r) {
-        let valid = vf(sval, update, state);
-        if (!valid || update.err) {
-            let w = update.why || 'custom';
-            let p = pathstr(state.path, state.dI);
-            if ('object' === typeof (update.err)) {
-                // Assumes makeErr already called
-                state.terr.push(...[update.err].flat().map(e => {
-                    e.p = null == e.p ? p : e.p;
-                    e.m = null == e.m ? 2010 : e.m;
-                    return e;
-                }));
-            }
-            else {
-                let fname = vf.name;
-                if (null == fname || '' == fname) {
-                    fname = vf.toString().replace(/[ \t\r\n]+/g, ' ');
-                    fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname;
-                }
-                state.terr.push(makeErrImpl(w, sval, state.path, state.dI, state.node, 1045, undefined, {}, fname));
-            }
-            update.pass = false;
-        }
+    if (undefined === sval && (true === state.node.o || false === state.node.r)) {
+        return update;
     }
+    // if (undefined !== sval || state.node.r) {
+    let valid = vf(sval, update, state);
+    if (!valid || update.err) {
+        let w = update.why || 'custom';
+        let p = pathstr(state.path, state.dI);
+        if ('object' === typeof (update.err)) {
+            // Assumes makeErr already called
+            state.terr.push(...[update.err].flat().map(e => {
+                e.p = null == e.p ? p : e.p;
+                e.m = null == e.m ? 2010 : e.m;
+                return e;
+            }));
+        }
+        else {
+            let fname = vf.name;
+            if (null == fname || '' == fname) {
+                fname = vf.toString().replace(/[ \t\r\n]+/g, ' ');
+                fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname;
+            }
+            state.terr.push(makeErrImpl(w, sval, state.path, state.dI, state.node, 1045, undefined, {}, fname));
+        }
+        update.pass = false;
+    }
+    // }
     return update;
 }
 function pathstr(path, dI) {
@@ -667,14 +681,46 @@ const Rename = function (inopts, spec) {
     let vs = buildize(this, spec);
     let opts = 'object' === typeof inopts ? inopts || {} : {};
     let name = 'string' === typeof inopts ? inopts : opts.name;
+    let keep = 'boolean' === typeof opts.keep ? opts.keep : undefined;
+    let claim = Array.isArray(opts.claim) ? opts.claim : [];
     if (null != name && '' != name) {
+        // vs.b = (val: any, update: Update, state: State) => {
+        //   // console.log('B', val)
+        //   if (undefined === val) {
+        //     for (let cn of claim) {
+        //       if (undefined !== state.src[cn]) {
+        //         update.val = state.src[name] = state.src[cn]
+        //         delete state.src[cn]
+        //         // done = true
+        //       }
+        //     }
+        //   }
+        //   return true
+        // }
         vs.a = (val, _update, state) => {
-            state.src[name] = val;
-            if (!opts.keep) {
+            // console.log('RENAME', state.key, name, val)
+            let done = false;
+            if (undefined === state.oval) {
+                for (let cn of claim) {
+                    if (undefined !== state.src[cn]) {
+                        state.src[name] = state.src[cn];
+                        delete state.src[cn];
+                        done = true;
+                    }
+                }
+            }
+            if (!done) {
+                state.src[name] = val;
+            }
+            if (!keep &&
+                // Arrays require explicit deletion as validation is based on index
+                // and will be lost.
+                !(Array.isArray(state.src) && false !== keep)) {
                 delete state.src[state.key];
             }
             return true;
         };
+        Object.defineProperty(vs.a, 'name', { value: 'Rename:' + name });
     }
     return vs;
 };
@@ -822,7 +868,12 @@ function stringify(x, r) {
                     'function' === typeof val.toString ? val.toString() : val.constructor.name;
             }
             else if ('function' === typeof (val)) {
-                val = val.name;
+                if ('function' === typeof (make[val.name])) {
+                    val = undefined;
+                }
+                else {
+                    val = val.name;
+                }
             }
             else if ('bigint' === typeof (val)) {
                 val = String(val.toString());
@@ -867,6 +918,31 @@ Object.assign(make, {
 Object.defineProperty(make, 'name', { value: 'gubu' });
 const Gubu = make;
 exports.Gubu = Gubu;
+function Args(spec, wrapped) {
+    let argsShape = 
+    // Gubu(Object.keys(spec)
+    //   .reduce((as: any[], name, index) =>
+    //     (as[index + 1] = Rename(name, spec[name]), as), [Never()]))
+    Gubu([
+        Never(),
+        // Rename('foo', 1),
+        // Rename('bar', 2)
+        // Rename({ name: 'foo' }, Optional(Number)),
+        Rename({ name: 'foo' }, 1),
+        Rename({ name: 'bar', claim: ['foo'] }, 2)
+    ]);
+    // console.dir(argsShape.spec(), { depth: null })
+    let argsWrap = function () {
+        let inargs = Array.prototype.slice.call(arguments);
+        // console.log('INARGS', inargs)
+        let args = argsShape(inargs);
+        // console.log('ARGS', args)
+        return wrapped.call(this, args);
+    };
+    Object.defineProperty(argsWrap, 'name', { value: wrapped.name + '_args' });
+    return argsWrap;
+}
+exports.Args = Args;
 const GAbove = Above;
 exports.GAbove = GAbove;
 const GAfter = After;

@@ -1,7 +1,7 @@
 
 const {
   Gubu,
-  Custom,
+  Args,
   G$,
   One,
   Some,
@@ -274,9 +274,29 @@ function J(x,s) {
 // console.log(a0([{x:99},'q']))
 
 
-let a0 = Gubu(All({x:1},{y:2}))
-console.log(a0)
-console.log(a0.spec())
-console.log(a0({x:11,y:22}))
-// console.log(a0({x:'X',y:22}))
-console.log(a0({x:11,y:'Y'}))
+// let a0 = Gubu(All({x:1},{y:2}))
+// console.log(a0)
+// console.log(a0.spec())
+// console.log(a0({x:11,y:22}))
+// // console.log(a0({x:'X',y:22}))
+// console.log(a0({x:11,y:'Y'}))
+
+
+
+const print = Args(
+  // {bar:String,foo:Number,},
+  // {foo:Number,bar:String},
+  // {foo:Number,barx:'x'},
+  // {foo:Number,bar:String,zed:Boolean},
+  {foo:0,bar:0},
+  function print(args) {
+  console.log('PRINT')
+  console.dir(args, {depth:null})
+})
+
+// print(2,'y')
+// print('y',2)
+// print(2,'y',true)
+print(11,22)
+print(11)
+print()
