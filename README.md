@@ -50,7 +50,8 @@ nicely with an easy-to-read syntax.
 
 
 ## Quick Example
-[top](#top)
+<sub><sup>[top](#top)</sup></sub>
+
 
 ```js
 
@@ -148,9 +149,9 @@ productListShape({}) // returns:
 
 
 
-
-<a href="#top" style="font-size:small; float:right; margin-top:1em;">[top]</a>
 ## Install
+<sub><sup>[top](#top)</sup></sub>
+
 
 ```sh
 $ npm install gubu
@@ -187,8 +188,9 @@ else.
 
 
 
-<a href="#top" style="font-size:small; float:right; margin-top:1em;">[top]</a>
 ### Shape Rules
+<sub><sup>[top](#top)</sup></sub>
+
 
 The general principle of Gubu's design is that the schema shape should
 match a valid object or value as closely as possible.
@@ -324,8 +326,8 @@ comprehensive and provide many usage examples.
 
 
 
-<a href="#top" style="font-size:small; float:right; margin-top:1em;">[top]</a>
 ## API
+<sub><sup>[top](#top)</sup></sub>
 
 
 ### Shape
