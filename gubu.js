@@ -415,12 +415,18 @@ function make(inspec, inopts) {
 }
 function handleValidate(vf, sval, state) {
     let update = { pass: true, done: false };
-    if (undefined === sval && (true === state.node.o || false === state.node.r)) {
-        return update;
-    }
+    // if (undefined === sval && (true === state.node.o || false === state.node.r)) {
+    //   return update
+    // }
     // if (undefined !== sval || state.node.r) {
     let valid = vf(sval, update, state);
     if (!valid || update.err) {
+        // Explicit Optional allows undefined
+        if (undefined === sval && (state.node.o || !state.node.r)) {
+            delete update.err;
+            update.pass = true;
+            return update;
+        }
         let w = update.why || 'custom';
         let p = pathstr(state.path, state.dI);
         if ('object' === typeof (update.err)) {
@@ -684,31 +690,31 @@ const Rename = function (inopts, spec) {
     let keep = 'boolean' === typeof opts.keep ? opts.keep : undefined;
     let claim = Array.isArray(opts.claim) ? opts.claim : [];
     if (null != name && '' != name) {
-        // vs.b = (val: any, update: Update, state: State) => {
-        //   // console.log('B', val)
-        //   if (undefined === val) {
-        //     for (let cn of claim) {
-        //       if (undefined !== state.src[cn]) {
-        //         update.val = state.src[name] = state.src[cn]
-        //         delete state.src[cn]
-        //         // done = true
-        //       }
-        //     }
-        //   }
-        //   return true
-        // }
-        vs.a = (val, _update, state) => {
-            // console.log('RENAME', state.key, name, val)
-            let done = false;
-            if (undefined === state.oval) {
+        vs.b = (val, update, state) => {
+            // console.log('B', val)
+            if (undefined === val) {
                 for (let cn of claim) {
                     if (undefined !== state.src[cn]) {
-                        state.src[name] = state.src[cn];
+                        update.val = state.src[name] = state.src[cn];
                         delete state.src[cn];
-                        done = true;
+                        // done = true
                     }
                 }
             }
+            return true;
+        };
+        vs.a = (val, _update, state) => {
+            // console.log('RENAME', state.key, name, val)
+            let done = false;
+            // if (undefined === state.oval) {
+            //   for (let cn of claim) {
+            //     if (undefined !== state.src[cn]) {
+            //       state.src[name] = state.src[cn]
+            //       delete state.src[cn]
+            //       done = true
+            //     }
+            //   }
+            // }
             if (!done) {
                 state.src[name] = val;
             }

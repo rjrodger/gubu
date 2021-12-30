@@ -604,14 +604,22 @@ function make(inspec?: any, inopts?: Options): GubuShape {
 function handleValidate(vf: Validate, sval: any, state: State): Update {
   let update: Update = { pass: true, done: false }
 
-  if (undefined === sval && (true === state.node.o || false === state.node.r)) {
-    return update
-  }
+  // if (undefined === sval && (true === state.node.o || false === state.node.r)) {
+  //   return update
+  // }
 
   // if (undefined !== sval || state.node.r) {
   let valid = vf(sval, update, state)
 
   if (!valid || update.err) {
+
+    // Explicit Optional allows undefined
+    if (undefined === sval && (state.node.o || !state.node.r)) {
+      delete update.err
+      update.pass = true
+      return update
+    }
+
     let w = update.why || 'custom'
     let p = pathstr(state.path, state.dI)
 
@@ -939,33 +947,33 @@ const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpe
   let claim = Array.isArray(opts.claim) ? opts.claim : []
 
   if (null != name && '' != name) {
-    // vs.b = (val: any, update: Update, state: State) => {
-    //   // console.log('B', val)
-    //   if (undefined === val) {
-    //     for (let cn of claim) {
-    //       if (undefined !== state.src[cn]) {
-    //         update.val = state.src[name] = state.src[cn]
-    //         delete state.src[cn]
-    //         // done = true
-    //       }
-    //     }
-    //   }
-    //   return true
-    // }
+    vs.b = (val: any, update: Update, state: State) => {
+      // console.log('B', val)
+      if (undefined === val) {
+        for (let cn of claim) {
+          if (undefined !== state.src[cn]) {
+            update.val = state.src[name] = state.src[cn]
+            delete state.src[cn]
+            // done = true
+          }
+        }
+      }
+      return true
+    }
     vs.a = (val: any, _update: Update, state: State) => {
       // console.log('RENAME', state.key, name, val)
 
       let done = false
 
-      if (undefined === state.oval) {
-        for (let cn of claim) {
-          if (undefined !== state.src[cn]) {
-            state.src[name] = state.src[cn]
-            delete state.src[cn]
-            done = true
-          }
-        }
-      }
+      // if (undefined === state.oval) {
+      //   for (let cn of claim) {
+      //     if (undefined !== state.src[cn]) {
+      //       state.src[name] = state.src[cn]
+      //       delete state.src[cn]
+      //       done = true
+      //     }
+      //   }
+      // }
 
       if (!done) {
         state.src[name] = val

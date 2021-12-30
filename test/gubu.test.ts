@@ -1102,8 +1102,10 @@ Validation failed for path "y" with value "Y" because the value is not of type n
       b: Refer('A'),
       c: Refer({ name: 'A', fill: true })
     })
+    expect(g1({ a: { x: 2 } }))
+      .toEqual({ a: { x: 2 }, c: { x: 1 } })
     expect(g1({ a: { x: 2 }, b: { x: 2 } }))
-      .toEqual({ a: { x: 2 }, b: { x: 2 } })
+      .toEqual({ a: { x: 2 }, b: { x: 2 }, c: { x: 1 } })
     expect(g1({ a: { x: 2 }, b: { x: 2 }, c: {} }))
       .toEqual({ a: { x: 2 }, b: { x: 2 }, c: { x: 1 } })
     expect(g1({ a: { x: 33 }, b: { x: 44 }, c: { x: 2 } }))
