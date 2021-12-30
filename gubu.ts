@@ -40,16 +40,16 @@ type ValType =
 
 
 type ValSpec = {
-  $: typeof GUBU
-  t: ValType
-  d: number    // Depth.
-  v: any
-  r: boolean   // Value is required.
-  o: boolean   // Value is explicitly optional.
-  k: string    // Key of this node.
-  u?: any      // Custom meta data
-  b?: Validate // Custom before validation function.
-  a: Validate[] // Custom after vaidation function.
+  $: typeof GUBU         // Special marker to indicate normalized.
+  t: ValType             // Value type name.
+  d: number              // Depth.
+  v: any                 // Default value.
+  r: boolean             // Value is required.
+  o: boolean             // Value is explicitly optional.
+  k: string              // Key of this node.
+  u: Record<string, any> // Custom meta data
+  b: Validate[]          // Custom before validation functions.
+  a: Validate[]          // Custom after vaidation functions.
 }
 
 
@@ -185,6 +185,7 @@ function norm(spec?: any): ValSpec {
       vs.o = !!vs.o
       vs.d = null == vs.d ? -1 : vs.d
 
+      vs.b = vs.b || []
       vs.a = vs.a || []
 
       vs.u = vs.u || {}
@@ -262,11 +263,13 @@ function norm(spec?: any): ValSpec {
     k: '',
     d: -1,
     u,
-    a: []
+    a: [],
+    b: [],
   }
 
   if (b) {
-    vs.b = b
+    // vs.b = b
+    vs.b.push(b)
   }
 
   return vs
@@ -407,31 +410,33 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         let done = false
 
         // update can set t
-        if (vs.b) {
-          let update = handleValidate(vs.b, sval, {
-            dI, nI, sI, pI, cN,
-            key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-            pass, oval
-          })
+        if (0 < vs.b.length) {
+          for (let bI = 0; bI < vs.b.length; bI++) {
+            let update = handleValidate(vs.b[bI], sval, {
+              dI, nI, sI, pI, cN,
+              key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+              pass, oval
+            })
 
-          pass = update.pass
-          if (undefined !== update.val) {
-            sval = src[key] = update.val
-            stype = typeof (sval)
+            pass = update.pass
+            if (undefined !== update.val) {
+              sval = src[key] = update.val
+              stype = typeof (sval)
+            }
+            if (undefined !== update.node) {
+              vs = update.node
+            }
+            if (undefined !== update.type) {
+              t = update.type
+            }
+            if (undefined !== update.done) {
+              done = update.done
+            }
+            nI = undefined === update.nI ? nI : update.nI
+            sI = undefined === update.sI ? sI : update.sI
+            pI = undefined === update.pI ? pI : update.pI
+            cN = undefined === update.cN ? cN : update.cN
           }
-          if (undefined !== update.node) {
-            vs = update.node
-          }
-          if (undefined !== update.type) {
-            t = update.type
-          }
-          if (undefined !== update.done) {
-            done = update.done
-          }
-          nI = undefined === update.nI ? nI : update.nI
-          sI = undefined === update.sI ? sI : update.sI
-          pI = undefined === update.pI ? pI : update.pI
-          cN = undefined === update.cN ? cN : update.cN
         }
 
         // console.log('KEY2', key, pass, done, sval, vs.a)
@@ -712,7 +717,7 @@ const All: Builder = function(this: ValSpec, ...specs: any[]) {
   let shapes = specs.map(s => Gubu(s))
   vs.u.list = specs
 
-  vs.b = (val: any, update: Update, state: State) => {
+  vs.b.push(function All(val: any, update: Update, state: State) {
     let pass = true
 
     let err: any = []
@@ -734,7 +739,7 @@ const All: Builder = function(this: ValSpec, ...specs: any[]) {
     }
 
     return pass
-  }
+  })
 
   return vs
 }
@@ -747,7 +752,7 @@ const Some: Builder = function(this: ValSpec, ...specs: any[]) {
   let shapes = specs.map(s => Gubu(s))
   vs.u.list = specs
 
-  vs.b = (val: any, update: Update, state: State) => {
+  vs.b.push(function Some(val: any, update: Update, state: State) {
     let pass = false
 
     let err: any = []
@@ -772,7 +777,7 @@ const Some: Builder = function(this: ValSpec, ...specs: any[]) {
     }
 
     return pass
-  }
+  })
 
   return vs
 }
@@ -785,7 +790,7 @@ const One: Builder = function(this: ValSpec, ...specs: any[]) {
   let shapes = specs.map(s => Gubu(s))
   vs.u.list = specs
 
-  vs.b = (val: any, update: Update, state: State) => {
+  vs.b.push(function One(val: any, update: Update, state: State) {
     let passN = 0
 
     let err: any = []
@@ -807,7 +812,7 @@ const One: Builder = function(this: ValSpec, ...specs: any[]) {
     }
 
     return true
-  }
+  })
 
   return vs
 }
@@ -816,7 +821,7 @@ const One: Builder = function(this: ValSpec, ...specs: any[]) {
 
 const Exact: Builder = function(this: ValSpec, ...vals: any[]) {
   let vs = buildize()
-  vs.b = (val: any, update: Update, state: State) => {
+  vs.b.push(function Exact(val: any, update: Update, state: State) {
     for (let i = 0; i < vals.length; i++) {
       if (val === vals[i]) {
         return true
@@ -828,7 +833,8 @@ const Exact: Builder = function(this: ValSpec, ...vals: any[]) {
         `${vals.map(v => stringify(v)).join(', ')}.`)
 
     return false
-  }
+  })
+
   return vs
 }
 
@@ -836,7 +842,7 @@ const Exact: Builder = function(this: ValSpec, ...vals: any[]) {
 
 const Before: Builder = function(this: ValSpec, validate: Validate, spec?: any) {
   let vs = buildize(this, spec)
-  vs.b = validate
+  vs.b.push(validate)
   return vs
 }
 
@@ -852,7 +858,7 @@ const After: Builder = function(this: ValSpec, validate: Validate, spec?: any) {
 const Closed: Builder = function(this: ValSpec, spec?: any) {
   let vs = buildize(this, spec)
 
-  vs.b = (val: any, update: Update, state: State) => {
+  vs.b.push(function Closed(val: any, update: Update, state: State) {
     if (null != val && 'object' === typeof (val)) {
       let vkeys = Object.keys(val)
       let allowed = vs.v
@@ -884,7 +890,7 @@ const Closed: Builder = function(this: ValSpec, spec?: any) {
       return 0 === update.err.length
     }
     return true
-  }
+  })
 
   return vs
 }
@@ -898,11 +904,11 @@ const Define: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpe
 
 
   if (null != name && '' != name) {
-    vs.b = (_val: any, _update: Update, state: State) => {
+    vs.b.push(function Define(_val: any, _update: Update, state: State) {
       let ref = state.ctx.ref = state.ctx.ref || {}
       ref[name] = state.node
       return true
-    }
+    })
   }
 
   return vs
@@ -919,7 +925,7 @@ const Refer: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec
   let fill = !!opts.fill
 
   if (null != name && '' != name) {
-    vs.b = (val: any, update: Update, state: State) => {
+    vs.b.push(function Refer(val: any, update: Update, state: State) {
       if (undefined !== val || fill) {
         let ref = state.ctx.ref = state.ctx.ref || {}
 
@@ -936,7 +942,7 @@ const Refer: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec
 
       // TODO: option to fail if ref not found?
       return true
-    }
+    })
   }
 
   return vs
@@ -952,38 +958,25 @@ const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpe
   let claim = Array.isArray(opts.claim) ? opts.claim : []
 
   if (null != name && '' != name) {
-    vs.b = (val: any, update: Update, state: State) => {
-      // console.log('B', val)
+
+    // If there is a claim, grab the value so that validations
+    // can be applied to it.
+    let vsb = (val: any, update: Update, state: State) => {
       if (undefined === val) {
         for (let cn of claim) {
           if (undefined !== state.src[cn]) {
             update.val = state.src[name] = state.src[cn]
             delete state.src[cn]
-            // done = true
           }
         }
       }
       return true
     }
+    Object.defineProperty(vsb, 'name', { value: 'Rename:' + name })
+    vs.b.push(vsb)
 
     let vsa = (val: any, _update: Update, state: State) => {
-      // console.log('RENAME', state.key, name, val)
-
-      let done = false
-
-      // if (undefined === state.oval) {
-      //   for (let cn of claim) {
-      //     if (undefined !== state.src[cn]) {
-      //       state.src[name] = state.src[cn]
-      //       delete state.src[cn]
-      //       done = true
-      //     }
-      //   }
-      // }
-
-      if (!done) {
-        state.src[name] = val
-      }
+      state.src[name] = val
 
       if (!keep &&
         // Arrays require explicit deletion as validation is based on index
@@ -1018,7 +1011,7 @@ const Min: Builder = function(
 ): ValSpec {
   let vs = buildize(this, spec)
 
-  vs.b = (val: any, update: Update, state: State) => {
+  vs.b.push(function Min(val: any, update: Update, state: State) {
     let vlen = valueLen(val)
 
     if (min <= vlen) {
@@ -1030,7 +1023,7 @@ const Min: Builder = function(
       makeErr(val, state,
         `Value "$VALUE" for path "$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`)
     return false
-  }
+  })
 
   return vs
 }
@@ -1043,7 +1036,7 @@ const Max: Builder = function(
 ): ValSpec {
   let vs = buildize(this, spec)
 
-  vs.b = (val: any, update: Update, state: State) => {
+  vs.b.push(function Max(val: any, update: Update, state: State) {
     let vlen = valueLen(val)
 
     if (vlen <= max) {
@@ -1055,7 +1048,7 @@ const Max: Builder = function(
       makeErr(val, state,
         `Value "$VALUE" for path "$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`)
     return false
-  }
+  })
 
   return vs
 }
@@ -1068,7 +1061,7 @@ const Above: Builder = function(
 ): ValSpec {
   let vs = buildize(this, spec)
 
-  vs.b = (val: any, update: Update, state: State) => {
+  vs.b.push(function Above(val: any, update: Update, state: State) {
     let vlen = valueLen(val)
 
     if (above < vlen) {
@@ -1080,7 +1073,7 @@ const Above: Builder = function(
       makeErr(val, state,
         `Value "$VALUE" for path "$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`)
     return false
-  }
+  })
 
   return vs
 }
@@ -1093,7 +1086,7 @@ const Below: Builder = function(
 ): ValSpec {
   let vs = buildize(this, spec)
 
-  vs.b = (val: any, update: Update, state: State) => {
+  vs.b.push(function Below(val: any, update: Update, state: State) {
     let vlen = valueLen(val)
 
     if (vlen < below) {
@@ -1105,7 +1098,7 @@ const Below: Builder = function(
       makeErr(val, state,
         `Value "$VALUE" for path "$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`)
     return false
-  }
+  })
 
   return vs
 }

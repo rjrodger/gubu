@@ -766,7 +766,7 @@ Validation failed for path "y" with value "Y" because the value is not of type n
         const Between = function (inopts, spec) {
             let vs = buildize(this || spec);
             let range = rangeCheck(inopts);
-            vs.b = (val, update, state) => {
+            vs.b.push((val, update, state) => {
                 // Don't run any more checks after this.
                 update.done = true;
                 if ('number' === typeof (val) && range[0] < val && val < range[1]) {
@@ -779,7 +779,7 @@ Validation failed for path "y" with value "Y" because the value is not of type n
                     ];
                     return false;
                 }
-            };
+            });
             return vs;
         };
         const g0 = Gubu({ a: [Between([10, 20])] });
@@ -1141,7 +1141,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                     }
                 ]
             });
-            expect(JSON.stringify(e)).toEqual("{\"gubu\":true,\"name\":\"GubuError\",\"code\":\"shape\",\"err\":[{\"n\":{\"$\":{\"v$\":\"" + package_json_1.default.version + "\"},\"t\":\"nan\",\"v\":null,\"r\":false,\"o\":false,\"k\":\"\",\"d\":0,\"u\":{},\"a\":[]},\"s\":1,\"p\":\"\",\"w\":\"type\",\"m\":1050,\"t\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}],\"message\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}");
+            expect(JSON.stringify(e)).toEqual("{\"gubu\":true,\"name\":\"GubuError\",\"code\":\"shape\",\"err\":[{\"n\":{\"$\":{\"v$\":\"" + package_json_1.default.version + "\"},\"t\":\"nan\",\"v\":null,\"r\":false,\"o\":false,\"k\":\"\",\"d\":0,\"u\":{},\"a\":[],\"b\":[]},\"s\":1,\"p\":\"\",\"w\":\"type\",\"m\":1050,\"t\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}],\"message\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}");
         }
     });
     test('spec-basic', () => {
@@ -1182,6 +1182,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             t: 'object',
             u: {},
             a: [],
+            b: [],
             v: {
                 a: {
                     $: {
@@ -1195,6 +1196,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                     t: 'number',
                     u: {},
                     a: [],
+                    b: [],
                     v: 1,
                 },
             },
@@ -1236,6 +1238,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             t: 'object',
             u: {},
             a: [],
+            b: [],
             v: {
                 a: {
                     $: {
@@ -1249,6 +1252,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                     t: 'array',
                     u: {},
                     a: [],
+                    b: [],
                     v: {
                         0: {
                             $: {
@@ -1262,6 +1266,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                             t: 'number',
                             u: {},
                             a: [],
+                            b: [],
                             v: 1,
                         },
                     },
@@ -1309,6 +1314,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             k: '',
             d: -1,
             a: [],
+            b: [],
             u: {}
         });
         expect(G$({ v: Number })).toMatchObject({
@@ -1320,6 +1326,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             k: '',
             d: -1,
             a: [],
+            b: [],
             u: {}
         });
         expect(G$({ v: BigInt(11) })).toMatchObject({
@@ -1331,6 +1338,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             k: '',
             d: -1,
             a: [],
+            b: [],
             u: {}
         });
         let s0 = Symbol('foo');
@@ -1343,6 +1351,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             k: '',
             d: -1,
             a: [],
+            b: [],
             u: {}
         });
         // NOTE: special case for plain functions.
@@ -1357,6 +1366,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             k: '',
             d: -1,
             a: [],
+            b: [],
             u: {}
         });
     });

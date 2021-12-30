@@ -17,8 +17,8 @@ declare type ValSpec = {
     r: boolean;
     o: boolean;
     k: string;
-    u?: any;
-    b?: Validate;
+    u: Record<string, any>;
+    b: Validate[];
     a: Validate[];
 };
 declare type Builder = (opts?: any, ...specs: any[]) => ValSpec & {

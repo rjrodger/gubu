@@ -72,6 +72,7 @@ function norm(spec) {
             vs.r = !!vs.r;
             vs.o = !!vs.o;
             vs.d = null == vs.d ? -1 : vs.d;
+            vs.b = vs.b || [];
             vs.a = vs.a || [];
             vs.u = vs.u || {};
             if ((_b = vs.u.list) === null || _b === void 0 ? void 0 : _b.specs) {
@@ -138,10 +139,12 @@ function norm(spec) {
         k: '',
         d: -1,
         u,
-        a: []
+        a: [],
+        b: [],
     };
     if (b) {
-        vs.b = b;
+        // vs.b = b
+        vs.b.push(b);
     }
     return vs;
 }
@@ -254,30 +257,32 @@ function make(inspec, inopts) {
                 let pass = true;
                 let done = false;
                 // update can set t
-                if (vs.b) {
-                    let update = handleValidate(vs.b, sval, {
-                        dI, nI, sI, pI, cN,
-                        key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-                        pass, oval
-                    });
-                    pass = update.pass;
-                    if (undefined !== update.val) {
-                        sval = src[key] = update.val;
-                        stype = typeof (sval);
+                if (0 < vs.b.length) {
+                    for (let bI = 0; bI < vs.b.length; bI++) {
+                        let update = handleValidate(vs.b[bI], sval, {
+                            dI, nI, sI, pI, cN,
+                            key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+                            pass, oval
+                        });
+                        pass = update.pass;
+                        if (undefined !== update.val) {
+                            sval = src[key] = update.val;
+                            stype = typeof (sval);
+                        }
+                        if (undefined !== update.node) {
+                            vs = update.node;
+                        }
+                        if (undefined !== update.type) {
+                            t = update.type;
+                        }
+                        if (undefined !== update.done) {
+                            done = update.done;
+                        }
+                        nI = undefined === update.nI ? nI : update.nI;
+                        sI = undefined === update.sI ? sI : update.sI;
+                        pI = undefined === update.pI ? pI : update.pI;
+                        cN = undefined === update.cN ? cN : update.cN;
                     }
-                    if (undefined !== update.node) {
-                        vs = update.node;
-                    }
-                    if (undefined !== update.type) {
-                        t = update.type;
-                    }
-                    if (undefined !== update.done) {
-                        done = update.done;
-                    }
-                    nI = undefined === update.nI ? nI : update.nI;
-                    sI = undefined === update.sI ? sI : update.sI;
-                    pI = undefined === update.pI ? pI : update.pI;
-                    cN = undefined === update.cN ? cN : update.cN;
                 }
                 // console.log('KEY2', key, pass, done, sval, vs.a)
                 if (!done) {
@@ -504,7 +509,7 @@ const All = function (...specs) {
     vs.t = 'list';
     let shapes = specs.map(s => Gubu(s));
     vs.u.list = specs;
-    vs.b = (val, update, state) => {
+    vs.b.push(function All(val, update, state) {
         let pass = true;
         let err = [];
         for (let shape of shapes) {
@@ -523,7 +528,7 @@ const All = function (...specs) {
             ];
         }
         return pass;
-    };
+    });
     return vs;
 };
 exports.All = All;
@@ -533,7 +538,7 @@ const Some = function (...specs) {
     vs.t = 'list';
     let shapes = specs.map(s => Gubu(s));
     vs.u.list = specs;
-    vs.b = (val, update, state) => {
+    vs.b.push(function Some(val, update, state) {
         let pass = false;
         let err = [];
         for (let shape of shapes) {
@@ -555,7 +560,7 @@ const Some = function (...specs) {
             ];
         }
         return pass;
-    };
+    });
     return vs;
 };
 exports.Some = Some;
@@ -565,7 +570,7 @@ const One = function (...specs) {
     vs.t = 'list';
     let shapes = specs.map(s => Gubu(s));
     vs.u.list = specs;
-    vs.b = (val, update, state) => {
+    vs.b.push(function One(val, update, state) {
         let passN = 0;
         let err = [];
         for (let shape of shapes) {
@@ -584,13 +589,13 @@ const One = function (...specs) {
             ];
         }
         return true;
-    };
+    });
     return vs;
 };
 exports.One = One;
 const Exact = function (...vals) {
     let vs = buildize();
-    vs.b = (val, update, state) => {
+    vs.b.push(function Exact(val, update, state) {
         for (let i = 0; i < vals.length; i++) {
             if (val === vals[i]) {
                 return true;
@@ -600,13 +605,13 @@ const Exact = function (...vals) {
             makeErr(val, state, `Value "$VALUE" for path "$PATH" must be exactly one of: ` +
                 `${vals.map(v => stringify(v)).join(', ')}.`);
         return false;
-    };
+    });
     return vs;
 };
 exports.Exact = Exact;
 const Before = function (validate, spec) {
     let vs = buildize(this, spec);
-    vs.b = validate;
+    vs.b.push(validate);
     return vs;
 };
 exports.Before = Before;
@@ -619,7 +624,7 @@ const After = function (validate, spec) {
 exports.After = After;
 const Closed = function (spec) {
     let vs = buildize(this, spec);
-    vs.b = (val, update, state) => {
+    vs.b.push(function Closed(val, update, state) {
         if (null != val && 'object' === typeof (val)) {
             let vkeys = Object.keys(val);
             let allowed = vs.v;
@@ -646,7 +651,7 @@ const Closed = function (spec) {
             return 0 === update.err.length;
         }
         return true;
-    };
+    });
     return vs;
 };
 exports.Closed = Closed;
@@ -655,11 +660,11 @@ const Define = function (inopts, spec) {
     let opts = 'object' === typeof inopts ? inopts || {} : {};
     let name = 'string' === typeof inopts ? inopts : opts.name;
     if (null != name && '' != name) {
-        vs.b = (_val, _update, state) => {
+        vs.b.push(function Define(_val, _update, state) {
             let ref = state.ctx.ref = state.ctx.ref || {};
             ref[name] = state.node;
             return true;
-        };
+        });
     }
     return vs;
 };
@@ -671,7 +676,7 @@ const Refer = function (inopts, spec) {
     // Fill should be false (the default) if used recursively, to prevent loops.
     let fill = !!opts.fill;
     if (null != name && '' != name) {
-        vs.b = (val, update, state) => {
+        vs.b.push(function Refer(val, update, state) {
             if (undefined !== val || fill) {
                 let ref = state.ctx.ref = state.ctx.ref || {};
                 if (undefined !== ref[name]) {
@@ -684,7 +689,7 @@ const Refer = function (inopts, spec) {
             }
             // TODO: option to fail if ref not found?
             return true;
-        };
+        });
     }
     return vs;
 };
@@ -696,34 +701,23 @@ const Rename = function (inopts, spec) {
     let keep = 'boolean' === typeof opts.keep ? opts.keep : undefined;
     let claim = Array.isArray(opts.claim) ? opts.claim : [];
     if (null != name && '' != name) {
-        vs.b = (val, update, state) => {
-            // console.log('B', val)
+        // If there is a claim, grab the value so that validations
+        // can be applied to it.
+        let vsb = (val, update, state) => {
             if (undefined === val) {
                 for (let cn of claim) {
                     if (undefined !== state.src[cn]) {
                         update.val = state.src[name] = state.src[cn];
                         delete state.src[cn];
-                        // done = true
                     }
                 }
             }
             return true;
         };
+        Object.defineProperty(vsb, 'name', { value: 'Rename:' + name });
+        vs.b.push(vsb);
         let vsa = (val, _update, state) => {
-            // console.log('RENAME', state.key, name, val)
-            let done = false;
-            // if (undefined === state.oval) {
-            //   for (let cn of claim) {
-            //     if (undefined !== state.src[cn]) {
-            //       state.src[name] = state.src[cn]
-            //       delete state.src[cn]
-            //       done = true
-            //     }
-            //   }
-            // }
-            if (!done) {
-                state.src[name] = val;
-            }
+            state.src[name] = val;
             if (!keep &&
                 // Arrays require explicit deletion as validation is based on index
                 // and will be lost.
@@ -746,7 +740,7 @@ function valueLen(val) {
 }
 const Min = function (min, spec) {
     let vs = buildize(this, spec);
-    vs.b = (val, update, state) => {
+    vs.b.push(function Min(val, update, state) {
         let vlen = valueLen(val);
         if (min <= vlen) {
             return true;
@@ -755,13 +749,13 @@ const Min = function (min, spec) {
         update.err =
             makeErr(val, state, `Value "$VALUE" for path "$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
         return false;
-    };
+    });
     return vs;
 };
 exports.Min = Min;
 const Max = function (max, spec) {
     let vs = buildize(this, spec);
-    vs.b = (val, update, state) => {
+    vs.b.push(function Max(val, update, state) {
         let vlen = valueLen(val);
         if (vlen <= max) {
             return true;
@@ -770,13 +764,13 @@ const Max = function (max, spec) {
         update.err =
             makeErr(val, state, `Value "$VALUE" for path "$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`);
         return false;
-    };
+    });
     return vs;
 };
 exports.Max = Max;
 const Above = function (above, spec) {
     let vs = buildize(this, spec);
-    vs.b = (val, update, state) => {
+    vs.b.push(function Above(val, update, state) {
         let vlen = valueLen(val);
         if (above < vlen) {
             return true;
@@ -785,13 +779,13 @@ const Above = function (above, spec) {
         update.err =
             makeErr(val, state, `Value "$VALUE" for path "$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`);
         return false;
-    };
+    });
     return vs;
 };
 exports.Above = Above;
 const Below = function (below, spec) {
     let vs = buildize(this, spec);
-    vs.b = (val, update, state) => {
+    vs.b.push(function Below(val, update, state) {
         let vlen = valueLen(val);
         if (vlen < below) {
             return true;
@@ -800,7 +794,7 @@ const Below = function (below, spec) {
         update.err =
             makeErr(val, state, `Value "$VALUE" for path "$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`);
         return false;
-    };
+    });
     return vs;
 };
 exports.Below = Below;
