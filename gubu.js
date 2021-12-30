@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNever = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Never = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Before = exports.Any = exports.All = exports.After = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
+exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
 // TODO: function deref?
 // TODO: BigInt spec roundtrip test
 // TODO: Min,Max - builder, depends on value
@@ -222,10 +222,8 @@ function make(inspec, inopts) {
                     if (undefined !== n) {
                         tvs = n = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (nv[akey] = norm(n));
                     }
-                    //if (undefined === n) {
                     else {
                         n = nv[0];
-                        // key = '' + 0
                         akey = '' + 0;
                         // No first element defining element type spec, so use Any.
                         if (undefined === n) {
@@ -678,19 +676,90 @@ const Rename = function (inopts, spec) {
     return vs;
 };
 exports.Rename = Rename;
+function valueLen(val) {
+    return 'number' === typeof (val) ? val :
+        'number' === typeof (val === null || val === void 0 ? void 0 : val.length) ? val.length :
+            null != val && 'object' === typeof (val) ? Object.keys(val).length :
+                NaN;
+}
+const Min = function (min, spec) {
+    let vs = buildize(this, spec);
+    vs.b = (val, update, state) => {
+        let vlen = valueLen(val);
+        if (min <= vlen) {
+            return true;
+        }
+        let errmsgpart = 'number' === typeof (val) ? '' : 'length ';
+        update.err =
+            makeErr(val, state, `Value "$VALUE" for path "$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
+        return false;
+    };
+    return vs;
+};
+exports.Min = Min;
+const Max = function (max, spec) {
+    let vs = buildize(this, spec);
+    vs.b = (val, update, state) => {
+        let vlen = valueLen(val);
+        if (vlen <= max) {
+            return true;
+        }
+        let errmsgpart = 'number' === typeof (val) ? '' : 'length ';
+        update.err =
+            makeErr(val, state, `Value "$VALUE" for path "$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`);
+        return false;
+    };
+    return vs;
+};
+exports.Max = Max;
+const Above = function (above, spec) {
+    let vs = buildize(this, spec);
+    vs.b = (val, update, state) => {
+        let vlen = valueLen(val);
+        if (above < vlen) {
+            return true;
+        }
+        let errmsgpart = 'number' === typeof (val) ? 'be' : 'have length';
+        update.err =
+            makeErr(val, state, `Value "$VALUE" for path "$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`);
+        return false;
+    };
+    return vs;
+};
+exports.Above = Above;
+const Below = function (below, spec) {
+    let vs = buildize(this, spec);
+    vs.b = (val, update, state) => {
+        let vlen = valueLen(val);
+        if (vlen < below) {
+            return true;
+        }
+        let errmsgpart = 'number' === typeof (val) ? 'be' : 'have length';
+        update.err =
+            makeErr(val, state, `Value "$VALUE" for path "$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`);
+        return false;
+    };
+    return vs;
+};
+exports.Below = Below;
 function buildize(invs0, invs1) {
     let invs = undefined === invs0 ? invs1 : invs0.window === invs0 ? invs1 : invs0;
     let vs = norm(invs);
     return Object.assign(vs, {
+        Above,
         After,
         All,
         Any,
         Before,
+        Below,
         Closed,
         Define,
         Empty,
         Exact,
+        Max,
+        Min,
         Never,
+        One,
         Optional,
         Refer,
         Rename,
@@ -769,14 +838,18 @@ function clone(x) {
 const G$ = (spec) => norm({ ...spec, $: { gubu$: true } });
 exports.G$ = G$;
 Object.assign(make, {
+    Above,
     After,
     All,
     Any,
     Before,
+    Below,
     Closed,
     Define,
     Empty,
     Exact,
+    Max,
+    Min,
     Never,
     One,
     Optional,
@@ -791,6 +864,8 @@ Object.assign(make, {
 Object.defineProperty(make, 'name', { value: 'gubu' });
 const Gubu = make;
 exports.Gubu = Gubu;
+const GAbove = Above;
+exports.GAbove = GAbove;
 const GAfter = After;
 exports.GAfter = GAfter;
 const GAll = All;
@@ -799,6 +874,8 @@ const GAny = Any;
 exports.GAny = GAny;
 const GBefore = Before;
 exports.GBefore = GBefore;
+const GBelow = Below;
+exports.GBelow = GBelow;
 const GClosed = Closed;
 exports.GClosed = GClosed;
 const GDefine = Define;
@@ -807,6 +884,10 @@ const GEmpty = Empty;
 exports.GEmpty = GEmpty;
 const GExact = Exact;
 exports.GExact = GExact;
+const GMax = Max;
+exports.GMax = GMax;
+const GMin = Min;
+exports.GMin = GMin;
 const GNever = Never;
 exports.GNever = GNever;
 const GOne = One;

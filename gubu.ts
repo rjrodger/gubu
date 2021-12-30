@@ -366,10 +366,8 @@ function make(inspec?: any, inopts?: Options): GubuShape {
             tvs = n = GUBU$ === n.$?.gubu$ ? n : (nv[akey] = norm(n))
           }
 
-          //if (undefined === n) {
           else {
             n = nv[0]
-            // key = '' + 0
             akey = '' + 0
 
             // No first element defining element type spec, so use Any.
@@ -930,20 +928,134 @@ const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpe
 }
 
 
+function valueLen(val: any) {
+  return 'number' === typeof (val) ? val :
+    'number' === typeof (val?.length) ? val.length :
+      null != val && 'object' === typeof (val) ? Object.keys(val).length :
+        NaN
+}
+
+
+const Min: Builder = function(
+  this: ValSpec,
+  min: number | string,
+  spec?: any
+): ValSpec {
+  let vs = buildize(this, spec)
+
+  vs.b = (val: any, update: Update, state: State) => {
+    let vlen = valueLen(val)
+
+    if (min <= vlen) {
+      return true
+    }
+
+    let errmsgpart = 'number' === typeof (val) ? '' : 'length '
+    update.err =
+      makeErr(val, state,
+        `Value "$VALUE" for path "$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`)
+    return false
+  }
+
+  return vs
+}
+
+
+const Max: Builder = function(
+  this: ValSpec,
+  max: number | string,
+  spec?: any
+): ValSpec {
+  let vs = buildize(this, spec)
+
+  vs.b = (val: any, update: Update, state: State) => {
+    let vlen = valueLen(val)
+
+    if (vlen <= max) {
+      return true
+    }
+
+    let errmsgpart = 'number' === typeof (val) ? '' : 'length '
+    update.err =
+      makeErr(val, state,
+        `Value "$VALUE" for path "$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`)
+    return false
+  }
+
+  return vs
+}
+
+
+const Above: Builder = function(
+  this: ValSpec,
+  above: number | string,
+  spec?: any
+): ValSpec {
+  let vs = buildize(this, spec)
+
+  vs.b = (val: any, update: Update, state: State) => {
+    let vlen = valueLen(val)
+
+    if (above < vlen) {
+      return true
+    }
+
+    let errmsgpart = 'number' === typeof (val) ? 'be' : 'have length'
+    update.err =
+      makeErr(val, state,
+        `Value "$VALUE" for path "$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`)
+    return false
+  }
+
+  return vs
+}
+
+
+const Below: Builder = function(
+  this: ValSpec,
+  below: number | string,
+  spec?: any
+): ValSpec {
+  let vs = buildize(this, spec)
+
+  vs.b = (val: any, update: Update, state: State) => {
+    let vlen = valueLen(val)
+
+    if (vlen < below) {
+      return true
+    }
+
+    let errmsgpart = 'number' === typeof (val) ? 'be' : 'have length'
+    update.err =
+      makeErr(val, state,
+        `Value "$VALUE" for path "$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`)
+    return false
+  }
+
+  return vs
+}
+
+
+
 function buildize(invs0?: any, invs1?: any): ValSpec {
   let invs = undefined === invs0 ? invs1 : invs0.window === invs0 ? invs1 : invs0
 
   let vs = norm(invs)
   return Object.assign(vs, {
+    Above,
     After,
     All,
     Any,
     Before,
+    Below,
     Closed,
     Define,
     Empty,
     Exact,
+    Max,
+    Min,
     Never,
+    One,
     Optional,
     Refer,
     Rename,
@@ -1068,14 +1180,18 @@ const G$ = (spec: any): ValSpec => norm({ ...spec, $: { gubu$: true } })
 
 
 Object.assign(make, {
+  Above,
   After,
   All,
   Any,
   Before,
+  Below,
   Closed,
   Define,
   Empty,
   Exact,
+  Max,
+  Min,
   Never,
   One,
   Optional,
@@ -1096,14 +1212,18 @@ type Gubu = typeof make & {
   buildize: typeof buildize,
   makeErr: typeof makeErr,
 
+  Above: typeof Above
   After: typeof After
   All: typeof All
   Any: typeof Any
   Before: typeof Before
+  Below: typeof Below
   Closed: typeof Closed
   Define: typeof Define
   Empty: typeof Empty
   Exact: typeof Exact
+  Max: typeof Max
+  Min: typeof Min
   Never: typeof Never
   One: typeof One
   Optional: typeof Optional
@@ -1119,14 +1239,18 @@ Object.defineProperty(make, 'name', { value: 'gubu' })
 const Gubu: Gubu = (make as Gubu)
 
 
+const GAbove = Above
 const GAfter = After
 const GAll = All
 const GAny = Any
 const GBefore = Before
+const GBelow = Below
 const GClosed = Closed
 const GDefine = Define
 const GEmpty = Empty
 const GExact = Exact
+const GMax = Max
+const GMin = Min
 const GNever = Never
 const GOne = One
 const GOptional = Optional
@@ -1152,14 +1276,18 @@ export {
   buildize,
   makeErr,
 
+  Above,
   After,
   All,
   Any,
   Before,
+  Below,
   Closed,
   Define,
   Empty,
   Exact,
+  Max,
+  Min,
   Never,
   One,
   Optional,
@@ -1168,14 +1296,18 @@ export {
   Required,
   Some,
 
+  GAbove,
   GAfter,
   GAll,
   GAny,
   GBefore,
+  GBelow,
   GClosed,
   GDefine,
   GEmpty,
   GExact,
+  GMax,
+  GMin,
   GNever,
   GOne,
   GOptional,
