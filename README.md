@@ -81,6 +81,8 @@ exception listing all (not just the first!) the validity errors.
  
 
 ## Common Use Cases
+<sub><sup>[top](#top)</sup></sub>
+
 
 ### Option defaults and validation
 
