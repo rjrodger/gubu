@@ -160,7 +160,7 @@ function make(inspec, inopts) {
         const nodes = [spec, -1];
         const srcs = [root, -1];
         const path = []; // Key path to current node.
-        const parent = [];
+        // const parent: any[] = []
         let dI = -1; // Node depth.
         let nI = 2; // Next free slot in nodes.
         let pI = 0; // Pointer to current node.
@@ -209,6 +209,7 @@ function make(inspec, inopts) {
                 if ('number' === stype && isNaN(sval)) {
                     stype = 'nan';
                 }
+                // TODO: fix var names
                 let nv = node.v;
                 let n = nv[key];
                 let tvs = null;
@@ -220,7 +221,8 @@ function make(inspec, inopts) {
                     let akey = '' + (parseInt(key) + 1);
                     n = nv[akey];
                     if (undefined !== n) {
-                        tvs = n = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (nv[akey] = norm(n));
+                        // tvs = n = GUBU$ === n.$?.gubu$ ? n : (nv[akey] = norm(n))
+                        tvs = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (nv[akey] = norm(n));
                     }
                     else {
                         n = nv[0];
@@ -241,7 +243,8 @@ function make(inspec, inopts) {
                 let t = tvs.t;
                 let terr = [];
                 let vs = tvs;
-                vs = GUBU$ === ((_d = vs.$) === null || _d === void 0 ? void 0 : _d.gubu$) ? vs : (tvs = norm(vs));
+                // vs = GUBU$ === vs.$?.gubu$ ? vs : (tvs = norm(vs))
+                vs = GUBU$ === ((_d = vs.$) === null || _d === void 0 ? void 0 : _d.gubu$) ? vs : norm(vs);
                 // let t = vs.t
                 let pass = true;
                 let done = false;
@@ -286,7 +289,7 @@ function make(inspec, inopts) {
                         else if (null != src[key] || !vs.o) {
                             nodes[nI] = vs;
                             srcs[nI] = src[key] = (src[key] || {});
-                            parent[nI] = src[key];
+                            // parent[nI] = src[key]
                             nI++;
                             cN++;
                         }
@@ -343,10 +346,10 @@ function make(inspec, inopts) {
                         key, node: vs, src, nodes, srcs, path, terr, err, ctx,
                         pass
                     });
-                    pass = update.pass;
-                    if (undefined !== update.val) {
-                        sval = src[key] = update.val;
-                    }
+                    // pass = update.pass
+                    // if (undefined !== update.val) {
+                    //   sval = src[key] = update.val
+                    // }
                     nI = undefined === update.nI ? nI : update.nI;
                     sI = undefined === update.sI ? sI : update.sI;
                     pI = undefined === update.pI ? pI : update.pI;

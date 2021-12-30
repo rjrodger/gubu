@@ -288,7 +288,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
     const nodes: (ValSpec | number)[] = [spec, -1]
     const srcs: any[] = [root, -1]
     const path: string[] = [] // Key path to current node.
-    const parent: any[] = []
+    // const parent: any[] = []
 
     let dI: number = -1  // Node depth.
     let nI: number = 2  // Next free slot in nodes.
@@ -349,6 +349,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           stype = 'nan'
         }
 
+        // TODO: fix var names
         let nv = node.v
         let n = nv[key]
         let tvs: ValSpec = null as any
@@ -363,7 +364,8 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           n = nv[akey]
 
           if (undefined !== n) {
-            tvs = n = GUBU$ === n.$?.gubu$ ? n : (nv[akey] = norm(n))
+            // tvs = n = GUBU$ === n.$?.gubu$ ? n : (nv[akey] = norm(n))
+            tvs = GUBU$ === n.$?.gubu$ ? n : (nv[akey] = norm(n))
           }
 
           else {
@@ -390,7 +392,8 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         let terr: any[] = []
         let vs = tvs
 
-        vs = GUBU$ === vs.$?.gubu$ ? vs : (tvs = norm(vs))
+        // vs = GUBU$ === vs.$?.gubu$ ? vs : (tvs = norm(vs))
+        vs = GUBU$ === vs.$?.gubu$ ? vs : norm(vs)
 
         // let t = vs.t
         let pass = true
@@ -444,7 +447,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
             else if (null != src[key] || !vs.o) {
               nodes[nI] = vs
               srcs[nI] = src[key] = (src[key] || {})
-              parent[nI] = src[key]
+              // parent[nI] = src[key]
               nI++
               cN++
             }
@@ -508,10 +511,10 @@ function make(inspec?: any, inopts?: Options): GubuShape {
             key, node: vs, src, nodes, srcs, path, terr, err, ctx,
             pass
           })
-          pass = update.pass
-          if (undefined !== update.val) {
-            sval = src[key] = update.val
-          }
+          // pass = update.pass
+          // if (undefined !== update.val) {
+          //   sval = src[key] = update.val
+          // }
           nI = undefined === update.nI ? nI : update.nI
           sI = undefined === update.sI ? sI : update.sI
           pI = undefined === update.pI ? pI : update.pI

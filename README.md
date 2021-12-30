@@ -48,9 +48,9 @@ nicely with an easy-to-read syntax.
 
 
 
-<a href="#top" style="font-size:small; float:right; margin-top:1em;">[top]</a>
-## Quick Example
 
+## Quick Example
+[top](#top)
 
 ```js
 
