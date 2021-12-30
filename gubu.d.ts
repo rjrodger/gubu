@@ -19,7 +19,7 @@ declare type ValSpec = {
     k: string;
     u?: any;
     b?: Validate;
-    a?: Validate;
+    a: Validate[];
 };
 declare type Builder = (opts?: any, ...specs: any[]) => ValSpec & {
     [name: string]: Builder | any;

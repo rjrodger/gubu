@@ -1,11 +1,6 @@
 /* Copyright (c) 2021 Richard Rodger and other contributors, MIT License */
 
 
-// TODO: Default to explicitly set default (allows you to force value to bad type such as undefined)
-// TODO: function deref?
-// TODO: BigInt spec roundtrip test
-
-
 
 import { inspect } from 'util'
 import Pkg from './package.json'
@@ -54,7 +49,7 @@ type ValSpec = {
   k: string    // Key of this node.
   u?: any      // Custom meta data
   b?: Validate // Custom before validation function.
-  a?: Validate // Custom after vaidation function.
+  a: Validate[] // Custom after vaidation function.
 }
 
 
@@ -190,6 +185,8 @@ function norm(spec?: any): ValSpec {
       vs.o = !!vs.o
       vs.d = null == vs.d ? -1 : vs.d
 
+      vs.a = vs.a || []
+
       vs.u = vs.u || {}
       if (vs.u.list?.specs) {
         vs.u.list.specs = [...vs.u.list.specs]
@@ -265,6 +262,7 @@ function norm(spec?: any): ValSpec {
     k: '',
     d: -1,
     u,
+    a: []
   }
 
   if (b) {
@@ -524,16 +522,22 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         }
 
         // console.log('KEY3', key, pass, done, vs.a)
-        if (vs.a) {
-          let update = handleValidate(vs.a, sval, {
-            dI, nI, sI, pI, cN,
-            key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-            pass, oval
-          })
-          nI = undefined === update.nI ? nI : update.nI
-          sI = undefined === update.sI ? sI : update.sI
-          pI = undefined === update.pI ? pI : update.pI
-          cN = undefined === update.cN ? cN : update.cN
+        if (0 < vs.a.length) {
+          for (let aI = 0; aI < vs.a.length; aI++) {
+            let update = handleValidate(vs.a[aI], sval, {
+              dI, nI, sI, pI, cN,
+              key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+              pass, oval
+            })
+            if (undefined !== update.val) {
+              sval = src[key] = update.val
+              stype = typeof (sval)
+            }
+            nI = undefined === update.nI ? nI : update.nI
+            sI = undefined === update.sI ? sI : update.sI
+            pI = undefined === update.pI ? pI : update.pI
+            cN = undefined === update.cN ? cN : update.cN
+          }
         }
 
         if (0 < terr.length) {
@@ -839,7 +843,8 @@ const Before: Builder = function(this: ValSpec, validate: Validate, spec?: any) 
 
 const After: Builder = function(this: ValSpec, validate: Validate, spec?: any) {
   let vs = buildize(this, spec)
-  vs.a = validate
+  // vs.a = validate
+  vs.a.push(validate)
   return vs
 }
 
@@ -960,7 +965,8 @@ const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpe
       }
       return true
     }
-    vs.a = (val: any, _update: Update, state: State) => {
+
+    let vsa = (val: any, _update: Update, state: State) => {
       // console.log('RENAME', state.key, name, val)
 
       let done = false
@@ -989,7 +995,8 @@ const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpe
 
       return true
     }
-    Object.defineProperty(vs.a, 'name', { value: 'Rename:' + name })
+    Object.defineProperty(vsa, 'name', { value: 'Rename:' + name })
+    vs.a.push(vsa)
   }
 
   return vs

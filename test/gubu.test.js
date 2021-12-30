@@ -572,6 +572,11 @@ Validation failed for path "a" with value "" because the value is required.`);
         expect(g3(11)).toEqual(11);
         expect(() => g3(9)).toThrow('Validation failed for path "" with value "9" because check "custom: (v) => v > 10" failed.');
     });
+    test('after-multiple', () => {
+        let g0 = Gubu(After(function v1(v, u) { u.val = v + 1; return true; }, After(function v2(v, u) { u.val = v * 2; return true; }, Number)));
+        expect(g0(1)).toEqual(3);
+        expect(g0(2)).toEqual(5);
+    });
     test('builder-before-after-basic', () => {
         let g0 = Gubu(Before((val, _update) => {
             val.b = 1 + val.a;
@@ -1136,7 +1141,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                     }
                 ]
             });
-            expect(JSON.stringify(e)).toEqual("{\"gubu\":true,\"name\":\"GubuError\",\"code\":\"shape\",\"err\":[{\"n\":{\"$\":{\"v$\":\"" + package_json_1.default.version + "\"},\"t\":\"nan\",\"v\":null,\"r\":false,\"o\":false,\"k\":\"\",\"d\":0,\"u\":{}},\"s\":1,\"p\":\"\",\"w\":\"type\",\"m\":1050,\"t\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}],\"message\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}");
+            expect(JSON.stringify(e)).toEqual("{\"gubu\":true,\"name\":\"GubuError\",\"code\":\"shape\",\"err\":[{\"n\":{\"$\":{\"v$\":\"" + package_json_1.default.version + "\"},\"t\":\"nan\",\"v\":null,\"r\":false,\"o\":false,\"k\":\"\",\"d\":0,\"u\":{},\"a\":[]},\"s\":1,\"p\":\"\",\"w\":\"type\",\"m\":1050,\"t\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}],\"message\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}");
         }
     });
     test('spec-basic', () => {
@@ -1160,26 +1165,23 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
     test('spec-roundtrip', () => {
         let m0 = { a: 1 };
         let g0 = Gubu(m0);
-        // console.log('m0 A', m0)
         expect(m0).toEqual({ a: 1 });
         expect(g0({ a: 2 })).toEqual({ a: 2 });
         expect(m0).toEqual({ a: 1 });
-        // console.log('m0 B', m0)
         let s0 = g0.spec();
         expect(m0).toEqual({ a: 1 });
-        // console.log('m0 C', m0)
         let s0s = {
             $: {
                 gubu$: true,
                 v$: package_json_1.default.version,
             },
-            // d: -1,
             d: 0,
             k: '',
             r: false,
             o: false,
             t: 'object',
             u: {},
+            a: [],
             v: {
                 a: {
                     $: {
@@ -1192,6 +1194,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                     o: false,
                     t: 'number',
                     u: {},
+                    a: [],
                     v: 1,
                 },
             },
@@ -1232,6 +1235,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             o: false,
             t: 'object',
             u: {},
+            a: [],
             v: {
                 a: {
                     $: {
@@ -1244,6 +1248,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                     o: false,
                     t: 'array',
                     u: {},
+                    a: [],
                     v: {
                         0: {
                             $: {
@@ -1256,6 +1261,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                             o: false,
                             t: 'number',
                             u: {},
+                            a: [],
                             v: 1,
                         },
                     },
@@ -1302,6 +1308,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             o: false,
             k: '',
             d: -1,
+            a: [],
             u: {}
         });
         expect(G$({ v: Number })).toMatchObject({
@@ -1312,6 +1319,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             o: false,
             k: '',
             d: -1,
+            a: [],
             u: {}
         });
         expect(G$({ v: BigInt(11) })).toMatchObject({
@@ -1322,6 +1330,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             o: false,
             k: '',
             d: -1,
+            a: [],
             u: {}
         });
         let s0 = Symbol('foo');
@@ -1333,6 +1342,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             o: false,
             k: '',
             d: -1,
+            a: [],
             u: {}
         });
         // NOTE: special case for plain functions.
@@ -1346,6 +1356,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             o: false,
             k: '',
             d: -1,
+            a: [],
             u: {}
         });
     });

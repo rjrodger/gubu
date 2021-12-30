@@ -5,9 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.Args = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
-// TODO: Default to explicitly set default (allows you to force value to bad type such as undefined)
-// TODO: function deref?
-// TODO: BigInt spec roundtrip test
 const util_1 = require("util");
 const package_json_1 = __importDefault(require("./package.json"));
 const GUBU$ = Symbol.for('gubu$');
@@ -75,6 +72,7 @@ function norm(spec) {
             vs.r = !!vs.r;
             vs.o = !!vs.o;
             vs.d = null == vs.d ? -1 : vs.d;
+            vs.a = vs.a || [];
             vs.u = vs.u || {};
             if ((_b = vs.u.list) === null || _b === void 0 ? void 0 : _b.specs) {
                 vs.u.list.specs = [...vs.u.list.specs];
@@ -140,6 +138,7 @@ function norm(spec) {
         k: '',
         d: -1,
         u,
+        a: []
     };
     if (b) {
         vs.b = b;
@@ -354,16 +353,22 @@ function make(inspec, inopts) {
                     }
                 }
                 // console.log('KEY3', key, pass, done, vs.a)
-                if (vs.a) {
-                    let update = handleValidate(vs.a, sval, {
-                        dI, nI, sI, pI, cN,
-                        key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-                        pass, oval
-                    });
-                    nI = undefined === update.nI ? nI : update.nI;
-                    sI = undefined === update.sI ? sI : update.sI;
-                    pI = undefined === update.pI ? pI : update.pI;
-                    cN = undefined === update.cN ? cN : update.cN;
+                if (0 < vs.a.length) {
+                    for (let aI = 0; aI < vs.a.length; aI++) {
+                        let update = handleValidate(vs.a[aI], sval, {
+                            dI, nI, sI, pI, cN,
+                            key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+                            pass, oval
+                        });
+                        if (undefined !== update.val) {
+                            sval = src[key] = update.val;
+                            stype = typeof (sval);
+                        }
+                        nI = undefined === update.nI ? nI : update.nI;
+                        sI = undefined === update.sI ? sI : update.sI;
+                        pI = undefined === update.pI ? pI : update.pI;
+                        cN = undefined === update.cN ? cN : update.cN;
+                    }
                 }
                 if (0 < terr.length) {
                     err.push(...terr);
@@ -607,7 +612,8 @@ const Before = function (validate, spec) {
 exports.Before = Before;
 const After = function (validate, spec) {
     let vs = buildize(this, spec);
-    vs.a = validate;
+    // vs.a = validate
+    vs.a.push(validate);
     return vs;
 };
 exports.After = After;
@@ -703,7 +709,7 @@ const Rename = function (inopts, spec) {
             }
             return true;
         };
-        vs.a = (val, _update, state) => {
+        let vsa = (val, _update, state) => {
             // console.log('RENAME', state.key, name, val)
             let done = false;
             // if (undefined === state.oval) {
@@ -726,7 +732,8 @@ const Rename = function (inopts, spec) {
             }
             return true;
         };
-        Object.defineProperty(vs.a, 'name', { value: 'Rename:' + name });
+        Object.defineProperty(vsa, 'name', { value: 'Rename:' + name });
+        vs.a.push(vsa);
     }
     return vs;
 };
