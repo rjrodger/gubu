@@ -182,6 +182,38 @@ describe('gubu', () => {
   })
 
 
+  test('scalar-optional-basic', () => {
+    let g0 = Gubu(1)
+    expect(g0(2)).toEqual(2)
+    expect(g0()).toEqual(1)
+    expect(() => g0('x')).toThrow('Validation failed for path "" with value "x" because the value is not of type number.')
+  })
+
+  test('object-optional-basic', () => {
+    let g0 = Gubu({ x: 1 })
+    expect(g0({ x: 2 })).toEqual({ x: 2 })
+    expect(g0({})).toEqual({ x: 1 })
+    expect(g0()).toEqual({ x: 1 })
+    expect(() => g0('x')).toThrow('Validation failed for path "" with value "x" because the value is not of type object.')
+  })
+
+  test('array-optional-basic', () => {
+    let g0 = Gubu([1])
+    expect(g0([11, 22])).toEqual([11, 22])
+    expect(g0([11])).toEqual([11])
+    expect(g0([])).toEqual([])
+    expect(g0()).toEqual([])
+    expect(() => g0('x')).toThrow('Validation failed for path "" with value "x" because the value is not of type array.')
+  })
+
+
+  test('error-basic', () => {
+    let g0 = Gubu(Number)
+    expect(g0(1)).toEqual(1)
+    expect(() => g0('x')).toThrow('Validation failed for path "" with value "x" because the value is not of type number.')
+  })
+
+
   test('shapes-basic', () => {
     let tmp: any = {}
 

@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.Args = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
-// TODO: spread shape for all object values
+// TODO: spread shape for all object values:  Value(vshape)
 // TODO: validator on completion of object or array
 const util_1 = require("util");
 const package_json_1 = __importDefault(require("./package.json"));
@@ -155,243 +155,299 @@ function make(inspec, inopts) {
     const opts = null == inopts ? {} : inopts;
     opts.name =
         null == opts.name ? 'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name;
-    let top = { '': inspec };
+    // let top = { '': inspec }
+    let top = inspec;
     let spec = norm(top); // Tree of validation nodes.
     let gubuShape = function GubuShape(inroot, inctx) {
-        var _a, _b, _c, _d;
         const ctx = inctx || {};
-        const root = { '': inroot };
+        // const root: any = { '': inroot }
+        // const root: any = inroot
+        let root = inroot;
         const nodes = [spec, -1];
         const srcs = [root, -1];
+        const parents = [];
         const path = []; // Key path to current node.
-        // const parent: any[] = []
-        let dI = -1; // Node depth.
+        let dI = 0; // Node depth.
         let nI = 2; // Next free slot in nodes.
         let pI = 0; // Pointer to current node.
         let sI = -1; // Pointer to next sibling node.
-        let cN = 0; // Number of children of current node.
+        // let cN: number = 0  // Number of children of current node.
         let err = []; // Errors collected.
         let node; // Current node.  
         let src; // Current source value to validate.
+        let parent;
         // Iterative depth-first traversal of the spec.
-        while (true) {
+        next_node: while (true) {
+            // printStacks(nodes, srcs, parents)
             // Dereference the back pointers to ancestor siblings.
             // Only objects|arrays can be nodes, so a number is a back pointer.
             // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
             node = nodes[pI];
+            // console.log('NODE-0', 'd=' + dI, pI, nI, +node, node.k, node.t)
             while (+node) {
                 pI = node;
                 node = nodes[pI];
                 dI--;
             }
-            sI = pI + 1;
-            src = srcs[pI];
+            // console.log('NODE-1', 'd=' + dI, pI, nI, +node, node?.k, node?.t)
             if (!node) {
                 break;
             }
-            if (-1 < dI) {
-                path[dI] = node.k;
-            }
-            dI++;
-            cN = 0;
+            sI = pI + 1;
+            src = srcs[pI];
+            parent = parents[pI];
+            // if (-1 < dI) {
+            //   path[dI] = node.k
+            // }
+            // dI++
+            // cN = 0
             pI = nI;
-            let keys = null == node.v ? [] : Object.keys(node.v);
-            // Treat array indexes as keys.
-            // Inject missing indexes if present in ValSpec.
-            if ('array' === node.t) {
-                // Ignore non-index properties in arrays.
-                // Use a custom validator for this case.
-                keys = Object.keys(src).filter(k => (!isNaN(+k) && -1 < +k));
-                // console.log('AKEYS', keys)
-                for (let vk in node.v) {
-                    let vko = '' + (parseInt(vk) - 1);
-                    // console.log('VK', vk, vko)
-                    // if ('0' !== vk && !keys.includes(vk)) {
-                    if ('0' !== vk && !keys.includes(vko)) {
-                        keys.splice(parseInt(vk) - 1, 0, vko);
-                    }
-                }
-                // console.log('AKEYS2', keys)
+            // let keys = null == node.v ? [] : Object.keys(node.v)
+            // // Treat array indexes as keys.
+            // // Inject missing indexes if present in ValSpec.
+            // if ('array' === node.t) {
+            //   // Ignore non-index properties in arrays.
+            //   // Use a custom validator for this case.
+            //   keys = Object.keys(src).filter(k => (!isNaN(+k) && -1 < +k))
+            //   // console.log('AKEYS', keys)
+            //   for (let vk in node.v) {
+            //     let vko = '' + (parseInt(vk) - 1)
+            //     // console.log('VK', vk, vko)
+            //     // if ('0' !== vk && !keys.includes(vk)) {
+            //     if ('0' !== vk && !keys.includes(vko)) {
+            //       keys.splice(parseInt(vk) - 1, 0, vko)
+            //     }
+            //   }
+            //   // console.log('AKEYS2', keys)
+            // }
+            // for (let key of keys) {
+            let key = node.k;
+            let t = node.t;
+            let sval = src;
+            path[dI] = key;
+            // console.log('PATH', dI, pathstr(path, dI), 'KEY', key)
+            //   let sval = src[key]
+            let oval = sval;
+            let stype = typeof (sval);
+            if ('number' === stype && isNaN(sval)) {
+                stype = 'nan';
             }
-            for (let key of keys) {
-                // console.log('KEY', key, keys)
-                path[dI] = key;
-                let sval = src[key];
-                let oval = sval;
-                let stype = typeof (sval);
-                if ('number' === stype && isNaN(sval)) {
-                    stype = 'nan';
+            //   // TODO: fix var names
+            //   let nv = node.v
+            //   let n = nv[key]
+            // let tvs: ValSpec = null as any
+            //   // NOTE: special case handling for arrays keys.
+            //   if ('array' === node.t) {
+            //     // First array entry is general type spec.
+            //     // Following are special case elements offset by +1.
+            //     // Use these if src has no corresponding element.
+            //     let akey = '' + (parseInt(key) + 1)
+            //     n = nv[akey]
+            //     if (undefined !== n) {
+            //       tvs = GUBU$ === n.$?.gubu$ ? n : (nv[akey] = norm(n))
+            //     }
+            //     else {
+            //       n = nv[0]
+            //       akey = '' + 0
+            //       // No first element defining element type spec, so use Any.
+            //       if (undefined === n) {
+            //         n = nv[0] = Any()
+            //       }
+            //       tvs = null === n ? norm(n) :
+            //         GUBU$ === n.$?.gubu$ ? n : (nv[akey] = norm(n))
+            //     }
+            //   }
+            //   else {
+            //     tvs = (null != n && GUBU$ === n.$?.gubu$) ? n : (nv[key] = norm(n))
+            //   }
+            //   tvs.k = key
+            //   tvs.d = dI
+            //   let t = tvs.t
+            let terr = [];
+            //   let vs = tvs
+            let vs = node;
+            //   // vs = GUBU$ === vs.$?.gubu$ ? vs : (tvs = norm(vs))
+            //   vs = GUBU$ === vs.$?.gubu$ ? vs : norm(vs)
+            //   // let t = vs.t
+            let pass = true;
+            let done = false;
+            // update can set t
+            if (0 < vs.b.length) {
+                for (let bI = 0; bI < vs.b.length; bI++) {
+                    let update = handleValidate(vs.b[bI], sval, {
+                        dI, nI, sI, pI,
+                        key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+                        pass, oval
+                    });
+                    pass = update.pass;
+                    if (undefined !== update.val) {
+                        sval = src[key] = update.val;
+                        stype = typeof (sval);
+                    }
+                    if (undefined !== update.node) {
+                        vs = update.node;
+                    }
+                    if (undefined !== update.type) {
+                        t = update.type;
+                    }
+                    if (undefined !== update.done) {
+                        done = update.done;
+                    }
+                    nI = undefined === update.nI ? nI : update.nI;
+                    sI = undefined === update.sI ? sI : update.sI;
+                    pI = undefined === update.pI ? pI : update.pI;
+                    // cN = undefined === update.cN ? cN : update.cN
                 }
-                // TODO: fix var names
-                let nv = node.v;
-                let n = nv[key];
-                let tvs = null;
-                // NOTE: special case handling for arrays keys.
-                if ('array' === node.t) {
-                    // First array entry is general type spec.
-                    // Following are special case elements offset by +1.
-                    // Use these if src has no corresponding element.
-                    let akey = '' + (parseInt(key) + 1);
-                    n = nv[akey];
-                    if (undefined !== n) {
-                        tvs = GUBU$ === ((_a = n.$) === null || _a === void 0 ? void 0 : _a.gubu$) ? n : (nv[akey] = norm(n));
+            }
+            //   // console.log('KEY2', key, pass, done, sval, vs.a)
+            if (!done) {
+                if ('never' === t) {
+                    terr.push(makeErrImpl('never', sval, path, dI, vs, 1070));
+                }
+                else if ('object' === t) {
+                    if (vs.r && undefined === sval) {
+                        terr.push(makeErrImpl('required', sval, path, dI, vs, 1010));
                     }
-                    else {
-                        n = nv[0];
-                        akey = '' + 0;
-                        // No first element defining element type spec, so use Any.
-                        if (undefined === n) {
-                            n = nv[0] = Any();
+                    else if (undefined !== sval && (null === sval ||
+                        'object' !== stype ||
+                        Array.isArray(sval))) {
+                        terr.push(makeErrImpl('type', sval, path, dI, vs, 1020));
+                    }
+                    // else if (null != src[key] || !vs.o) {
+                    else if (!vs.o) {
+                        sval = sval || {};
+                        if (undefined === root) {
+                            root = sval;
                         }
-                        tvs = null === n ? norm(n) :
-                            GUBU$ === ((_b = n.$) === null || _b === void 0 ? void 0 : _b.gubu$) ? n : (nv[akey] = norm(n));
+                        // console.log('OBJ', sI, sval)
+                        let vkeys = Object.keys(vs.v);
+                        if (0 < vkeys.length) {
+                            pI = nI;
+                            for (let k of vkeys) {
+                                let nvs = norm(vs.v[k]);
+                                nvs.k = k;
+                                nodes[nI] = nvs;
+                                srcs[nI] = sval[k];
+                                parents[nI] = sval;
+                                nI++;
+                            }
+                            dI++;
+                            nodes[nI++] = sI;
+                            continue next_node;
+                        }
                     }
                 }
-                else {
-                    tvs = (null != n && GUBU$ === ((_c = n.$) === null || _c === void 0 ? void 0 : _c.gubu$)) ? n : (nv[key] = norm(n));
-                }
-                tvs.k = key;
-                tvs.d = dI;
-                let t = tvs.t;
-                let terr = [];
-                let vs = tvs;
-                // vs = GUBU$ === vs.$?.gubu$ ? vs : (tvs = norm(vs))
-                vs = GUBU$ === ((_d = vs.$) === null || _d === void 0 ? void 0 : _d.gubu$) ? vs : norm(vs);
-                // let t = vs.t
-                let pass = true;
-                let done = false;
-                // update can set t
-                if (0 < vs.b.length) {
-                    for (let bI = 0; bI < vs.b.length; bI++) {
-                        let update = handleValidate(vs.b[bI], sval, {
-                            dI, nI, sI, pI, cN,
-                            key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-                            pass, oval
-                        });
-                        pass = update.pass;
-                        if (undefined !== update.val) {
-                            sval = src[key] = update.val;
-                            stype = typeof (sval);
+                else if ('array' === t) {
+                    if (vs.r && undefined === sval) {
+                        terr.push(makeErrImpl('required', sval, path, dI, vs, 1030));
+                    }
+                    else if (undefined !== sval && !Array.isArray(sval)) {
+                        terr.push(makeErrImpl('type', sval, path, dI, vs, 1040));
+                    }
+                    else if (!vs.o) {
+                        sval = sval || [];
+                        if (undefined === root) {
+                            root = sval;
                         }
-                        if (undefined !== update.node) {
-                            vs = update.node;
+                        // console.log('ARR', sI, sval)
+                        if (0 < sval.length) {
+                            pI = nI;
+                            let nvs = undefined === vs.v[0] ? Any() : vs.v[0] = norm(vs.v[0]);
+                            for (let i = 0; i < sval.length; i++) {
+                                // TODO: avoid need for this
+                                nodes[nI] = { ...nvs, k: '' + i };
+                                srcs[nI] = sval[i];
+                                parents[nI] = sval;
+                                nI++;
+                            }
+                            dI++;
+                            nodes[nI++] = sI;
+                            continue next_node;
                         }
-                        if (undefined !== update.type) {
-                            t = update.type;
-                        }
-                        if (undefined !== update.done) {
-                            done = update.done;
-                        }
-                        nI = undefined === update.nI ? nI : update.nI;
-                        sI = undefined === update.sI ? sI : update.sI;
-                        pI = undefined === update.pI ? pI : update.pI;
-                        cN = undefined === update.cN ? cN : update.cN;
                     }
                 }
-                // console.log('KEY2', key, pass, done, sval, vs.a)
-                if (!done) {
-                    if ('never' === t) {
-                        terr.push(makeErrImpl('never', sval, path, dI, vs, 1070));
-                    }
-                    else if ('object' === t) {
-                        if (vs.r && undefined === sval) {
-                            terr.push(makeErrImpl('required', sval, path, dI, vs, 1010));
-                        }
-                        else if (undefined !== sval && (null === sval ||
-                            'object' !== stype ||
-                            Array.isArray(sval))) {
-                            terr.push(makeErrImpl('type', sval, path, dI, vs, 1020));
-                        }
-                        else if (null != src[key] || !vs.o) {
-                            nodes[nI] = vs;
-                            srcs[nI] = src[key] = (src[key] || {});
-                            // parent[nI] = src[key]
-                            nI++;
-                            cN++;
-                        }
-                    }
-                    else if ('array' === t) {
-                        if (vs.r && undefined === sval) {
-                            terr.push(makeErrImpl('required', sval, path, dI, vs, 1030));
-                        }
-                        else if (undefined !== sval && !Array.isArray(sval)) {
-                            terr.push(makeErrImpl('type', sval, path, dI, vs, 1040));
-                        }
-                        else if (null != src[key] || !vs.o) {
-                            nodes[nI] = vs;
-                            srcs[nI] = src[key] = (src[key] || []);
-                            nI++;
-                            cN++;
-                        }
-                    }
-                    // Invalid type.
-                    else if (!('any' === t ||
-                        'custom' === t ||
-                        'list' === t ||
-                        undefined === sval ||
-                        t === stype ||
-                        ('instance' === t && vs.u.i && sval instanceof vs.u.i) ||
-                        ('null' === t && null === sval))) {
-                        terr.push(makeErrImpl('type', sval, path, dI, vs, 1050));
+                // Invalid type.
+                else if (!('any' === t ||
+                    'custom' === t ||
+                    'list' === t ||
+                    undefined === sval ||
+                    t === stype ||
+                    ('instance' === t && vs.u.i && sval instanceof vs.u.i) ||
+                    ('null' === t && null === sval))) {
+                    terr.push(makeErrImpl('type', sval, path, dI, vs, 1050));
+                    pass = false;
+                }
+                // Value itself, or default.
+                else if (undefined === sval) {
+                    // console.log('DEF')
+                    let parentKey = path[dI];
+                    if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
+                        terr.push(makeErrImpl('required', sval, path, dI, vs, 1060));
                         pass = false;
                     }
-                    // Value itself, or default.
-                    else if (undefined === sval) {
-                        // console.log('DEF')
-                        let parentKey = path[dI];
-                        if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
-                            terr.push(makeErrImpl('required', sval, path, dI, vs, 1060));
-                            pass = false;
-                        }
-                        else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
-                            // console.log('AAA', key, vs.v)
-                            sval = src[key] = vs.v;
-                        }
-                        // else {
-                        //   console.log('BBB')
-                        // }
-                    }
-                    // Empty strings fail even if string is optional. Use Empty to allow.
-                    else if ('string' === t && '' === sval) {
-                        if (vs.u.empty) {
-                            src[key] = sval;
-                        }
-                        else {
-                            terr.push(makeErrImpl('required', sval, path, dI, vs, 1080));
+                    else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
+                        // console.log('AAA', key, vs.v)
+                        // sval = src[key] = vs.v
+                        sval = vs.v;
+                        if (undefined === root) {
+                            root = sval;
                         }
                     }
+                    // else {
+                    //   console.log('BBB')
+                    // }
                 }
-                // console.log('KEY3', key, pass, done, vs.a)
-                if (0 < vs.a.length) {
-                    for (let aI = 0; aI < vs.a.length; aI++) {
-                        let update = handleValidate(vs.a[aI], sval, {
-                            dI, nI, sI, pI, cN,
-                            key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-                            pass, oval
-                        });
-                        if (undefined !== update.val) {
-                            sval = src[key] = update.val;
-                            stype = typeof (sval);
-                        }
-                        nI = undefined === update.nI ? nI : update.nI;
-                        sI = undefined === update.sI ? sI : update.sI;
-                        pI = undefined === update.pI ? pI : update.pI;
-                        cN = undefined === update.cN ? cN : update.cN;
+                // Empty strings fail even if string is optional. Use Empty to allow.
+                else if ('string' === t && '' === sval) {
+                    if (vs.u.empty) {
+                        // NG: set parent?
+                        // src[key] = sval
+                    }
+                    else {
+                        terr.push(makeErrImpl('required', sval, path, dI, vs, 1080));
                     }
                 }
-                if (0 < terr.length) {
-                    err.push(...terr);
-                }
             }
-            if (0 < cN) {
-                // Follow pointer back to next parent sibling.
-                nodes[nI++] = sI;
+            //   // console.log('KEY3', key, pass, done, vs.a)
+            //   if (0 < vs.a.length) {
+            //     for (let aI = 0; aI < vs.a.length; aI++) {
+            //       let update = handleValidate(vs.a[aI], sval, {
+            //         dI, nI, sI, pI, cN,
+            //         key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+            //         pass, oval
+            //       })
+            //       if (undefined !== update.val) {
+            //         sval = src[key] = update.val
+            //         stype = typeof (sval)
+            //       }
+            //       nI = undefined === update.nI ? nI : update.nI
+            //       sI = undefined === update.sI ? sI : update.sI
+            //       pI = undefined === update.pI ? pI : update.pI
+            //       cN = undefined === update.cN ? cN : update.cN
+            //     }
+            //   }
+            if (0 < terr.length) {
+                err.push(...terr);
             }
-            else {
-                // Next sibling.
-                pI = sI;
-                dI--;
+            // }
+            // console.log('END', key, parent, sval)
+            if (parent) {
+                parent[key] = sval;
             }
+            // else {
+            //   root = sval
+            // }
+            // if (0 < cN) {
+            //   // Follow pointer back to next parent sibling.
+            //   nodes[nI++] = sI
+            // }
+            // else {
+            //   // Next sibling.
+            //   pI = sI
+            //   dI--
+            // }
+            pI = sI;
+            // dI--
         }
         if (0 < err.length) {
             if (ctx.err) {
@@ -401,7 +457,8 @@ function make(inspec, inopts) {
                 throw new GubuError('shape', err, ctx);
             }
         }
-        return root[''];
+        // return root['']
+        return root;
     };
     // TODO: test Number, String, etc also in arrays
     gubuShape.spec = () => {
@@ -426,6 +483,11 @@ function make(inspec, inopts) {
     };
     gubuShape.gubu = GUBU;
     return gubuShape;
+}
+function printStacks(nodes, srcs, parents) {
+    for (let i = 0; i < nodes.length || i < srcs.length || i < parents.length; i++) {
+        console.log(i, '\t', isNaN(+nodes[i]) ? nodes[i].k + ':' + nodes[i].t : +nodes[i], '\t', srcs[i], '\t', parents[i]);
+    }
 }
 function handleValidate(vf, sval, state) {
     let update = { pass: true, done: false };

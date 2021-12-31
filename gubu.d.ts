@@ -33,7 +33,6 @@ declare type State = {
     nI: number;
     sI: number;
     pI: number;
-    cN: number;
     nodes: (ValSpec | number)[];
     srcs: any[];
     path: string[];

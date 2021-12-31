@@ -283,20 +283,37 @@ function J(x,s) {
 
 
 
-const print = Args(
-  // {bar:String,foo:Number,},
-  // {foo:Number,bar:String},
-  // {foo:Number,barx:'x'},
-  // {foo:Number,bar:String,zed:Boolean},
-  {foo:0,bar:0},
-  function print(args) {
-  console.log('PRINT')
-  console.dir(args, {depth:null})
-})
+// const print = Args(
+//   // {bar:String,foo:Number,},
+//   // {foo:Number,bar:String},
+//   // {foo:Number,barx:'x'},
+//   // {foo:Number,bar:String,zed:Boolean},
+//   {foo:0,bar:0},
+//   function print(args) {
+//   console.log('PRINT')
+//   console.dir(args, {depth:null})
+// })
 
-// print(2,'y')
-// print('y',2)
-// print(2,'y',true)
-print(11,22)
-print(11)
-print()
+// // print(2,'y')
+// // print('y',2)
+// // print(2,'y',true)
+// print(11,22)
+// print(11)
+// print()
+
+
+
+// let d0 = Gubu({a:{b:1,c:2},d:(v,u,s)=>(u.val=s.src.a.c,true)})
+// console.log(d0({a:{b:11,c:22}}))
+// console.log(d0({a:{b:11}}))
+
+// let d1 = Gubu(1)
+// console.log(d1(2))
+// console.log(d1())
+
+// let d2 = Gubu({a:{b:1,c:2},d:3})
+// console.log(d2({a:{b:11,c:22},d:33}))
+
+let d3 = Gubu({x:1})
+// console.log(d3({}))
+console.log(d3())
