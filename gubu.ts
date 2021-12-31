@@ -1,6 +1,8 @@
 /* Copyright (c) 2021 Richard Rodger and other contributors, MIT License */
 
 
+// TODO: spread shape for all object values
+// TODO: validator on completion of object or array
 
 import { inspect } from 'util'
 import Pkg from './package.json'
@@ -336,7 +338,9 @@ function make(inspec?: any, inopts?: Options): GubuShape {
       // Treat array indexes as keys.
       // Inject missing indexes if present in ValSpec.
       if ('array' === node.t) {
-        keys = Object.keys(src)
+        // Ignore non-index properties in arrays.
+        // Use a custom validator for this case.
+        keys = Object.keys(src).filter(k => (!isNaN(+k) && -1 < +k))
         // console.log('AKEYS', keys)
         for (let vk in node.v) {
           let vko = '' + (parseInt(vk) - 1)
@@ -1272,9 +1276,11 @@ Object.assign(make, {
   Rename,
   Required,
   Some,
+
   G$,
   buildize,
   makeErr,
+  Args,
 })
 
 
@@ -1284,6 +1290,7 @@ type Gubu = typeof make & {
   G$: typeof G$,
   buildize: typeof buildize,
   makeErr: typeof makeErr,
+  Args: typeof Args,
 
   Above: typeof Above
   After: typeof After
@@ -1312,32 +1319,76 @@ Object.defineProperty(make, 'name', { value: 'gubu' })
 const Gubu: Gubu = (make as Gubu)
 
 
+// TODO: claim not working
+function Args(spec: any, wrapped?: any) {
+  let restArg: any = undefined
+  let argsSpec: any =
+    Object.keys(spec)
+      .reduce((as: any[], name, index, keys) => {
+        if (name.startsWith('...') && index + 1 === keys.length) {
+          restArg = { name: name.substring(3), spec: spec[name] }
+        }
+        else {
+          let claim: any = (name.split(':')[1] || '').split(',').filter(c => '' !== c)
+          if (0 < claim.length) {
+            name = name.split(':')[0]
+          }
+          else {
+            claim = undefined
+          }
+          // console.log('NAME', name, claim)
+          as[index + 1] = Rename({ name, claim }, spec[name])
+        }
+        return as
+      }, [Never()])
 
-function Args(spec: any, wrapped: any) {
-  let argsShape =
-    // Gubu(Object.keys(spec)
-    //   .reduce((as: any[], name, index) =>
-    //     (as[index + 1] = Rename(name, spec[name]), as), [Never()]))
+  if (restArg) {
+    argsSpec[0] = After((v: any, _u: Update, s: State) => {
+      s.src[restArg.name] = (s.src[restArg.name] || [])
+      s.src[restArg.name].push(v)
+      return true
+    }, restArg.spec)
 
-    Gubu([
-      Never(),
-      // Rename('foo', 1),
-      // Rename('bar', 2)
-      // Rename({ name: 'foo' }, Optional(Number)),
-      Rename({ name: 'foo' }, 1),
-      Rename({ name: 'bar', claim: ['foo'] }, 2)
-    ])
+    // TODO: should use Complete
+    argsSpec = After((v: any, _u: Update, _s: State) => {
+      if (v) {
+        v[restArg.name] = (v[restArg.name] || [])
+      }
+      // console.log('QQQ', v)
+      return true
+    }, argsSpec)
+  }
+
+  // console.log('ASP', argsSpec)
+
+  let argsShape = Gubu(argsSpec)
+
+  // Gubu([
+  //   Never(),
+  //   // Rename('foo', 1),
+  //   // Rename('bar', 2)
+  //   // Rename({ name: 'foo' }, Optional(Number)),
+  //   Rename({ name: 'foo' }, 1),
+  //   Rename({ name: 'bar', claim: ['foo'] }, 2)
+  // ])
   // console.dir(argsShape.spec(), { depth: null })
 
-  let argsWrap = function(this: any) {
-    let inargs = Array.prototype.slice.call(arguments)
-    // console.log('INARGS', inargs)
-    let args = argsShape(inargs)
-    // console.log('ARGS', args)
-    return wrapped.call(this, args)
+  if (wrapped) {
+    let argsWrap = function(this: any) {
+      let inargs = Array.prototype.slice.call(arguments)
+      // console.log('INARGS', inargs)
+      let args = argsShape(inargs)
+      // console.log('ARGS', args)
+      return wrapped.call(this, args)
+    }
+
+    if (null != wrapped.name && '' != wrapped.name) {
+      Object.defineProperty(argsWrap, 'name', { value: wrapped.name + '_args' })
+    }
+    return argsWrap
   }
-  Object.defineProperty(argsWrap, 'name', { value: wrapped.name + '_args' })
-  return argsWrap
+
+  return argsShape
 }
 
 

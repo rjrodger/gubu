@@ -5,6 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.Args = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
+// TODO: spread shape for all object values
+// TODO: validator on completion of object or array
 const util_1 = require("util");
 const package_json_1 = __importDefault(require("./package.json"));
 const GUBU$ = Symbol.for('gubu$');
@@ -197,7 +199,9 @@ function make(inspec, inopts) {
             // Treat array indexes as keys.
             // Inject missing indexes if present in ValSpec.
             if ('array' === node.t) {
-                keys = Object.keys(src);
+                // Ignore non-index properties in arrays.
+                // Use a custom validator for this case.
+                keys = Object.keys(src).filter(k => (!isNaN(+k) && -1 < +k));
                 // console.log('AKEYS', keys)
                 for (let vk in node.v) {
                     let vko = '' + (parseInt(vk) - 1);
@@ -921,33 +925,72 @@ Object.assign(make, {
     G$,
     buildize,
     makeErr,
+    Args,
 });
 Object.defineProperty(make, 'name', { value: 'gubu' });
 const Gubu = make;
 exports.Gubu = Gubu;
+// TODO: claim not working
 function Args(spec, wrapped) {
-    let argsShape = 
-    // Gubu(Object.keys(spec)
-    //   .reduce((as: any[], name, index) =>
-    //     (as[index + 1] = Rename(name, spec[name]), as), [Never()]))
-    Gubu([
-        Never(),
-        // Rename('foo', 1),
-        // Rename('bar', 2)
-        // Rename({ name: 'foo' }, Optional(Number)),
-        Rename({ name: 'foo' }, 1),
-        Rename({ name: 'bar', claim: ['foo'] }, 2)
-    ]);
+    let restArg = undefined;
+    let argsSpec = Object.keys(spec)
+        .reduce((as, name, index, keys) => {
+        if (name.startsWith('...') && index + 1 === keys.length) {
+            restArg = { name: name.substring(3), spec: spec[name] };
+        }
+        else {
+            let claim = (name.split(':')[1] || '').split(',').filter(c => '' !== c);
+            if (0 < claim.length) {
+                name = name.split(':')[0];
+            }
+            else {
+                claim = undefined;
+            }
+            // console.log('NAME', name, claim)
+            as[index + 1] = Rename({ name, claim }, spec[name]);
+        }
+        return as;
+    }, [Never()]);
+    if (restArg) {
+        argsSpec[0] = After((v, _u, s) => {
+            s.src[restArg.name] = (s.src[restArg.name] || []);
+            s.src[restArg.name].push(v);
+            return true;
+        }, restArg.spec);
+        // TODO: should use Complete
+        argsSpec = After((v, _u, _s) => {
+            if (v) {
+                v[restArg.name] = (v[restArg.name] || []);
+            }
+            // console.log('QQQ', v)
+            return true;
+        }, argsSpec);
+    }
+    // console.log('ASP', argsSpec)
+    let argsShape = Gubu(argsSpec);
+    // Gubu([
+    //   Never(),
+    //   // Rename('foo', 1),
+    //   // Rename('bar', 2)
+    //   // Rename({ name: 'foo' }, Optional(Number)),
+    //   Rename({ name: 'foo' }, 1),
+    //   Rename({ name: 'bar', claim: ['foo'] }, 2)
+    // ])
     // console.dir(argsShape.spec(), { depth: null })
-    let argsWrap = function () {
-        let inargs = Array.prototype.slice.call(arguments);
-        // console.log('INARGS', inargs)
-        let args = argsShape(inargs);
-        // console.log('ARGS', args)
-        return wrapped.call(this, args);
-    };
-    Object.defineProperty(argsWrap, 'name', { value: wrapped.name + '_args' });
-    return argsWrap;
+    if (wrapped) {
+        let argsWrap = function () {
+            let inargs = Array.prototype.slice.call(arguments);
+            // console.log('INARGS', inargs)
+            let args = argsShape(inargs);
+            // console.log('ARGS', args)
+            return wrapped.call(this, args);
+        };
+        if (null != wrapped.name && '' != wrapped.name) {
+            Object.defineProperty(argsWrap, 'name', { value: wrapped.name + '_args' });
+        }
+        return argsWrap;
+    }
+    return argsShape;
 }
 exports.Args = Args;
 const GAbove = Above;

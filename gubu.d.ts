@@ -97,6 +97,7 @@ declare type Gubu = typeof make & {
     G$: typeof G$;
     buildize: typeof buildize;
     makeErr: typeof makeErr;
+    Args: typeof Args;
     Above: typeof Above;
     After: typeof After;
     All: typeof All;
@@ -118,7 +119,7 @@ declare type Gubu = typeof make & {
     Some: typeof Some;
 };
 declare const Gubu: Gubu;
-declare function Args(spec: any, wrapped: any): (this: any) => any;
+declare function Args(spec: any, wrapped?: any): GubuShape | ((this: any) => any);
 declare const GAbove: Builder;
 declare const GAfter: Builder;
 declare const GAll: Builder;
