@@ -178,6 +178,7 @@ function make(inspec, inopts) {
         let parent;
         // Iterative depth-first traversal of the spec.
         next_node: while (true) {
+            let isRoot = 0 === pI;
             // printStacks(nodes, srcs, parents)
             // Dereference the back pointers to ancestor siblings.
             // Only objects|arrays can be nodes, so a number is a back pointer.
@@ -279,9 +280,14 @@ function make(inspec, inopts) {
                         key, node: vs, src, nodes, srcs, path, terr, err, ctx,
                         pass, oval
                     });
+                    // console.log('UB', update, pI)
                     pass = update.pass;
                     if (undefined !== update.val) {
-                        sval = src[key] = update.val;
+                        sval = update.val;
+                        // if (undefined === root) {
+                        if (isRoot) {
+                            root = sval;
+                        }
                         stype = typeof (sval);
                     }
                     if (undefined !== update.node) {
@@ -316,7 +322,8 @@ function make(inspec, inopts) {
                     // else if (null != src[key] || !vs.o) {
                     else if (!vs.o) {
                         sval = sval || {};
-                        if (undefined === root) {
+                        // if (undefined === root) {
+                        if (isRoot) {
                             root = sval;
                         }
                         // console.log('OBJ', sI, sval)
@@ -346,7 +353,8 @@ function make(inspec, inopts) {
                     }
                     else if (!vs.o) {
                         sval = sval || [];
-                        if (undefined === root) {
+                        // if (undefined === root) {
+                        if (isRoot) {
                             root = sval;
                         }
                         // console.log('ARR', sI, sval)
@@ -389,7 +397,8 @@ function make(inspec, inopts) {
                         // console.log('AAA', key, vs.v)
                         // sval = src[key] = vs.v
                         sval = vs.v;
-                        if (undefined === root) {
+                        //if (undefined === root) {
+                        if (isRoot) {
                             root = sval;
                         }
                     }
@@ -409,23 +418,26 @@ function make(inspec, inopts) {
                 }
             }
             //   // console.log('KEY3', key, pass, done, vs.a)
-            //   if (0 < vs.a.length) {
-            //     for (let aI = 0; aI < vs.a.length; aI++) {
-            //       let update = handleValidate(vs.a[aI], sval, {
-            //         dI, nI, sI, pI, cN,
-            //         key, node: vs, src, nodes, srcs, path, terr, err, ctx,
-            //         pass, oval
-            //       })
-            //       if (undefined !== update.val) {
-            //         sval = src[key] = update.val
-            //         stype = typeof (sval)
-            //       }
-            //       nI = undefined === update.nI ? nI : update.nI
-            //       sI = undefined === update.sI ? sI : update.sI
-            //       pI = undefined === update.pI ? pI : update.pI
-            //       cN = undefined === update.cN ? cN : update.cN
-            //     }
-            //   }
+            if (0 < vs.a.length) {
+                for (let aI = 0; aI < vs.a.length; aI++) {
+                    let update = handleValidate(vs.a[aI], sval, {
+                        dI, nI, sI, pI,
+                        key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+                        pass, oval
+                    });
+                    if (undefined !== update.val) {
+                        sval = update.val;
+                        //if (undefined === root) {
+                        if (isRoot) {
+                            root = sval;
+                        }
+                        stype = typeof (sval);
+                    }
+                    nI = undefined === update.nI ? nI : update.nI;
+                    sI = undefined === update.sI ? sI : update.sI;
+                    pI = undefined === update.pI ? pI : update.pI;
+                }
+            }
             if (0 < terr.length) {
                 err.push(...terr);
             }

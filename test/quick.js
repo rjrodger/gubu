@@ -314,6 +314,9 @@ function J(x,s) {
 // let d2 = Gubu({a:{b:1,c:2},d:3})
 // console.log(d2({a:{b:11,c:22},d:33}))
 
-let d3 = Gubu({x:1})
+// let d3 = Gubu({x:1})
 // console.log(d3({}))
-console.log(d3())
+// console.log(d3())
+
+
+console.log( Gubu((v, u) => (u.val = 1, true))(null) )
