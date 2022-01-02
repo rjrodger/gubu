@@ -14,6 +14,7 @@ const {
   Optional,
   Empty,
   Exact,
+  Never,
 } = require('../gubu')
 
 
@@ -320,4 +321,15 @@ function J(x,s) {
 
 
 // console.log( Gubu((v, u) => (u.val = 1, true))(null) )
-console.log( Gubu({a:{b:1}})({}) )
+// console.log( Gubu({a:{b:1}})({}) )
+
+// console.log(Gubu([Never(), 1, 'x'])([2,'y',true]))
+
+
+let g1 = Gubu([
+  Never(),
+  Rename('a', String),
+  Rename('b', 2),
+  Rename({ name: 'c', keep: false }, true)
+])
+console.log(g1(['x', 22]))

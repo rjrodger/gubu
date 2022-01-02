@@ -29,6 +29,7 @@ declare type State = {
     key: string;
     node: ValSpec;
     src: any;
+    parent: any;
     dI: number;
     nI: number;
     sI: number;

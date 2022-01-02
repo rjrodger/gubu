@@ -280,7 +280,7 @@ function make(inspec, inopts) {
                 for (let bI = 0; bI < vs.b.length; bI++) {
                     let update = handleValidate(vs.b[bI], sval, {
                         dI, nI, sI, pI,
-                        key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+                        key, node: vs, src, parent, nodes, srcs, path, terr, err, ctx,
                         pass, oval
                     });
                     // console.log('UB', update, pI)
@@ -359,6 +359,8 @@ function make(inspec, inopts) {
                         terr.push(makeErrImpl('type', sval, path, dI, vs, 1040));
                     }
                     else if (!vs.o) {
+                        // sval.mark0 = Math.random()
+                        // console.log('ARR0', sval, root)
                         sval = sval || [];
                         // if (undefined === root) {
                         if (isRoot) {
@@ -371,9 +373,9 @@ function make(inspec, inopts) {
                             pI = nI;
                             let nvs = undefined === vs.v[0] ? Any() : vs.v[0] = norm(vs.v[0]);
                             // Special elements
-                            let j = 0;
+                            let j = 1;
                             if (1 < vkeys.length) {
-                                for (j = 1; j < vkeys.length; j++) {
+                                for (; j < vkeys.length; j++) {
                                     let jvs = vs.v[j] = norm(vs.v[j]);
                                     // TODO: move to norm?
                                     jvs.k = '' + (j - 1);
@@ -384,7 +386,8 @@ function make(inspec, inopts) {
                                     nI++;
                                 }
                             }
-                            for (let i = j; i < sval.length; i++) {
+                            // console.log('ARR REST', j, sval)
+                            for (let i = j - 1; i < sval.length; i++) {
                                 // TODO: avoid need for this
                                 nodes[nI] = { ...nvs, k: '' + i };
                                 srcs[nI] = sval[i];
@@ -394,7 +397,7 @@ function make(inspec, inopts) {
                             dI++;
                             nodes[nI++] = sI;
                             nextSibling = false;
-                            // continue next_node
+                            // console.log('ARR DONE', sval)
                         }
                     }
                 }
@@ -447,7 +450,7 @@ function make(inspec, inopts) {
                 for (let aI = 0; aI < vs.a.length; aI++) {
                     let update = handleValidate(vs.a[aI], sval, {
                         dI, nI, sI, pI,
-                        key, node: vs, src, nodes, srcs, path, terr, err, ctx,
+                        key, node: vs, src, parent, nodes, srcs, path, terr, err, ctx,
                         pass, oval
                     });
                     if (undefined !== update.val) {
@@ -457,6 +460,9 @@ function make(inspec, inopts) {
                             root = sval;
                         }
                         stype = typeof (sval);
+                    }
+                    if (undefined !== update.done) {
+                        done = update.done;
                     }
                     nI = undefined === update.nI ? nI : update.nI;
                     sI = undefined === update.sI ? sI : update.sI;
@@ -468,7 +474,7 @@ function make(inspec, inopts) {
             }
             // }
             // console.log('END', parent, key, sval)
-            if (parent) {
+            if (parent && !done) {
                 parent[key] = sval;
                 // console.log('END2', parent)
             }
@@ -812,9 +818,13 @@ const Rename = function (inopts, spec) {
         let vsb = (val, update, state) => {
             if (undefined === val) {
                 for (let cn of claim) {
-                    if (undefined !== state.src[cn]) {
-                        update.val = state.src[name] = state.src[cn];
-                        delete state.src[cn];
+                    // if (undefined !== state.src[cn]) {
+                    //   update.val = state.src[name] = state.src[cn]
+                    //   delete state.src[cn]
+                    // }
+                    if (undefined !== state.parent[cn]) {
+                        update.val = state.parent[name] = state.parent[cn];
+                        delete state.parent[cn];
                     }
                 }
             }
@@ -822,13 +832,20 @@ const Rename = function (inopts, spec) {
         };
         Object.defineProperty(vsb, 'name', { value: 'Rename:' + name });
         vs.b.push(vsb);
-        let vsa = (val, _update, state) => {
-            state.src[name] = val;
+        let vsa = (val, update, state) => {
+            // state.src[name] = val
+            state.parent[name] = val;
+            // console.log('KEEP', name, state.key, opts, state.parent)
             if (!keep &&
                 // Arrays require explicit deletion as validation is based on index
                 // and will be lost.
-                !(Array.isArray(state.src) && false !== keep)) {
-                delete state.src[state.key];
+                // !(Array.isArray(state.src) && false !== keep)
+                !(Array.isArray(state.parent) && false !== keep)) {
+                // delete state.src[state.key]
+                delete state.parent[state.key];
+                // state.parent.mark1 = Math.random()
+                // console.log('DELETE', state.parent)
+                update.done = true;
             }
             return true;
         };
