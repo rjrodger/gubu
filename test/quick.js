@@ -319,4 +319,5 @@ function J(x,s) {
 // console.log(d3())
 
 
-console.log( Gubu((v, u) => (u.val = 1, true))(null) )
+// console.log( Gubu((v, u) => (u.val = 1, true))(null) )
+console.log( Gubu({a:{b:1}})({}) )

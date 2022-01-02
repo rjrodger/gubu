@@ -653,22 +653,38 @@ Validation failed for path "a" with value "" because the value is required.`);
             n: { o: 6 }
         });
     });
-    test('deep-array-basic', () => {
+    test('array-special', () => {
         let a0 = Gubu([1]);
-        // console.dir(a0.spec(), { depth: null })
         expect(a0()).toMatchObject([]);
         expect(a0([])).toMatchObject([]);
         expect(a0([11])).toMatchObject([11]);
         expect(a0([11, 22])).toMatchObject([11, 22]);
-        let a1 = Gubu([-1, 1, 2, 3]);
-        // console.dir(a1.spec(), { depth: null })
-        expect(a1()).toMatchObject([1, 2, 3]);
-        expect(a1([])).toMatchObject([1, 2, 3]);
-        expect(a1([11])).toMatchObject([11, 2, 3]);
-        expect(a1([11, 22])).toMatchObject([11, 22, 3]);
-        expect(a1([11, 22, 33])).toMatchObject([11, 22, 33]);
-        expect(a1([11, 22, 33, 44])).toMatchObject([11, 22, 33, 44]);
-        expect(a1([undefined, 22])).toMatchObject([1, 22, 3]);
+        let a1 = Gubu([String, Number]);
+        expect(() => a1()).toThrow('Validation failed for path "0" with value "" because the value is required.');
+        expect(() => a1([])).toThrow('Validation failed for path "0" with value "" because the value is required.');
+        expect(a1([1])).toMatchObject([1]);
+        expect(a1([1, 'x'])).toMatchObject([1, 'x']);
+        expect(a1([1, 'x', 'y'])).toMatchObject([1, 'x', 'y']);
+        expect(() => a1(['x'])).toThrow('Validation failed for path "0" with value "x" because the value is not of type number.');
+        expect(() => a1(['x', 1])).toThrow('Validation failed for path "0" with value "x" because the value is not of type number.');
+        expect(() => a1(['x', 'y'])).toThrow('Validation failed for path "0" with value "x" because the value is not of type number.');
+        let a2 = Gubu([String, 9]);
+        expect(a2()).toMatchObject([9]);
+        expect(a2([])).toMatchObject([9]);
+        expect(a2([1])).toMatchObject([1]);
+        expect(a2([1, 'x'])).toMatchObject([1, 'x']);
+        expect(a2([1, 'x', 'y'])).toMatchObject([1, 'x', 'y']);
+        expect(() => a2(['x'])).toThrow('Validation failed for path "0" with value "x" because the value is not of type number.');
+        expect(() => a2(['x', 1])).toThrow('Validation failed for path "0" with value "x" because the value is not of type number.');
+        expect(() => a2(['x', 'y'])).toThrow('Validation failed for path "0" with value "x" because the value is not of type number.');
+        let a3 = Gubu([-1, 1, 2, 3]);
+        expect(a3()).toMatchObject([1, 2, 3]);
+        expect(a3([])).toMatchObject([1, 2, 3]);
+        expect(a3([11])).toMatchObject([11, 2, 3]);
+        expect(a3([11, 22])).toMatchObject([11, 22, 3]);
+        expect(a3([11, 22, 33])).toMatchObject([11, 22, 33]);
+        expect(a3([11, 22, 33, 44])).toMatchObject([11, 22, 33, 44]);
+        expect(a3([undefined, 22])).toMatchObject([1, 22, 3]);
     });
     test('builder-required', () => {
         let g0 = Gubu({ a: Required({ x: 1 }) });

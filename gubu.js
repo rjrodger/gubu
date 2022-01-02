@@ -158,6 +158,8 @@ function make(inspec, inopts) {
     // let top = { '': inspec }
     let top = inspec;
     let spec = norm(top); // Tree of validation nodes.
+    // TODO: move to norm?
+    spec.d = 0;
     let gubuShape = function GubuShape(inroot, inctx) {
         const ctx = inctx || {};
         // const root: any = { '': inroot }
@@ -177,7 +179,7 @@ function make(inspec, inopts) {
         let src; // Current source value to validate.
         let parent;
         // Iterative depth-first traversal of the spec.
-        next_node: while (true) {
+        while (true) {
             let isRoot = 0 === pI;
             // printStacks(nodes, srcs, parents)
             // Dereference the back pointers to ancestor siblings.
@@ -203,6 +205,7 @@ function make(inspec, inopts) {
             // dI++
             // cN = 0
             pI = nI;
+            let nextSibling = true;
             // let keys = null == node.v ? [] : Object.keys(node.v)
             // // Treat array indexes as keys.
             // // Inject missing indexes if present in ValSpec.
@@ -311,6 +314,7 @@ function make(inspec, inopts) {
                     terr.push(makeErrImpl('never', sval, path, dI, vs, 1070));
                 }
                 else if ('object' === t) {
+                    // console.log('OBJ', vs)
                     if (vs.r && undefined === sval) {
                         terr.push(makeErrImpl('required', sval, path, dI, vs, 1010));
                     }
@@ -326,13 +330,15 @@ function make(inspec, inopts) {
                         if (isRoot) {
                             root = sval;
                         }
-                        // console.log('OBJ', sI, sval)
+                        // console.log('OBJ2', isRoot, sI, sval)
                         let vkeys = Object.keys(vs.v);
                         if (0 < vkeys.length) {
                             pI = nI;
                             for (let k of vkeys) {
                                 let nvs = norm(vs.v[k]);
+                                // TODO: move to norm?
                                 nvs.k = k;
+                                nvs.d = 1 + dI;
                                 nodes[nI] = nvs;
                                 srcs[nI] = sval[k];
                                 parents[nI] = sval;
@@ -340,7 +346,8 @@ function make(inspec, inopts) {
                             }
                             dI++;
                             nodes[nI++] = sI;
-                            continue next_node;
+                            nextSibling = false;
+                            // continue next_node
                         }
                     }
                 }
@@ -357,11 +364,27 @@ function make(inspec, inopts) {
                         if (isRoot) {
                             root = sval;
                         }
-                        // console.log('ARR', sI, sval)
-                        if (0 < sval.length) {
+                        // console.log('ARR', sI, sval, vs.v)
+                        let vkeys = Object.keys(vs.v).filter(k => !isNaN(+k));
+                        // console.log('VKEYS', vkeys)
+                        if (0 < sval.length || 1 < vkeys.length) {
                             pI = nI;
                             let nvs = undefined === vs.v[0] ? Any() : vs.v[0] = norm(vs.v[0]);
-                            for (let i = 0; i < sval.length; i++) {
+                            // Special elements
+                            let j = 0;
+                            if (1 < vkeys.length) {
+                                for (j = 1; j < vkeys.length; j++) {
+                                    let jvs = vs.v[j] = norm(vs.v[j]);
+                                    // TODO: move to norm?
+                                    jvs.k = '' + (j - 1);
+                                    jvs.d = 1 + dI;
+                                    nodes[nI] = { ...jvs, k: '' + (j - 1) };
+                                    srcs[nI] = sval[(j - 1)];
+                                    parents[nI] = sval;
+                                    nI++;
+                                }
+                            }
+                            for (let i = j; i < sval.length; i++) {
                                 // TODO: avoid need for this
                                 nodes[nI] = { ...nvs, k: '' + i };
                                 srcs[nI] = sval[i];
@@ -370,7 +393,8 @@ function make(inspec, inopts) {
                             }
                             dI++;
                             nodes[nI++] = sI;
-                            continue next_node;
+                            nextSibling = false;
+                            // continue next_node
                         }
                     }
                 }
@@ -387,9 +411,10 @@ function make(inspec, inopts) {
                 }
                 // Value itself, or default.
                 else if (undefined === sval) {
-                    // console.log('DEF')
                     let parentKey = path[dI];
-                    if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
+                    // console.log('DEF', parentKey, src, parent)
+                    // if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
+                    if (vs.r && ('undefined' !== t || !parent.hasOwnProperty(parentKey))) {
                         terr.push(makeErrImpl('required', sval, path, dI, vs, 1060));
                         pass = false;
                     }
@@ -442,9 +467,10 @@ function make(inspec, inopts) {
                 err.push(...terr);
             }
             // }
-            // console.log('END', key, parent, sval)
+            // console.log('END', parent, key, sval)
             if (parent) {
                 parent[key] = sval;
+                // console.log('END2', parent)
             }
             // else {
             //   root = sval
@@ -458,7 +484,9 @@ function make(inspec, inopts) {
             //   pI = sI
             //   dI--
             // }
-            pI = sI;
+            if (nextSibling) {
+                pI = sI;
+            }
             // dI--
         }
         if (0 < err.length) {
@@ -469,14 +497,14 @@ function make(inspec, inopts) {
                 throw new GubuError('shape', err, ctx);
             }
         }
-        // return root['']
+        // return root
         return root;
     };
     // TODO: test Number, String, etc also in arrays
     gubuShape.spec = () => {
         // Normalize spec, discard errors.
         gubuShape(undefined, { err: [] });
-        return JSON.parse(stringify(spec.v[''], (_key, val) => {
+        return JSON.parse(stringify(spec, (_key, val) => {
             if (GUBU$ === val) {
                 return true;
             }
