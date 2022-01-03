@@ -326,10 +326,13 @@ function J(x,s) {
 // console.log(Gubu([Never(), 1, 'x'])([2,'y',true]))
 
 
-let g1 = Gubu([
-  Never(),
-  Rename('a', String),
-  Rename('b', 2),
-  Rename({ name: 'c', keep: false }, true)
-])
-console.log(g1(['x', 22]))
+// let g1 = Gubu([
+//   Never(),
+//   Rename('a', String),
+//   Rename('b', 2),
+//   Rename({ name: 'c', keep: false }, true)
+// ])
+// console.log(g1(['x', 22]))
+
+
+console.dir(Gubu({a:1}).spec(), {depth:null})

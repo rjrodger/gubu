@@ -508,7 +508,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
             if (0 < vkeys.length) {
               pI = nI
               for (let k of vkeys) {
-                let nvs = norm(vs.v[k])
+                let nvs = vs.v[k] = norm(vs.v[k])
 
                 // TODO: move to norm?
                 nvs.k = k
@@ -553,6 +553,8 @@ function make(inspec?: any, inopts?: Options): GubuShape {
             if (0 < sval.length || 1 < vkeys.length) {
               pI = nI
               let nvs = undefined === vs.v[0] ? Any() : vs.v[0] = norm(vs.v[0])
+              nvs.k = '0'
+              nvs.d = 1 + dI
 
               // Special elements
               let j = 1
@@ -718,6 +720,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
   gubuShape.spec = () => {
     // Normalize spec, discard errors.
     gubuShape(undefined, { err: [] })
+    // gubuShape({ a: 2 }, { err: [] })
     return JSON.parse(stringify(spec, (_key: string, val: any) => {
       if (GUBU$ === val) {
         return true
@@ -1499,8 +1502,10 @@ function Args(spec: any, wrapped?: any) {
 
   if (restArg) {
     argsSpec[0] = After((v: any, _u: Update, s: State) => {
-      s.src[restArg.name] = (s.src[restArg.name] || [])
-      s.src[restArg.name].push(v)
+      s.parent[restArg.name] = (s.parent[restArg.name] || [])
+      s.parent[restArg.name].push(v)
+      // s.src[restArg.name] = (s.src[restArg.name] || [])
+      // s.src[restArg.name].push(v)
       return true
     }, restArg.spec)
 
