@@ -327,14 +327,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
 
     let s = new State(root, spec, ctx)
 
-
-    // const s_nodes: (Node | number)[] = [spec, -1]
-    // const s_srcs: any[] = [root, -1]
-    // const s_parents: any[] = []
-    // const s_path: string[] = [] // Key path to current node.
-
-    let err: any = []   // Errors collected.
-    let node: any       // Current node.  
+    // let s.node: any       // Current node.  
     let src: any        // Current source value to validate.
     let parent: any
 
@@ -347,19 +340,22 @@ function make(inspec?: any, inopts?: Options): GubuShape {
       // Dereference the back pointers to ancestor siblings.
       // Only objects|arrays can be nodes, so a number is a back pointer.
       // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
-      node = s.nodes[s.pI]
+      let nextNode = s.nodes[s.pI]
       // console.log('NODE-0', 'd=' + dI, pI, nI, +node, node.k, node.t)
 
-      while (+node) {
-        s.pI = node
-        node = s.nodes[s.pI]
+      while (+nextNode) {
+        s.pI = +nextNode
+        nextNode = s.nodes[s.pI]
         s.dI--
       }
 
       // console.log('NODE-1', 'd=' + dI, pI, nI, +node, node?.k, node?.t)
 
-      if (!node) {
+      if (!nextNode) {
         break
+      }
+      else {
+        s.node = (nextNode as Node)
       }
 
       s.sI = s.pI + 1
@@ -370,8 +366,8 @@ function make(inspec?: any, inopts?: Options): GubuShape {
 
       let nextSibling = true
 
-      let key = node.k
-      let t = node.t
+      let key = s.node.k
+      let t = s.node.t
       let sval = src
       s.path[s.dI] = key
       // console.log('PATH', dI, pathstr(path, dI), 'KEY', key)
@@ -383,7 +379,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
       }
 
       let terr: any[] = []
-      let vs = node
+      let vs = s.node
 
       let pass = true
       let done = false
@@ -392,7 +388,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         for (let bI = 0; bI < vs.b.length; bI++) {
           let update = handleValidate(vs.b[bI], sval, {
             dI: s.dI, nI: s.nI, sI: s.sI, pI: s.pI,
-            key, node: vs, val: src, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err, ctx,
+            key, node: vs, val: src, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
             pass, oval, parents: s.parents
           })
 
@@ -564,7 +560,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         for (let aI = 0; aI < vs.a.length; aI++) {
           let update = handleValidate(vs.a[aI], sval, {
             dI: s.dI, nI: s.nI, sI: s.sI, pI: s.pI,
-            key, node: vs, val: src, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err, ctx,
+            key, node: vs, val: src, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
             pass, oval, parents: s.parents
           })
           if (undefined !== update.val) {
@@ -584,7 +580,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
       }
 
       if (0 < terr.length) {
-        err.push(...terr)
+        s.err.push(...terr)
       }
 
       if (parent && !done) {
@@ -596,12 +592,12 @@ function make(inspec?: any, inopts?: Options): GubuShape {
       }
     }
 
-    if (0 < err.length) {
+    if (0 < s.err.length) {
       if (ctx.err) {
-        ctx.err.push(...err)
+        ctx.err.push(...s.err)
       }
       else {
-        throw new GubuError('shape', err, ctx)
+        throw new GubuError('shape', s.err, ctx)
       }
     }
 
