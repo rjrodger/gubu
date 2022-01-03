@@ -11,6 +11,25 @@ const util_1 = require("util");
 const package_json_1 = __importDefault(require("./package.json"));
 const GUBU$ = Symbol.for('gubu$');
 const GUBU = { gubu$: GUBU$, v$: package_json_1.default.version };
+// The current validation state.
+class State {
+    constructor(root, top, ctx) {
+        this.dI = 0; // Node depth.
+        this.nI = 2; // Next free slot in nodes.
+        this.pI = 0; // Pointer to current node.
+        this.sI = -1; // Pointer to next sibling node.
+        this.pass = true;
+        this.err = [];
+        this.terr = [];
+        this.srcs = [root, -1];
+        this.node = top;
+        this.nodes = [top, -1];
+        this.parents = [];
+        this.path = [];
+        this.key = top.k;
+        this.ctx = ctx;
+    }
+}
 class GubuError extends TypeError {
     constructor(code, err, ctx) {
         let message = err.map((e) => e.t).join('\n');
@@ -163,45 +182,42 @@ function make(inspec, inopts) {
     let gubuShape = function GubuShape(inroot, inctx) {
         const ctx = inctx || {};
         let root = inroot;
-        const nodes = [spec, -1];
-        const srcs = [root, -1];
-        const parents = [];
-        const path = []; // Key path to current node.
-        let dI = 0; // Node depth.
-        let nI = 2; // Next free slot in nodes.
-        let pI = 0; // Pointer to current node.
-        let sI = -1; // Pointer to next sibling node.
+        let s = new State(root, spec, ctx);
+        // const s_nodes: (Node | number)[] = [spec, -1]
+        // const s_srcs: any[] = [root, -1]
+        // const s_parents: any[] = []
+        // const s_path: string[] = [] // Key path to current node.
         let err = []; // Errors collected.
         let node; // Current node.  
         let src; // Current source value to validate.
         let parent;
         // Iterative depth-first traversal of the spec.
         while (true) {
-            let isRoot = 0 === pI;
+            let isRoot = 0 === s.pI;
             // printStacks(nodes, srcs, parents)
             // Dereference the back pointers to ancestor siblings.
             // Only objects|arrays can be nodes, so a number is a back pointer.
             // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
-            node = nodes[pI];
+            node = s.nodes[s.pI];
             // console.log('NODE-0', 'd=' + dI, pI, nI, +node, node.k, node.t)
             while (+node) {
-                pI = node;
-                node = nodes[pI];
-                dI--;
+                s.pI = node;
+                node = s.nodes[s.pI];
+                s.dI--;
             }
             // console.log('NODE-1', 'd=' + dI, pI, nI, +node, node?.k, node?.t)
             if (!node) {
                 break;
             }
-            sI = pI + 1;
-            src = srcs[pI];
-            parent = parents[pI];
-            pI = nI;
+            s.sI = s.pI + 1;
+            src = s.srcs[s.pI];
+            parent = s.parents[s.pI];
+            s.pI = s.nI;
             let nextSibling = true;
             let key = node.k;
             let t = node.t;
             let sval = src;
-            path[dI] = key;
+            s.path[s.dI] = key;
             // console.log('PATH', dI, pathstr(path, dI), 'KEY', key)
             let oval = sval;
             let stype = typeof (sval);
@@ -209,26 +225,19 @@ function make(inspec, inopts) {
                 stype = 'nan';
             }
             let terr = [];
-            //   let vs = tvs
             let vs = node;
-            //   // vs = GUBU$ === vs.$?.gubu$ ? vs : (tvs = norm(vs))
-            //   vs = GUBU$ === vs.$?.gubu$ ? vs : norm(vs)
-            //   // let t = vs.t
             let pass = true;
             let done = false;
-            // update can set t
             if (0 < vs.b.length) {
                 for (let bI = 0; bI < vs.b.length; bI++) {
                     let update = handleValidate(vs.b[bI], sval, {
-                        dI, nI, sI, pI,
-                        key, node: vs, val: src, parent, nodes, srcs, path, terr, err, ctx,
-                        pass, oval
+                        dI: s.dI, nI: s.nI, sI: s.sI, pI: s.pI,
+                        key, node: vs, val: src, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err, ctx,
+                        pass, oval, parents: s.parents
                     });
-                    // console.log('UB', update, pI)
                     pass = update.pass;
                     if (undefined !== update.val) {
                         sval = update.val;
-                        // if (undefined === root) {
                         if (isRoot) {
                             root = sval;
                         }
@@ -243,78 +252,67 @@ function make(inspec, inopts) {
                     if (undefined !== update.done) {
                         done = update.done;
                     }
-                    nI = undefined === update.nI ? nI : update.nI;
-                    sI = undefined === update.sI ? sI : update.sI;
-                    pI = undefined === update.pI ? pI : update.pI;
-                    // cN = undefined === update.cN ? cN : update.cN
+                    s.nI = undefined === update.nI ? s.nI : update.nI;
+                    s.sI = undefined === update.sI ? s.sI : update.sI;
+                    s.pI = undefined === update.pI ? s.pI : update.pI;
                 }
             }
-            //   // console.log('KEY2', key, pass, done, sval, vs.a)
             if (!done) {
                 if ('never' === t) {
-                    terr.push(makeErrImpl('never', sval, path, dI, vs, 1070));
+                    terr.push(makeErrImpl('never', sval, s.path, s.dI, vs, 1070));
                 }
                 else if ('object' === t) {
-                    // console.log('OBJ', vs)
                     if (vs.r && undefined === sval) {
-                        terr.push(makeErrImpl('required', sval, path, dI, vs, 1010));
+                        terr.push(makeErrImpl('required', sval, s.path, s.dI, vs, 1010));
                     }
                     else if (undefined !== sval && (null === sval ||
                         'object' !== stype ||
                         Array.isArray(sval))) {
-                        terr.push(makeErrImpl('type', sval, path, dI, vs, 1020));
+                        terr.push(makeErrImpl('type', sval, s.path, s.dI, vs, 1020));
                     }
                     // else if (null != src[key] || !vs.o) {
                     else if (!vs.o) {
                         sval = sval || {};
-                        // if (undefined === root) {
                         if (isRoot) {
                             root = sval;
                         }
-                        // console.log('OBJ2', isRoot, sI, sval)
                         let vkeys = Object.keys(vs.v);
                         if (0 < vkeys.length) {
-                            pI = nI;
+                            s.pI = s.nI;
                             for (let k of vkeys) {
                                 let nvs = vs.v[k] = norm(vs.v[k]);
                                 // TODO: move to norm?
                                 nvs.k = k;
-                                nvs.d = 1 + dI;
-                                nodes[nI] = nvs;
-                                srcs[nI] = sval[k];
-                                parents[nI] = sval;
-                                nI++;
+                                nvs.d = 1 + s.dI;
+                                s.nodes[s.nI] = nvs;
+                                s.srcs[s.nI] = sval[k];
+                                s.parents[s.nI] = sval;
+                                s.nI++;
                             }
-                            dI++;
-                            nodes[nI++] = sI;
+                            s.dI++;
+                            s.nodes[s.nI++] = s.sI;
                             nextSibling = false;
-                            // continue next_node
                         }
                     }
                 }
                 else if ('array' === t) {
                     if (vs.r && undefined === sval) {
-                        terr.push(makeErrImpl('required', sval, path, dI, vs, 1030));
+                        terr.push(makeErrImpl('required', sval, s.path, s.dI, vs, 1030));
                     }
                     else if (undefined !== sval && !Array.isArray(sval)) {
-                        terr.push(makeErrImpl('type', sval, path, dI, vs, 1040));
+                        terr.push(makeErrImpl('type', sval, s.path, s.dI, vs, 1040));
                     }
                     else if (!vs.o) {
-                        // sval.mark0 = Math.random()
-                        // console.log('ARR0', sval, root)
                         sval = sval || [];
-                        // if (undefined === root) {
                         if (isRoot) {
                             root = sval;
                         }
-                        // console.log('ARR', sI, sval, vs.v)
                         let vkeys = Object.keys(vs.v).filter(k => !isNaN(+k));
-                        // console.log('VKEYS', vkeys)
                         if (0 < sval.length || 1 < vkeys.length) {
-                            pI = nI;
+                            s.pI = s.nI;
                             let nvs = undefined === vs.v[0] ? Any() : vs.v[0] = norm(vs.v[0]);
                             nvs.k = '0';
-                            nvs.d = 1 + dI;
+                            nvs.d = 1 + s.dI;
                             // Special elements
                             let j = 1;
                             if (1 < vkeys.length) {
@@ -322,25 +320,22 @@ function make(inspec, inopts) {
                                     let jvs = vs.v[j] = norm(vs.v[j]);
                                     // TODO: move to norm?
                                     jvs.k = '' + (j - 1);
-                                    jvs.d = 1 + dI;
-                                    nodes[nI] = { ...jvs, k: '' + (j - 1) };
-                                    srcs[nI] = sval[(j - 1)];
-                                    parents[nI] = sval;
-                                    nI++;
+                                    jvs.d = 1 + s.dI;
+                                    s.nodes[s.nI] = { ...jvs, k: '' + (j - 1) };
+                                    s.srcs[s.nI] = sval[(j - 1)];
+                                    s.parents[s.nI] = sval;
+                                    s.nI++;
                                 }
                             }
-                            // console.log('ARR REST', j, sval)
                             for (let i = j - 1; i < sval.length; i++) {
-                                // TODO: avoid need for this
-                                nodes[nI] = { ...nvs, k: '' + i };
-                                srcs[nI] = sval[i];
-                                parents[nI] = sval;
-                                nI++;
+                                s.nodes[s.nI] = { ...nvs, k: '' + i };
+                                s.srcs[s.nI] = sval[i];
+                                s.parents[s.nI] = sval;
+                                s.nI++;
                             }
-                            dI++;
-                            nodes[nI++] = sI;
+                            s.dI++;
+                            s.nodes[s.nI++] = s.sI;
                             nextSibling = false;
-                            // console.log('ARR DONE', sval)
                         }
                     }
                 }
@@ -352,39 +347,27 @@ function make(inspec, inopts) {
                     t === stype ||
                     ('instance' === t && vs.u.i && sval instanceof vs.u.i) ||
                     ('null' === t && null === sval))) {
-                    terr.push(makeErrImpl('type', sval, path, dI, vs, 1050));
+                    terr.push(makeErrImpl('type', sval, s.path, s.dI, vs, 1050));
                     pass = false;
                 }
                 // Value itself, or default.
                 else if (undefined === sval) {
-                    let parentKey = path[dI];
-                    // console.log('DEF', parentKey, src, parent)
-                    // if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
+                    let parentKey = s.path[s.dI];
                     if (vs.r && ('undefined' !== t || !parent.hasOwnProperty(parentKey))) {
-                        terr.push(makeErrImpl('required', sval, path, dI, vs, 1060));
+                        terr.push(makeErrImpl('required', sval, s.path, s.dI, vs, 1060));
                         pass = false;
                     }
                     else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
-                        // console.log('AAA', key, vs.v)
-                        // sval = src[key] = vs.v
                         sval = vs.v;
-                        //if (undefined === root) {
                         if (isRoot) {
                             root = sval;
                         }
                     }
-                    // else {
-                    //   console.log('BBB')
-                    // }
                 }
                 // Empty strings fail even if string is optional. Use Empty to allow.
                 else if ('string' === t && '' === sval) {
-                    if (vs.u.empty) {
-                        // NG: set parent?
-                        // src[key] = sval
-                    }
-                    else {
-                        terr.push(makeErrImpl('required', sval, path, dI, vs, 1080));
+                    if (!vs.u.empty) {
+                        terr.push(makeErrImpl('required', sval, s.path, s.dI, vs, 1080));
                     }
                 }
             }
@@ -392,13 +375,12 @@ function make(inspec, inopts) {
             if (0 < vs.a.length) {
                 for (let aI = 0; aI < vs.a.length; aI++) {
                     let update = handleValidate(vs.a[aI], sval, {
-                        dI, nI, sI, pI,
-                        key, node: vs, val: src, parent, nodes, srcs, path, terr, err, ctx,
-                        pass, oval
+                        dI: s.dI, nI: s.nI, sI: s.sI, pI: s.pI,
+                        key, node: vs, val: src, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err, ctx,
+                        pass, oval, parents: s.parents
                     });
                     if (undefined !== update.val) {
                         sval = update.val;
-                        //if (undefined === root) {
                         if (isRoot) {
                             root = sval;
                         }
@@ -407,36 +389,20 @@ function make(inspec, inopts) {
                     if (undefined !== update.done) {
                         done = update.done;
                     }
-                    nI = undefined === update.nI ? nI : update.nI;
-                    sI = undefined === update.sI ? sI : update.sI;
-                    pI = undefined === update.pI ? pI : update.pI;
+                    s.nI = undefined === update.nI ? s.nI : update.nI;
+                    s.sI = undefined === update.sI ? s.sI : update.sI;
+                    s.pI = undefined === update.pI ? s.pI : update.pI;
                 }
             }
             if (0 < terr.length) {
                 err.push(...terr);
             }
-            // }
-            // console.log('END', parent, key, sval)
             if (parent && !done) {
                 parent[key] = sval;
-                // console.log('END2', parent)
             }
-            // else {
-            //   root = sval
-            // }
-            // if (0 < cN) {
-            //   // Follow pointer back to next parent sibling.
-            //   nodes[nI++] = sI
-            // }
-            // else {
-            //   // Next sibling.
-            //   pI = sI
-            //   dI--
-            // }
             if (nextSibling) {
-                pI = sI;
+                s.pI = s.sI;
             }
-            // dI--
         }
         if (0 < err.length) {
             if (ctx.err) {
@@ -446,14 +412,12 @@ function make(inspec, inopts) {
                 throw new GubuError('shape', err, ctx);
             }
         }
-        // return root
         return root;
     };
     // TODO: test Number, String, etc also in arrays
     gubuShape.spec = () => {
         // Normalize spec, discard errors.
         gubuShape(undefined, { err: [] });
-        // gubuShape({ a: 2 }, { err: [] })
         return JSON.parse(stringify(spec, (_key, val) => {
             if (GUBU$ === val) {
                 return true;
@@ -474,17 +438,17 @@ function make(inspec, inopts) {
     gubuShape.gubu = GUBU;
     return gubuShape;
 }
-function printStacks(nodes, srcs, parents) {
-    for (let i = 0; i < nodes.length || i < srcs.length || i < parents.length; i++) {
-        console.log(i, '\t', isNaN(+nodes[i]) ? nodes[i].k + ':' + nodes[i].t : +nodes[i], '\t', srcs[i], '\t', parents[i]);
-    }
+/*
+function printStacks(nodes: any[], srcs: any[], parents: any[]) {
+  for (let i = 0; i < nodes.length || i < srcs.length || i < parents.length; i++) {
+    console.log(i, '\t',
+      isNaN(+nodes[i]) ? nodes[i].k + ':' + nodes[i].t : +nodes[i],
+      '\t', srcs[i], '\t', parents[i])
+  }
 }
+*/
 function handleValidate(vf, sval, state) {
     let update = { pass: true, done: false };
-    // if (undefined === sval && (true === state.node.o || false === state.node.r)) {
-    //   return update
-    // }
-    // if (undefined !== sval || state.node.r) {
     let valid = vf(sval, update, state);
     if (!valid || update.err) {
         // Explicit Optional allows undefined
@@ -513,7 +477,6 @@ function handleValidate(vf, sval, state) {
         }
         update.pass = false;
     }
-    // }
     return update;
 }
 function pathstr(path, dI) {
@@ -673,7 +636,6 @@ const Before = function (validate, spec) {
 exports.Before = Before;
 const After = function (validate, spec) {
     let vs = buildize(this, spec);
-    // vs.a = validate
     vs.a.push(validate);
     return vs;
 };
@@ -762,10 +724,6 @@ const Rename = function (inopts, spec) {
         let vsb = (val, update, state) => {
             if (undefined === val) {
                 for (let cn of claim) {
-                    // if (undefined !== state.src[cn]) {
-                    //   update.val = state.src[name] = state.src[cn]
-                    //   delete state.src[cn]
-                    // }
                     if (undefined !== state.parent[cn]) {
                         update.val = state.parent[name] = state.parent[cn];
                         delete state.parent[cn];
@@ -779,16 +737,11 @@ const Rename = function (inopts, spec) {
         let vsa = (val, update, state) => {
             // state.src[name] = val
             state.parent[name] = val;
-            // console.log('KEEP', name, state.key, opts, state.parent)
             if (!keep &&
                 // Arrays require explicit deletion as validation is based on index
                 // and will be lost.
-                // !(Array.isArray(state.src) && false !== keep)
                 !(Array.isArray(state.parent) && false !== keep)) {
-                // delete state.src[state.key]
                 delete state.parent[state.key];
-                // state.parent.mark1 = Math.random()
-                // console.log('DELETE', state.parent)
                 update.done = true;
             }
             return true;
@@ -1018,8 +971,6 @@ function Args(spec, wrapped) {
         argsSpec[0] = After((v, _u, s) => {
             s.parent[restArg.name] = (s.parent[restArg.name] || []);
             s.parent[restArg.name].push(v);
-            // s.src[restArg.name] = (s.src[restArg.name] || [])
-            // s.src[restArg.name].push(v)
             return true;
         }, restArg.spec);
         // TODO: should use Complete
@@ -1027,27 +978,14 @@ function Args(spec, wrapped) {
             if (v) {
                 v[restArg.name] = (v[restArg.name] || []);
             }
-            // console.log('QQQ', v)
             return true;
         }, argsSpec);
     }
-    // console.log('ASP', argsSpec)
     let argsShape = Gubu(argsSpec);
-    // Gubu([
-    //   Never(),
-    //   // Rename('foo', 1),
-    //   // Rename('bar', 2)
-    //   // Rename({ name: 'foo' }, Optional(Number)),
-    //   Rename({ name: 'foo' }, 1),
-    //   Rename({ name: 'bar', claim: ['foo'] }, 2)
-    // ])
-    // console.dir(argsShape.spec(), { depth: null })
     if (wrapped) {
         let argsWrap = function () {
             let inargs = Array.prototype.slice.call(arguments);
-            // console.log('INARGS', inargs)
             let args = argsShape(inargs);
-            // console.log('ARGS', args)
             return wrapped.call(this, args);
         };
         if (null != wrapped.name && '' != wrapped.name) {

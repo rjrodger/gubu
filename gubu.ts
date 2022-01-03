@@ -76,23 +76,39 @@ type Validate = (val: any, update: Update, state: State) => boolean
 
 
 // The current validation state.
-type State = {
-  key: string
+class State {
+  dI: number = 0  // Node depth.
+  nI: number = 2  // Next free slot in nodes.
+  pI: number = 0  // Pointer to current node.
+  sI: number = -1 // Pointer to next sibling node.
+  pass: boolean = true
+  err: any[] = []
+  terr: any[] = []
+
   node: Node
+  key: string
   val: any
   parent: any
-  dI: number
-  nI: number
-  sI: number
-  pI: number
   nodes: (Node | number)[]
   srcs: any[]
+  parents: Node[]
   path: string[]
-  terr: any[] // Term errors (for Some,All).
-  err: any[]
   ctx: any
-  pass: boolean
   oval: any
+
+  constructor(
+    root: any,
+    top: Node,
+    ctx: Context,
+  ) {
+    this.srcs = [root, -1]
+    this.node = top
+    this.nodes = [top, -1]
+    this.parents = []
+    this.path = []
+    this.key = top.k
+    this.ctx = ctx
+  }
 }
 
 
@@ -309,15 +325,13 @@ function make(inspec?: any, inopts?: Options): GubuShape {
     const ctx: any = inctx || {}
     let root: any = inroot
 
-    const nodes: (Node | number)[] = [spec, -1]
-    const srcs: any[] = [root, -1]
-    const parents: any[] = []
-    const path: string[] = [] // Key path to current node.
+    let s = new State(root, spec, ctx)
 
-    let dI: number = 0  // Node depth.
-    let nI: number = 2  // Next free slot in nodes.
-    let pI: number = 0  // Pointer to current node.
-    let sI: number = -1 // Pointer to next sibling node.
+
+    // const s_nodes: (Node | number)[] = [spec, -1]
+    // const s_srcs: any[] = [root, -1]
+    // const s_parents: any[] = []
+    // const s_path: string[] = [] // Key path to current node.
 
     let err: any = []   // Errors collected.
     let node: any       // Current node.  
@@ -326,20 +340,20 @@ function make(inspec?: any, inopts?: Options): GubuShape {
 
     // Iterative depth-first traversal of the spec.
     while (true) {
-      let isRoot = 0 === pI
+      let isRoot = 0 === s.pI
 
       // printStacks(nodes, srcs, parents)
 
       // Dereference the back pointers to ancestor siblings.
       // Only objects|arrays can be nodes, so a number is a back pointer.
       // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
-      node = nodes[pI]
+      node = s.nodes[s.pI]
       // console.log('NODE-0', 'd=' + dI, pI, nI, +node, node.k, node.t)
 
       while (+node) {
-        pI = node
-        node = nodes[pI]
-        dI--
+        s.pI = node
+        node = s.nodes[s.pI]
+        s.dI--
       }
 
       // console.log('NODE-1', 'd=' + dI, pI, nI, +node, node?.k, node?.t)
@@ -348,18 +362,18 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         break
       }
 
-      sI = pI + 1
-      src = srcs[pI]
-      parent = parents[pI]
+      s.sI = s.pI + 1
+      src = s.srcs[s.pI]
+      parent = s.parents[s.pI]
 
-      pI = nI
+      s.pI = s.nI
 
       let nextSibling = true
 
       let key = node.k
       let t = node.t
       let sval = src
-      path[dI] = key
+      s.path[s.dI] = key
       // console.log('PATH', dI, pathstr(path, dI), 'KEY', key)
 
       let oval = sval
@@ -369,31 +383,22 @@ function make(inspec?: any, inopts?: Options): GubuShape {
       }
 
       let terr: any[] = []
-      //   let vs = tvs
       let vs = node
 
-      //   // vs = GUBU$ === vs.$?.gubu$ ? vs : (tvs = norm(vs))
-      //   vs = GUBU$ === vs.$?.gubu$ ? vs : norm(vs)
-
-      //   // let t = vs.t
       let pass = true
       let done = false
 
-      // update can set t
       if (0 < vs.b.length) {
         for (let bI = 0; bI < vs.b.length; bI++) {
           let update = handleValidate(vs.b[bI], sval, {
-            dI, nI, sI, pI,
-            key, node: vs, val: src, parent, nodes, srcs, path, terr, err, ctx,
-            pass, oval
+            dI: s.dI, nI: s.nI, sI: s.sI, pI: s.pI,
+            key, node: vs, val: src, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err, ctx,
+            pass, oval, parents: s.parents
           })
-
-          // console.log('UB', update, pI)
 
           pass = update.pass
           if (undefined !== update.val) {
             sval = update.val
-            // if (undefined === root) {
             if (isRoot) {
               root = sval
             }
@@ -408,23 +413,19 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           if (undefined !== update.done) {
             done = update.done
           }
-          nI = undefined === update.nI ? nI : update.nI
-          sI = undefined === update.sI ? sI : update.sI
-          pI = undefined === update.pI ? pI : update.pI
-          // cN = undefined === update.cN ? cN : update.cN
+          s.nI = undefined === update.nI ? s.nI : update.nI
+          s.sI = undefined === update.sI ? s.sI : update.sI
+          s.pI = undefined === update.pI ? s.pI : update.pI
         }
       }
 
-      //   // console.log('KEY2', key, pass, done, sval, vs.a)
-
       if (!done) {
         if ('never' === t) {
-          terr.push(makeErrImpl('never', sval, path, dI, vs, 1070))
+          terr.push(makeErrImpl('never', sval, s.path, s.dI, vs, 1070))
         }
         else if ('object' === t) {
-          // console.log('OBJ', vs)
           if (vs.r && undefined === sval) {
-            terr.push(makeErrImpl('required', sval, path, dI, vs, 1010))
+            terr.push(makeErrImpl('required', sval, s.path, s.dI, vs, 1010))
           }
           else if (
             undefined !== sval && (
@@ -433,69 +434,60 @@ function make(inspec?: any, inopts?: Options): GubuShape {
               Array.isArray(sval)
             )
           ) {
-            terr.push(makeErrImpl('type', sval, path, dI, vs, 1020))
+            terr.push(makeErrImpl('type', sval, s.path, s.dI, vs, 1020))
           }
 
           // else if (null != src[key] || !vs.o) {
           else if (!vs.o) {
             sval = sval || {}
-            // if (undefined === root) {
             if (isRoot) {
               root = sval
             }
-            // console.log('OBJ2', isRoot, sI, sval)
 
             let vkeys = Object.keys(vs.v)
             if (0 < vkeys.length) {
-              pI = nI
+              s.pI = s.nI
               for (let k of vkeys) {
                 let nvs = vs.v[k] = norm(vs.v[k])
 
                 // TODO: move to norm?
                 nvs.k = k
-                nvs.d = 1 + dI
+                nvs.d = 1 + s.dI
 
-                nodes[nI] = nvs
-                srcs[nI] = sval[k]
-                parents[nI] = sval
-                nI++
+                s.nodes[s.nI] = nvs
+                s.srcs[s.nI] = sval[k]
+                s.parents[s.nI] = sval
+                s.nI++
               }
 
-              dI++
-              nodes[nI++] = sI
+              s.dI++
+              s.nodes[s.nI++] = s.sI
 
               nextSibling = false
-              // continue next_node
             }
           }
         }
 
         else if ('array' === t) {
           if (vs.r && undefined === sval) {
-            terr.push(makeErrImpl('required', sval, path, dI, vs, 1030))
+            terr.push(makeErrImpl('required', sval, s.path, s.dI, vs, 1030))
           }
           else if (undefined !== sval && !Array.isArray(sval)) {
-            terr.push(makeErrImpl('type', sval, path, dI, vs, 1040))
+            terr.push(makeErrImpl('type', sval, s.path, s.dI, vs, 1040))
           }
           else if (!vs.o) {
-            // sval.mark0 = Math.random()
-            // console.log('ARR0', sval, root)
             sval = sval || []
-            // if (undefined === root) {
             if (isRoot) {
               root = sval
             }
 
-            // console.log('ARR', sI, sval, vs.v)
-
             let vkeys = Object.keys(vs.v).filter(k => !isNaN(+k))
-            // console.log('VKEYS', vkeys)
 
             if (0 < sval.length || 1 < vkeys.length) {
-              pI = nI
+              s.pI = s.nI
               let nvs = undefined === vs.v[0] ? Any() : vs.v[0] = norm(vs.v[0])
               nvs.k = '0'
-              nvs.d = 1 + dI
+              nvs.d = 1 + s.dI
 
               // Special elements
               let j = 1
@@ -505,31 +497,26 @@ function make(inspec?: any, inopts?: Options): GubuShape {
 
                   // TODO: move to norm?
                   jvs.k = '' + (j - 1)
-                  jvs.d = 1 + dI
+                  jvs.d = 1 + s.dI
 
-                  nodes[nI] = { ...jvs, k: '' + (j - 1) }
-                  srcs[nI] = sval[(j - 1)]
-                  parents[nI] = sval
-                  nI++
+                  s.nodes[s.nI] = { ...jvs, k: '' + (j - 1) }
+                  s.srcs[s.nI] = sval[(j - 1)]
+                  s.parents[s.nI] = sval
+                  s.nI++
                 }
               }
 
-              // console.log('ARR REST', j, sval)
-
               for (let i = j - 1; i < sval.length; i++) {
-                // TODO: avoid need for this
-                nodes[nI] = { ...nvs, k: '' + i }
-                srcs[nI] = sval[i]
-                parents[nI] = sval
-                nI++
+                s.nodes[s.nI] = { ...nvs, k: '' + i }
+                s.srcs[s.nI] = sval[i]
+                s.parents[s.nI] = sval
+                s.nI++
               }
 
-              dI++
-              nodes[nI++] = sI
+              s.dI++
+              s.nodes[s.nI++] = s.sI
 
               nextSibling = false
-
-              // console.log('ARR DONE', sval)
             }
           }
         }
@@ -544,43 +531,30 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           ('instance' === t && vs.u.i && sval instanceof vs.u.i) ||
           ('null' === t && null === sval)
         )) {
-          terr.push(makeErrImpl('type', sval, path, dI, vs, 1050))
+          terr.push(makeErrImpl('type', sval, s.path, s.dI, vs, 1050))
           pass = false
         }
 
         // Value itself, or default.
         else if (undefined === sval) {
-          let parentKey = path[dI]
-          // console.log('DEF', parentKey, src, parent)
+          let parentKey = s.path[s.dI]
 
-          // if (vs.r && ('undefined' !== t || !src.hasOwnProperty(parentKey))) {
           if (vs.r && ('undefined' !== t || !parent.hasOwnProperty(parentKey))) {
-            terr.push(makeErrImpl('required', sval, path, dI, vs, 1060))
+            terr.push(makeErrImpl('required', sval, s.path, s.dI, vs, 1060))
             pass = false
           }
           else if (undefined !== vs.v && !vs.o || 'undefined' === t) {
-            // console.log('AAA', key, vs.v)
-            // sval = src[key] = vs.v
-
             sval = vs.v
-            //if (undefined === root) {
             if (isRoot) {
               root = sval
             }
           }
-          // else {
-          //   console.log('BBB')
-          // }
         }
 
         // Empty strings fail even if string is optional. Use Empty to allow.
         else if ('string' === t && '' === sval) {
-          if (vs.u.empty) {
-            // NG: set parent?
-            // src[key] = sval
-          }
-          else {
-            terr.push(makeErrImpl('required', sval, path, dI, vs, 1080))
+          if (!vs.u.empty) {
+            terr.push(makeErrImpl('required', sval, s.path, s.dI, vs, 1080))
           }
         }
       }
@@ -589,13 +563,12 @@ function make(inspec?: any, inopts?: Options): GubuShape {
       if (0 < vs.a.length) {
         for (let aI = 0; aI < vs.a.length; aI++) {
           let update = handleValidate(vs.a[aI], sval, {
-            dI, nI, sI, pI,
-            key, node: vs, val: src, parent, nodes, srcs, path, terr, err, ctx,
-            pass, oval
+            dI: s.dI, nI: s.nI, sI: s.sI, pI: s.pI,
+            key, node: vs, val: src, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err, ctx,
+            pass, oval, parents: s.parents
           })
           if (undefined !== update.val) {
             sval = update.val
-            //if (undefined === root) {
             if (isRoot) {
               root = sval
             }
@@ -604,43 +577,23 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           if (undefined !== update.done) {
             done = update.done
           }
-          nI = undefined === update.nI ? nI : update.nI
-          sI = undefined === update.sI ? sI : update.sI
-          pI = undefined === update.pI ? pI : update.pI
+          s.nI = undefined === update.nI ? s.nI : update.nI
+          s.sI = undefined === update.sI ? s.sI : update.sI
+          s.pI = undefined === update.pI ? s.pI : update.pI
         }
       }
 
       if (0 < terr.length) {
         err.push(...terr)
       }
-      // }
 
-
-      // console.log('END', parent, key, sval)
       if (parent && !done) {
         parent[key] = sval
-        // console.log('END2', parent)
       }
-
-      // else {
-      //   root = sval
-      // }
-
-      // if (0 < cN) {
-      //   // Follow pointer back to next parent sibling.
-      //   nodes[nI++] = sI
-      // }
-      // else {
-      //   // Next sibling.
-      //   pI = sI
-      //   dI--
-      // }
 
       if (nextSibling) {
-        pI = sI
+        s.pI = s.sI
       }
-      // dI--
-
     }
 
     if (0 < err.length) {
@@ -652,7 +605,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
       }
     }
 
-    // return root
     return root
   } as GubuShape
 
@@ -661,7 +613,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
   gubuShape.spec = () => {
     // Normalize spec, discard errors.
     gubuShape(undefined, { err: [] })
-    // gubuShape({ a: 2 }, { err: [] })
     return JSON.parse(stringify(spec, (_key: string, val: any) => {
       if (GUBU$ === val) {
         return true
@@ -692,6 +643,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
 }
 
 
+/*
 function printStacks(nodes: any[], srcs: any[], parents: any[]) {
   for (let i = 0; i < nodes.length || i < srcs.length || i < parents.length; i++) {
     console.log(i, '\t',
@@ -699,16 +651,12 @@ function printStacks(nodes: any[], srcs: any[], parents: any[]) {
       '\t', srcs[i], '\t', parents[i])
   }
 }
+*/
 
 
 function handleValidate(vf: Validate, sval: any, state: State): Update {
   let update: Update = { pass: true, done: false }
 
-  // if (undefined === sval && (true === state.node.o || false === state.node.r)) {
-  //   return update
-  // }
-
-  // if (undefined !== sval || state.node.r) {
   let valid = vf(sval, update, state)
 
   if (!valid || update.err) {
@@ -742,7 +690,6 @@ function handleValidate(vf: Validate, sval: any, state: State): Update {
     }
     update.pass = false
   }
-  // }
 
   return update
 }
@@ -940,7 +887,6 @@ const Before: Builder = function(this: Node, validate: Validate, spec?: any) {
 
 const After: Builder = function(this: Node, validate: Validate, spec?: any) {
   let vs = buildize(this, spec)
-  // vs.a = validate
   vs.a.push(validate)
   return vs
 }
@@ -1055,10 +1001,6 @@ const Rename: Builder = function(this: Node, inopts: any, spec?: any): Node {
     let vsb = (val: any, update: Update, state: State) => {
       if (undefined === val) {
         for (let cn of claim) {
-          // if (undefined !== state.src[cn]) {
-          //   update.val = state.src[name] = state.src[cn]
-          //   delete state.src[cn]
-          // }
           if (undefined !== state.parent[cn]) {
             update.val = state.parent[name] = state.parent[cn]
             delete state.parent[cn]
@@ -1074,18 +1016,12 @@ const Rename: Builder = function(this: Node, inopts: any, spec?: any): Node {
       // state.src[name] = val
       state.parent[name] = val
 
-      // console.log('KEEP', name, state.key, opts, state.parent)
-
       if (!keep &&
         // Arrays require explicit deletion as validation is based on index
         // and will be lost.
-        // !(Array.isArray(state.src) && false !== keep)
         !(Array.isArray(state.parent) && false !== keep)
       ) {
-        // delete state.src[state.key]
         delete state.parent[state.key]
-        // state.parent.mark1 = Math.random()
-        // console.log('DELETE', state.parent)
         update.done = true
       }
 
@@ -1445,8 +1381,6 @@ function Args(spec: any, wrapped?: any) {
     argsSpec[0] = After((v: any, _u: Update, s: State) => {
       s.parent[restArg.name] = (s.parent[restArg.name] || [])
       s.parent[restArg.name].push(v)
-      // s.src[restArg.name] = (s.src[restArg.name] || [])
-      // s.src[restArg.name].push(v)
       return true
     }, restArg.spec)
 
@@ -1455,31 +1389,16 @@ function Args(spec: any, wrapped?: any) {
       if (v) {
         v[restArg.name] = (v[restArg.name] || [])
       }
-      // console.log('QQQ', v)
       return true
     }, argsSpec)
   }
 
-  // console.log('ASP', argsSpec)
-
   let argsShape = Gubu(argsSpec)
-
-  // Gubu([
-  //   Never(),
-  //   // Rename('foo', 1),
-  //   // Rename('bar', 2)
-  //   // Rename({ name: 'foo' }, Optional(Number)),
-  //   Rename({ name: 'foo' }, 1),
-  //   Rename({ name: 'bar', claim: ['foo'] }, 2)
-  // ])
-  // console.dir(argsShape.spec(), { depth: null })
 
   if (wrapped) {
     let argsWrap = function(this: any) {
       let inargs = Array.prototype.slice.call(arguments)
-      // console.log('INARGS', inargs)
       let args = argsShape(inargs)
-      // console.log('ARGS', args)
       return wrapped.call(this, args)
     }
 

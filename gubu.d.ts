@@ -42,24 +42,26 @@ declare type Builder = (opts?: any, // Builder options.
     [name: string]: Builder | any;
 };
 declare type Validate = (val: any, update: Update, state: State) => boolean;
-declare type State = {
-    key: string;
-    node: Node;
-    val: any;
-    parent: any;
+declare class State {
     dI: number;
     nI: number;
-    sI: number;
     pI: number;
+    sI: number;
+    pass: boolean;
+    err: any[];
+    terr: any[];
+    node: Node;
+    key: string;
+    val: any;
+    parent: any;
     nodes: (Node | number)[];
     srcs: any[];
+    parents: Node[];
     path: string[];
-    terr: any[];
-    err: any[];
     ctx: any;
-    pass: boolean;
     oval: any;
-};
+    constructor(root: any, top: Node, ctx: Context);
+}
 declare type Update = {
     pass: boolean;
     done?: boolean;
