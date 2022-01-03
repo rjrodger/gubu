@@ -307,8 +307,6 @@ function make(inspec?: any, inopts?: Options): GubuShape {
 
   let gubuShape = function GubuShape<T>(inroot?: T, inctx?: Context): T {
     const ctx: any = inctx || {}
-    // const root: any = { '': inroot }
-    // const root: any = inroot
     let root: any = inroot
 
     const nodes: (Node | number)[] = [spec, -1]
@@ -316,12 +314,10 @@ function make(inspec?: any, inopts?: Options): GubuShape {
     const parents: any[] = []
     const path: string[] = [] // Key path to current node.
 
-
     let dI: number = 0  // Node depth.
     let nI: number = 2  // Next free slot in nodes.
     let pI: number = 0  // Pointer to current node.
     let sI: number = -1 // Pointer to next sibling node.
-    // let cN: number = 0  // Number of children of current node.
 
     let err: any = []   // Errors collected.
     let node: any       // Current node.  
@@ -356,91 +352,22 @@ function make(inspec?: any, inopts?: Options): GubuShape {
       src = srcs[pI]
       parent = parents[pI]
 
-
-      // if (-1 < dI) {
-      //   path[dI] = node.k
-      // }
-      // dI++
-
-      // cN = 0
       pI = nI
 
       let nextSibling = true
 
-
-      // let keys = null == node.v ? [] : Object.keys(node.v)
-
-      // // Treat array indexes as keys.
-      // // Inject missing indexes if present in ValSpec.
-      // if ('array' === node.t) {
-      //   // Ignore non-index properties in arrays.
-      //   // Use a custom validator for this case.
-      //   keys = Object.keys(src).filter(k => (!isNaN(+k) && -1 < +k))
-      //   // console.log('AKEYS', keys)
-      //   for (let vk in node.v) {
-      //     let vko = '' + (parseInt(vk) - 1)
-      //     // console.log('VK', vk, vko)
-      //     // if ('0' !== vk && !keys.includes(vk)) {
-      //     if ('0' !== vk && !keys.includes(vko)) {
-      //       keys.splice(parseInt(vk) - 1, 0, vko)
-      //     }
-      //   }
-      //   // console.log('AKEYS2', keys)
-      // }
-
-      // for (let key of keys) {
       let key = node.k
       let t = node.t
       let sval = src
       path[dI] = key
       // console.log('PATH', dI, pathstr(path, dI), 'KEY', key)
 
-      //   let sval = src[key]
       let oval = sval
       let stype: string = typeof (sval)
       if ('number' === stype && isNaN(sval)) {
         stype = 'nan'
       }
 
-      //   // TODO: fix var names
-      //   let nv = node.v
-      //   let n = nv[key]
-      // let tvs: ValSpec = null as any
-
-      //   // NOTE: special case handling for arrays keys.
-      //   if ('array' === node.t) {
-      //     // First array entry is general type spec.
-      //     // Following are special case elements offset by +1.
-      //     // Use these if src has no corresponding element.
-
-      //     let akey = '' + (parseInt(key) + 1)
-      //     n = nv[akey]
-
-      //     if (undefined !== n) {
-      //       tvs = GUBU$ === n.$?.gubu$ ? n : (nv[akey] = norm(n))
-      //     }
-
-      //     else {
-      //       n = nv[0]
-      //       akey = '' + 0
-
-      //       // No first element defining element type spec, so use Any.
-      //       if (undefined === n) {
-      //         n = nv[0] = Any()
-      //       }
-
-      //       tvs = null === n ? norm(n) :
-      //         GUBU$ === n.$?.gubu$ ? n : (nv[akey] = norm(n))
-      //     }
-      //   }
-      //   else {
-      //     tvs = (null != n && GUBU$ === n.$?.gubu$) ? n : (nv[key] = norm(n))
-      //   }
-
-      //   tvs.k = key
-      //   tvs.d = dI
-
-      //   let t = tvs.t
       let terr: any[] = []
       //   let vs = tvs
       let vs = node
