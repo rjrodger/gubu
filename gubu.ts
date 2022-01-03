@@ -328,7 +328,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
     let s = new State(root, spec, ctx)
 
     // let s.node: any       // Current node.  
-    let src: any        // Current source value to validate.
+    // let src: any        // Current source value to validate.
     let parent: any
 
     // Iterative depth-first traversal of the spec.
@@ -359,7 +359,8 @@ function make(inspec?: any, inopts?: Options): GubuShape {
       }
 
       s.sI = s.pI + 1
-      src = s.srcs[s.pI]
+      // src = s.srcs[s.pI]
+      let sval = s.srcs[s.pI]
       parent = s.parents[s.pI]
 
       s.pI = s.nI
@@ -368,7 +369,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
 
       let key = s.node.k
       let t = s.node.t
-      let sval = src
+      // let sval = src
       s.path[s.dI] = key
       // console.log('PATH', dI, pathstr(path, dI), 'KEY', key)
 
@@ -388,7 +389,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         for (let bI = 0; bI < vs.b.length; bI++) {
           let update = handleValidate(vs.b[bI], sval, {
             dI: s.dI, nI: s.nI, sI: s.sI, pI: s.pI,
-            key, node: vs, val: src, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
+            key, node: vs, val: sval, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
             pass, oval, parents: s.parents
           })
 
@@ -560,7 +561,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         for (let aI = 0; aI < vs.a.length; aI++) {
           let update = handleValidate(vs.a[aI], sval, {
             dI: s.dI, nI: s.nI, sI: s.sI, pI: s.pI,
-            key, node: vs, val: src, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
+            key, node: vs, val: sval, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
             pass, oval, parents: s.parents
           })
           if (undefined !== update.val) {

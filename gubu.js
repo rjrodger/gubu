@@ -184,7 +184,7 @@ function make(inspec, inopts) {
         let root = inroot;
         let s = new State(root, spec, ctx);
         // let s.node: any       // Current node.  
-        let src; // Current source value to validate.
+        // let src: any        // Current source value to validate.
         let parent;
         // Iterative depth-first traversal of the spec.
         while (true) {
@@ -208,13 +208,14 @@ function make(inspec, inopts) {
                 s.node = nextNode;
             }
             s.sI = s.pI + 1;
-            src = s.srcs[s.pI];
+            // src = s.srcs[s.pI]
+            let sval = s.srcs[s.pI];
             parent = s.parents[s.pI];
             s.pI = s.nI;
             let nextSibling = true;
             let key = s.node.k;
             let t = s.node.t;
-            let sval = src;
+            // let sval = src
             s.path[s.dI] = key;
             // console.log('PATH', dI, pathstr(path, dI), 'KEY', key)
             let oval = sval;
@@ -230,7 +231,7 @@ function make(inspec, inopts) {
                 for (let bI = 0; bI < vs.b.length; bI++) {
                     let update = handleValidate(vs.b[bI], sval, {
                         dI: s.dI, nI: s.nI, sI: s.sI, pI: s.pI,
-                        key, node: vs, val: src, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
+                        key, node: vs, val: sval, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
                         pass, oval, parents: s.parents
                     });
                     pass = update.pass;
@@ -374,7 +375,7 @@ function make(inspec, inopts) {
                 for (let aI = 0; aI < vs.a.length; aI++) {
                     let update = handleValidate(vs.a[aI], sval, {
                         dI: s.dI, nI: s.nI, sI: s.sI, pI: s.pI,
-                        key, node: vs, val: src, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
+                        key, node: vs, val: sval, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
                         pass, oval, parents: s.parents
                     });
                     if (undefined !== update.val) {
