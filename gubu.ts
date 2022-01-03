@@ -1,4 +1,4 @@
-/* Copyright (c) 2021 Richard Rodger and other contributors, MIT License */
+/* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 
 
 // TODO: spread shape for all object values:  Value(vshape)
@@ -12,36 +12,43 @@ const GUBU$ = Symbol.for('gubu$')
 const GUBU = { gubu$: GUBU$, v$: Pkg.version }
 
 
+// Options for creating a GubuShape.
 type Options = {
   name?: string // Name this Gubu shape.
 }
 
 
+// User context for a given Gubu validation run.
+// Add your own references here for use in your own custom validations.
+// The reserved properties are: `err`.
 type Context = Record<string, any> & {
   err?: ErrDesc[] // Provide an array to collect errors, instead of throwing.
 }
 
 
+// The semantic types recognized by Gubu.
+// Not that Gubu considers values to be subtypes.
 type ValType =
-  'any' |
-  'never' |
-  'custom' |
-  'null' |
-  'undefined' |
-  'list' |
-  'string' |
-  'number' |
-  'boolean' |
-  'object' |
-  'array' |
-  'bigint' |
-  'symbol' |
-  'function' |
-  'instance' |
-  'nan'
+  'any' |       // Any type.
+  'array' |     // An array.
+  'bigint' |    // A BigInt value.
+  'boolean' |   // The values `true` or `false`.
+  'custom' |    // Custom type defined by a validation function.
+  'function' |  // A function.
+  'instance' |  // An instance of a constructed object.
+  'list' |      // A list of types under a given logical rule.
+  'nan' |       // The `NaN` value.
+  'never' |     // No type.
+  'null' |      // The `null` value.
+  'number' |    // A number.
+  'object' |    // A plain object.
+  'string' |    // A string (but *not* the empty string).
+  'symbol' |    // A symbol reference.
+  'undefined'   // The `undefined` value.
 
 
-type ValSpec = {
+// A node in the validation tree structure.
+type Node = {
   $: typeof GUBU         // Special marker to indicate normalized.
   t: ValType             // Value type name.
   d: number              // Depth.
@@ -55,24 +62,30 @@ type ValSpec = {
 }
 
 
-type Builder = (opts?: any, ...specs: any[]) =>
-  ValSpec & { [name: string]: Builder | any }
+// A validation Node builder.
+type Builder = (
+  opts?: any,     // Builder options.
+  ...vals: any[]  // Values for the builder. 
+) =>
+  Node & // Builders build Nodes.
+  { [name: string]: Builder | any } // Chained builders for convenience.
 
 
+// Validate a given value, potentially updating the value and state.
 type Validate = (val: any, update: Update, state: State) => boolean
 
 
+// The current validation state.
 type State = {
   key: string
-  node: ValSpec
-  src: any
+  node: Node
+  val: any
   parent: any
   dI: number
   nI: number
   sI: number
   pI: number
-  // cN: number
-  nodes: (ValSpec | number)[]
+  nodes: (Node | number)[]
   srcs: any[]
   path: string[]
   terr: any[] // Term errors (for Some,All).
@@ -83,23 +96,24 @@ type State = {
 }
 
 
+// Return updates to the validation state.
 type Update = {
   pass: boolean
   done?: boolean
   val?: any
-  node?: ValSpec
+  node?: Node
   type?: ValType
   nI?: number
   sI?: number
   pI?: number
-  cN?: number
   err?: boolean | ErrDesc | ErrDesc[]
   why?: string
 }
 
 
+// Validation error description.
 type ErrDesc = {
-  n: ValSpec    // Failing spec node.
+  n: Node    // Failing spec node.
   s: any        // Failing src value.
   p: string     // Key path to src value.
   w: string     // Error code ("why").
@@ -160,7 +174,7 @@ const EMPTY_VAL: { [name: string]: any } = {
 }
 
 
-function norm(spec?: any): ValSpec {
+function norm(spec?: any): Node {
 
   // Is this a (possibly incomplete) ValSpec?
   if (null != spec && spec.$?.gubu$) {
@@ -234,7 +248,7 @@ function norm(spec?: any): ValSpec {
     }
     else if (spec.gubu === GUBU || true === spec.$?.gubu) {
       let gs = spec.spec ? spec.spec() : spec
-      t = (gs as ValSpec).t
+      t = (gs as Node).t
       v = gs.v
       r = gs.r
       u = gs.u
@@ -257,7 +271,7 @@ function norm(spec?: any): ValSpec {
     t = 'nan'
   }
 
-  let vs: ValSpec = {
+  let vs: Node = {
     $: GUBU,
     t,
     v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
@@ -286,7 +300,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
 
   // let top = { '': inspec }
   let top = inspec
-  let spec: ValSpec = norm(top) // Tree of validation nodes.
+  let spec: Node = norm(top) // Tree of validation nodes.
 
   // TODO: move to norm?
   spec.d = 0
@@ -297,7 +311,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
     // const root: any = inroot
     let root: any = inroot
 
-    const nodes: (ValSpec | number)[] = [spec, -1]
+    const nodes: (Node | number)[] = [spec, -1]
     const srcs: any[] = [root, -1]
     const parents: any[] = []
     const path: string[] = [] // Key path to current node.
@@ -443,7 +457,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         for (let bI = 0; bI < vs.b.length; bI++) {
           let update = handleValidate(vs.b[bI], sval, {
             dI, nI, sI, pI,
-            key, node: vs, src, parent, nodes, srcs, path, terr, err, ctx,
+            key, node: vs, val: src, parent, nodes, srcs, path, terr, err, ctx,
             pass, oval
           })
 
@@ -649,7 +663,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
         for (let aI = 0; aI < vs.a.length; aI++) {
           let update = handleValidate(vs.a[aI], sval, {
             dI, nI, sI, pI,
-            key, node: vs, src, parent, nodes, srcs, path, terr, err, ctx,
+            key, node: vs, val: src, parent, nodes, srcs, path, terr, err, ctx,
             pass, oval
           })
           if (undefined !== update.val) {
@@ -812,7 +826,7 @@ function pathstr(path: string[], dI: number) {
 }
 
 
-const Required: Builder = function(this: ValSpec, spec?: any) {
+const Required: Builder = function(this: Node, spec?: any) {
   let vs = buildize(this, spec)
   vs.r = true
 
@@ -824,7 +838,7 @@ const Required: Builder = function(this: ValSpec, spec?: any) {
   return vs
 }
 
-const Optional: Builder = function(this: ValSpec, spec?: any) {
+const Optional: Builder = function(this: Node, spec?: any) {
   let vs = buildize(this, spec)
   vs.r = false
 
@@ -834,7 +848,7 @@ const Optional: Builder = function(this: ValSpec, spec?: any) {
   return vs
 }
 
-const Empty: Builder = function(this: ValSpec, spec?: any) {
+const Empty: Builder = function(this: Node, spec?: any) {
   let vs = buildize(this, spec)
   vs.u.empty = true
   return vs
@@ -843,7 +857,7 @@ const Empty: Builder = function(this: ValSpec, spec?: any) {
 
 
 // Optional value provides default.
-const Any: Builder = function(this: ValSpec, spec?: any) {
+const Any: Builder = function(this: Node, spec?: any) {
   let vs = buildize(this, spec)
   vs.t = 'any'
   if (undefined !== spec) {
@@ -853,7 +867,7 @@ const Any: Builder = function(this: ValSpec, spec?: any) {
 }
 
 
-const Never: Builder = function(this: ValSpec, spec?: any) {
+const Never: Builder = function(this: Node, spec?: any) {
   let vs = buildize(this, spec)
   vs.t = 'never'
   return vs
@@ -861,7 +875,7 @@ const Never: Builder = function(this: ValSpec, spec?: any) {
 
 
 // Pass only if all match. Does not short circuit (as defaults may be missed).
-const All: Builder = function(this: ValSpec, ...specs: any[]) {
+const All: Builder = function(this: Node, ...specs: any[]) {
   let vs = buildize()
   vs.t = 'list'
   let shapes = specs.map(s => Gubu(s))
@@ -896,7 +910,7 @@ const All: Builder = function(this: ValSpec, ...specs: any[]) {
 
 
 // Pass if some match. Does not short circuit (as defaults may be missed).
-const Some: Builder = function(this: ValSpec, ...specs: any[]) {
+const Some: Builder = function(this: Node, ...specs: any[]) {
   let vs = buildize()
   vs.t = 'list'
   let shapes = specs.map(s => Gubu(s))
@@ -934,7 +948,7 @@ const Some: Builder = function(this: ValSpec, ...specs: any[]) {
 
 
 // Pass if exactly one matches. Does not short circuit (as defaults may be missed).
-const One: Builder = function(this: ValSpec, ...specs: any[]) {
+const One: Builder = function(this: Node, ...specs: any[]) {
   let vs = buildize()
   vs.t = 'list'
   let shapes = specs.map(s => Gubu(s))
@@ -969,7 +983,7 @@ const One: Builder = function(this: ValSpec, ...specs: any[]) {
 
 
 
-const Exact: Builder = function(this: ValSpec, ...vals: any[]) {
+const Exact: Builder = function(this: Node, ...vals: any[]) {
   let vs = buildize()
   vs.b.push(function Exact(val: any, update: Update, state: State) {
     for (let i = 0; i < vals.length; i++) {
@@ -990,14 +1004,14 @@ const Exact: Builder = function(this: ValSpec, ...vals: any[]) {
 
 
 
-const Before: Builder = function(this: ValSpec, validate: Validate, spec?: any) {
+const Before: Builder = function(this: Node, validate: Validate, spec?: any) {
   let vs = buildize(this, spec)
   vs.b.push(validate)
   return vs
 }
 
 
-const After: Builder = function(this: ValSpec, validate: Validate, spec?: any) {
+const After: Builder = function(this: Node, validate: Validate, spec?: any) {
   let vs = buildize(this, spec)
   // vs.a = validate
   vs.a.push(validate)
@@ -1005,7 +1019,7 @@ const After: Builder = function(this: ValSpec, validate: Validate, spec?: any) {
 }
 
 
-const Closed: Builder = function(this: ValSpec, spec?: any) {
+const Closed: Builder = function(this: Node, spec?: any) {
   let vs = buildize(this, spec)
 
   vs.b.push(function Closed(val: any, update: Update, state: State) {
@@ -1046,7 +1060,7 @@ const Closed: Builder = function(this: ValSpec, spec?: any) {
 }
 
 
-const Define: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
+const Define: Builder = function(this: Node, inopts: any, spec?: any): Node {
   let vs = buildize(this, spec)
 
   let opts = 'object' === typeof inopts ? inopts || {} : {}
@@ -1065,7 +1079,7 @@ const Define: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpe
 }
 
 
-const Refer: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
+const Refer: Builder = function(this: Node, inopts: any, spec?: any): Node {
   let vs = buildize(this, spec)
 
   let opts = 'object' === typeof inopts ? inopts || {} : {}
@@ -1099,7 +1113,7 @@ const Refer: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec
 }
 
 
-const Rename: Builder = function(this: ValSpec, inopts: any, spec?: any): ValSpec {
+const Rename: Builder = function(this: Node, inopts: any, spec?: any): Node {
   let vs = buildize(this, spec)
 
   let opts = 'object' === typeof inopts ? inopts || {} : {}
@@ -1167,10 +1181,10 @@ function valueLen(val: any) {
 
 
 const Min: Builder = function(
-  this: ValSpec,
+  this: Node,
   min: number | string,
   spec?: any
-): ValSpec {
+): Node {
   let vs = buildize(this, spec)
 
   vs.b.push(function Min(val: any, update: Update, state: State) {
@@ -1192,10 +1206,10 @@ const Min: Builder = function(
 
 
 const Max: Builder = function(
-  this: ValSpec,
+  this: Node,
   max: number | string,
   spec?: any
-): ValSpec {
+): Node {
   let vs = buildize(this, spec)
 
   vs.b.push(function Max(val: any, update: Update, state: State) {
@@ -1217,10 +1231,10 @@ const Max: Builder = function(
 
 
 const Above: Builder = function(
-  this: ValSpec,
+  this: Node,
   above: number | string,
   spec?: any
-): ValSpec {
+): Node {
   let vs = buildize(this, spec)
 
   vs.b.push(function Above(val: any, update: Update, state: State) {
@@ -1242,10 +1256,10 @@ const Above: Builder = function(
 
 
 const Below: Builder = function(
-  this: ValSpec,
+  this: Node,
   below: number | string,
   spec?: any
-): ValSpec {
+): Node {
   let vs = buildize(this, spec)
 
   vs.b.push(function Below(val: any, update: Update, state: State) {
@@ -1267,7 +1281,7 @@ const Below: Builder = function(
 
 
 
-function buildize(invs0?: any, invs1?: any): ValSpec {
+function buildize(invs0?: any, invs1?: any): Node {
   let invs = undefined === invs0 ? invs1 : invs0.window === invs0 ? invs1 : invs0
 
   let vs = norm(invs)
@@ -1315,7 +1329,7 @@ function makeErrImpl(
   sval: any,
   path: string[],
   dI: number,
-  node: ValSpec,
+  node: Node,
   mark: number,
   text?: string,
   user?: any,
@@ -1411,7 +1425,7 @@ type GubuShape =
   }
 
 
-const G$ = (spec: any): ValSpec => norm({ ...spec, $: { gubu$: true } })
+const G$ = (spec: any): Node => norm({ ...spec, $: { gubu$: true } })
 
 
 Object.assign(make, {
@@ -1579,7 +1593,7 @@ export type {
   Update,
   Context,
   Builder,
-  ValSpec,
+  Node,
   State,
 }
 

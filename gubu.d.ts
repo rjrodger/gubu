@@ -8,8 +8,23 @@ declare type Options = {
 declare type Context = Record<string, any> & {
     err?: ErrDesc[];
 };
-declare type ValType = 'any' | 'never' | 'custom' | 'null' | 'undefined' | 'list' | 'string' | 'number' | 'boolean' | 'object' | 'array' | 'bigint' | 'symbol' | 'function' | 'instance' | 'nan';
-declare type ValSpec = {
+declare type ValType = 'any' | // Any type.
+'array' | // An array.
+'bigint' | // A BigInt value.
+'boolean' | // The values `true` or `false`.
+'custom' | // Custom type defined by a validation function.
+'function' | // A function.
+'instance' | // An instance of a constructed object.
+'list' | // A list of types under a given logical rule.
+'nan' | // The `NaN` value.
+'never' | // No type.
+'null' | // The `null` value.
+'number' | // A number.
+'object' | // A plain object.
+'string' | // A string (but *not* the empty string).
+'symbol' | // A symbol reference.
+'undefined';
+declare type Node = {
     $: typeof GUBU;
     t: ValType;
     d: number;
@@ -21,20 +36,22 @@ declare type ValSpec = {
     b: Validate[];
     a: Validate[];
 };
-declare type Builder = (opts?: any, ...specs: any[]) => ValSpec & {
+declare type Builder = (opts?: any, // Builder options.
+...vals: any[]) => Node & // Builders build Nodes.
+{
     [name: string]: Builder | any;
 };
 declare type Validate = (val: any, update: Update, state: State) => boolean;
 declare type State = {
     key: string;
-    node: ValSpec;
-    src: any;
+    node: Node;
+    val: any;
     parent: any;
     dI: number;
     nI: number;
     sI: number;
     pI: number;
-    nodes: (ValSpec | number)[];
+    nodes: (Node | number)[];
     srcs: any[];
     path: string[];
     terr: any[];
@@ -47,24 +64,23 @@ declare type Update = {
     pass: boolean;
     done?: boolean;
     val?: any;
-    node?: ValSpec;
+    node?: Node;
     type?: ValType;
     nI?: number;
     sI?: number;
     pI?: number;
-    cN?: number;
     err?: boolean | ErrDesc | ErrDesc[];
     why?: string;
 };
 declare type ErrDesc = {
-    n: ValSpec;
+    n: Node;
     s: any;
     p: string;
     w: string;
     m: number;
     t: string;
 };
-declare function norm(spec?: any): ValSpec;
+declare function norm(spec?: any): Node;
 declare function make(inspec?: any, inopts?: Options): GubuShape;
 declare const Required: Builder;
 declare const Optional: Builder;
@@ -85,13 +101,13 @@ declare const Min: Builder;
 declare const Max: Builder;
 declare const Above: Builder;
 declare const Below: Builder;
-declare function buildize(invs0?: any, invs1?: any): ValSpec;
+declare function buildize(invs0?: any, invs1?: any): Node;
 declare function makeErr(val: any, state: State, text?: string, why?: string): ErrDesc;
 declare type GubuShape = (<T>(inroot?: T, inctx?: any) => T) & {
     spec: () => any;
     gubu: typeof GUBU;
 };
-declare const G$: (spec: any) => ValSpec;
+declare const G$: (spec: any) => Node;
 declare type Gubu = typeof make & {
     desc: () => any;
     G$: typeof G$;
@@ -139,5 +155,5 @@ declare const GRefer: Builder;
 declare const GRename: Builder;
 declare const GRequired: Builder;
 declare const GSome: Builder;
-export type { Validate, Update, Context, Builder, ValSpec, State, };
+export type { Validate, Update, Context, Builder, Node, State, };
 export { Gubu, G$, norm, buildize, makeErr, Args, Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Optional, Refer, Rename, Required, Some, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GOptional, GRefer, GRename, GRequired, GSome, };

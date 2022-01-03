@@ -8,7 +8,7 @@ import Pkg from '../package.json'
 
 import type {
   Builder,
-  ValSpec,
+  Node,
   State,
   Update,
 } from '../gubu'
@@ -1049,7 +1049,7 @@ Validation failed for path "y" with value "Y" because the value is not of type n
   test('builder-custom-between', () => {
     const rangeCheck = Gubu([Never(), Number, Number])
     const Between: Builder =
-      function(this: ValSpec, inopts: any, spec?: any): ValSpec {
+      function(this: Node, inopts: any, spec?: any): Node {
         let vs = buildize(this || spec)
         let range: number[] = rangeCheck(inopts)
 

@@ -1,5 +1,5 @@
 "use strict";
-/* Copyright (c) 2021 Richard Rodger and other contributors, MIT License */
+/* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -280,7 +280,7 @@ function make(inspec, inopts) {
                 for (let bI = 0; bI < vs.b.length; bI++) {
                     let update = handleValidate(vs.b[bI], sval, {
                         dI, nI, sI, pI,
-                        key, node: vs, src, parent, nodes, srcs, path, terr, err, ctx,
+                        key, node: vs, val: src, parent, nodes, srcs, path, terr, err, ctx,
                         pass, oval
                     });
                     // console.log('UB', update, pI)
@@ -452,7 +452,7 @@ function make(inspec, inopts) {
                 for (let aI = 0; aI < vs.a.length; aI++) {
                     let update = handleValidate(vs.a[aI], sval, {
                         dI, nI, sI, pI,
-                        key, node: vs, src, parent, nodes, srcs, path, terr, err, ctx,
+                        key, node: vs, val: src, parent, nodes, srcs, path, terr, err, ctx,
                         pass, oval
                     });
                     if (undefined !== update.val) {
