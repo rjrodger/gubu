@@ -47,7 +47,7 @@ declare class State {
     nI: number;
     pI: number;
     sI: number;
-    pass: boolean;
+    stype: string;
     err: any[];
     nextSibling: boolean;
     node: Node;
@@ -63,7 +63,6 @@ declare class State {
     constructor(root: any, top: Node, ctx: Context);
 }
 declare type Update = {
-    pass: boolean;
     done?: boolean;
     val?: any;
     node?: Node;

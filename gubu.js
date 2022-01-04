@@ -18,9 +18,8 @@ class State {
         this.nI = 2; // Next free slot in nodes.
         this.pI = 0; // Pointer to current node.
         this.sI = -1; // Pointer to next sibling node.
-        this.pass = true;
+        this.stype = 'never';
         this.err = [];
-        // terr: any[] = []
         this.nextSibling = true;
         this.srcs = [root, -1];
         this.node = top;
@@ -217,24 +216,24 @@ function make(inspec, inopts) {
             s.path[s.dI] = s.key;
             // console.log('PATH', dI, pathstr(path, dI), 'KEY', key)
             s.oval = s.val;
-            let stype = typeof (s.val);
-            if ('number' === stype && isNaN(s.val)) {
-                stype = 'nan';
+            s.stype = typeof (s.val);
+            if ('number' === s.stype && isNaN(s.val)) {
+                s.stype = 'nan';
             }
             // let terr: any[] = []
             let n = s.node;
-            let pass = true;
+            // let pass = true
             let done = false;
             if (0 < n.b.length) {
                 for (let bI = 0; bI < n.b.length; bI++) {
                     let update = handleValidate(n.b[bI], s);
-                    pass = update.pass;
+                    // pass = update.pass
                     if (undefined !== update.val) {
                         s.val = update.val;
                         if (isRoot) {
                             root = s.val;
                         }
-                        stype = typeof (s.val);
+                        s.stype = typeof (s.val);
                     }
                     if (undefined !== update.node) {
                         n = update.node;
@@ -245,9 +244,9 @@ function make(inspec, inopts) {
                     if (undefined !== update.done) {
                         done = update.done;
                     }
-                    s.nI = undefined === update.nI ? s.nI : update.nI;
-                    s.sI = undefined === update.sI ? s.sI : update.sI;
-                    s.pI = undefined === update.pI ? s.pI : update.pI;
+                    // s.nI = undefined === update.nI ? s.nI : update.nI
+                    // s.sI = undefined === update.sI ? s.sI : update.sI
+                    // s.pI = undefined === update.pI ? s.pI : update.pI
                 }
             }
             if (!done) {
@@ -259,7 +258,7 @@ function make(inspec, inopts) {
                         s.err.push(makeErrImpl('required', s.val, s.path, s.dI, n, 1010));
                     }
                     else if (undefined !== s.val && (null === s.val ||
-                        'object' !== stype ||
+                        'object' !== s.stype ||
                         Array.isArray(s.val))) {
                         s.err.push(makeErrImpl('type', s.val, s.path, s.dI, n, 1020));
                     }
@@ -337,18 +336,18 @@ function make(inspec, inopts) {
                     'custom' === t ||
                     'list' === t ||
                     undefined === s.val ||
-                    t === stype ||
+                    t === s.stype ||
                     ('instance' === t && n.u.i && s.val instanceof n.u.i) ||
                     ('null' === t && null === s.val))) {
                     s.err.push(makeErrImpl('type', s.val, s.path, s.dI, n, 1050));
-                    pass = false;
+                    // pass = false
                 }
                 // Value itself, or default.
                 else if (undefined === s.val) {
                     let parentKey = s.path[s.dI];
                     if (n.r && ('undefined' !== t || !s.parent.hasOwnProperty(parentKey))) {
                         s.err.push(makeErrImpl('required', s.val, s.path, s.dI, n, 1060));
-                        pass = false;
+                        // pass = false
                     }
                     else if (undefined !== n.v && !n.o || 'undefined' === t) {
                         s.val = n.v;
@@ -373,14 +372,14 @@ function make(inspec, inopts) {
                         if (isRoot) {
                             root = s.val;
                         }
-                        stype = typeof (s.val);
+                        s.stype = typeof (s.val);
                     }
                     if (undefined !== update.done) {
                         done = update.done;
                     }
-                    s.nI = undefined === update.nI ? s.nI : update.nI;
-                    s.sI = undefined === update.sI ? s.sI : update.sI;
-                    s.pI = undefined === update.pI ? s.pI : update.pI;
+                    // s.nI = undefined === update.nI ? s.nI : update.nI
+                    // s.sI = undefined === update.sI ? s.sI : update.sI
+                    // s.pI = undefined === update.pI ? s.pI : update.pI
                 }
             }
             // if (0 < terr.length) {
@@ -437,13 +436,16 @@ function printStacks(nodes: any[], srcs: any[], parents: any[]) {
 }
 */
 function handleValidate(vf, s) {
-    let update = { pass: true, done: false };
+    let update = {
+        // pass: true,
+        done: false
+    };
     let valid = vf(s.val, update, s);
     if (!valid || update.err) {
         // Explicit Optional allows undefined
         if (undefined === s.val && (s.node.o || !s.node.r)) {
             delete update.err;
-            update.pass = true;
+            // update.pass = true
             return update;
         }
         let w = update.why || 'custom';
@@ -464,8 +466,11 @@ function handleValidate(vf, s) {
             }
             s.err.push(makeErrImpl(w, s.val, s.path, s.dI, s.node, 1045, undefined, {}, fname));
         }
-        update.pass = false;
+        // update.pass = false
     }
+    s.nI = undefined === update.nI ? s.nI : update.nI;
+    s.sI = undefined === update.sI ? s.sI : update.sI;
+    s.pI = undefined === update.pI ? s.pI : update.pI;
     return update;
 }
 function pathstr(path, dI) {

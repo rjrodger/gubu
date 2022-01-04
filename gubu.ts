@@ -81,9 +81,8 @@ class State {
   nI: number = 2  // Next free slot in nodes.
   pI: number = 0  // Pointer to current node.
   sI: number = -1 // Pointer to next sibling node.
-  pass: boolean = true
+  stype: string = 'never'
   err: any[] = []
-  // terr: any[] = []
   nextSibling: boolean = true
 
   node: Node
@@ -115,7 +114,7 @@ class State {
 
 // Return updates to the validation state.
 type Update = {
-  pass: boolean
+  // pass: boolean
   done?: boolean
   val?: any
   node?: Node
@@ -372,29 +371,29 @@ function make(inspec?: any, inopts?: Options): GubuShape {
       // console.log('PATH', dI, pathstr(path, dI), 'KEY', key)
 
       s.oval = s.val
-      let stype: string = typeof (s.val)
-      if ('number' === stype && isNaN(s.val)) {
-        stype = 'nan'
+      s.stype = typeof (s.val)
+      if ('number' === s.stype && isNaN(s.val)) {
+        s.stype = 'nan'
       }
 
       // let terr: any[] = []
 
       let n = s.node
 
-      let pass = true
+      // let pass = true
       let done = false
 
       if (0 < n.b.length) {
         for (let bI = 0; bI < n.b.length; bI++) {
           let update = handleValidate(n.b[bI], s)
 
-          pass = update.pass
+          // pass = update.pass
           if (undefined !== update.val) {
             s.val = update.val
             if (isRoot) {
               root = s.val
             }
-            stype = typeof (s.val)
+            s.stype = typeof (s.val)
           }
           if (undefined !== update.node) {
             n = update.node
@@ -405,9 +404,9 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           if (undefined !== update.done) {
             done = update.done
           }
-          s.nI = undefined === update.nI ? s.nI : update.nI
-          s.sI = undefined === update.sI ? s.sI : update.sI
-          s.pI = undefined === update.pI ? s.pI : update.pI
+          // s.nI = undefined === update.nI ? s.nI : update.nI
+          // s.sI = undefined === update.sI ? s.sI : update.sI
+          // s.pI = undefined === update.pI ? s.pI : update.pI
         }
       }
 
@@ -422,7 +421,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           else if (
             undefined !== s.val && (
               null === s.val ||
-              'object' !== stype ||
+              'object' !== s.stype ||
               Array.isArray(s.val)
             )
           ) {
@@ -519,12 +518,12 @@ function make(inspec?: any, inopts?: Options): GubuShape {
           'custom' === t ||
           'list' === t ||
           undefined === s.val ||
-          t === stype ||
+          t === s.stype ||
           ('instance' === t && n.u.i && s.val instanceof n.u.i) ||
           ('null' === t && null === s.val)
         )) {
           s.err.push(makeErrImpl('type', s.val, s.path, s.dI, n, 1050))
-          pass = false
+          // pass = false
         }
 
         // Value itself, or default.
@@ -533,7 +532,7 @@ function make(inspec?: any, inopts?: Options): GubuShape {
 
           if (n.r && ('undefined' !== t || !s.parent.hasOwnProperty(parentKey))) {
             s.err.push(makeErrImpl('required', s.val, s.path, s.dI, n, 1060))
-            pass = false
+            // pass = false
           }
           else if (undefined !== n.v && !n.o || 'undefined' === t) {
             s.val = n.v
@@ -560,14 +559,14 @@ function make(inspec?: any, inopts?: Options): GubuShape {
             if (isRoot) {
               root = s.val
             }
-            stype = typeof (s.val)
+            s.stype = typeof (s.val)
           }
           if (undefined !== update.done) {
             done = update.done
           }
-          s.nI = undefined === update.nI ? s.nI : update.nI
-          s.sI = undefined === update.sI ? s.sI : update.sI
-          s.pI = undefined === update.pI ? s.pI : update.pI
+          // s.nI = undefined === update.nI ? s.nI : update.nI
+          // s.sI = undefined === update.sI ? s.sI : update.sI
+          // s.pI = undefined === update.pI ? s.pI : update.pI
         }
       }
 
@@ -643,7 +642,10 @@ function printStacks(nodes: any[], srcs: any[], parents: any[]) {
 
 
 function handleValidate(vf: Validate, s: State): Update {
-  let update: Update = { pass: true, done: false }
+  let update: Update = {
+    // pass: true,
+    done: false
+  }
 
   let valid = vf(s.val, update, s)
 
@@ -652,7 +654,7 @@ function handleValidate(vf: Validate, s: State): Update {
     // Explicit Optional allows undefined
     if (undefined === s.val && (s.node.o || !s.node.r)) {
       delete update.err
-      update.pass = true
+      // update.pass = true
       return update
     }
 
@@ -676,8 +678,13 @@ function handleValidate(vf: Validate, s: State): Update {
       s.err.push(makeErrImpl(
         w, s.val, s.path, s.dI, s.node, 1045, undefined, {}, fname))
     }
-    update.pass = false
+
+    // update.pass = false
   }
+
+  s.nI = undefined === update.nI ? s.nI : update.nI
+  s.sI = undefined === update.sI ? s.sI : update.sI
+  s.pI = undefined === update.pI ? s.pI : update.pI
 
   return update
 }
