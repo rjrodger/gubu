@@ -48,10 +48,13 @@ declare class State {
     pI: number;
     sI: number;
     stype: string;
+    isRoot: boolean;
     err: any[];
     nextSibling: boolean;
     node: Node;
     key: string;
+    type: string;
+    root: any;
     val: any;
     parent: any;
     nodes: (Node | number)[];

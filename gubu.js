@@ -19,8 +19,11 @@ class State {
         this.pI = 0; // Pointer to current node.
         this.sI = -1; // Pointer to next sibling node.
         this.stype = 'never';
+        this.isRoot = false;
         this.err = [];
         this.nextSibling = true;
+        this.type = 'never';
+        this.root = root;
         this.srcs = [root, -1];
         this.node = top;
         this.nodes = [top, -1];
@@ -181,11 +184,12 @@ function make(inspec, inopts) {
     spec.d = 0;
     let gubuShape = function GubuShape(inroot, inctx) {
         const ctx = inctx || {};
-        let root = inroot;
-        let s = new State(root, spec, ctx);
+        // let root: any = inroot
+        let s = new State(inroot, spec, ctx);
         // Iterative depth-first traversal of the spec.
         while (true) {
-            let isRoot = 0 === s.pI;
+            // let isRoot = 0 === s.pI
+            s.isRoot = 0 === s.pI;
             // printStacks(nodes, srcs, parents)
             // Dereference the back pointers to ancestor siblings.
             // Only objects|arrays can be nodes, so a number is a back pointer.
@@ -212,7 +216,7 @@ function make(inspec, inopts) {
             s.nextSibling = true;
             // let s_key = s.node.k
             s.key = s.node.k;
-            let t = s.node.t;
+            s.type = s.node.t;
             s.path[s.dI] = s.key;
             // console.log('PATH', dI, pathstr(path, dI), 'KEY', key)
             s.oval = s.val;
@@ -220,27 +224,26 @@ function make(inspec, inopts) {
             if ('number' === s.stype && isNaN(s.val)) {
                 s.stype = 'nan';
             }
-            // let terr: any[] = []
             let n = s.node;
-            // let pass = true
             let done = false;
             if (0 < n.b.length) {
                 for (let bI = 0; bI < n.b.length; bI++) {
                     let update = handleValidate(n.b[bI], s);
+                    n = s.node;
                     // pass = update.pass
-                    if (undefined !== update.val) {
-                        s.val = update.val;
-                        if (isRoot) {
-                            root = s.val;
-                        }
-                        s.stype = typeof (s.val);
-                    }
-                    if (undefined !== update.node) {
-                        n = update.node;
-                    }
-                    if (undefined !== update.type) {
-                        t = update.type;
-                    }
+                    // if (undefined !== update.val) {
+                    //   s.val = update.val
+                    //   if (isRoot) {
+                    //     root = s.val
+                    //   }
+                    //   s.stype = typeof (s.val)
+                    // }
+                    // if (undefined !== update.node) {
+                    //   n = update.node
+                    // }
+                    // if (undefined !== update.type) {
+                    //   s.type = update.type
+                    // }
                     if (undefined !== update.done) {
                         done = update.done;
                     }
@@ -250,10 +253,10 @@ function make(inspec, inopts) {
                 }
             }
             if (!done) {
-                if ('never' === t) {
+                if ('never' === s.type) {
                     s.err.push(makeErrImpl('never', s.val, s.path, s.dI, n, 1070));
                 }
-                else if ('object' === t) {
+                else if ('object' === s.type) {
                     if (n.r && undefined === s.val) {
                         s.err.push(makeErrImpl('required', s.val, s.path, s.dI, n, 1010));
                     }
@@ -265,8 +268,8 @@ function make(inspec, inopts) {
                     // else if (null != src[key] || !vs.o) {
                     else if (!n.o) {
                         s.val = s.val || {};
-                        if (isRoot) {
-                            root = s.val;
+                        if (s.isRoot) {
+                            s.root = s.val;
                         }
                         let vkeys = Object.keys(n.v);
                         if (0 < vkeys.length) {
@@ -287,7 +290,7 @@ function make(inspec, inopts) {
                         }
                     }
                 }
-                else if ('array' === t) {
+                else if ('array' === s.type) {
                     if (n.r && undefined === s.val) {
                         s.err.push(makeErrImpl('required', s.val, s.path, s.dI, n, 1030));
                     }
@@ -296,8 +299,8 @@ function make(inspec, inopts) {
                     }
                     else if (!n.o) {
                         s.val = s.val || [];
-                        if (isRoot) {
-                            root = s.val;
+                        if (s.isRoot) {
+                            s.root = s.val;
                         }
                         let vkeys = Object.keys(n.v).filter(k => !isNaN(+k));
                         if (0 < s.val.length || 1 < vkeys.length) {
@@ -332,32 +335,32 @@ function make(inspec, inopts) {
                     }
                 }
                 // Invalid type.
-                else if (!('any' === t ||
-                    'custom' === t ||
-                    'list' === t ||
+                else if (!('any' === s.type ||
+                    'custom' === s.type ||
+                    'list' === s.type ||
                     undefined === s.val ||
-                    t === s.stype ||
-                    ('instance' === t && n.u.i && s.val instanceof n.u.i) ||
-                    ('null' === t && null === s.val))) {
+                    s.type === s.stype ||
+                    ('instance' === s.type && n.u.i && s.val instanceof n.u.i) ||
+                    ('null' === s.type && null === s.val))) {
                     s.err.push(makeErrImpl('type', s.val, s.path, s.dI, n, 1050));
                     // pass = false
                 }
                 // Value itself, or default.
                 else if (undefined === s.val) {
                     let parentKey = s.path[s.dI];
-                    if (n.r && ('undefined' !== t || !s.parent.hasOwnProperty(parentKey))) {
+                    if (n.r && ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
                         s.err.push(makeErrImpl('required', s.val, s.path, s.dI, n, 1060));
                         // pass = false
                     }
-                    else if (undefined !== n.v && !n.o || 'undefined' === t) {
+                    else if (undefined !== n.v && !n.o || 'undefined' === s.type) {
                         s.val = n.v;
-                        if (isRoot) {
-                            root = s.val;
+                        if (s.isRoot) {
+                            s.root = s.val;
                         }
                     }
                 }
                 // Empty strings fail even if string is optional. Use Empty to allow.
-                else if ('string' === t && '' === s.val) {
+                else if ('string' === s.type && '' === s.val) {
                     if (!n.u.empty) {
                         s.err.push(makeErrImpl('required', s.val, s.path, s.dI, n, 1080));
                     }
@@ -367,13 +370,13 @@ function make(inspec, inopts) {
             if (0 < n.a.length) {
                 for (let aI = 0; aI < n.a.length; aI++) {
                     let update = handleValidate(n.a[aI], s);
-                    if (undefined !== update.val) {
-                        s.val = update.val;
-                        if (isRoot) {
-                            root = s.val;
-                        }
-                        s.stype = typeof (s.val);
-                    }
+                    // if (undefined !== update.val) {
+                    //   s.val = update.val
+                    //   if (isRoot) {
+                    //     root = s.val
+                    //   }
+                    //   s.stype = typeof (s.val)
+                    // }
                     if (undefined !== update.done) {
                         done = update.done;
                     }
@@ -400,7 +403,7 @@ function make(inspec, inopts) {
                 throw new GubuError('shape', s.err, ctx);
             }
         }
-        return root;
+        return s.root;
     };
     // TODO: test Number, String, etc also in arrays
     gubuShape.spec = () => {
@@ -467,6 +470,20 @@ function handleValidate(vf, s) {
             s.err.push(makeErrImpl(w, s.val, s.path, s.dI, s.node, 1045, undefined, {}, fname));
         }
         // update.pass = false
+    }
+    if (undefined !== update.val) {
+        s.val = update.val;
+        if (s.isRoot) {
+            // if (0 === s.pI) {
+            s.root = s.val;
+        }
+        s.stype = typeof (s.val);
+    }
+    if (undefined !== update.node) {
+        s.node = update.node;
+    }
+    if (undefined !== update.type) {
+        s.type = update.type;
     }
     s.nI = undefined === update.nI ? s.nI : update.nI;
     s.sI = undefined === update.sI ? s.sI : update.sI;
