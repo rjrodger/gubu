@@ -50,6 +50,7 @@ declare class State {
     pass: boolean;
     err: any[];
     terr: any[];
+    nextSibling: boolean;
     node: Node;
     key: string;
     val: any;

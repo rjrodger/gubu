@@ -21,6 +21,7 @@ class State {
         this.pass = true;
         this.err = [];
         this.terr = [];
+        this.nextSibling = true;
         this.srcs = [root, -1];
         this.node = top;
         this.nodes = [top, -1];
@@ -183,9 +184,6 @@ function make(inspec, inopts) {
         const ctx = inctx || {};
         let root = inroot;
         let s = new State(root, spec, ctx);
-        // let s.node: any       // Current node.  
-        // let src: any        // Current source value to validate.
-        let parent;
         // Iterative depth-first traversal of the spec.
         while (true) {
             let isRoot = 0 === s.pI;
@@ -208,15 +206,14 @@ function make(inspec, inopts) {
                 s.node = nextNode;
             }
             s.sI = s.pI + 1;
-            // src = s.srcs[s.pI]
             let sval = s.srcs[s.pI];
-            parent = s.parents[s.pI];
+            s.parent = s.parents[s.pI];
             s.pI = s.nI;
-            let nextSibling = true;
-            let key = s.node.k;
+            s.nextSibling = true;
+            // let s_key = s.node.k
+            s.key = s.node.k;
             let t = s.node.t;
-            // let sval = src
-            s.path[s.dI] = key;
+            s.path[s.dI] = s.key;
             // console.log('PATH', dI, pathstr(path, dI), 'KEY', key)
             let oval = sval;
             let stype = typeof (sval);
@@ -231,8 +228,8 @@ function make(inspec, inopts) {
                 for (let bI = 0; bI < vs.b.length; bI++) {
                     let update = handleValidate(vs.b[bI], sval, {
                         dI: s.dI, nI: s.nI, sI: s.sI, pI: s.pI,
-                        key, node: vs, val: sval, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
-                        pass, oval, parents: s.parents
+                        key: s.key, node: vs, val: sval, parent: s.parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
+                        pass, oval, parents: s.parents, nextSibling: s.nextSibling
                     });
                     pass = update.pass;
                     if (undefined !== update.val) {
@@ -290,7 +287,7 @@ function make(inspec, inopts) {
                             }
                             s.dI++;
                             s.nodes[s.nI++] = s.sI;
-                            nextSibling = false;
+                            s.nextSibling = false;
                         }
                     }
                 }
@@ -334,7 +331,7 @@ function make(inspec, inopts) {
                             }
                             s.dI++;
                             s.nodes[s.nI++] = s.sI;
-                            nextSibling = false;
+                            s.nextSibling = false;
                         }
                     }
                 }
@@ -352,7 +349,7 @@ function make(inspec, inopts) {
                 // Value itself, or default.
                 else if (undefined === sval) {
                     let parentKey = s.path[s.dI];
-                    if (vs.r && ('undefined' !== t || !parent.hasOwnProperty(parentKey))) {
+                    if (vs.r && ('undefined' !== t || !s.parent.hasOwnProperty(parentKey))) {
                         terr.push(makeErrImpl('required', sval, s.path, s.dI, vs, 1060));
                         pass = false;
                     }
@@ -375,8 +372,8 @@ function make(inspec, inopts) {
                 for (let aI = 0; aI < vs.a.length; aI++) {
                     let update = handleValidate(vs.a[aI], sval, {
                         dI: s.dI, nI: s.nI, sI: s.sI, pI: s.pI,
-                        key, node: vs, val: sval, parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
-                        pass, oval, parents: s.parents
+                        key: s.key, node: vs, val: sval, parent: s.parent, nodes: s.nodes, srcs: s.srcs, path: s.path, terr, err: s.err, ctx,
+                        pass, oval, parents: s.parents, nextSibling: s.nextSibling
                     });
                     if (undefined !== update.val) {
                         sval = update.val;
@@ -396,10 +393,10 @@ function make(inspec, inopts) {
             if (0 < terr.length) {
                 s.err.push(...terr);
             }
-            if (parent && !done) {
-                parent[key] = sval;
+            if (s.parent && !done) {
+                s.parent[s.key] = sval;
             }
-            if (nextSibling) {
+            if (s.nextSibling) {
                 s.pI = s.sI;
             }
         }
