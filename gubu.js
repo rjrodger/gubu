@@ -230,26 +230,9 @@ function make(inspec, inopts) {
                 for (let bI = 0; bI < n.b.length; bI++) {
                     let update = handleValidate(n.b[bI], s);
                     n = s.node;
-                    // pass = update.pass
-                    // if (undefined !== update.val) {
-                    //   s.val = update.val
-                    //   if (isRoot) {
-                    //     root = s.val
-                    //   }
-                    //   s.stype = typeof (s.val)
-                    // }
-                    // if (undefined !== update.node) {
-                    //   n = update.node
-                    // }
-                    // if (undefined !== update.type) {
-                    //   s.type = update.type
-                    // }
                     if (undefined !== update.done) {
                         done = update.done;
                     }
-                    // s.nI = undefined === update.nI ? s.nI : update.nI
-                    // s.sI = undefined === update.sI ? s.sI : update.sI
-                    // s.pI = undefined === update.pI ? s.pI : update.pI
                 }
             }
             if (!done) {
@@ -265,7 +248,6 @@ function make(inspec, inopts) {
                         Array.isArray(s.val))) {
                         s.err.push(makeErrImpl('type', s.val, s.path, s.dI, n, 1020));
                     }
-                    // else if (null != src[key] || !vs.o) {
                     else if (!n.o) {
                         s.val = s.val || {};
                         if (s.isRoot) {
@@ -343,14 +325,13 @@ function make(inspec, inopts) {
                     ('instance' === s.type && n.u.i && s.val instanceof n.u.i) ||
                     ('null' === s.type && null === s.val))) {
                     s.err.push(makeErrImpl('type', s.val, s.path, s.dI, n, 1050));
-                    // pass = false
                 }
                 // Value itself, or default.
                 else if (undefined === s.val) {
                     let parentKey = s.path[s.dI];
-                    if (n.r && ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
+                    if (n.r &&
+                        ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
                         s.err.push(makeErrImpl('required', s.val, s.path, s.dI, n, 1060));
-                        // pass = false
                     }
                     else if (undefined !== n.v && !n.o || 'undefined' === s.type) {
                         s.val = n.v;
@@ -370,24 +351,11 @@ function make(inspec, inopts) {
             if (0 < n.a.length) {
                 for (let aI = 0; aI < n.a.length; aI++) {
                     let update = handleValidate(n.a[aI], s);
-                    // if (undefined !== update.val) {
-                    //   s.val = update.val
-                    //   if (isRoot) {
-                    //     root = s.val
-                    //   }
-                    //   s.stype = typeof (s.val)
-                    // }
                     if (undefined !== update.done) {
                         done = update.done;
                     }
-                    // s.nI = undefined === update.nI ? s.nI : update.nI
-                    // s.sI = undefined === update.sI ? s.sI : update.sI
-                    // s.pI = undefined === update.pI ? s.pI : update.pI
                 }
             }
-            // if (0 < terr.length) {
-            //   s.err.push(...terr)
-            // }
             if (s.parent && !done) {
                 s.parent[s.key] = s.val;
             }
@@ -440,7 +408,6 @@ function printStacks(nodes: any[], srcs: any[], parents: any[]) {
 */
 function handleValidate(vf, s) {
     let update = {
-        // pass: true,
         done: false
     };
     let valid = vf(s.val, update, s);
@@ -448,7 +415,6 @@ function handleValidate(vf, s) {
         // Explicit Optional allows undefined
         if (undefined === s.val && (s.node.o || !s.node.r)) {
             delete update.err;
-            // update.pass = true
             return update;
         }
         let w = update.why || 'custom';
@@ -469,7 +435,6 @@ function handleValidate(vf, s) {
             }
             s.err.push(makeErrImpl(w, s.val, s.path, s.dI, s.node, 1045, undefined, {}, fname));
         }
-        // update.pass = false
     }
     if (undefined !== update.val) {
         s.val = update.val;
