@@ -49,7 +49,6 @@ declare class State {
     sI: number;
     pass: boolean;
     err: any[];
-    terr: any[];
     nextSibling: boolean;
     node: Node;
     key: string;
