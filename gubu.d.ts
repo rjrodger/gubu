@@ -49,6 +49,7 @@ declare class State {
     sI: number;
     stype: string;
     isRoot: boolean;
+    stop: boolean;
     err: any[];
     nextSibling: boolean;
     node: Node;
@@ -58,12 +59,14 @@ declare class State {
     val: any;
     parent: any;
     nodes: (Node | number)[];
-    srcs: any[];
+    vals: any[];
     parents: Node[];
     path: string[];
     ctx: any;
     oval: any;
-    constructor(root: any, top: Node, ctx: Context);
+    constructor(root: any, top: Node, ctx?: Context);
+    next(): void;
+    updateVal(val: any): void;
 }
 declare type Update = {
     done?: boolean;
@@ -84,8 +87,8 @@ declare type ErrDesc = {
     m: number;
     t: string;
 };
-declare function norm(spec?: any): Node;
-declare function make(inspec?: any, inopts?: Options): GubuShape;
+declare function norm(spec?: any, depth?: number): Node;
+declare function make(intop?: any, inopts?: Options): GubuShape;
 declare const Required: Builder;
 declare const Optional: Builder;
 declare const Empty: Builder;
