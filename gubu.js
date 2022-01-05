@@ -74,17 +74,6 @@ class State {
             this.root = this.val;
         }
     }
-    printStacks() {
-        var _a;
-        console.log('NODE', 'd=' + this.dI, this.pI, this.nI, +this.node, this.node.t);
-        for (let i = 0; i < this.nodes.length ||
-            i < this.vals.length ||
-            i < this.parents.length; i++) {
-            console.log(i, '\t', isNaN(+this.nodes[i]) ?
-                this.keys[i] + ':' + ((_a = this.nodes[i]) === null || _a === void 0 ? void 0 : _a.t) :
-                +this.nodes[i], '\t', this.vals[i], '\t', this.parents[i]);
-        }
-    }
 }
 class GubuError extends TypeError {
     constructor(code, err, ctx) {

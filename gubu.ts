@@ -159,7 +159,6 @@ class State {
   }
 
 
-
   updateVal(val: any) {
     this.val = val
     this.stype = typeof (this.val)
@@ -172,6 +171,7 @@ class State {
   }
 
 
+  /*
   printStacks() {
     console.log('NODE', 'd=' + this.dI, this.pI, this.nI, +this.node, this.node.t)
 
@@ -186,6 +186,7 @@ class State {
           +this.nodes[i], '\t', this.vals[i], '\t', this.parents[i])
     }
   }
+  */
 }
 
 

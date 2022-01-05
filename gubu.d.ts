@@ -67,7 +67,6 @@ declare class State {
     constructor(root: any, top: Node, ctx?: Context);
     next(): void;
     updateVal(val: any): void;
-    printStacks(): void;
 }
 declare type Update = {
     done?: boolean;
