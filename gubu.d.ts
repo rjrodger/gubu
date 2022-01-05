@@ -31,7 +31,6 @@ declare type Node = {
     v: any;
     r: boolean;
     o: boolean;
-    k: string;
     u: Record<string, any>;
     b: Validate[];
     a: Validate[];
@@ -50,23 +49,25 @@ declare class State {
     stype: string;
     isRoot: boolean;
     stop: boolean;
-    err: any[];
     nextSibling: boolean;
-    node: Node;
     key: string;
     type: string;
+    err: any[];
+    parents: Node[];
+    keys: string[];
+    path: string[];
+    node: Node;
     root: any;
     val: any;
     parent: any;
     nodes: (Node | number)[];
     vals: any[];
-    parents: Node[];
-    path: string[];
     ctx: any;
     oval: any;
     constructor(root: any, top: Node, ctx?: Context);
     next(): void;
     updateVal(val: any): void;
+    printStacks(): void;
 }
 declare type Update = {
     done?: boolean;
@@ -87,7 +88,7 @@ declare type ErrDesc = {
     m: number;
     t: string;
 };
-declare function norm(spec?: any, depth?: number): Node;
+declare function norm(shape?: any, depth?: number): Node;
 declare function make(intop?: any, inopts?: Options): GubuShape;
 declare const Required: Builder;
 declare const Optional: Builder;
@@ -108,13 +109,14 @@ declare const Min: Builder;
 declare const Max: Builder;
 declare const Above: Builder;
 declare const Below: Builder;
+declare const Value: Builder;
 declare function buildize(invs0?: any, invs1?: any): Node;
 declare function makeErr(val: any, state: State, text?: string, why?: string): ErrDesc;
 declare type GubuShape = (<T>(inroot?: T, inctx?: any) => T) & {
     spec: () => any;
     gubu: typeof GUBU;
 };
-declare const G$: (spec: any) => Node;
+declare const G$: (node: any) => Node;
 declare type Gubu = typeof make & {
     desc: () => any;
     G$: typeof G$;
@@ -140,9 +142,10 @@ declare type Gubu = typeof make & {
     Rename: typeof Rename;
     Required: typeof Required;
     Some: typeof Some;
+    Value: typeof Value;
 };
 declare const Gubu: Gubu;
-declare function Args(spec: any, wrapped?: any): GubuShape | ((this: any) => any);
+declare function Args(shapes: Record<string, any>, wrapped?: any): GubuShape | ((this: any) => any);
 declare const GAbove: Builder;
 declare const GAfter: Builder;
 declare const GAll: Builder;
@@ -162,5 +165,6 @@ declare const GRefer: Builder;
 declare const GRename: Builder;
 declare const GRequired: Builder;
 declare const GSome: Builder;
+declare const GValue: Builder;
 export type { Validate, Update, Context, Builder, Node, State, };
-export { Gubu, G$, norm, buildize, makeErr, Args, Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Optional, Refer, Rename, Required, Some, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GOptional, GRefer, GRename, GRequired, GSome, };
+export { Gubu, G$, norm, buildize, makeErr, Args, Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Optional, Refer, Rename, Required, Some, Value, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GOptional, GRefer, GRename, GRequired, GSome, GValue, };

@@ -1,7 +1,6 @@
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 
 
-// TODO: spread shape for all object values:  Value(vshape)
 // TODO: validator on completion of object or array
 
 import { inspect } from 'util'
@@ -55,7 +54,7 @@ type Node = {
   v: any                 // Default value.
   r: boolean             // Value is required.
   o: boolean             // Value is explicitly optional.
-  k: string              // Key of this node.
+  // k: string              // Key of this node.
   u: Record<string, any> // Custom meta data
   b: Validate[]          // Custom before validation functions.
   a: Validate[]          // Custom after vaidation functions.
@@ -84,13 +83,17 @@ class State {
   stype: string = 'never'
   isRoot: boolean = false
   stop: boolean = true
+  nextSibling: boolean = true
+  key: string = ''
+  type: string = 'never'
 
   err: any[] = []
-  nextSibling: boolean = true
+  parents: Node[] = []
+  keys: string[] = []
+  path: string[] = []
+
 
   node: Node
-  key: string
-  type: string = 'never'
 
   root: any
 
@@ -98,8 +101,6 @@ class State {
   parent: any
   nodes: (Node | number)[]
   vals: any[]
-  parents: Node[]
-  path: string[]
   ctx: any
   oval: any
 
@@ -112,14 +113,11 @@ class State {
     this.vals = [root, -1]
     this.node = top
     this.nodes = [top, -1]
-    this.parents = []
-    this.path = []
-    this.key = top.k
     this.ctx = ctx || {}
   }
 
   next() {
-    // printStacks(this.nodes, this.srcs, this.parents)
+    // this.printStacks()
 
     this.stop = false
     this.isRoot = 0 === this.pI
@@ -128,7 +126,6 @@ class State {
     // Only objects|arrays can be nodes, so a number is a back pointer.
     // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
     let nextNode = this.nodes[this.pI]
-    // console.log('NODE-0', 'd=' + dI, pI, nI, +node, node.k, node.t)
 
     while (+nextNode) {
       this.pI = +nextNode
@@ -147,13 +144,14 @@ class State {
     }
 
     this.updateVal(this.vals[this.pI])
+    this.key = this.keys[this.pI]
 
     this.sI = this.pI + 1
     this.parent = this.parents[this.pI]
 
     this.pI = this.nI
     this.nextSibling = true
-    this.key = this.node.k
+
     this.type = this.node.t
     this.path[this.dI] = this.key
 
@@ -174,21 +172,25 @@ class State {
   }
 
 
-  /*
-    printStacks(nodes: any[], srcs: any[], parents: any[]) {
-    for (let i = 0; i < nodes.length || i < srcs.length || i < parents.length; i++) {
-    console.log(i, '\t',
-    isNaN(+nodes[i]) ? nodes[i].k + ':' + nodes[i].t : +nodes[i],
-    '\t', srcs[i], '\t', parents[i])
+  printStacks() {
+    console.log('NODE', 'd=' + this.dI, this.pI, this.nI, +this.node, this.node.t)
+
+    for (let i = 0;
+      i < this.nodes.length ||
+      i < this.vals.length ||
+      i < this.parents.length;
+      i++) {
+      console.log(i, '\t',
+        isNaN(+this.nodes[i]) ?
+          this.keys[i] + ':' + (this.nodes[i] as any)?.t :
+          +this.nodes[i], '\t', this.vals[i], '\t', this.parents[i])
     }
-    }
-  */
+  }
 }
 
 
 // Return updates to the validation state.
 type Update = {
-  // pass: boolean
   done?: boolean
   val?: any
   node?: Node
@@ -204,11 +206,11 @@ type Update = {
 // Validation error description.
 type ErrDesc = {
   n: Node    // Failing spec node.
-  s: any        // Failing src value.
-  p: string     // Key path to src value.
-  w: string     // Error code ("why").
-  m: number     // Error mark for debugging.
-  t: string     // Error message text.
+  s: any     // Failing src value.
+  p: string  // Key path to src value.
+  w: string  // Error code ("why").
+  m: number  // Error mark for debugging.
+  t: string  // Error message text.
 }
 
 
@@ -264,58 +266,57 @@ const EMPTY_VAL: { [name: string]: any } = {
 }
 
 
-function norm(spec?: any, depth?: number): Node {
+// Normalize a value into a Node.
+function norm(shape?: any, depth?: number): Node {
 
-  // Is this a (possibly incomplete) ValSpec?
-  if (null != spec && spec.$?.gubu$) {
+  // Is this a (possibly incomplete) Node?
+  if (null != shape && shape.$?.gubu$) {
 
     // Assume complete if gubu$ has special internal reference.
-    if (GUBU$ === spec.$.gubu$) {
-      return spec
+    if (GUBU$ === shape.$.gubu$) {
+      shape.d = null == depth ? shape.d : depth
+      return shape
     }
 
-    // Normalize an incomplete ValSpec, avoiding any recursive calls to norm.
-    else if (true === spec.$.gubu$) {
-      let vs = { ...spec }
-      vs.$ = { v$: Pkg.version, ...vs.$, gubu$: GUBU$ }
+    // Normalize an incomplete Node, avoiding any recursive calls to norm.
+    else if (true === shape.$.gubu$) {
+      let node = { ...shape }
+      node.$ = { v$: Pkg.version, ...node.$, gubu$: GUBU$ }
 
-      vs.v = (null != vs.v && 'object' === typeof (vs.v)) ? { ...vs.v } : vs.v
+      node.v =
+        (null != node.v && 'object' === typeof (node.v)) ? { ...node.v } : node.v
 
-      vs.t = vs.t || typeof (vs.v)
-      if ('function' === vs.t && IS_TYPE[vs.v.name]) {
-        vs.t = (vs.v.name.toLowerCase() as ValType)
-        vs.v = clone(EMPTY_VAL[vs.t])
+      node.t = node.t || typeof (node.v)
+      if ('function' === node.t && IS_TYPE[node.v.name]) {
+        node.t = (node.v.name.toLowerCase() as ValType)
+        node.v = clone(EMPTY_VAL[node.t])
       }
 
-      vs.k = null == vs.k ? '' : vs.k
-      vs.r = !!vs.r
-      vs.o = !!vs.o
-      vs.d = null == vs.d ? -1 : vs.d
+      node.r = !!node.r
+      node.o = !!node.o
+      node.d = null == depth ? null == node.d ? -1 : node.d : depth
 
-      vs.b = vs.b || []
-      vs.a = vs.a || []
+      node.b = node.b || []
+      node.a = node.a || []
 
-      vs.u = vs.u || {}
-      if (vs.u.list?.specs) {
-        vs.u.list.specs = [...vs.u.list.specs]
-      }
+      node.u = node.u || {}
 
-      return vs
+      return node
     }
   }
 
-  // Not a ValSpec, so build one based on value and its type.
-  let t: ValType | 'undefined' = (null === spec ? 'null' : typeof (spec))
+  // Not a Node, so build one based on value and its type.
+  let t: ValType | 'undefined' = (null === shape ? 'null' : typeof (shape))
   t = ('undefined' === t ? 'any' : t) as ValType
 
-  let v = spec
+  let v = shape
   let r = false // Optional by default.
   let o = false // Only true when Optional builder is used.
   let b = undefined
   let u: any = {}
 
   if ('object' === t) {
-    if (Array.isArray(spec)) {
+    if (Array.isArray(shape)) {
       t = 'array'
     }
     else if (
@@ -331,21 +332,21 @@ function norm(spec?: any, depth?: number): Node {
   }
 
   else if ('function' === t) {
-    if (IS_TYPE[spec.name]) {
-      t = (spec.name.toLowerCase() as ValType)
+    if (IS_TYPE[shape.name]) {
+      t = (shape.name.toLowerCase() as ValType)
       r = true
       v = clone(EMPTY_VAL[t])
     }
-    else if (spec.gubu === GUBU || true === spec.$?.gubu) {
-      let gs = spec.spec ? spec.spec() : spec
+    else if (shape.gubu === GUBU || true === shape.$?.gubu) {
+      let gs = shape.spec ? shape.spec() : shape
       t = (gs as Node).t
       v = gs.v
       r = gs.r
       u = gs.u
     }
     else if (
-      (undefined === spec.prototype && Function === spec.constructor) ||
-      Function === spec.prototype?.constructor
+      (undefined === shape.prototype && Function === shape.constructor) ||
+      Function === shape.prototype?.constructor
     ) {
       t = 'custom'
       b = v
@@ -361,13 +362,12 @@ function norm(spec?: any, depth?: number): Node {
     t = 'nan'
   }
 
-  let vs: Node = {
+  let node: Node = {
     $: GUBU,
     t,
     v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
     r,
     o,
-    k: '',
     d: null == depth ? -1 : depth,
     u,
     a: [],
@@ -375,11 +375,10 @@ function norm(spec?: any, depth?: number): Node {
   }
 
   if (b) {
-    // vs.b = b
-    vs.b.push(b)
+    node.b.push(b)
   }
 
-  return vs
+  return node
 }
 
 
@@ -389,12 +388,11 @@ function make(intop?: any, inopts?: Options): GubuShape {
     null == opts.name ? 'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name
 
   let top: Node = norm(intop, 0)
-  // top.d = 0
 
   let gubuShape = function GubuShape<T>(root?: T, inctx?: Context): T {
     let s = new State(root, top, inctx)
 
-    // Iterative depth-first traversal of the spec.
+    // Iterative depth-first traversal of the shape.
     while (true) {
       s.next()
 
@@ -402,13 +400,12 @@ function make(intop?: any, inopts?: Options): GubuShape {
         break
       }
 
-      let n = s.node
+      // let n = s.node
       let done = false
 
-      if (0 < n.b.length) {
-        for (let bI = 0; bI < n.b.length; bI++) {
-          let update = handleValidate(n.b[bI], s)
-          n = s.node
+      if (0 < s.node.b.length) {
+        for (let bI = 0; bI < s.node.b.length; bI++) {
+          let update = handleValidate(s.node.b[bI], s)
           if (undefined !== update.done) {
             done = update.done
           }
@@ -417,11 +414,11 @@ function make(intop?: any, inopts?: Options): GubuShape {
 
       if (!done) {
         if ('never' === s.type) {
-          s.err.push(makeErrImpl('never', s.val, s.path, s.dI, n, 1070))
+          s.err.push(makeErrImpl('never', s.val, s.path, s.dI, s.node, 1070))
         }
         else if ('object' === s.type) {
-          if (n.r && undefined === s.val) {
-            s.err.push(makeErrImpl('required', s.val, s.path, s.dI, n, 1010))
+          if (s.node.r && undefined === s.val) {
+            s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1010))
           }
           else if (
             undefined !== s.val && (
@@ -430,25 +427,21 @@ function make(intop?: any, inopts?: Options): GubuShape {
               Array.isArray(s.val)
             )
           ) {
-            s.err.push(makeErrImpl('type', s.val, s.path, s.dI, n, 1020))
+            s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1020))
           }
 
-          else if (!n.o) {
+          else if (!s.node.o) {
             s.updateVal(s.val || {})
 
-            let vkeys = Object.keys(n.v)
+            let vkeys = Object.keys(s.node.v)
             if (0 < vkeys.length) {
               s.pI = s.nI
               for (let k of vkeys) {
-                let nvs = n.v[k] = norm(n.v[k], 1 + s.dI)
-
-                // TODO: move to norm?
-                nvs.k = k
-                // nvs.d = 1 + s.dI
-
+                let nvs = s.node.v[k] = norm(s.node.v[k], 1 + s.dI)
                 s.nodes[s.nI] = nvs
                 s.vals[s.nI] = s.val[k]
                 s.parents[s.nI] = s.val
+                s.keys[s.nI] = k
                 s.nI++
               }
 
@@ -461,45 +454,41 @@ function make(intop?: any, inopts?: Options): GubuShape {
         }
 
         else if ('array' === s.type) {
-          if (n.r && undefined === s.val) {
-            s.err.push(makeErrImpl('required', s.val, s.path, s.dI, n, 1030))
+          if (s.node.r && undefined === s.val) {
+            s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1030))
           }
           else if (undefined !== s.val && !Array.isArray(s.val)) {
-            s.err.push(makeErrImpl('type', s.val, s.path, s.dI, n, 1040))
+            s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1040))
           }
-          else if (!n.o) {
+          else if (!s.node.o) {
             s.updateVal(s.val || [])
 
-            let vkeys = Object.keys(n.v).filter(k => !isNaN(+k))
+            let vkeys = Object.keys(s.node.v).filter(k => !isNaN(+k))
 
             if (0 < s.val.length || 1 < vkeys.length) {
               s.pI = s.nI
               let nvs =
-                undefined === n.v[0] ? Any() : n.v[0] = norm(n.v[0], 1 + s.dI)
-              nvs.k = '0'
-              // nvs.d = 1 + s.dI
+                undefined === s.node.v[0] ? Any() :
+                  s.node.v[0] = norm(s.node.v[0], 1 + s.dI)
 
               // Special elements
               let j = 1
               if (1 < vkeys.length) {
                 for (; j < vkeys.length; j++) {
-                  let jvs = n.v[j] = norm(n.v[j], 1 + s.dI)
-
-                  // TODO: move to norm?
-                  jvs.k = '' + (j - 1)
-                  // jvs.d = 1 + s.dI
-
-                  s.nodes[s.nI] = { ...jvs, k: '' + (j - 1) }
+                  let jvs = s.node.v[j] = norm(s.node.v[j], 1 + s.dI)
+                  s.nodes[s.nI] = jvs
                   s.vals[s.nI] = s.val[(j - 1)]
                   s.parents[s.nI] = s.val
+                  s.keys[s.nI] = '' + (j - 1)
                   s.nI++
                 }
               }
 
               for (let i = j - 1; i < s.val.length; i++) {
-                s.nodes[s.nI] = { ...nvs, k: '' + i }
+                s.nodes[s.nI] = nvs
                 s.vals[s.nI] = s.val[i]
                 s.parents[s.nI] = s.val
+                s.keys[s.nI] = '' + i
                 s.nI++
               }
 
@@ -518,37 +507,36 @@ function make(intop?: any, inopts?: Options): GubuShape {
           'list' === s.type ||
           undefined === s.val ||
           s.type === s.stype ||
-          ('instance' === s.type && n.u.i && s.val instanceof n.u.i) ||
+          ('instance' === s.type && s.node.u.i && s.val instanceof s.node.u.i) ||
           ('null' === s.type && null === s.val)
         )) {
-          s.err.push(makeErrImpl('type', s.val, s.path, s.dI, n, 1050))
+          s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1050))
         }
 
         // Value itself, or default.
         else if (undefined === s.val) {
           let parentKey = s.path[s.dI]
 
-          if (n.r &&
+          if (s.node.r &&
             ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
-            s.err.push(makeErrImpl('required', s.val, s.path, s.dI, n, 1060))
+            s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1060))
           }
-          else if (undefined !== n.v && !n.o || 'undefined' === s.type) {
-            s.updateVal(n.v)
+          else if (undefined !== s.node.v && !s.node.o || 'undefined' === s.type) {
+            s.updateVal(s.node.v)
           }
         }
 
         // Empty strings fail even if string is optional. Use Empty to allow.
         else if ('string' === s.type && '' === s.val) {
-          if (!n.u.empty) {
-            s.err.push(makeErrImpl('required', s.val, s.path, s.dI, n, 1080))
+          if (!s.node.u.empty) {
+            s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1080))
           }
         }
       }
 
-      //   // console.log('KEY3', key, pass, done, vs.a)
-      if (0 < n.a.length) {
-        for (let aI = 0; aI < n.a.length; aI++) {
-          let update = handleValidate(n.a[aI], s)
+      if (0 < s.node.a.length) {
+        for (let aI = 0; aI < s.node.a.length; aI++) {
+          let update = handleValidate(s.node.a[aI], s)
           if (undefined !== update.done) {
             done = update.done
           }
@@ -672,62 +660,62 @@ function pathstr(path: string[], dI: number) {
 }
 
 
-const Required: Builder = function(this: Node, spec?: any) {
-  let vs = buildize(this, spec)
-  vs.r = true
+const Required: Builder = function(this: Node, shape?: any) {
+  let node = buildize(this, shape)
+  node.r = true
 
-  if (undefined === spec && 1 === arguments.length) {
-    vs.t = 'undefined'
-    vs.v = undefined
+  if (undefined === shape && 1 === arguments.length) {
+    node.t = 'undefined'
+    node.v = undefined
   }
 
-  return vs
+  return node
 }
 
-const Optional: Builder = function(this: Node, spec?: any) {
-  let vs = buildize(this, spec)
-  vs.r = false
+const Optional: Builder = function(this: Node, shape?: any) {
+  let node = buildize(this, shape)
+  node.r = false
 
-  // Mark Optional as explicit, this do not insert empty arrays and objects.
-  vs.o = true
+  // Mark Optional as explicit => do not insert empty arrays and objects.
+  node.o = true
 
-  return vs
+  return node
 }
 
-const Empty: Builder = function(this: Node, spec?: any) {
-  let vs = buildize(this, spec)
-  vs.u.empty = true
-  return vs
+const Empty: Builder = function(this: Node, shape?: any) {
+  let node = buildize(this, shape)
+  node.u.empty = true
+  return node
 }
 
 
 
 // Optional value provides default.
-const Any: Builder = function(this: Node, spec?: any) {
-  let vs = buildize(this, spec)
-  vs.t = 'any'
-  if (undefined !== spec) {
-    vs.v = spec
+const Any: Builder = function(this: Node, shape?: any) {
+  let node = buildize(this, shape)
+  node.t = 'any'
+  if (undefined !== shape) {
+    node.v = shape
   }
-  return vs
+  return node
 }
 
 
-const Never: Builder = function(this: Node, spec?: any) {
-  let vs = buildize(this, spec)
-  vs.t = 'never'
-  return vs
+const Never: Builder = function(this: Node, shape?: any) {
+  let node = buildize(this, shape)
+  node.t = 'never'
+  return node
 }
 
 
 // Pass only if all match. Does not short circuit (as defaults may be missed).
-const All: Builder = function(this: Node, ...specs: any[]) {
-  let vs = buildize()
-  vs.t = 'list'
-  let shapes = specs.map(s => Gubu(s))
-  vs.u.list = specs
+const All: Builder = function(this: Node, ...inshapes: any[]) {
+  let node = buildize()
+  node.t = 'list'
+  let shapes = inshapes.map(s => Gubu(s))
+  node.u.list = inshapes
 
-  vs.b.push(function All(val: any, update: Update, state: State) {
+  node.b.push(function All(val: any, update: Update, state: State) {
     let pass = true
 
     let err: any = []
@@ -751,18 +739,18 @@ const All: Builder = function(this: Node, ...specs: any[]) {
     return pass
   })
 
-  return vs
+  return node
 }
 
 
 // Pass if some match. Does not short circuit (as defaults may be missed).
-const Some: Builder = function(this: Node, ...specs: any[]) {
-  let vs = buildize()
-  vs.t = 'list'
-  let shapes = specs.map(s => Gubu(s))
-  vs.u.list = specs
+const Some: Builder = function(this: Node, ...inshapes: any[]) {
+  let node = buildize()
+  node.t = 'list'
+  let shapes = inshapes.map(s => Gubu(s))
+  node.u.list = inshapes
 
-  vs.b.push(function Some(val: any, update: Update, state: State) {
+  node.b.push(function Some(val: any, update: Update, state: State) {
     let pass = false
 
     let err: any = []
@@ -789,18 +777,18 @@ const Some: Builder = function(this: Node, ...specs: any[]) {
     return pass
   })
 
-  return vs
+  return node
 }
 
 
 // Pass if exactly one matches. Does not short circuit (as defaults may be missed).
-const One: Builder = function(this: Node, ...specs: any[]) {
-  let vs = buildize()
-  vs.t = 'list'
-  let shapes = specs.map(s => Gubu(s))
-  vs.u.list = specs
+const One: Builder = function(this: Node, ...inshapes: any[]) {
+  let node = buildize()
+  node.t = 'list'
+  let shapes = inshapes.map(s => Gubu(s))
+  node.u.list = inshapes
 
-  vs.b.push(function One(val: any, update: Update, state: State) {
+  node.b.push(function One(val: any, update: Update, state: State) {
     let passN = 0
 
     let err: any = []
@@ -824,14 +812,14 @@ const One: Builder = function(this: Node, ...specs: any[]) {
     return true
   })
 
-  return vs
+  return node
 }
 
 
 
 const Exact: Builder = function(this: Node, ...vals: any[]) {
-  let vs = buildize()
-  vs.b.push(function Exact(val: any, update: Update, state: State) {
+  let node = buildize()
+  node.b.push(function Exact(val: any, update: Update, state: State) {
     for (let i = 0; i < vals.length; i++) {
       if (val === vals[i]) {
         return true
@@ -845,36 +833,36 @@ const Exact: Builder = function(this: Node, ...vals: any[]) {
     return false
   })
 
-  return vs
+  return node
 }
 
 
 
-const Before: Builder = function(this: Node, validate: Validate, spec?: any) {
-  let vs = buildize(this, spec)
-  vs.b.push(validate)
-  return vs
+const Before: Builder = function(this: Node, validate: Validate, shape?: any) {
+  let node = buildize(this, shape)
+  node.b.push(validate)
+  return node
 }
 
 
-const After: Builder = function(this: Node, validate: Validate, spec?: any) {
-  let vs = buildize(this, spec)
-  vs.a.push(validate)
-  return vs
+const After: Builder = function(this: Node, validate: Validate, shape?: any) {
+  let node = buildize(this, shape)
+  node.a.push(validate)
+  return node
 }
 
 
-const Closed: Builder = function(this: Node, spec?: any) {
-  let vs = buildize(this, spec)
+const Closed: Builder = function(this: Node, shape?: any) {
+  let node = buildize(this, shape)
 
-  vs.b.push(function Closed(val: any, update: Update, state: State) {
+  node.b.push(function Closed(val: any, update: Update, state: State) {
     if (null != val && 'object' === typeof (val)) {
       let vkeys = Object.keys(val)
-      let allowed = vs.v
+      let allowed = node.v
 
       // For arrays, handle non-index properties, and special element offset.
       if ('array' === state.node.t) {
-        allowed = Object.keys(vs.v).slice(1)
+        allowed = Object.keys(node.v).slice(1)
           .map((x: any) => {
             let i = parseInt(x)
             if (isNaN(i)) {
@@ -891,7 +879,7 @@ const Closed: Builder = function(this: Node, spec?: any) {
       for (let k of vkeys) {
         if (undefined === allowed[k]) {
           update.err.push(
-            makeErrImpl('closed', val, state.path, state.dI, vs, 3010, '', { k })
+            makeErrImpl('closed', val, state.path, state.dI, node, 3010, '', { k })
           )
         }
       }
@@ -901,31 +889,31 @@ const Closed: Builder = function(this: Node, spec?: any) {
     return true
   })
 
-  return vs
+  return node
 }
 
 
-const Define: Builder = function(this: Node, inopts: any, spec?: any): Node {
-  let vs = buildize(this, spec)
+const Define: Builder = function(this: Node, inopts: any, shape?: any): Node {
+  let node = buildize(this, shape)
 
   let opts = 'object' === typeof inopts ? inopts || {} : {}
   let name = 'string' === typeof inopts ? inopts : opts.name
 
 
   if (null != name && '' != name) {
-    vs.b.push(function Define(_val: any, _update: Update, state: State) {
+    node.b.push(function Define(_val: any, _update: Update, state: State) {
       let ref = state.ctx.ref = state.ctx.ref || {}
       ref[name] = state.node
       return true
     })
   }
 
-  return vs
+  return node
 }
 
 
-const Refer: Builder = function(this: Node, inopts: any, spec?: any): Node {
-  let vs = buildize(this, spec)
+const Refer: Builder = function(this: Node, inopts: any, shape?: any): Node {
+  let node = buildize(this, shape)
 
   let opts = 'object' === typeof inopts ? inopts || {} : {}
   let name = 'string' === typeof inopts ? inopts : opts.name
@@ -934,13 +922,12 @@ const Refer: Builder = function(this: Node, inopts: any, spec?: any): Node {
   let fill = !!opts.fill
 
   if (null != name && '' != name) {
-    vs.b.push(function Refer(val: any, update: Update, state: State) {
+    node.b.push(function Refer(val: any, update: Update, state: State) {
       if (undefined !== val || fill) {
         let ref = state.ctx.ref = state.ctx.ref || {}
 
         if (undefined !== ref[name]) {
           let node = { ...ref[name] }
-          node.k = state.node.k
           node.t = node.t || 'never'
 
           update.node = node
@@ -954,12 +941,12 @@ const Refer: Builder = function(this: Node, inopts: any, spec?: any): Node {
     })
   }
 
-  return vs
+  return node
 }
 
 
-const Rename: Builder = function(this: Node, inopts: any, spec?: any): Node {
-  let vs = buildize(this, spec)
+const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
+  let node = buildize(this, shape)
 
   let opts = 'object' === typeof inopts ? inopts || {} : {}
   let name = 'string' === typeof inopts ? inopts : opts.name
@@ -982,7 +969,7 @@ const Rename: Builder = function(this: Node, inopts: any, spec?: any): Node {
       return true
     }
     Object.defineProperty(vsb, 'name', { value: 'Rename:' + name })
-    vs.b.push(vsb)
+    node.b.push(vsb)
 
     let vsa = (val: any, update: Update, state: State) => {
       // state.src[name] = val
@@ -1000,10 +987,10 @@ const Rename: Builder = function(this: Node, inopts: any, spec?: any): Node {
       return true
     }
     Object.defineProperty(vsa, 'name', { value: 'Rename:' + name })
-    vs.a.push(vsa)
+    node.a.push(vsa)
   }
 
-  return vs
+  return node
 }
 
 
@@ -1018,11 +1005,11 @@ function valueLen(val: any) {
 const Min: Builder = function(
   this: Node,
   min: number | string,
-  spec?: any
+  shape?: any
 ): Node {
-  let vs = buildize(this, spec)
+  let node = buildize(this, shape)
 
-  vs.b.push(function Min(val: any, update: Update, state: State) {
+  node.b.push(function Min(val: any, update: Update, state: State) {
     let vlen = valueLen(val)
 
     if (min <= vlen) {
@@ -1036,18 +1023,18 @@ const Min: Builder = function(
     return false
   })
 
-  return vs
+  return node
 }
 
 
 const Max: Builder = function(
   this: Node,
   max: number | string,
-  spec?: any
+  shape?: any
 ): Node {
-  let vs = buildize(this, spec)
+  let node = buildize(this, shape)
 
-  vs.b.push(function Max(val: any, update: Update, state: State) {
+  node.b.push(function Max(val: any, update: Update, state: State) {
     let vlen = valueLen(val)
 
     if (vlen <= max) {
@@ -1061,18 +1048,18 @@ const Max: Builder = function(
     return false
   })
 
-  return vs
+  return node
 }
 
 
 const Above: Builder = function(
   this: Node,
   above: number | string,
-  spec?: any
+  shape?: any
 ): Node {
-  let vs = buildize(this, spec)
+  let node = buildize(this, shape)
 
-  vs.b.push(function Above(val: any, update: Update, state: State) {
+  node.b.push(function Above(val: any, update: Update, state: State) {
     let vlen = valueLen(val)
 
     if (above < vlen) {
@@ -1086,18 +1073,18 @@ const Above: Builder = function(
     return false
   })
 
-  return vs
+  return node
 }
 
 
 const Below: Builder = function(
   this: Node,
   below: number | string,
-  spec?: any
+  shape?: any
 ): Node {
-  let vs = buildize(this, spec)
+  let node = buildize(this, shape)
 
-  vs.b.push(function Below(val: any, update: Update, state: State) {
+  node.b.push(function Below(val: any, update: Update, state: State) {
     let vlen = valueLen(val)
 
     if (vlen < below) {
@@ -1111,16 +1098,61 @@ const Below: Builder = function(
     return false
   })
 
-  return vs
+  return node
 }
+
+
+const Value: Builder = function(
+  this: Node,
+  shape0?: any,
+  shape1?: any
+): Node {
+  let node = undefined == shape1 ? buildize(this) : buildize(shape0)
+  let shape = norm(undefined == shape1 ? shape0 : shape1)
+
+  node.a.push(function Below(val: any, _update: Update, s: State) {
+
+    let namedKeys = Object.keys(s.node.v)
+    let valKeys = Object.keys(val)
+      .reduce((a: string[], k: string) =>
+        ((namedKeys.includes(k) || a.push(k)), a), [])
+
+    // console.log('namedKeys', namedKeys)
+    // console.log('valKeys', valKeys)
+
+    if (0 < valKeys.length) {
+      let endI = s.nI + valKeys.length - 1
+
+      let nI = s.nI - 1
+      s.nodes[endI] = s.nodes[nI]
+      s.vals[endI] = s.vals[nI]
+      s.parents[endI] = s.parents[nI]
+      s.keys[endI] = s.keys[nI]
+
+      for (let k of valKeys) {
+        s.nodes[nI] = norm(shape, 1 + s.dI)
+        s.vals[nI] = val[k]
+        s.parents[nI] = val
+        s.keys[nI] = k
+        nI++
+      }
+
+      s.nI = endI + 1
+    }
+    return true
+  })
+
+  return node
+}
+
 
 
 
 function buildize(invs0?: any, invs1?: any): Node {
   let invs = undefined === invs0 ? invs1 : invs0.window === invs0 ? invs1 : invs0
 
-  let vs = norm(invs)
-  return Object.assign(vs, {
+  let node = norm(invs)
+  return Object.assign(node, {
     Above,
     After,
     All,
@@ -1140,6 +1172,7 @@ function buildize(invs0?: any, invs1?: any): Node {
     Rename,
     Required,
     Some,
+    Value,
   })
 }
 
@@ -1260,7 +1293,7 @@ type GubuShape =
   }
 
 
-const G$ = (spec: any): Node => norm({ ...spec, $: { gubu$: true } })
+const G$ = (node: any): Node => norm({ ...node, $: { gubu$: true } })
 
 
 Object.assign(make, {
@@ -1283,6 +1316,7 @@ Object.assign(make, {
   Rename,
   Required,
   Some,
+  Value,
 
   G$,
   buildize,
@@ -1318,6 +1352,7 @@ type Gubu = typeof make & {
   Rename: typeof Rename
   Required: typeof Required
   Some: typeof Some
+  Value: typeof Value
 }
 
 Object.defineProperty(make, 'name', { value: 'gubu' })
@@ -1327,13 +1362,13 @@ const Gubu: Gubu = (make as Gubu)
 
 
 // TODO: claim not working
-function Args(spec: any, wrapped?: any) {
+function Args(shapes: Record<string, any>, wrapped?: any) {
   let restArg: any = undefined
-  let argsSpec: any =
-    Object.keys(spec)
+  let args: any =
+    Object.keys(shapes)
       .reduce((as: any[], name, index, keys) => {
         if (name.startsWith('...') && index + 1 === keys.length) {
-          restArg = { name: name.substring(3), spec: spec[name] }
+          restArg = { name: name.substring(3), shape: shapes[name] }
         }
         else {
           let claim: any = (name.split(':')[1] || '').split(',').filter(c => '' !== c)
@@ -1344,28 +1379,28 @@ function Args(spec: any, wrapped?: any) {
             claim = undefined
           }
           // console.log('NAME', name, claim)
-          as[index + 1] = Rename({ name, claim }, spec[name])
+          as[index + 1] = Rename({ name, claim }, shapes[name])
         }
         return as
       }, [Never()])
 
   if (restArg) {
-    argsSpec[0] = After((v: any, _u: Update, s: State) => {
+    args[0] = After((v: any, _u: Update, s: State) => {
       s.parent[restArg.name] = (s.parent[restArg.name] || [])
       s.parent[restArg.name].push(v)
       return true
-    }, restArg.spec)
+    }, restArg.shape)
 
     // TODO: should use Complete
-    argsSpec = After((v: any, _u: Update, _s: State) => {
+    args = After((v: any, _u: Update, _s: State) => {
       if (v) {
         v[restArg.name] = (v[restArg.name] || [])
       }
       return true
-    }, argsSpec)
+    }, args)
   }
 
-  let argsShape = Gubu(argsSpec)
+  let argsShape = Gubu(args)
 
   if (wrapped) {
     let argsWrap = function(this: any) {
@@ -1404,6 +1439,7 @@ const GRefer = Refer
 const GRename = Rename
 const GRequired = Required
 const GSome = Some
+const GValue = Value
 
 
 export type {
@@ -1442,6 +1478,7 @@ export {
   Rename,
   Required,
   Some,
+  Value,
 
   GAbove,
   GAfter,
@@ -1462,6 +1499,7 @@ export {
   GRename,
   GRequired,
   GSome,
+  GValue,
 }
 
 

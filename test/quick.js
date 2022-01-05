@@ -15,6 +15,7 @@ const {
   Empty,
   Exact,
   Never,
+  Value
 } = require('../gubu')
 
 
@@ -335,4 +336,6 @@ function J(x,s) {
 // console.log(g1(['x', 22]))
 
 
-console.dir(Gubu({a:1}).spec(), {depth:null})
+// console.dir(Gubu({a:1}).spec(), {depth:null})
+
+console.dir(Gubu(Value({a:1,b:true},String))({a:2,b:false,c:'x',d:'y',e:1}), {depth:null})

@@ -36,6 +36,7 @@ const Refer = Gubu.Refer;
 const Rename = Gubu.Rename;
 const Required = Gubu.Required;
 const Some = Gubu.Some;
+const Value = Gubu.Value;
 class Foo {
     constructor(a) {
         this.a = -1;
@@ -1119,6 +1120,23 @@ Value "3" for path "d.3" must be above 4 (was 3).`);
             .toThrow(`Value "4" for path "d.0" must be below 4 (was 4).
 Value "5" for path "d.1" must be below 4 (was 5).`);
     });
+    test('builder-value', () => {
+        let g0 = Gubu(Value({ a: 1 }, String));
+        expect(g0({})).toMatchObject({});
+        expect(g0({ a: 2 })).toMatchObject({ a: 2 });
+        expect(() => g0({ a: 'x' })).toThrow('type');
+        expect(g0({ a: 2, b: 'x' })).toMatchObject({ a: 2, b: 'x' });
+        expect(g0({ a: 2, b: 'x', c: 'y' })).toMatchObject({ a: 2, b: 'x', c: 'y' });
+        expect(() => g0({ a: 2, b: 3 })).toThrow('Validation failed for path "b" with value "3" because the value is not of type string.');
+        expect(() => g0({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for path "c" with value "4" because the value is not of type string.');
+        expect(() => g0({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for path "a" with value "z" because the value is not of type number.');
+        let g1 = Gubu({ a: Required({ b: 1 }).Value({ x: String }) });
+        expect(g1({ a: { b: 2, c: { x: 'x' } } }))
+            .toMatchObject({ a: { b: 2, c: { x: 'x' } } });
+        expect(g1({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } }))
+            .toMatchObject({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } });
+        expect(() => g1({ a: { b: 2, c: 3 } })).toThrow('Validation failed for path "a.c" with value "3" because the value is not of type object.');
+    });
     test('context-basic', () => {
         let c0 = { max: 10 };
         let g0 = Gubu({
@@ -1156,7 +1174,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
         let o0 = g0(1, { err });
         expect(o0).toEqual(1);
         expect(err).toMatchObject([{
-                n: { t: 'nan', v: NaN, r: false, k: '', d: 0, u: {} },
+                n: { t: 'nan', v: NaN, r: false, d: 0, u: {} },
                 s: 1,
                 p: '',
                 w: 'type',
@@ -1176,7 +1194,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                 ctx: { a: 'A' },
                 err: [
                     {
-                        n: { t: 'nan', v: NaN, r: false, k: '', d: 0, u: {} },
+                        n: { t: 'nan', v: NaN, r: false, d: 0, u: {} },
                         s: 1,
                         p: '',
                         w: 'type',
@@ -1185,25 +1203,25 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                     }
                 ]
             });
-            expect(JSON.stringify(e)).toEqual("{\"gubu\":true,\"name\":\"GubuError\",\"code\":\"shape\",\"err\":[{\"n\":{\"$\":{\"v$\":\"" + package_json_1.default.version + "\"},\"t\":\"nan\",\"v\":null,\"r\":false,\"o\":false,\"k\":\"\",\"d\":0,\"u\":{},\"a\":[],\"b\":[]},\"s\":1,\"p\":\"\",\"w\":\"type\",\"m\":1050,\"t\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}],\"message\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}");
+            expect(JSON.stringify(e)).toEqual("{\"gubu\":true,\"name\":\"GubuError\",\"code\":\"shape\",\"err\":[{\"n\":{\"$\":{\"v$\":\"" + package_json_1.default.version + "\"},\"t\":\"nan\",\"v\":null,\"r\":false,\"o\":false,\"d\":0,\"u\":{},\"a\":[],\"b\":[]},\"s\":1,\"p\":\"\",\"w\":\"type\",\"m\":1050,\"t\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}],\"message\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}");
         }
     });
     test('spec-basic', () => {
         expect(Gubu(Number).spec()).toMatchObject({
             $: { gubu$: true, v$: package_json_1.default.version },
-            d: 0, k: '', r: true, t: 'number', u: {}, v: 0,
+            d: 0, r: true, t: 'number', u: {}, v: 0,
         });
         expect(Gubu(String).spec()).toMatchObject({
             $: { gubu$: true, v$: package_json_1.default.version },
-            d: 0, k: '', r: true, t: 'string', u: {}, v: '',
+            d: 0, r: true, t: 'string', u: {}, v: '',
         });
         expect(Gubu(BigInt).spec()).toMatchObject({
             $: { gubu$: true, v$: package_json_1.default.version },
-            d: 0, k: '', r: true, t: 'bigint', u: {}, v: "0",
+            d: 0, r: true, t: 'bigint', u: {}, v: "0",
         });
         expect(Gubu(null).spec()).toMatchObject({
             $: { gubu$: true, v$: package_json_1.default.version },
-            d: 0, k: '', r: false, t: 'null', u: {}, v: null,
+            d: 0, r: false, t: 'null', u: {}, v: null,
         });
     });
     test('spec-roundtrip', () => {
@@ -1220,7 +1238,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                 v$: package_json_1.default.version,
             },
             d: 0,
-            k: '',
+            // k: '',
             r: false,
             o: false,
             t: 'object',
@@ -1234,7 +1252,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                         v$: package_json_1.default.version,
                     },
                     d: 1,
-                    k: 'a',
+                    // k: 'a',
                     r: false,
                     o: false,
                     t: 'number',
@@ -1274,9 +1292,8 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                 gubu$: true,
                 v$: package_json_1.default.version,
             },
-            // d: -1,
             d: 0,
-            k: '',
+            // k: '',
             r: false,
             o: false,
             t: 'object',
@@ -1290,7 +1307,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                         v$: package_json_1.default.version,
                     },
                     d: 1,
-                    k: 'a',
+                    // k: 'a',
                     r: false,
                     o: false,
                     t: 'array',
@@ -1304,7 +1321,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                                 v$: package_json_1.default.version,
                             },
                             d: 2,
-                            k: '0',
+                            // k: '0',
                             r: false,
                             o: false,
                             t: 'number',
@@ -1396,7 +1413,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             v: 11,
             r: false,
             o: false,
-            k: '',
+            // k: '',
             d: -1,
             a: [],
             b: [],
@@ -1408,7 +1425,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             v: 0,
             r: false,
             o: false,
-            k: '',
+            // k: '',
             d: -1,
             a: [],
             b: [],
@@ -1420,7 +1437,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             v: BigInt(11),
             r: false,
             o: false,
-            k: '',
+            // k: '',
             d: -1,
             a: [],
             b: [],
@@ -1433,7 +1450,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             v: s0,
             r: false,
             o: false,
-            k: '',
+            // k: '',
             d: -1,
             a: [],
             b: [],
@@ -1448,7 +1465,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             v: f0,
             r: false,
             o: false,
-            k: '',
+            // k: '',
             d: -1,
             a: [],
             b: [],
