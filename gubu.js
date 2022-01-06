@@ -15,14 +15,16 @@ class State {
     constructor(root, top, ctx) {
         this.dI = 0; // Node depth.
         this.nI = 2; // Next free slot in nodes.
+        this.cI = -1; // Pointer to next node.
         this.pI = 0; // Pointer to current node.
         this.sI = -1; // Pointer to next sibling node.
-        this.stype = 'never';
+        this.valType = 'never';
         this.isRoot = false;
-        this.stop = true;
-        this.nextSibling = true;
         this.key = '';
         this.type = 'never';
+        this.stop = true;
+        this.nextSibling = true;
+        this.fromDefault = false;
         this.err = [];
         this.parents = [];
         this.keys = [];
@@ -36,6 +38,7 @@ class State {
     next() {
         // this.printStacks()
         this.stop = false;
+        this.fromDefault = false;
         this.isRoot = 0 === this.pI;
         // Dereference the back pointers to ancestor siblings.
         // Only objects|arrays can be nodes, so a number is a back pointer.
@@ -56,9 +59,9 @@ class State {
         }
         this.updateVal(this.vals[this.pI]);
         this.key = this.keys[this.pI];
+        this.cI = this.pI;
         this.sI = this.pI + 1;
         this.parent = this.parents[this.pI];
-        this.pI = this.nI;
         this.nextSibling = true;
         this.type = this.node.t;
         this.path[this.dI] = this.key;
@@ -66,9 +69,9 @@ class State {
     }
     updateVal(val) {
         this.val = val;
-        this.stype = typeof (this.val);
-        if ('number' === this.stype && isNaN(this.val)) {
-            this.stype = 'nan';
+        this.valType = typeof (this.val);
+        if ('number' === this.valType && isNaN(this.val)) {
+            this.valType = 'nan';
         }
         if (this.isRoot) {
             this.root = this.val;
@@ -237,19 +240,22 @@ function make(intop, inopts) {
             }
             if (!done) {
                 if ('never' === s.type) {
-                    s.err.push(makeErrImpl('never', s.val, s.path, s.dI, s.node, 1070));
+                    // s.err.push(makeErrImpl('never', s.val, s.path, s.dI, s.node, 1070))
+                    s.err.push(makeErrImpl('never', s, 1070));
                 }
                 else if ('object' === s.type) {
                     if (s.node.r && undefined === s.val) {
-                        s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1010));
+                        // s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1010))
+                        s.err.push(makeErrImpl('required', s, 1010));
                     }
                     else if (undefined !== s.val && (null === s.val ||
-                        'object' !== s.stype ||
+                        'object' !== s.valType ||
                         Array.isArray(s.val))) {
-                        s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1020));
+                        // s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1020))
+                        s.err.push(makeErrImpl('type', s, 1020));
                     }
                     else if (!s.node.o) {
-                        s.updateVal(s.val || {});
+                        s.updateVal(s.val || (s.fromDefault = true, {}));
                         let vkeys = Object.keys(s.node.v);
                         if (0 < vkeys.length) {
                             s.pI = s.nI;
@@ -269,13 +275,15 @@ function make(intop, inopts) {
                 }
                 else if ('array' === s.type) {
                     if (s.node.r && undefined === s.val) {
-                        s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1030));
+                        // s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1030))
+                        s.err.push(makeErrImpl('required', s, 1030));
                     }
                     else if (undefined !== s.val && !Array.isArray(s.val)) {
-                        s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1040));
+                        // s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1040))
+                        s.err.push(makeErrImpl('type', s, 1040));
                     }
                     else if (!s.node.o) {
-                        s.updateVal(s.val || []);
+                        s.updateVal(s.val || (s.fromDefault = true, []));
                         let vkeys = Object.keys(s.node.v).filter(k => !isNaN(+k));
                         if (0 < s.val.length || 1 < vkeys.length) {
                             s.pI = s.nI;
@@ -311,27 +319,29 @@ function make(intop, inopts) {
                     'custom' === s.type ||
                     'list' === s.type ||
                     undefined === s.val ||
-                    s.type === s.stype ||
+                    s.type === s.valType ||
                     ('instance' === s.type && s.node.u.i && s.val instanceof s.node.u.i) ||
                     ('null' === s.type && null === s.val))) {
-                    s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1050));
+                    // s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1050))
+                    s.err.push(makeErrImpl('type', s, 1050));
                 }
                 // Value itself, or default.
                 else if (undefined === s.val) {
                     let parentKey = s.path[s.dI];
                     if (s.node.r &&
                         ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
-                        s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1060));
+                        // s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1060))
+                        s.err.push(makeErrImpl('required', s, 1060));
                     }
                     else if (undefined !== s.node.v && !s.node.o || 'undefined' === s.type) {
                         s.updateVal(s.node.v);
+                        s.fromDefault = true;
                     }
                 }
-                // Empty strings fail even if string is optional. Use Empty to allow.
-                else if ('string' === s.type && '' === s.val) {
-                    if (!s.node.u.empty) {
-                        s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1080));
-                    }
+                // Empty strings fail even if string is optional. Use Empty() to allow.
+                else if ('string' === s.type && '' === s.val && !s.node.u.empty) {
+                    // s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1080))
+                    s.err.push(makeErrImpl('required', s, 1080));
                 }
             }
             if (0 < s.node.a.length) {
@@ -410,7 +420,9 @@ function handleValidate(vf, s) {
                 fname = vf.toString().replace(/[ \t\r\n]+/g, ' ');
                 fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname;
             }
-            s.err.push(makeErrImpl(w, s.val, s.path, s.dI, s.node, 1045, undefined, {}, fname));
+            s.err.push(makeErrImpl(
+            // w, s.val, s.path, s.dI, s.node, 1045, undefined, {}, fname))
+            w, s, 1045, undefined, {}, fname));
         }
     }
     if (undefined !== update.val) {
@@ -590,12 +602,12 @@ const After = function (validate, shape) {
 exports.After = After;
 const Closed = function (shape) {
     let node = buildize(this, shape);
-    node.b.push(function Closed(val, update, state) {
+    node.b.push(function Closed(val, update, s) {
         if (null != val && 'object' === typeof (val)) {
             let vkeys = Object.keys(val);
             let allowed = node.v;
             // For arrays, handle non-index properties, and special element offset.
-            if ('array' === state.node.t) {
+            if ('array' === s.node.t) {
                 allowed = Object.keys(node.v).slice(1)
                     .map((x) => {
                     let i = parseInt(x);
@@ -611,7 +623,9 @@ const Closed = function (shape) {
             update.err = [];
             for (let k of vkeys) {
                 if (undefined === allowed[k]) {
-                    update.err.push(makeErrImpl('closed', val, state.path, state.dI, node, 3010, '', { k }));
+                    update.err.push(
+                    // makeErrImpl('closed', val, state.path, state.dI, node, 3010, '', { k })
+                    makeErrImpl('closed', s, 3010, '', { k }));
                 }
             }
             return 0 === update.err.length;
@@ -664,17 +678,49 @@ const Rename = function (inopts, shape) {
     let opts = 'object' === typeof inopts ? inopts || {} : {};
     let name = 'string' === typeof inopts ? inopts : opts.name;
     let keep = 'boolean' === typeof opts.keep ? opts.keep : undefined;
+    // NOTE: Rename claims are experimental.
     let claim = Array.isArray(opts.claim) ? opts.claim : [];
     if (null != name && '' != name) {
         // If there is a claim, grab the value so that validations
         // can be applied to it.
-        let vsb = (val, update, state) => {
-            if (undefined === val) {
+        let vsb = (val, update, s) => {
+            if (undefined === val && 0 < claim.length) {
+                s.ctx.Args = (s.ctx.Args || {});
+                s.ctx.Args.fromDefault = (s.ctx.Args.fromDefault || {});
                 for (let cn of claim) {
-                    if (undefined !== state.parent[cn]) {
-                        update.val = state.parent[name] = state.parent[cn];
-                        delete state.parent[cn];
+                    let fromDefault = s.ctx.Args.fromDefault[cn];
+                    // console.log('CLAIM', name, keep, claim, cn, s.parent[cn], s.ctx.Args.fromDefault[cn])
+                    // Only use claim if it was not a default value.
+                    if (undefined !== s.parent[cn] && !fromDefault.yes) {
+                        update.val = s.parent[name] = s.parent[cn];
+                        update.node = fromDefault.node;
+                        // Old errors on the claimed value are no longer valid.
+                        for (let eI = 0; eI < s.err.length; eI++) {
+                            if (s.err[eI].k === fromDefault.key) {
+                                s.err.splice(eI, 1);
+                                eI--;
+                            }
+                        }
+                        if (!keep) {
+                            delete s.parent[cn];
+                        }
+                        else {
+                            let j = s.cI + 1;
+                            // Add the default to the end of the node set to ensure it
+                            // is properly validated.
+                            s.nodes.splice(j, 0, norm(fromDefault.dval));
+                            s.vals.splice(j, 0, undefined);
+                            s.parents.splice(j, 0, s.parent);
+                            s.keys.splice(j, 0, cn);
+                            s.nI++;
+                            s.pI++;
+                        }
+                        break;
                     }
+                }
+                if (undefined === update.val) {
+                    // console.log('QQQ', state.key, state.node)
+                    update.val = s.node.v;
                 }
             }
             return true;
@@ -682,7 +728,6 @@ const Rename = function (inopts, shape) {
         Object.defineProperty(vsb, 'name', { value: 'Rename:' + name });
         node.b.push(vsb);
         let vsa = (val, update, state) => {
-            // state.src[name] = val
             state.parent[name] = val;
             if (!keep &&
                 // Arrays require explicit deletion as validation is based on index
@@ -691,6 +736,14 @@ const Rename = function (inopts, shape) {
                 delete state.parent[state.key];
                 update.done = true;
             }
+            state.ctx.Args = (state.ctx.Args || {});
+            state.ctx.Args.fromDefault = (state.ctx.Args.fromDefault || {});
+            state.ctx.Args.fromDefault[name] = {
+                yes: state.fromDefault,
+                key: state.key,
+                dval: state.node.v,
+                node: state.node
+            };
             return true;
         };
         Object.defineProperty(vsa, 'name', { value: 'Rename:' + name });
@@ -824,27 +877,40 @@ function buildize(invs0, invs1) {
 exports.buildize = buildize;
 // External utility to make ErrDesc objects.
 function makeErr(val, state, text, why) {
-    return makeErrImpl(why || 'custom', val, state.path, state.dI, state.node, 4000, text);
+    return makeErrImpl(why || 'custom', 
+    // val,
+    state, 
+    // state.path,
+    // state.dI,
+    // state.node,
+    4000, text);
 }
 exports.makeErr = makeErr;
 // Internal utility to make ErrDesc objects.
-function makeErrImpl(why, sval, path, dI, node, mark, text, user, fname) {
+function makeErrImpl(why, s, 
+// sval: any,
+// key: string,
+// path: string[],
+// dI: number,
+// node: Node,
+mark, text, user, fname) {
     let err = {
-        n: node,
-        s: sval,
-        p: pathstr(path, dI),
+        k: s.key,
+        n: s.node,
+        s: s.val,
+        p: pathstr(s.path, s.dI),
         w: why,
         m: mark,
         t: '',
     };
-    let jstr = undefined === sval ? '' : stringify(sval);
+    let jstr = undefined === s.val ? '' : stringify(s.val);
     let valstr = jstr.replace(/"/g, '');
     valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '');
     if (null == text || '' === text) {
         err.t = `Validation failed for path "${err.p}" ` +
             `with value "${valstr}" because ` +
-            ('type' === why ? ('instance' === node.t ? `the value is not an instance of ${node.u.n}` :
-                `the value is not of type ${node.t}`) :
+            ('type' === why ? ('instance' === s.node.t ? `the value is not an instance of ${s.node.u.n}` :
+                `the value is not of type ${s.node.t}`) :
                 'required' === why ? `the value is required` :
                     'closed' === why ? `the property "${user === null || user === void 0 ? void 0 : user.k}" is not allowed` :
                         'never' === why ? 'no value is allowed' :
@@ -925,7 +991,8 @@ Object.assign(make, {
 Object.defineProperty(make, 'name', { value: 'gubu' });
 const Gubu = make;
 exports.Gubu = Gubu;
-// TODO: claim not working
+// Experimental: function argument validation.
+// Uses Rename claims to support optional prefix arguments.
 function Args(shapes, wrapped) {
     let restArg = undefined;
     let args = Object.keys(shapes)
@@ -934,15 +1001,16 @@ function Args(shapes, wrapped) {
             restArg = { name: name.substring(3), shape: shapes[name] };
         }
         else {
+            let fullname = name;
             let claim = (name.split(':')[1] || '').split(',').filter(c => '' !== c);
             if (0 < claim.length) {
-                name = name.split(':')[0];
+                name = fullname.split(':')[0];
             }
             else {
                 claim = undefined;
             }
-            // console.log('NAME', name, claim)
-            as[index + 1] = Rename({ name, claim }, shapes[name]);
+            // console.log('NAME', index, name, claim, shapes[fullname], shapes[index])
+            as[index + 1] = Rename({ name, claim, keep: true }, shapes[fullname]);
         }
         return as;
     }, [Never()]);

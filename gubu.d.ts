@@ -44,14 +44,16 @@ declare type Validate = (val: any, update: Update, state: State) => boolean;
 declare class State {
     dI: number;
     nI: number;
+    cI: number;
     pI: number;
     sI: number;
-    stype: string;
+    valType: string;
     isRoot: boolean;
-    stop: boolean;
-    nextSibling: boolean;
     key: string;
     type: string;
+    stop: boolean;
+    nextSibling: boolean;
+    fromDefault: boolean;
     err: any[];
     parents: Node[];
     keys: string[];
@@ -80,6 +82,7 @@ declare type Update = {
     why?: string;
 };
 declare type ErrDesc = {
+    k: string;
     n: Node;
     s: any;
     p: string;

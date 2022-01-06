@@ -78,14 +78,20 @@ type Validate = (val: any, update: Update, state: State) => boolean
 class State {
   dI: number = 0  // Node depth.
   nI: number = 2  // Next free slot in nodes.
+  cI: number = -1 // Pointer to next node.
   pI: number = 0  // Pointer to current node.
   sI: number = -1 // Pointer to next sibling node.
-  stype: string = 'never'
+
+  valType: string = 'never'
   isRoot: boolean = false
-  stop: boolean = true
-  nextSibling: boolean = true
+
   key: string = ''
   type: string = 'never'
+
+  stop: boolean = true
+  nextSibling: boolean = true
+
+  fromDefault: boolean = false
 
   err: any[] = []
   parents: Node[] = []
@@ -120,6 +126,7 @@ class State {
     // this.printStacks()
 
     this.stop = false
+    this.fromDefault = false
     this.isRoot = 0 === this.pI
 
     // Dereference the back pointers to ancestor siblings.
@@ -146,10 +153,10 @@ class State {
     this.updateVal(this.vals[this.pI])
     this.key = this.keys[this.pI]
 
+    this.cI = this.pI
     this.sI = this.pI + 1
     this.parent = this.parents[this.pI]
 
-    this.pI = this.nI
     this.nextSibling = true
 
     this.type = this.node.t
@@ -161,9 +168,9 @@ class State {
 
   updateVal(val: any) {
     this.val = val
-    this.stype = typeof (this.val)
-    if ('number' === this.stype && isNaN(this.val)) {
-      this.stype = 'nan'
+    this.valType = typeof (this.val)
+    if ('number' === this.valType && isNaN(this.val)) {
+      this.valType = 'nan'
     }
     if (this.isRoot) {
       this.root = this.val
@@ -171,9 +178,17 @@ class State {
   }
 
 
-  /*
+
+  /* Uncomment for debugging.
   printStacks() {
-    console.log('NODE', 'd=' + this.dI, this.pI, this.nI, +this.node, this.node.t)
+    console.log('NODE',
+      'd=' + this.dI,
+      'c=' + this.cI,
+      'p=' + this.pI,
+      'n=' + this.nI,
+      +this.node,
+      this.node.t,
+      this.err.length)
 
     for (let i = 0;
       i < this.nodes.length ||
@@ -206,6 +221,7 @@ type Update = {
 
 // Validation error description.
 type ErrDesc = {
+  k: string  // Key of failing value.
   n: Node    // Failing spec node.
   s: any     // Failing src value.
   p: string  // Key path to src value.
@@ -415,24 +431,27 @@ function make(intop?: any, inopts?: Options): GubuShape {
 
       if (!done) {
         if ('never' === s.type) {
-          s.err.push(makeErrImpl('never', s.val, s.path, s.dI, s.node, 1070))
+          // s.err.push(makeErrImpl('never', s.val, s.path, s.dI, s.node, 1070))
+          s.err.push(makeErrImpl('never', s, 1070))
         }
         else if ('object' === s.type) {
           if (s.node.r && undefined === s.val) {
-            s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1010))
+            // s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1010))
+            s.err.push(makeErrImpl('required', s, 1010))
           }
           else if (
             undefined !== s.val && (
               null === s.val ||
-              'object' !== s.stype ||
+              'object' !== s.valType ||
               Array.isArray(s.val)
             )
           ) {
-            s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1020))
+            // s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1020))
+            s.err.push(makeErrImpl('type', s, 1020))
           }
 
           else if (!s.node.o) {
-            s.updateVal(s.val || {})
+            s.updateVal(s.val || (s.fromDefault = true, {}))
 
             let vkeys = Object.keys(s.node.v)
             if (0 < vkeys.length) {
@@ -456,13 +475,15 @@ function make(intop?: any, inopts?: Options): GubuShape {
 
         else if ('array' === s.type) {
           if (s.node.r && undefined === s.val) {
-            s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1030))
+            // s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1030))
+            s.err.push(makeErrImpl('required', s, 1030))
           }
           else if (undefined !== s.val && !Array.isArray(s.val)) {
-            s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1040))
+            // s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1040))
+            s.err.push(makeErrImpl('type', s, 1040))
           }
           else if (!s.node.o) {
-            s.updateVal(s.val || [])
+            s.updateVal(s.val || (s.fromDefault = true, []))
 
             let vkeys = Object.keys(s.node.v).filter(k => !isNaN(+k))
 
@@ -507,11 +528,12 @@ function make(intop?: any, inopts?: Options): GubuShape {
           'custom' === s.type ||
           'list' === s.type ||
           undefined === s.val ||
-          s.type === s.stype ||
+          s.type === s.valType ||
           ('instance' === s.type && s.node.u.i && s.val instanceof s.node.u.i) ||
           ('null' === s.type && null === s.val)
         )) {
-          s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1050))
+          // s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1050))
+          s.err.push(makeErrImpl('type', s, 1050))
         }
 
         // Value itself, or default.
@@ -520,18 +542,19 @@ function make(intop?: any, inopts?: Options): GubuShape {
 
           if (s.node.r &&
             ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
-            s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1060))
+            // s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1060))
+            s.err.push(makeErrImpl('required', s, 1060))
           }
           else if (undefined !== s.node.v && !s.node.o || 'undefined' === s.type) {
             s.updateVal(s.node.v)
+            s.fromDefault = true
           }
         }
 
-        // Empty strings fail even if string is optional. Use Empty to allow.
-        else if ('string' === s.type && '' === s.val) {
-          if (!s.node.u.empty) {
-            s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1080))
-          }
+        // Empty strings fail even if string is optional. Use Empty() to allow.
+        else if ('string' === s.type && '' === s.val && !s.node.u.empty) {
+          // s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1080))
+          s.err.push(makeErrImpl('required', s, 1080))
         }
       }
 
@@ -633,7 +656,8 @@ function handleValidate(vf: Validate, s: State): Update {
         fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname
       }
       s.err.push(makeErrImpl(
-        w, s.val, s.path, s.dI, s.node, 1045, undefined, {}, fname))
+        // w, s.val, s.path, s.dI, s.node, 1045, undefined, {}, fname))
+        w, s, 1045, undefined, {}, fname))
     }
   }
 
@@ -646,7 +670,6 @@ function handleValidate(vf: Validate, s: State): Update {
   if (undefined !== update.type) {
     s.type = update.type
   }
-
 
   s.nI = undefined === update.nI ? s.nI : update.nI
   s.sI = undefined === update.sI ? s.sI : update.sI
@@ -856,13 +879,13 @@ const After: Builder = function(this: Node, validate: Validate, shape?: any) {
 const Closed: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
 
-  node.b.push(function Closed(val: any, update: Update, state: State) {
+  node.b.push(function Closed(val: any, update: Update, s: State) {
     if (null != val && 'object' === typeof (val)) {
       let vkeys = Object.keys(val)
       let allowed = node.v
 
       // For arrays, handle non-index properties, and special element offset.
-      if ('array' === state.node.t) {
+      if ('array' === s.node.t) {
         allowed = Object.keys(node.v).slice(1)
           .map((x: any) => {
             let i = parseInt(x)
@@ -880,7 +903,8 @@ const Closed: Builder = function(this: Node, shape?: any) {
       for (let k of vkeys) {
         if (undefined === allowed[k]) {
           update.err.push(
-            makeErrImpl('closed', val, state.path, state.dI, node, 3010, '', { k })
+            // makeErrImpl('closed', val, state.path, state.dI, node, 3010, '', { k })
+            makeErrImpl('closed', s, 3010, '', { k })
           )
         }
       }
@@ -952,20 +976,62 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
   let opts = 'object' === typeof inopts ? inopts || {} : {}
   let name = 'string' === typeof inopts ? inopts : opts.name
   let keep = 'boolean' === typeof opts.keep ? opts.keep : undefined
+
+  // NOTE: Rename claims are experimental.
   let claim = Array.isArray(opts.claim) ? opts.claim : []
 
   if (null != name && '' != name) {
 
     // If there is a claim, grab the value so that validations
     // can be applied to it.
-    let vsb = (val: any, update: Update, state: State) => {
-      if (undefined === val) {
+    let vsb = (val: any, update: Update, s: State) => {
+      if (undefined === val && 0 < claim.length) {
+        s.ctx.Args = (s.ctx.Args || {})
+        s.ctx.Args.fromDefault = (s.ctx.Args.fromDefault || {})
+
         for (let cn of claim) {
-          if (undefined !== state.parent[cn]) {
-            update.val = state.parent[name] = state.parent[cn]
-            delete state.parent[cn]
+          let fromDefault = s.ctx.Args.fromDefault[cn]
+
+          // console.log('CLAIM', name, keep, claim, cn, s.parent[cn], s.ctx.Args.fromDefault[cn])
+
+          // Only use claim if it was not a default value.
+          if (undefined !== s.parent[cn] && !fromDefault.yes) {
+            update.val = s.parent[name] = s.parent[cn]
+            update.node = fromDefault.node
+
+            // Old errors on the claimed value are no longer valid.
+            for (let eI = 0; eI < s.err.length; eI++) {
+              if (s.err[eI].k === fromDefault.key) {
+                s.err.splice(eI, 1)
+                eI--
+              }
+            }
+
+            if (!keep) {
+              delete s.parent[cn]
+            }
+            else {
+              let j = s.cI + 1
+
+              // Add the default to the end of the node set to ensure it
+              // is properly validated.
+              s.nodes.splice(j, 0, norm(fromDefault.dval))
+              s.vals.splice(j, 0, undefined)
+              s.parents.splice(j, 0, s.parent)
+              s.keys.splice(j, 0, cn)
+              s.nI++
+              s.pI++
+            }
+
+            break
           }
         }
+
+        if (undefined === update.val) {
+          // console.log('QQQ', state.key, state.node)
+          update.val = s.node.v
+        }
+
       }
       return true
     }
@@ -973,7 +1039,6 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
     node.b.push(vsb)
 
     let vsa = (val: any, update: Update, state: State) => {
-      // state.src[name] = val
       state.parent[name] = val
 
       if (!keep &&
@@ -983,6 +1048,15 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
       ) {
         delete state.parent[state.key]
         update.done = true
+      }
+
+      state.ctx.Args = (state.ctx.Args || {})
+      state.ctx.Args.fromDefault = (state.ctx.Args.fromDefault || {})
+      state.ctx.Args.fromDefault[name] = {
+        yes: state.fromDefault,
+        key: state.key,
+        dval: state.node.v,
+        node: state.node
       }
 
       return true
@@ -1182,10 +1256,11 @@ function buildize(invs0?: any, invs1?: any): Node {
 function makeErr(val: any, state: State, text?: string, why?: string) {
   return makeErrImpl(
     why || 'custom',
-    val,
-    state.path,
-    state.dI,
-    state.node,
+    // val,
+    state,
+    // state.path,
+    // state.dI,
+    // state.node,
     4000,
     text,
   )
@@ -1195,25 +1270,28 @@ function makeErr(val: any, state: State, text?: string, why?: string) {
 // Internal utility to make ErrDesc objects.
 function makeErrImpl(
   why: string,
-  sval: any,
-  path: string[],
-  dI: number,
-  node: Node,
+  s: State,
+  // sval: any,
+  // key: string,
+  // path: string[],
+  // dI: number,
+  // node: Node,
   mark: number,
   text?: string,
   user?: any,
   fname?: string,
 ): ErrDesc {
   let err: ErrDesc = {
-    n: node,
-    s: sval,
-    p: pathstr(path, dI),
+    k: s.key,
+    n: s.node,
+    s: s.val,
+    p: pathstr(s.path, s.dI),
     w: why,
     m: mark,
     t: '',
   }
 
-  let jstr = undefined === sval ? '' : stringify(sval)
+  let jstr = undefined === s.val ? '' : stringify(s.val)
   let valstr = jstr.replace(/"/g, '')
   valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '')
 
@@ -1222,8 +1300,8 @@ function makeErrImpl(
       `with value "${valstr}" because ` +
 
       ('type' === why ? (
-        'instance' === node.t ? `the value is not an instance of ${node.u.n}` :
-          `the value is not of type ${node.t}`) :
+        'instance' === s.node.t ? `the value is not an instance of ${s.node.u.n}` :
+          `the value is not of type ${s.node.t}`) :
         'required' === why ? `the value is required` :
           'closed' === why ? `the property "${user?.k}" is not allowed` :
             'never' === why ? 'no value is allowed' :
@@ -1362,7 +1440,8 @@ Object.defineProperty(make, 'name', { value: 'gubu' })
 const Gubu: Gubu = (make as Gubu)
 
 
-// TODO: claim not working
+// Experimental: function argument validation.
+// Uses Rename claims to support optional prefix arguments.
 function Args(shapes: Record<string, any>, wrapped?: any) {
   let restArg: any = undefined
   let args: any =
@@ -1372,15 +1451,16 @@ function Args(shapes: Record<string, any>, wrapped?: any) {
           restArg = { name: name.substring(3), shape: shapes[name] }
         }
         else {
+          let fullname = name
           let claim: any = (name.split(':')[1] || '').split(',').filter(c => '' !== c)
           if (0 < claim.length) {
-            name = name.split(':')[0]
+            name = fullname.split(':')[0]
           }
           else {
             claim = undefined
           }
-          // console.log('NAME', name, claim)
-          as[index + 1] = Rename({ name, claim }, shapes[name])
+          // console.log('NAME', index, name, claim, shapes[fullname], shapes[index])
+          as[index + 1] = Rename({ name, claim, keep: true }, shapes[fullname])
         }
         return as
       }, [Never()])

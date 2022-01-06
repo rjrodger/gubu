@@ -338,4 +338,26 @@ function J(x,s) {
 
 // console.dir(Gubu({a:1}).spec(), {depth:null})
 
-console.dir(Gubu(Value({a:1,b:true},String))({a:2,b:false,c:'x',d:'y',e:1}), {depth:null})
+// console.dir(Gubu(Value({a:1,b:true},String))({a:2,b:false,c:'x',d:'y',e:1}), {depth:null})
+
+
+
+// let a3 = Args({ a: 0, 'b:a': 1 })
+// // console.dir(a3.spec(),{depth:null})
+
+// console.log(a3([11,22]))
+// console.log(a3([33]))
+// console.log(a3([]))
+// // console.log(a3(['x',1]))
+
+
+let a4 = Args({ a: {x:1}, 'b:a': Optional(Function) })
+// console.dir(a3.spec(),{depth:null})
+
+function f0(){}
+
+console.log(a4([{x:2},f0]))
+console.log(a4([f0]))
+console.log(a4([]))
+
+

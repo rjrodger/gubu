@@ -1680,7 +1680,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
     let g0 = Gubu(String)
     let g1 = Gubu(g0)
     let g1s = Gubu(g0.spec())
-    // console.log(g1.spec())
 
     expect(g1('x')).toEqual('x')
     expect(() => g1(1)).toThrow()
@@ -1699,7 +1698,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
   })
 
 
-  // TODO: not complete - claim option not working
+  // Notes: Args is an experimental feature.
   test('args-basic', () => {
     let a0 = Args({ a: Number, b: String })
     expect(a0([1, 'x'])).toMatchObject({ a: 1, b: 'x' })
@@ -1742,18 +1741,18 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
     let a3 = Args({ a: 0, 'b:a': 1 })
     expect(a3([11, 22])).toMatchObject({ a: 11, b: 22 })
     expect(a3([11])).toMatchObject({ b: 11 })
-    // expect(a3([])).toMatchObject({ b: 1 })
+    expect(a3([])).toMatchObject({ a: 0, b: 1 })
 
     let t0 = () => true
+    let t1 = () => true
 
-    let a4 = Args({ a: One({}, Function), 'b': Optional(Function) })
-    expect(a4([{ x: 1 }, t0])).toMatchObject({ a: { x: 1 }, b: t0 })
-    expect(a4([t0])).toMatchObject({ a: t0 })
+    let a8 = Args({ a: { x: 1 }, 'b:a': t0 })
+    expect(a8([{ x: 2 }, t1])).toMatchObject({ a: { x: 2 }, b: t1 })
+    expect(a8([t1])).toMatchObject({ a: { x: 1 }, b: t1 })
+    expect(a8([])).toMatchObject({ a: { x: 1 }, b: t0 })
 
-    let a8 = Args({ a: One({}, Function), 'b:a': Function })
-    expect(a8([{ x: 1 }, t0])).toMatchObject({ a: { x: 1 }, b: t0 })
-    //expect(a8([t0])).toMatchObject({ a: {}, b: t0 })
-
+    // TODO: this should fail
+    // expect(() => a8([{ x: 3 }])).toThrow('type') // b has precedence
   })
 
 
