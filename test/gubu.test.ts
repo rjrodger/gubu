@@ -439,9 +439,9 @@ describe('gubu', () => {
     const rs0e = Gubu(Empty(String))
     expect(rs0e('x')).toEqual('x')
     expect(rs0e('')).toEqual('')
+    expect(() => rs0e()).toThrow('required')
 
     const os0 = Gubu('x')
-    // expect(os0('')).toEqual('x')
     expect(() => os0('')).toThrow('required')
     expect(os0()).toEqual('x')
     expect(os0(undefined)).toEqual('x')
@@ -454,6 +454,13 @@ describe('gubu', () => {
     expect(os0e(undefined)).toEqual('x')
     expect(os0e('x')).toEqual('x')
     expect(os0e('y')).toEqual('y')
+
+    const os0e2 = Gubu(Empty(''))
+    expect(os0e2('')).toEqual('')
+    expect(os0e2()).toEqual('')
+    expect(os0e2(undefined)).toEqual('')
+    expect(os0e2('x')).toEqual('x')
+    expect(os0e2('y')).toEqual('y')
 
     const os1e = Gubu(Optional(Empty(String)))
     expect(os1e()).toEqual(undefined)

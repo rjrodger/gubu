@@ -586,13 +586,14 @@ they are in fact simply not present.
 
 There are heartfelt arguments on both sides of this issue, but Gubu
 must choose, and Gubu chooses not to accept empty strings as a
-`string` type.
+`string` type. This protects you from all sorts of wierd bugs.
 
 The engineering compromise is based on the priniciple of explicit
 notice. Since reasonable people have a reasonable disagreement about
 this behaviour, a mitigation of the issue is to make it
 explicit. Thus, the `Empty(String)`, or `Empty('foo')` shapes need to
-be used if you want to accept empty strngs.
+be used if you want to accept empty strings (required or optional,
+respectively).
 
 As a shortcut, you can use `''` directly for optional strings, and
 that shape will accept empty strings, and give you an empty string as
