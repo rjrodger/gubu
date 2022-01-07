@@ -1,7 +1,9 @@
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 
 
-// TODO: validator on completion of object or array
+// FEATURE: validator on completion of object or array
+// FEATURE: support non-index properties on array shape
+
 
 import { inspect } from 'util'
 import Pkg from './package.json'
@@ -160,6 +162,7 @@ class State {
     this.nextSibling = true
 
     this.type = this.node.t
+
     this.path[this.dI] = this.key
 
     this.oval = this.val
@@ -181,13 +184,14 @@ class State {
 
   /* Uncomment for debugging.
   printStacks() {
-    console.log('NODE',
+    console.log('\nNODE',
       'd=' + this.dI,
       'c=' + this.cI,
       'p=' + this.pI,
       'n=' + this.nI,
       +this.node,
       this.node.t,
+      this.path,
       this.err.length)
 
     for (let i = 0;
@@ -198,7 +202,9 @@ class State {
       console.log(i, '\t',
         isNaN(+this.nodes[i]) ?
           this.keys[i] + ':' + (this.nodes[i] as any)?.t :
-          +this.nodes[i], '\t', this.vals[i], '\t', this.parents[i])
+          +this.nodes[i], '\t',
+        stringify(this.vals[i]), '\t',
+        stringify(this.parents[i]))
     }
   }
   */
@@ -276,7 +282,6 @@ const EMPTY_VAL: { [name: string]: any } = {
   boolean: false,
   object: {},
   array: [],
-  function: () => undefined,
   symbol: Symbol(''),
   bigint: BigInt(0),
   null: null,
@@ -431,12 +436,10 @@ function make(intop?: any, inopts?: Options): GubuShape {
 
       if (!done) {
         if ('never' === s.type) {
-          // s.err.push(makeErrImpl('never', s.val, s.path, s.dI, s.node, 1070))
           s.err.push(makeErrImpl('never', s, 1070))
         }
         else if ('object' === s.type) {
           if (s.node.r && undefined === s.val) {
-            // s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1010))
             s.err.push(makeErrImpl('required', s, 1010))
           }
           else if (
@@ -446,11 +449,10 @@ function make(intop?: any, inopts?: Options): GubuShape {
               Array.isArray(s.val)
             )
           ) {
-            // s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1020))
             s.err.push(makeErrImpl('type', s, 1020))
           }
 
-          else if (!s.node.o) {
+          else if (!s.node.o || null != s.val) {
             s.updateVal(s.val || (s.fromDefault = true, {}))
 
             let vkeys = Object.keys(s.node.v)
@@ -475,14 +477,12 @@ function make(intop?: any, inopts?: Options): GubuShape {
 
         else if ('array' === s.type) {
           if (s.node.r && undefined === s.val) {
-            // s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1030))
             s.err.push(makeErrImpl('required', s, 1030))
           }
           else if (undefined !== s.val && !Array.isArray(s.val)) {
-            // s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1040))
             s.err.push(makeErrImpl('type', s, 1040))
           }
-          else if (!s.node.o) {
+          else if (!s.node.o || null != s.val) {
             s.updateVal(s.val || (s.fromDefault = true, []))
 
             let vkeys = Object.keys(s.node.v).filter(k => !isNaN(+k))
@@ -532,7 +532,6 @@ function make(intop?: any, inopts?: Options): GubuShape {
           ('instance' === s.type && s.node.u.i && s.val instanceof s.node.u.i) ||
           ('null' === s.type && null === s.val)
         )) {
-          // s.err.push(makeErrImpl('type', s.val, s.path, s.dI, s.node, 1050))
           s.err.push(makeErrImpl('type', s, 1050))
         }
 
@@ -542,7 +541,6 @@ function make(intop?: any, inopts?: Options): GubuShape {
 
           if (s.node.r &&
             ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
-            // s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1060))
             s.err.push(makeErrImpl('required', s, 1060))
           }
           else if (undefined !== s.node.v && !s.node.o || 'undefined' === s.type) {
@@ -553,7 +551,6 @@ function make(intop?: any, inopts?: Options): GubuShape {
 
         // Empty strings fail even if string is optional. Use Empty() to allow.
         else if ('string' === s.type && '' === s.val && !s.node.u.empty) {
-          // s.err.push(makeErrImpl('required', s.val, s.path, s.dI, s.node, 1080))
           s.err.push(makeErrImpl('required', s, 1080))
         }
       }
@@ -567,7 +564,7 @@ function make(intop?: any, inopts?: Options): GubuShape {
         }
       }
 
-      if (s.parent && !done) {
+      if (s.parent && !done && !s.node.o) {
         s.parent[s.key] = s.val
       }
 
@@ -639,7 +636,8 @@ function handleValidate(vf: Validate, s: State): Update {
     }
 
     let w = update.why || 'custom'
-    let p = pathstr(s.path, s.dI)
+    // let p = pathstr(s.path, s.dI)
+    let p = pathstr(s)
 
     if ('object' === typeof (update.err)) {
       // Assumes makeErr already called
@@ -656,7 +654,6 @@ function handleValidate(vf: Validate, s: State): Update {
         fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname
       }
       s.err.push(makeErrImpl(
-        // w, s.val, s.path, s.dI, s.node, 1045, undefined, {}, fname))
         w, s, 1045, undefined, {}, fname))
     }
   }
@@ -679,8 +676,9 @@ function handleValidate(vf: Validate, s: State): Update {
 }
 
 
-function pathstr(path: string[], dI: number) {
-  return path.slice(1, dI + 1).filter(s => null != s).join('.')
+// function pathstr(path: string[], dI: number) {
+function pathstr(s: State) {
+  return s.path.slice(1, s.dI + 1).filter(p => null != p).join('.')
 }
 
 
@@ -755,7 +753,7 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
     if (!pass) {
       update.why = 'all'
       update.err = [
-        makeErr(val, state,
+        makeErr(state,
           `Value "$VALUE" for path "$PATH" does not satisfy All shape:`),
         ...err]
     }
@@ -793,7 +791,7 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
     if (!pass) {
       update.why = 'some'
       update.err = [
-        makeErr(val, state,
+        makeErr(state,
           `Value "$VALUE" for path "$PATH" does not satisfy Some shape:`),
         ...err]
     }
@@ -828,7 +826,7 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
     if (1 !== passN) {
       update.why = 'one'
       update.err = [
-        makeErr(val, state,
+        makeErr(state,
           `Value "$VALUE" for path "$PATH" does not satisfy One shape:`),
         ...err]
     }
@@ -850,7 +848,7 @@ const Exact: Builder = function(this: Node, ...vals: any[]) {
       }
     }
     update.err =
-      makeErr(val, state,
+      makeErr(state,
         `Value "$VALUE" for path "$PATH" must be exactly one of: ` +
         `${vals.map(v => stringify(v)).join(', ')}.`)
 
@@ -903,7 +901,6 @@ const Closed: Builder = function(this: Node, shape?: any) {
       for (let k of vkeys) {
         if (undefined === allowed[k]) {
           update.err.push(
-            // makeErrImpl('closed', val, state.path, state.dI, node, 3010, '', { k })
             makeErrImpl('closed', s, 3010, '', { k })
           )
         }
@@ -990,9 +987,7 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
         s.ctx.Args.fromDefault = (s.ctx.Args.fromDefault || {})
 
         for (let cn of claim) {
-          let fromDefault = s.ctx.Args.fromDefault[cn]
-
-          // console.log('CLAIM', name, keep, claim, cn, s.parent[cn], s.ctx.Args.fromDefault[cn])
+          let fromDefault = s.ctx.Args.fromDefault[cn] || {}
 
           // Only use claim if it was not a default value.
           if (undefined !== s.parent[cn] && !fromDefault.yes) {
@@ -1028,7 +1023,6 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
         }
 
         if (undefined === update.val) {
-          // console.log('QQQ', state.key, state.node)
           update.val = s.node.v
         }
 
@@ -1042,6 +1036,7 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
       state.parent[name] = val
 
       if (!keep &&
+        !(state.key === name) &&
         // Arrays require explicit deletion as validation is based on index
         // and will be lost.
         !(Array.isArray(state.parent) && false !== keep)
@@ -1093,7 +1088,7 @@ const Min: Builder = function(
 
     let errmsgpart = 'number' === typeof (val) ? '' : 'length '
     update.err =
-      makeErr(val, state,
+      makeErr(state,
         `Value "$VALUE" for path "$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`)
     return false
   })
@@ -1118,7 +1113,7 @@ const Max: Builder = function(
 
     let errmsgpart = 'number' === typeof (val) ? '' : 'length '
     update.err =
-      makeErr(val, state,
+      makeErr(state,
         `Value "$VALUE" for path "$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`)
     return false
   })
@@ -1143,7 +1138,7 @@ const Above: Builder = function(
 
     let errmsgpart = 'number' === typeof (val) ? 'be' : 'have length'
     update.err =
-      makeErr(val, state,
+      makeErr(state,
         `Value "$VALUE" for path "$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`)
     return false
   })
@@ -1168,7 +1163,7 @@ const Below: Builder = function(
 
     let errmsgpart = 'number' === typeof (val) ? 'be' : 'have length'
     update.err =
-      makeErr(val, state,
+      makeErr(state,
         `Value "$VALUE" for path "$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`)
     return false
   })
@@ -1186,33 +1181,46 @@ const Value: Builder = function(
   let shape = norm(undefined == shape1 ? shape0 : shape1)
 
   node.a.push(function Below(val: any, _update: Update, s: State) {
+    if (null != val) {
 
-    let namedKeys = Object.keys(s.node.v)
-    let valKeys = Object.keys(val)
-      .reduce((a: string[], k: string) =>
-        ((namedKeys.includes(k) || a.push(k)), a), [])
+      let namedKeys = Object.keys(s.node.v)
+      let valKeys = Object.keys(val)
+        .reduce((a: string[], k: string) =>
+          ((namedKeys.includes(k) || a.push(k)), a), [])
 
-    // console.log('namedKeys', namedKeys)
-    // console.log('valKeys', valKeys)
+      // console.log('namedKeys', namedKeys)
+      // console.log('valKeys', valKeys)
 
-    if (0 < valKeys.length) {
-      let endI = s.nI + valKeys.length - 1
+      if (0 < valKeys.length) {
+        let endI = s.nI + valKeys.length - 1
 
-      let nI = s.nI - 1
-      s.nodes[endI] = s.nodes[nI]
-      s.vals[endI] = s.vals[nI]
-      s.parents[endI] = s.parents[nI]
-      s.keys[endI] = s.keys[nI]
+        let nI = s.nI
 
-      for (let k of valKeys) {
-        s.nodes[nI] = norm(shape, 1 + s.dI)
-        s.vals[nI] = val[k]
-        s.parents[nI] = val
-        s.keys[nI] = k
-        nI++
+        if (0 < namedKeys.length) {
+          nI--
+          s.nodes[endI] = s.nodes[nI]
+          s.vals[endI] = s.vals[nI]
+          s.parents[endI] = s.parents[nI]
+          s.keys[endI] = s.keys[nI]
+        }
+        else {
+          endI++
+          s.nodes[endI] = s.sI
+          s.pI = nI
+        }
+
+        for (let k of valKeys) {
+          s.nodes[nI] = norm(shape, 1 + s.dI)
+          s.vals[nI] = val[k]
+          s.parents[nI] = val
+          s.keys[nI] = k
+          nI++
+        }
+
+        s.nI = endI + 1
+        s.nextSibling = false
+        s.dI++
       }
-
-      s.nI = endI + 1
     }
     return true
   })
@@ -1253,14 +1261,10 @@ function buildize(invs0?: any, invs1?: any): Node {
 
 
 // External utility to make ErrDesc objects.
-function makeErr(val: any, state: State, text?: string, why?: string) {
+function makeErr(state: State, text?: string, why?: string) {
   return makeErrImpl(
     why || 'custom',
-    // val,
     state,
-    // state.path,
-    // state.dI,
-    // state.node,
     4000,
     text,
   )
@@ -1285,7 +1289,8 @@ function makeErrImpl(
     k: s.key,
     n: s.node,
     s: s.val,
-    p: pathstr(s.path, s.dI),
+    // p: pathstr(s.path, s.dI),
+    p: pathstr(s),
     w: why,
     m: mark,
     t: '',
@@ -1400,16 +1405,16 @@ Object.assign(make, {
   G$,
   buildize,
   makeErr,
+  stringify,
   Args,
 })
 
 
 type Gubu = typeof make & {
-  desc: () => any
-
   G$: typeof G$,
   buildize: typeof buildize,
   makeErr: typeof makeErr,
+  stringify: typeof stringify,
   Args: typeof Args,
 
   Above: typeof Above
@@ -1538,6 +1543,7 @@ export {
   norm,
   buildize,
   makeErr,
+  stringify,
   Args,
 
   Above,

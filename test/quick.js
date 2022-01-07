@@ -351,13 +351,53 @@ function J(x,s) {
 // // console.log(a3(['x',1]))
 
 
-let a4 = Args({ a: {x:1}, 'b:a': Optional(Function) })
-// console.dir(a3.spec(),{depth:null})
+// let a4 = Args({ a: {x:1}, 'b:a': Optional(Function) })
+// // console.dir(a3.spec(),{depth:null})
 
-function f0(){}
+// function f0(){}
 
-console.log(a4([{x:2},f0]))
-console.log(a4([f0]))
-console.log(a4([]))
+// console.log(a4([{x:2},f0]))
+// console.log(a4([f0]))
+// console.log(a4([]))
 
 
+// let obj01 = Gubu({
+//   a: { x: 1 },
+//   b: Optional({ y: 2 }),
+//   c: Optional({ z: Optional({ k: 3 }) }),
+//   d: Optional(9)
+// })
+// console.log(obj01({}))
+// console.log(obj01({ b: {} }))
+// console.log(obj01({ c: {} }))
+// console.log(obj01({ c: { z: {} } }))
+
+
+
+// let obj11 = Gubu({
+//   people: Required({}).Value({ name: String, age: Number }),
+// })
+
+// console.dir(obj11({
+//   people: {
+//     alice: { name: 'Alice', age: 99 },
+//     bob: { name: 'Bob' }
+//   },
+// }), {depth:null})
+
+// let p0 = Gubu({
+//   // a: Value({q:'Q'},Number),
+//   a: Value({},Number),
+//   b: { m:3, n:4 },
+// })
+
+// console.dir(p0({
+//   a:{ x:1, y:2 }
+// }))
+
+
+// let g0 = Gubu(Value({ a: 1 }, String))
+// console.log(g0({a:true,b:'x'}))
+
+
+console.log(Gubu({a:Rename('a',1)})({a:2}))

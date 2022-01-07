@@ -371,6 +371,162 @@ default. If the value does not exist, the default value is inserted.
 
 #### Objects
 
+Plain objects can be specified directly as they appear in values to be
+validated. If you want an object `{foo: 123}`, then the shape is also
+`{foo: 123}`, meaning any object with a `foo` property that is a
+`number`. The `foo` property is optional, and will default to the
+value `123`.
+
+You can define plain objects to any depth. The shape `{ bar: { foo:
+123} }` defines an object that optionally contains another object as
+the value of the property `bar`.
+
+As objects and sub-objects are often referenced directly in data
+structures, *Gubu* will construct missing objects by default, and fill
+in the missing child values (which may themselves be objects).
+
+The general form of an object shape is:
+
+```
+{ 
+  'propName0': <SHAPE>,
+  'propName1': <SHAPE>,
+  ...
+  'propNameN': <SHAPE>,
+}
+```
+
+where `propNameX` is any string (the quotes may be omitted if the
+property name is a valid JavaScript identifier&mdash;this is just
+normal JavaScript syntax after all).
+
+The `<SHAPE>` can be any valid *Gubu* shape definition.
+
+
+##### Required Properties
+
+To mark an object property as required, use the [required
+scalar](#required-scalars) shapes (such as `String`), or use the shape
+builder [Required](#required-builder):
+
+```
+const { Required } = Gubu
+
+let shape = Gubu({
+  foo: Number,
+  bar: Required({
+    zed: Boolean
+  })
+})
+
+// These pass, returning the value unchanged.
+shape({ foo: 1, bar: { zed: false } })
+shape({ foo: 1, bar: { zed: false, baz: 2 }, qaz: 3 }) // new properties are allowed
+
+// These fail, throwing an Error.
+shape({ bar: { zed: false } }) // foo is required
+shape({ foo: 'abc', bar: { zed: false } }) // foo is not a number
+shape({ foo: 1 }) // bar is required
+shape({ foo: 1, bar: {} }) // zed is required
+```
+
+
+##### Closed Objects
+
+To restrict the set of allowed properties, use the shape builder
+[Closed](#closed-builder):
+
+```
+const { Closed } = Gubu
+
+let shape = Gubu(Closed({
+  a: Closed({ x: 1 }),
+  b: { y: 2 }
+}))
+
+// These pass, returning the value with defaults inserted
+shape({ a: { x: 11 }, b: { y: 22 } })
+shape({ a: { x: 11 } }) // b is optional, returns { a: { x: 11 }, b: { y: 2 } }
+shape({}) // a is optional, returns { a: { x: 1 }, b: { y: 2 } }
+
+// These fail, throwing an Error.
+shape({ a: { x: 11 }, b: { y: 22 }, c: { z: 33} }) // z is not allowed
+shape({ a: { x: 11, k: 44 } }) // k is not allowed inside { x: 11 }
+```
+
+If a property must be present in an object, used the shape builder
+[Required](#required-properties).
+
+
+##### Optional Objects
+
+Objects are optional by default, and will be created if not
+present. To prevent this, use the explicit shape builder
+[Optional](#optional-builder) to indicate that you do *not* wish an
+object to be inserted when it is missing.
+
+```
+const { Optional } = Gubu
+let shape = Gubu({
+  a: { x: 1 },
+  b: Optional({ y: 2 }),
+  c: Optional({ z: Optional({ k: 3 }) }),
+})
+
+// Explicitly optional properties are not inserted as defaults if missing.
+shape({}) // returns { a: { x: 1 } }, b and c are missing entirely
+shape({ b: {} }) // returns { a: { x: 1 }, b: { y: 2 } }, defaults for b are inserted
+shape({ c: {} }) // returns { a: { x: 1 }, c: {} }, c has no non-optional defaults
+shape({ c: { z: {} } }) // returns { a: { x: 1 }, c: { z: { k: 3 } } } // z has defaults
+```
+
+If the object value is present but empty, any default values will be inserted.
+
+
+##### Object Values
+
+You can define a general shape for all non-explicit object values
+using the shape builder [Value](#value-builder):
+
+```
+const { Value } = Gubu
+let shape = Gubu(Value({
+  a: 123,
+}, String))
+
+// All new properties must be a String
+shape({ a: 11, b:'abc' }) // b is a string
+shape({ c:'foo', d:'bar' }) // c and d are strings
+
+// These fail
+shape({ a: 'abc' }) // a must be a number
+shape({ b: { x: 1 } }) // b must be a string
+```
+
+The general shape can be any valid shape:
+
+
+```
+const { Required, Value } = Gubu
+let shape = Gubu({
+  people: Required({}).Value({ name: String, age: Number })
+})
+
+// This passes:
+shape({ people: { 
+  alice: { name: 'Alice', age:99 }, 
+  bob:   { name: 'Bob',   age:98 },
+} })
+
+// These fail:
+shape({ people: { 
+  alice: { name: 'Alice', age:99 }, 
+  bob:   { name: 'Bob' }, // age is a required number
+} })
+shape({}) // people is a required object
+
+```
+
 
 #### Arrays
 

@@ -113,17 +113,18 @@ declare const Above: Builder;
 declare const Below: Builder;
 declare const Value: Builder;
 declare function buildize(invs0?: any, invs1?: any): Node;
-declare function makeErr(val: any, state: State, text?: string, why?: string): ErrDesc;
+declare function makeErr(state: State, text?: string, why?: string): ErrDesc;
+declare function stringify(x: any, r?: any): string;
 declare type GubuShape = (<T>(inroot?: T, inctx?: any) => T) & {
     spec: () => any;
     gubu: typeof GUBU;
 };
 declare const G$: (node: any) => Node;
 declare type Gubu = typeof make & {
-    desc: () => any;
     G$: typeof G$;
     buildize: typeof buildize;
     makeErr: typeof makeErr;
+    stringify: typeof stringify;
     Args: typeof Args;
     Above: typeof Above;
     After: typeof After;
@@ -169,4 +170,4 @@ declare const GRequired: Builder;
 declare const GSome: Builder;
 declare const GValue: Builder;
 export type { Validate, Update, Context, Builder, Node, State, };
-export { Gubu, G$, norm, buildize, makeErr, Args, Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Optional, Refer, Rename, Required, Some, Value, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GOptional, GRefer, GRename, GRequired, GSome, GValue, };
+export { Gubu, G$, norm, buildize, makeErr, stringify, Args, Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Optional, Refer, Rename, Required, Some, Value, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GOptional, GRefer, GRename, GRequired, GSome, GValue, };

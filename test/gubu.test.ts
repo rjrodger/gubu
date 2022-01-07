@@ -30,6 +30,7 @@ const Gubu = GubuModule
 const G$ = Gubu.G$
 const buildize = Gubu.buildize
 const makeErr = Gubu.makeErr
+const stringify = Gubu.stringify
 const Args = Gubu.Args
 
 const Above = Gubu.Above
@@ -496,6 +497,44 @@ describe('gubu', () => {
   })
 
 
+  test('api-object', () => {
+    let obj01 = Gubu({
+      a: { x: 1 },
+      b: Optional({ y: 2 }),
+      c: Optional({ z: Optional({ k: 3 }) }),
+    })
+    expect(obj01({})).toEqual({ a: { x: 1 } })
+    expect(obj01({ b: {} })).toEqual({ a: { x: 1 }, b: { y: 2 } })
+    expect(obj01({ c: {} })).toEqual({ a: { x: 1 }, c: {} })
+    expect(obj01({ c: { z: {} } })).toEqual({ a: { x: 1 }, c: { z: { k: 3 } } })
+
+    let obj11 = Gubu({
+      people: Required({}).Value({ name: String, age: Number })
+    })
+
+    expect(obj11({
+      people: {
+        alice: { name: 'Alice', age: 99 },
+        bob: { name: 'Bob', age: 98 },
+      }
+    })).toEqual({
+      people: {
+        alice: { name: 'Alice', age: 99 },
+        bob: { name: 'Bob', age: 98 },
+      }
+    })
+
+    expect(() => obj11({
+      people: {
+        alice: { name: 'Alice', age: 99 },
+        bob: { name: 'Bob' }
+      }
+    })).toThrow('Validation failed for path "people.bob.age" with value "" because the value is required.')
+    expect(() => obj11({})).toThrow('Validation failed for path "people" with value "" because the value is required.')
+
+  })
+
+
   test('builder-construct', () => {
     const GUBU$ = Symbol.for('gubu$')
 
@@ -891,6 +930,20 @@ Validation failed for path "a" with value "" because the value is required.`)
     expect(a3([11, 22, 33])).toMatchObject([11, 22, 33])
     expect(a3([11, 22, 33, 44])).toMatchObject([11, 22, 33, 44])
     expect(a3([undefined, 22])).toMatchObject([1, 22, 3])
+
+    // non-index properties on array shape are not supported
+    // FEATURE: support non-index properties on array shape
+    let r0: any = null
+    let A0: any = [String]
+    A0.x = 1
+    let g3 = Gubu({ a: A0 })
+    expect(g3({})).toEqual({ a: [] })
+
+    expect(r0 = g3({ a: undefined })).toEqual({ a: [] })
+    expect(r0.x).toBeUndefined()
+
+    expect(r0 = g3({ a: [] })).toEqual({ a: [] })
+    expect(r0.x).toBeUndefined()
   })
 
 
@@ -908,6 +961,16 @@ Validation failed for path "a" with value "" because the value is required.`)
     expect(g2(1)).toEqual(1)
     expect(g2(2)).toEqual(2)
 
+    // TODO: note this in docs - deep child requires must be satisfied unless Optional
+    let g3 = Gubu({ a: { b: String } })
+    expect(() => g3()).toThrow(/"a.b".*required/)
+
+    let g4 = Gubu({ a: Optional({ b: String }) })
+    expect(g4()).toEqual({})
+    expect(g4({})).toEqual({})
+    expect(g4({ a: undefined })).toEqual({})
+    expect(() => g4({ a: {} })).toThrow(/"a.b".*required/)
+
   })
 
 
@@ -921,7 +984,25 @@ Validation failed for path "a" with value "" because the value is required.`)
     let g1 = Gubu(Closed([Any(), Date, RegExp]))
     expect(g1(tmp.a0 = [new Date(), /a/])).toEqual(tmp.a0)
     expect(() => g1([new Date(), /a/, 'Q'])).toThrow(/Validation failed for path "" with value "\[[^Z]+Z,\/a\/,Q\]" /) // because the property "2" is not allowed\./)
+    expect(() => g1((tmp.a1 = [new Date(), /a/], tmp.a1.x = 1, tmp.a1)))
+      .toThrow('"x" is not allowed')
 
+    let g2 = Gubu({ a: Closed([String]) })
+    expect(g2({})).toEqual({ a: [] })
+    expect(g2({ a: undefined })).toEqual({ a: [] })
+    expect(g2({ a: [] })).toEqual({ a: [] })
+
+    let r0: any = null
+    let a0: any = [String]
+    a0.x = 1
+    let g3 = Gubu({ a: Closed(a0) })
+    expect(g3({})).toEqual({ a: [] })
+
+    expect(r0 = g3({ a: undefined })).toEqual({ a: [] })
+    expect(r0.x).toBeUndefined()
+
+    expect(r0 = g3({ a: [] })).toEqual({ a: [] })
+    expect(r0.x).toBeUndefined()
   })
 
 
@@ -1063,7 +1144,7 @@ Validation failed for path "y" with value "Y" because the value is not of type n
           }
           else {
             update.err = [
-              makeErr(val, state,
+              makeErr(state,
                 `Value "$VALUE" for path "$PATH" is ` +
                 `not between ${range[0]} and ${range[1]}.`)
             ]
@@ -1137,6 +1218,13 @@ Validation failed for path "y" with value "Y" because the value is not of type n
     expect(() => g1([])).toThrow('required')
     expect(g1(['x', 22, false]))
       .toMatchObject({ 0: 'x', 1: 22, a: 'x', b: 22, c: false })
+
+    let g2 = Gubu({
+      a: Number,
+      b: Rename({ name: 'b', claim: ['a'], keep: false }, Number)
+    })
+    expect(g2({ a: 1, b: 2 })).toEqual({ a: 1, b: 2 })
+    expect(g2({ a: 1 })).toEqual({ b: 1 })
   })
 
 
@@ -1425,6 +1513,9 @@ Value "5" for path "d.1" must be below 4 (was 5).`)
     expect(g0({ a: 2, b: 'x', c: 'y' })).toMatchObject({ a: 2, b: 'x', c: 'y' })
     expect(() => g0({ a: 2, b: 3 })).toThrow('Validation failed for path "b" with value "3" because the value is not of type string.')
     expect(() => g0({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for path "c" with value "4" because the value is not of type string.')
+
+    expect(() => g0({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for path "a" with value "true" because the value is not of type number.')
+
     expect(() => g0({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for path "a" with value "z" because the value is not of type number.')
 
     let g1 = Gubu({ a: Required({ b: 1 }).Value({ x: String }) })
@@ -1753,6 +1844,22 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
 
     // TODO: this should fail
     // expect(() => a8([{ x: 3 }])).toThrow('type') // b has precedence
+
+    let n0 = function n0(args: any) { return args.a }
+    let f2 = Args({ a: 1 }, n0)
+    expect(f2()).toEqual(1)
+    expect(f2(2)).toEqual(2)
+  })
+
+
+  test('stringify', () => {
+    expect(stringify({ a: 1 })).toEqual('{"a":1}')
+    expect(stringify(Required()))
+      .toEqual('{"$":{"v$":"0.0.6"},"t":"any","r":true,"o":false,"d":-1,"u":{},"a":[],"b":[]}')
+
+    let c0: any = {}
+    c0.x = c0
+    expect(stringify(c0)).toEqual('"[object Object]"')
   })
 
 
