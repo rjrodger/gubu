@@ -633,10 +633,11 @@ Licensed under [MIT][].
       processes values in depth-first order.
 
 [^2]: An empty string is not considered to match the `string` type. To
-      allow empty strings, use `Empty(String)`. See [Empty
+      allow empty strings (as a required value), use `Empty(String)`. See [Empty
       Strings](#empty-strings).
 
 [^3]: An empty string is not considered to match the `string` type. To
-      allow empty strings, use `Empty('some-default')`. See [Empty
+      allow empty strings (as an optional value), use
+      `Empty('some-default')` or just `''`. See [Empty
       Strings](#empty-strings).
 
