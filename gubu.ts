@@ -3,6 +3,7 @@
 
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
+// FEATURE: state should indicate if value was present, not just undefined
 
 
 import { inspect } from 'util'
@@ -903,24 +904,25 @@ const Closed: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
 
   node.b.push(function Closed(val: any, update: Update, s: State) {
-    if (null != val && 'object' === typeof (val)) {
+    if (null != val && 'object' === typeof (val) && !Array.isArray(val)) {
       let vkeys = Object.keys(val)
       let allowed = node.v
 
-      // For arrays, handle non-index properties, and special element offset.
-      if ('array' === s.node.t) {
-        allowed = Object.keys(node.v).slice(1)
-          .map((x: any) => {
-            let i = parseInt(x)
-            if (isNaN(i)) {
-              return x
-            }
-            else {
-              return i - 1
-            }
-          })
-          .reduce((a: any, i: any) => (a[i] = true, a), {})
-      }
+      // NOTE: disabling array for now
+      // // For arrays, handle non-index properties, and special element offset.
+      // if ('array' === s.node.t) {
+      //   allowed = Object.keys(node.v).slice(1)
+      //     .map((x: any) => {
+      //       let i = parseInt(x)
+      //       if (isNaN(i)) {
+      //         return x
+      //       }
+      //       else {
+      //         return i - 1
+      //       }
+      //     })
+      //     .reduce((a: any, i: any) => (a[i] = true, a), {})
+      // }
 
       update.err = []
       for (let k of vkeys) {

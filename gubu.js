@@ -7,6 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GValue = exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.Args = exports.stringify = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
+// FEATURE: state should indicate if value was present, not just undefined
 const util_1 = require("util");
 const package_json_1 = __importDefault(require("./package.json"));
 const GUBU$ = Symbol.for('gubu$');
@@ -614,23 +615,24 @@ exports.After = After;
 const Closed = function (shape) {
     let node = buildize(this, shape);
     node.b.push(function Closed(val, update, s) {
-        if (null != val && 'object' === typeof (val)) {
+        if (null != val && 'object' === typeof (val) && !Array.isArray(val)) {
             let vkeys = Object.keys(val);
             let allowed = node.v;
-            // For arrays, handle non-index properties, and special element offset.
-            if ('array' === s.node.t) {
-                allowed = Object.keys(node.v).slice(1)
-                    .map((x) => {
-                    let i = parseInt(x);
-                    if (isNaN(i)) {
-                        return x;
-                    }
-                    else {
-                        return i - 1;
-                    }
-                })
-                    .reduce((a, i) => (a[i] = true, a), {});
-            }
+            // NOTE: disabling array for now
+            // // For arrays, handle non-index properties, and special element offset.
+            // if ('array' === s.node.t) {
+            //   allowed = Object.keys(node.v).slice(1)
+            //     .map((x: any) => {
+            //       let i = parseInt(x)
+            //       if (isNaN(i)) {
+            //         return x
+            //       }
+            //       else {
+            //         return i - 1
+            //       }
+            //     })
+            //     .reduce((a: any, i: any) => (a[i] = true, a), {})
+            // }
             update.err = [];
             for (let k of vkeys) {
                 if (undefined === allowed[k]) {

@@ -812,17 +812,17 @@ describe('gubu', () => {
 
     let g8 = Gubu(Closed([Any()]))
     expect(g8([])).toEqual([])
-    expect(() => g7([1])).toThrow('Validation failed for path "0" with value "1" because no value is allowed.')
+    expect(g8([1])).toEqual([1])
+    expect(g8([1, 'x'])).toEqual([1, 'x'])
     expect(g8(new Array(1))).toEqual([undefined])
+    expect(g8(new Array(2))).toEqual([undefined, undefined])
 
     let g9 = Gubu(Closed([1]))
     expect(g9([])).toEqual([])
-    expect(() => g9([1])).toThrow('Validation failed for path "" with value "[1]" because the property "0" is not allowed.')
-
-    // TODO: should pass
-    // expect(g9(new Array(1))).toEqual([1])
-
-
+    expect(g9([1])).toEqual([1])
+    expect(g9([1, 2])).toEqual([1, 2])
+    expect(g9(new Array(1))).toEqual([1])
+    expect(g9(new Array(2))).toEqual([1, 1])
   })
 
 
@@ -877,6 +877,8 @@ describe('gubu', () => {
     expect(g0({ a: 3 })).toEqual({ a: 6 })
     expect(() => g0({ b: 1 })).toThrow('BAD VALUE 1 AT b')
     expect(g0({ c: 'x' })).toEqual({ c: 'x (key=c)' })
+
+    // TODO: uval test
   })
 
 
@@ -1049,9 +1051,8 @@ describe('gubu', () => {
 
     let g1 = Gubu(Closed([Any(), Date, RegExp]))
     expect(g1(tmp.a0 = [new Date(), /a/])).toEqual(tmp.a0)
-    expect(() => g1([new Date(), /a/, 'Q'])).toThrow(/Validation failed for path "" with value "\[[^Z]+Z,\/a\/,Q\]" /) // because the property "2" is not allowed\./)
-    expect(() => g1((tmp.a1 = [new Date(), /a/], tmp.a1.x = 1, tmp.a1)))
-      .toThrow('"x" is not allowed')
+    expect(g1(tmp.a1 = [new Date(), /a/, 'Q'])).toEqual(tmp.a1)
+    expect(g1((tmp.a2 = [new Date(), /a/], tmp.a2.x = 1, tmp.a2))).toEqual(tmp.a2)
 
     let g2 = Gubu({ a: Closed([String]) })
     expect(g2({})).toEqual({ a: [] })

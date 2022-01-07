@@ -627,10 +627,11 @@ shape([ { x: 123 } ]) // Index 0 is special
 
 ##### Length Constraints
 
-There are a number of ways to control the allowed length of an array:
-* Using [Never](#never-builder) to make all elements special.
-* Using [Closed](#closed-builder) to make all elements special.
-* Using [Min](#min-builder), [Max](#max-builder), [Above](#above-builder), and [Below](#below-builder) to restrict the length of the array.
+You can control the allowed length of an array using the shape builder
+[Never](#never-builder) to make all elements special, and also by
+using [Min](#min-builder), [Max](#max-builder),
+[Above](#above-builder), and [Below](#below-builder) to restrict the
+length of the array.
 
 Use the shape builder [Never](#never-builder) as the first element to
 prevent additional elements in the array:
@@ -640,25 +641,6 @@ const { Never } = Gubu
 Gubu([Never()]) // Only accepts the empty array []
 Gubu([Never(),String]) // Only accepts an array with a string first element ['abc']
 ```
-
-Use the shape builder [Closed](#closed-builder) to also prevent
-additional elements in the array:
-
-```
-const { Closed, Any } = Gubu
-Gubu(Closed([Any()])) // Only accepts the empty array []
-Gubu([Any(),String]) // Only accepts an array with a string first element ['abc']
-```
-
-
-These options differ in how empty array element are handled. For array
-shapes, a default optional element (as the general element shape) will
-be inserted into any empty array index: `Gubu([123])(new Array(3))`
-will return `[ 123, 123, 123 ]`.
-
-When you use `Never()` as above, this will not be allowed, as
-`Never()`, never matches anything. If you use `Gubu(Closed([123]))`,
-you'll still get: `[ 123, 123, 123 ]`.
 
 
 The length constraining shape builders ([Min](#min-builder),
@@ -763,6 +745,12 @@ paths
 
 
 ### Builders
+
+
+#### Closed Builder
+
+does not work on arrays
+
 
 
 ### Edge Cases
