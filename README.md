@@ -451,6 +451,9 @@ let easyShape = Gubu({ a: Optional({ b: String }) })
 easyShape({ a: { b: 'ABC' } })
 easyShape({})
 
+// This still fails, as `a` is now defined, and needs `b`
+easyShape({ a: {} })
+
 ```
  
 

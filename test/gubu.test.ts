@@ -972,7 +972,6 @@ Validation failed for path "a" with value "" because the value is required.`)
     expect(g4({})).toEqual({})
     expect(g4({ a: undefined })).toEqual({})
     expect(() => g4({ a: {} })).toThrow(/"a.b".*required/)
-
   })
 
 
