@@ -542,6 +542,17 @@ describe('gubu', () => {
   })
 
 
+  test('api-functions', () => {
+    let f0 = () => true
+    let f1 = () => false
+    let { G$ } = Gubu
+    let shape = Gubu({ fn: G$({ v: f0 }) })
+
+    expect(shape({})).toEqual({ fn: f0 })
+    expect(shape({ fn: f1 })).toEqual({ fn: f1 })
+  })
+
+
   test('builder-construct', () => {
     const GUBU$ = Symbol.for('gubu$')
 
@@ -783,6 +794,35 @@ describe('gubu', () => {
       .toThrow(/"2".*"q".*type object/)
     expect(() => g5([{ x: 11 }, { y: 22 }, { z: 33 }, 'q', { k: 99 }]))
       .toThrow(/"3".*"q".*type object/)
+
+
+    let g6 = Gubu([1])
+    expect(g6(new Array(3))).toEqual([1, 1, 1])
+    let a0 = [11, 22, 33]
+    delete a0[1]
+    expect(g6(a0)).toEqual([11, 1, 33])
+
+    let g7 = Gubu([Never()])
+    expect(g7([])).toEqual([])
+    expect(() => g7([1])).toThrow('Validation failed for path "0" with value "1" because no value is allowed.')
+    expect(() => g7(new Array(1))).toThrow('Validation failed for path "0" with value "" because no value is allowed.')
+
+
+    // TODO: Closed over Array with no specials should have no effect
+
+    let g8 = Gubu(Closed([Any()]))
+    expect(g8([])).toEqual([])
+    expect(() => g7([1])).toThrow('Validation failed for path "0" with value "1" because no value is allowed.')
+    expect(g8(new Array(1))).toEqual([undefined])
+
+    let g9 = Gubu(Closed([1]))
+    expect(g9([])).toEqual([])
+    expect(() => g9([1])).toThrow('Validation failed for path "" with value "[1]" because the property "0" is not allowed.')
+
+    // TODO: should pass
+    // expect(g9(new Array(1))).toEqual([1])
+
+
   })
 
 
@@ -812,13 +852,31 @@ describe('gubu', () => {
     let g2 = Gubu({ a: Required((v: any) => v > 10) })
     expect(g1({ a: 11 })).toMatchObject({ a: 11 })
     expect(() => g2({ a: 9 })).toThrow('Validation failed for path "a" with value "9" because check "custom: (v) => v > 10" failed.')
-    expect(() => g2({})).toThrow(`Validation failed for path "a" with value "" because check "custom: (v) => v > 10" failed.
-Validation failed for path "a" with value "" because the value is required.`)
+    expect(() => g2({}))
+      .toThrow('Validation failed for path "a" with value "" because check "custom: (v) => v > 10" failed.')
+    // .toThrow(`Validation failed for path "a" with value "" because check "custom: (v) => v > 10" failed.
+    // Validation failed for path "a" with value "" because the value is required.`)
 
     let g3 = Gubu((v: any) => v > 10)
     expect(g3(11)).toEqual(11)
     expect(() => g3(9)).toThrow('Validation failed for path "" with value "9" because check "custom: (v) => v > 10" failed.')
+  })
 
+
+  test('custom-modify', () => {
+    let g0 = Gubu({
+      a: (v: number, u: Update) => (u.val = v * 2, true),
+      b: (_v: any, u: Update) => {
+        u.err = 'BAD VALUE $VALUE AT $PATH'
+        return false
+      },
+      c: (v: any, u: Update, s: State) =>
+        (u.val = (v ? v + ` (key=${s.key})` : undefined), true),
+    })
+
+    expect(g0({ a: 3 })).toEqual({ a: 6 })
+    expect(() => g0({ b: 1 })).toThrow('BAD VALUE 1 AT b')
+    expect(g0({ c: 'x' })).toEqual({ c: 'x (key=c)' })
   })
 
 
@@ -1377,7 +1435,8 @@ Validation failed for path "y" with value "Y" because the value is not of type n
       a: Min(10),
       b: Min(2, [String]),
       c: Min(3, 'foo'),
-      d: [Min(4, Number)]
+      d: [Min(4, Number)],
+      e: [Min(2, {})],
     })
     expect(g0({ a: 10 })).toMatchObject({ a: 10 })
     expect(g0({ a: 11 })).toMatchObject({ a: 11 })
@@ -1399,6 +1458,13 @@ Validation failed for path "y" with value "Y" because the value is not of type n
     expect(g0({ d: [4, 5, 6] })).toMatchObject({ d: [4, 5, 6] })
     expect(() => g0({ d: [4, 5, 6, 3] }))
       .toThrow(`Value "3" for path "d.3" must be a minimum of 4 (was 3).`)
+
+    expect(g0({ e: [{ x: 1, y: 2 }] })).toMatchObject({ e: [{ x: 1, y: 2 }] })
+    expect(g0({ e: [{ x: 1, y: 2, z: 3 }] }))
+      .toMatchObject({ e: [{ x: 1, y: 2, z: 3 }] })
+    expect(() => g0({ e: [{ x: 1 }] })).toThrow('Value "{x:1}" for path "e.0" must be a minimum length of 2 (was 1).')
+    expect(() => g0({ e: [{}] })).toThrow('Value "{}" for path "e.0" must be a minimum length of 2 (was 0).')
+    expect(g0({ e: [] })).toMatchObject({ e: [] })
   })
 
 
@@ -1407,7 +1473,8 @@ Validation failed for path "y" with value "Y" because the value is not of type n
       a: Max(10),
       b: Max(2, [String]),
       c: Max(3, 'foo'),
-      d: [Max(4, Number)]
+      d: [Max(4, Number)],
+      e: [Max(2, {})],
     })
     expect(g0({ a: 10 })).toMatchObject({ a: 10 })
     expect(g0({ a: 9 })).toMatchObject({ a: 9 })
@@ -1432,6 +1499,14 @@ Validation failed for path "y" with value "Y" because the value is not of type n
     expect(g0({ d: [] })).toMatchObject({ d: [] })
     expect(() => g0({ d: [4, 5] }))
       .toThrow(`Value "5" for path "d.1" must be a maximum of 4 (was 5).`)
+
+    expect(g0({ e: [{ x: 1, y: 2 }] })).toMatchObject({ e: [{ x: 1, y: 2 }] })
+    expect(g0({ e: [{ x: 1 }] }))
+      .toMatchObject({ e: [{ x: 1 }] })
+    expect(g0({ e: [{}] }))
+      .toMatchObject({ e: [{}] })
+    expect(() => g0({ e: [{ x: 1, y: 2, z: 3 }] })).toThrow('Value "{x:1,y:2,z:3}" for path "e.0" must be a maximum length of 2 (was 3).')
+    expect(g0({ e: [] })).toMatchObject({ e: [] })
   })
 
 
@@ -1440,7 +1515,8 @@ Validation failed for path "y" with value "Y" because the value is not of type n
       a: Above(10),
       b: Above(2, [String]),
       c: Above(3, 'foo'),
-      d: [Above(4, Number)]
+      d: [Above(4, Number)],
+      e: [Above(2, {})],
     })
     expect(g0({ a: 12 })).toMatchObject({ a: 12 })
     expect(g0({ a: 11 })).toMatchObject({ a: 11 })
@@ -1465,12 +1541,23 @@ Validation failed for path "y" with value "Y" because the value is not of type n
     expect(() => g0({ c: 'b' }))
       .toThrow(`Value "b" for path "c" must have length above 3 (was 1).`)
     expect(() => g0({ c: '' }))
-      .toThrow(`Validation failed for path "c" with value "" because the value is required.`)
+      // .toThrow(`Validation failed for path "c" with value "" because the value is required.`)
+      .toThrow('Value "" for path "c" must have length above 3 (was 0).')
 
     expect(g0({ d: [5, 6] })).toMatchObject({ d: [5, 6] })
     expect(() => g0({ d: [4, 5, 6, 3] }))
       .toThrow(`Value "4" for path "d.0" must be above 4 (was 4).
 Value "3" for path "d.3" must be above 4 (was 3).`)
+
+    expect(g0({ e: [{ x: 1, y: 2, z: 3 }] }))
+      .toMatchObject({ e: [{ x: 1, y: 2, z: 3 }] })
+    expect(() => g0({ e: [{ x: 1, y: 2 }] }))
+      .toThrow('Value "{x:1,y:2}" for path "e.0" must have length above 2 (was 2).')
+    expect(() => g0({ e: [{ x: 1 }] }))
+      .toThrow('Value "{x:1}" for path "e.0" must have length above 2 (was 1).')
+    expect(() => g0({ e: [{}] }))
+      .toThrow('Value "{}" for path "e.0" must have length above 2 (was 0).')
+    expect(g0({ e: [] })).toMatchObject({ e: [] })
   })
 
 
@@ -1479,7 +1566,8 @@ Value "3" for path "d.3" must be above 4 (was 3).`)
       a: Below(10),
       b: Below(2, [String]),
       c: Below(3, 'foo'),
-      d: [Below(4, Number)]
+      d: [Below(4, Number)],
+      e: [Below(2, {})],
     })
     expect(g0({ a: 8 })).toMatchObject({ a: 8 })
     expect(g0({ a: 9 })).toMatchObject({ a: 9 })
@@ -1509,6 +1597,14 @@ Value "3" for path "d.3" must be above 4 (was 3).`)
     expect(() => g0({ d: [4, 5] }))
       .toThrow(`Value "4" for path "d.0" must be below 4 (was 4).
 Value "5" for path "d.1" must be below 4 (was 5).`)
+
+    expect(g0({ e: [{ x: 1 }] }))
+      .toMatchObject({ e: [{ x: 1 }] })
+    expect(g0({ e: [{}] }))
+      .toMatchObject({ e: [{}] })
+    expect(() => g0({ e: [{ x: 1, y: 2 }] })).toThrow('Value "{x:1,y:2}" for path "e.0" must have length below 2 (was 2).')
+    expect(g0({ e: [] })).toMatchObject({ e: [] })
+
   })
 
 

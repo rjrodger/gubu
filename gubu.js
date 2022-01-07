@@ -26,6 +26,7 @@ class State {
         this.stop = true;
         this.nextSibling = true;
         this.fromDefault = false;
+        this.ignoreVal = false;
         this.err = [];
         this.parents = [];
         this.keys = [];
@@ -40,6 +41,7 @@ class State {
         // this.printStacks()
         this.stop = false;
         this.fromDefault = false;
+        this.ignoreVal = false;
         this.isRoot = 0 === this.pI;
         // Dereference the back pointers to ancestor siblings.
         // Only objects|arrays can be nodes, so a number is a back pointer.
@@ -76,6 +78,7 @@ class State {
         if (this.isRoot) {
             this.root = this.val;
         }
+        // console.log('UV', this.val)
     }
 }
 class GubuError extends TypeError {
@@ -186,6 +189,7 @@ function norm(shape, depth) {
             Function === ((_c = shape.prototype) === null || _c === void 0 ? void 0 : _c.constructor)) {
             t = 'custom';
             b = v;
+            v = undefined;
         }
         else {
             t = 'instance';
@@ -325,7 +329,10 @@ function make(intop, inopts) {
                         ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
                         s.err.push(makeErrImpl('required', s, 1060));
                     }
-                    else if (undefined !== s.node.v && !s.node.o || 'undefined' === s.type) {
+                    else if ('custom' !== s.type &&
+                        undefined !== s.node.v &&
+                        !s.node.o ||
+                        'undefined' === s.type) {
                         s.updateVal(s.node.v);
                         s.fromDefault = true;
                     }
@@ -343,7 +350,8 @@ function make(intop, inopts) {
                     }
                 }
             }
-            if (s.parent && !done && !s.node.o) {
+            if (s.parent && !done && !s.ignoreVal && !s.node.o) {
+                // console.log('PS', s.key, s.val)
                 s.parent[s.key] = s.val;
             }
             if (s.nextSibling) {
@@ -385,9 +393,7 @@ function make(intop, inopts) {
     return gubuShape;
 }
 function handleValidate(vf, s) {
-    let update = {
-        done: false
-    };
+    let update = {};
     let valid = vf(s.val, update, s);
     if (!valid || update.err) {
         // Explicit Optional allows undefined
@@ -398,7 +404,10 @@ function handleValidate(vf, s) {
         let w = update.why || 'custom';
         // let p = pathstr(s.path, s.dI)
         let p = pathstr(s);
-        if ('object' === typeof (update.err)) {
+        if ('string' === typeof (update.err)) {
+            s.err.push(makeErr(s, update.err));
+        }
+        else if ('object' === typeof (update.err)) {
             // Assumes makeErr already called
             s.err.push(...[update.err].flat().map(e => {
                 e.p = null == e.p ? p : e.p;
@@ -414,9 +423,18 @@ function handleValidate(vf, s) {
             }
             s.err.push(makeErrImpl(w, s, 1045, undefined, {}, fname));
         }
+        update.done = null == update.done ? true : update.done;
     }
-    if (undefined !== update.val) {
+    // Use uval for undefined and NaN
+    if (update.hasOwnProperty('uval')) {
         s.updateVal(update.val);
+    }
+    else if (undefined !== update.val && !Number.isNaN(update.val)) {
+        // console.log('QQQ', update)
+        s.updateVal(update.val);
+    }
+    else if ('custom' === s.node.t) {
+        s.ignoreVal = true;
     }
     if (undefined !== update.node) {
         s.node = update.node;
@@ -424,6 +442,7 @@ function handleValidate(vf, s) {
     if (undefined !== update.type) {
         s.type = update.type;
     }
+    // TODO: remove?
     s.nI = undefined === update.nI ? s.nI : update.nI;
     s.sI = undefined === update.sI ? s.sI : update.sI;
     s.pI = undefined === update.pI ? s.pI : update.pI;
@@ -591,6 +610,7 @@ const After = function (validate, shape) {
     return node;
 };
 exports.After = After;
+// TODO: array without specials should have no effect
 const Closed = function (shape) {
     let node = buildize(this, shape);
     node.b.push(function Closed(val, update, s) {
@@ -674,10 +694,10 @@ const Rename = function (inopts, shape) {
         // can be applied to it.
         let vsb = (val, update, s) => {
             if (undefined === val && 0 < claim.length) {
-                s.ctx.Args = (s.ctx.Args || {});
-                s.ctx.Args.fromDefault = (s.ctx.Args.fromDefault || {});
+                s.ctx.Rename = (s.ctx.Rename || {});
+                s.ctx.Rename.fromDefault = (s.ctx.Rename.fromDefault || {});
                 for (let cn of claim) {
-                    let fromDefault = s.ctx.Args.fromDefault[cn] || {};
+                    let fromDefault = s.ctx.Rename.fromDefault[cn] || {};
                     // Only use claim if it was not a default value.
                     if (undefined !== s.parent[cn] && !fromDefault.yes) {
                         update.val = s.parent[name] = s.parent[cn];
@@ -724,9 +744,9 @@ const Rename = function (inopts, shape) {
                 delete state.parent[state.key];
                 update.done = true;
             }
-            state.ctx.Args = (state.ctx.Args || {});
-            state.ctx.Args.fromDefault = (state.ctx.Args.fromDefault || {});
-            state.ctx.Args.fromDefault[name] = {
+            state.ctx.Rename = (state.ctx.Rename || {});
+            state.ctx.Rename.fromDefault = (state.ctx.Rename.fromDefault || {});
+            state.ctx.Rename.fromDefault[name] = {
                 yes: state.fromDefault,
                 key: state.key,
                 dval: state.node.v,
@@ -1013,11 +1033,14 @@ exports.Gubu = Gubu;
 // Experimental: function argument validation.
 // Uses Rename claims to support optional prefix arguments.
 function Args(shapes, wrapped) {
+    function fix(s) {
+        return 'function' === typeof (s) ? G$({ v: s }) : s;
+    }
     let restArg = undefined;
     let args = Object.keys(shapes)
         .reduce((as, name, index, keys) => {
         if (name.startsWith('...') && index + 1 === keys.length) {
-            restArg = { name: name.substring(3), shape: shapes[name] };
+            restArg = { name: name.substring(3), shape: fix(shapes[name]) };
         }
         else {
             let fullname = name;
@@ -1028,7 +1051,7 @@ function Args(shapes, wrapped) {
             else {
                 claim = undefined;
             }
-            as[index + 1] = Rename({ name, claim, keep: true }, shapes[fullname]);
+            as[index + 1] = Rename({ name, claim, keep: true }, fix(shapes[fullname]));
         }
         return as;
     }, [Never()]);

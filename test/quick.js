@@ -15,7 +15,11 @@ const {
   Empty,
   Exact,
   Never,
-  Value
+  Value,
+  Min,
+  Max,
+  Above,
+  Below,
 } = require('../gubu')
 
 
@@ -400,4 +404,9 @@ function J(x,s) {
 // console.log(g0({a:true,b:'x'}))
 
 
-console.log(Gubu({a:Rename('a',1)})({a:2}))
+// console.log(Gubu({a:Rename('a',1)})({a:2}))
+
+// console.log(Gubu([Never()])(new Array(3)))
+//console.log(Gubu(Closed([1]))([2,3]))
+
+console.log(Gubu(Above(3,[1]))([2,3,4,5]))

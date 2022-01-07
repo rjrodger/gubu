@@ -94,6 +94,7 @@ class State {
   nextSibling: boolean = true
 
   fromDefault: boolean = false
+  ignoreVal: boolean = false
 
   err: any[] = []
   parents: Node[] = []
@@ -129,6 +130,7 @@ class State {
 
     this.stop = false
     this.fromDefault = false
+    this.ignoreVal = false
     this.isRoot = 0 === this.pI
 
     // Dereference the back pointers to ancestor siblings.
@@ -176,6 +178,8 @@ class State {
     if (this.isRoot) {
       this.root = this.val
     }
+
+    // console.log('UV', this.val)
   }
 
 
@@ -213,12 +217,13 @@ class State {
 type Update = {
   done?: boolean
   val?: any
+  uval?: any // Use for undefined and NaN
   node?: Node
   type?: ValType
   nI?: number
   sI?: number
   pI?: number
-  err?: boolean | ErrDesc | ErrDesc[]
+  err?: string | ErrDesc | ErrDesc[]
   why?: string
 }
 
@@ -370,6 +375,7 @@ function norm(shape?: any, depth?: number): Node {
     ) {
       t = 'custom'
       b = v
+      v = undefined
     }
     else {
       t = 'instance'
@@ -541,7 +547,12 @@ function make(intop?: any, inopts?: Options): GubuShape {
             ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
             s.err.push(makeErrImpl('required', s, 1060))
           }
-          else if (undefined !== s.node.v && !s.node.o || 'undefined' === s.type) {
+          else if (
+            'custom' !== s.type &&
+            undefined !== s.node.v &&
+            !s.node.o ||
+            'undefined' === s.type
+          ) {
             s.updateVal(s.node.v)
             s.fromDefault = true
           }
@@ -562,7 +573,8 @@ function make(intop?: any, inopts?: Options): GubuShape {
         }
       }
 
-      if (s.parent && !done && !s.node.o) {
+      if (s.parent && !done && !s.ignoreVal && !s.node.o) {
+        // console.log('PS', s.key, s.val)
         s.parent[s.key] = s.val
       }
 
@@ -619,9 +631,7 @@ function make(intop?: any, inopts?: Options): GubuShape {
 
 
 function handleValidate(vf: Validate, s: State): Update {
-  let update: Update = {
-    done: false
-  }
+  let update: Update = {}
 
   let valid = vf(s.val, update, s)
 
@@ -637,7 +647,10 @@ function handleValidate(vf: Validate, s: State): Update {
     // let p = pathstr(s.path, s.dI)
     let p = pathstr(s)
 
-    if ('object' === typeof (update.err)) {
+    if ('string' === typeof (update.err)) {
+      s.err.push(makeErr(s, update.err))
+    }
+    else if ('object' === typeof (update.err)) {
       // Assumes makeErr already called
       s.err.push(...[update.err].flat().map(e => {
         e.p = null == e.p ? p : e.p
@@ -654,11 +667,22 @@ function handleValidate(vf: Validate, s: State): Update {
       s.err.push(makeErrImpl(
         w, s, 1045, undefined, {}, fname))
     }
+
+    update.done = null == update.done ? true : update.done
   }
 
-  if (undefined !== update.val) {
+  // Use uval for undefined and NaN
+  if (update.hasOwnProperty('uval')) {
     s.updateVal(update.val)
   }
+  else if (undefined !== update.val && !Number.isNaN(update.val)) {
+    // console.log('QQQ', update)
+    s.updateVal(update.val)
+  }
+  else if ('custom' === s.node.t) {
+    s.ignoreVal = true
+  }
+
   if (undefined !== update.node) {
     s.node = update.node
   }
@@ -666,6 +690,7 @@ function handleValidate(vf: Validate, s: State): Update {
     s.type = update.type
   }
 
+  // TODO: remove?
   s.nI = undefined === update.nI ? s.nI : update.nI
   s.sI = undefined === update.sI ? s.sI : update.sI
   s.pI = undefined === update.pI ? s.pI : update.pI
@@ -873,6 +898,7 @@ const After: Builder = function(this: Node, validate: Validate, shape?: any) {
 }
 
 
+// TODO: array without specials should have no effect
 const Closed: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
 
@@ -982,11 +1008,11 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
     // can be applied to it.
     let vsb = (val: any, update: Update, s: State) => {
       if (undefined === val && 0 < claim.length) {
-        s.ctx.Args = (s.ctx.Args || {})
-        s.ctx.Args.fromDefault = (s.ctx.Args.fromDefault || {})
+        s.ctx.Rename = (s.ctx.Rename || {})
+        s.ctx.Rename.fromDefault = (s.ctx.Rename.fromDefault || {})
 
         for (let cn of claim) {
-          let fromDefault = s.ctx.Args.fromDefault[cn] || {}
+          let fromDefault = s.ctx.Rename.fromDefault[cn] || {}
 
           // Only use claim if it was not a default value.
           if (undefined !== s.parent[cn] && !fromDefault.yes) {
@@ -1044,9 +1070,9 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
         update.done = true
       }
 
-      state.ctx.Args = (state.ctx.Args || {})
-      state.ctx.Args.fromDefault = (state.ctx.Args.fromDefault || {})
-      state.ctx.Args.fromDefault[name] = {
+      state.ctx.Rename = (state.ctx.Rename || {})
+      state.ctx.Rename.fromDefault = (state.ctx.Rename.fromDefault || {})
+      state.ctx.Rename.fromDefault[name] = {
         yes: state.fromDefault,
         key: state.key,
         dval: state.node.v,
@@ -1471,12 +1497,16 @@ const Gubu: Gubu = (make as Gubu)
 // Experimental: function argument validation.
 // Uses Rename claims to support optional prefix arguments.
 function Args(shapes: Record<string, any>, wrapped?: any) {
+  function fix(s: any) {
+    return 'function' === typeof (s) ? G$({ v: s }) : s
+  }
+
   let restArg: any = undefined
   let args: any =
     Object.keys(shapes)
       .reduce((as: any[], name, index, keys) => {
         if (name.startsWith('...') && index + 1 === keys.length) {
-          restArg = { name: name.substring(3), shape: shapes[name] }
+          restArg = { name: name.substring(3), shape: fix(shapes[name]) }
         }
         else {
           let fullname = name
@@ -1487,7 +1517,7 @@ function Args(shapes: Record<string, any>, wrapped?: any) {
           else {
             claim = undefined
           }
-          as[index + 1] = Rename({ name, claim, keep: true }, shapes[fullname])
+          as[index + 1] = Rename({ name, claim, keep: true }, fix(shapes[fullname]))
         }
         return as
       }, [Never()])

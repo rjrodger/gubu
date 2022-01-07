@@ -54,6 +54,7 @@ declare class State {
     stop: boolean;
     nextSibling: boolean;
     fromDefault: boolean;
+    ignoreVal: boolean;
     err: any[];
     parents: Node[];
     keys: string[];
@@ -73,12 +74,13 @@ declare class State {
 declare type Update = {
     done?: boolean;
     val?: any;
+    uval?: any;
     node?: Node;
     type?: ValType;
     nI?: number;
     sI?: number;
     pI?: number;
-    err?: boolean | ErrDesc | ErrDesc[];
+    err?: string | ErrDesc | ErrDesc[];
     why?: string;
 };
 declare type ErrDesc = {

@@ -403,7 +403,7 @@ normal JavaScript syntax after all).
 The `<SHAPE>` can be any valid *Gubu* shape definition.
 
 
-##### Required Properties
+##### Required Properties (Object)
 
 To mark an object property as required, use the [required
 scalar](#required-scalars) shapes (such as `String`), or use the shape
@@ -481,7 +481,7 @@ shape({ a: { x: 11, k: 44 } }) // k is not allowed inside { x: 11 }
 ```
 
 If a property must be present in an object, used the shape builder
-[Required](#required-properties).
+[Required](#required-properties-object).
 
 
 ##### Optional Objects
@@ -556,20 +556,210 @@ shape({}) // people is a required object
 
 #### Arrays
 
+Arrays can be specified directly using the first element as the shape
+that each element of the value array must match. If you want an array
+of numbers (`[ 1, 2, 3 ]`, say), then the shape is `[Number]`.
+
+You can also define special shapes for individual elements at specific
+indexes, as shown below.
+
+As arrays are often referenced directly in data structures, *Gubu*
+will construct missing arrays by default, and fill in the missing
+element values if there are empty array entries.
+
+The general form of an array shape is:
+
+```
+[
+  <SHAPE>,
+  <SPECIAL-SHAPE-0>,
+  <SPECIAL-SHAPE-1>,
+  ...
+  <SPECIAL-SHAPE-N>,
+]
+```
+
+where `<SHAPE>` is any valid *Gubu* shape definition. All elements
+must match `<SHAPE>`, unless they are special cases.
+
+For the special cases, they correspond to the first, second, etc
+elements of the value array (and are thus offset by +1 in the array
+shape):
+
+```
+let shape = Gubu([Number,String,Boolean])
+
+// These pass, returning the array as is.
+shape([ 'abc', true ])
+shape([ 'abc', true, 123 ])
+shape([ 'abc', true, 123, 456 ])
+
+// These fail.
+shape([ 123 ]) // Index 0 must be a string
+shape([ 'abc', 123 ]) // Index 1 must be a boolean
+```
+
+
+##### Required Properties (Array)
+
+To mark an array element as required, use the [required
+scalar](#required-scalars) shapes (such as `String`), or use the shape
+builder [Required](#required-builder). 
+
+Only required special elements must be present. Empty arrays with a
+required general element shape (such as `[Number]`), can still be empty
+(`[]` with match). Element constraints apply to elements, not the
+array itself.
+
+
+```
+let shape = Gubu([ { x: 1 }, Required({ y: Boolean }) ])
+
+// These pass:
+shape([ { y: true } ]) // Index 0 is special
+shape([ { y: false }, { x: 123 } ]) // Index >= 1 must match general element shape
+
+// These fail:
+shape([]) // Index 0 is required
+shape([ { x: 123 } ]) // Index 0 is special
+```
+
+
+##### Length Constraints
+
+There are a number of ways to control the allowed length of an array:
+* Using [Never](#never-builder) to make all elements special.
+* Using [Closed](#closed-builder) to make all elements special.
+* Using [Min](#min-builder), [Max](#max-builder), [Above](#above-builder), and [Below](#below-builder) to restrict the length of the array.
+
+Use the shape builder [Never](#never-builder) as the first element to
+prevent additional elements in the array:
+
+```
+const { Never } = Gubu
+Gubu([Never()]) // Only accepts the empty array []
+Gubu([Never(),String]) // Only accepts an array with a string first element ['abc']
+```
+
+Use the shape builder [Closed](#closed-builder) to also prevent
+additional elements in the array:
+
+```
+const { Closed, Any } = Gubu
+Gubu(Closed([Any()])) // Only accepts the empty array []
+Gubu([Any(),String]) // Only accepts an array with a string first element ['abc']
+```
+
+
+These options differ in how empty array element are handled. For array
+shapes, a default optional element (as the general element shape) will
+be inserted into any empty array index: `Gubu([123])(new Array(3))`
+will return `[ 123, 123, 123 ]`.
+
+When you use `Never()` as above, this will not be allowed, as
+`Never()`, never matches anything. If you use `Gubu(Closed([123]))`,
+you'll still get: `[ 123, 123, 123 ]`.
+
+
+The length constraining shape builders ([Min](#min-builder),
+[Max](#max-builder), [Above](#above-builder), and
+[Below](#below-builder)) work in a sensible way depending on the data
+type. For strings they control character length, for numbers they
+control magnitude, for object they control key count, and for arrays,
+they control length:
+
+```
+let { Min } = Gubu
+let shape = Gubu(Min(2, [Number]))
+
+// These pass
+shape([11,22]) // length is 2, >= minimum 2
+shape([11,22,33]) // length is 3, >= minimum 2
+
+// These fail
+shape([11]) // length is 1, not >= minimum 2
+shape([]) // length is 0, not >= minimum 2
+```
+
+
+##### Array Properties
+
+JavaScript allows arrays to have properties: `let a = []; a.foo = 1`.
+Matching against array properties is not supported in the current
+version. The workaround is write a [custom
+validator](#custom-validations).
+
+
 
 #### Functions
 
+To require a function, use the shape `Function`:
+`Gubu(Function)(()=>true)` will pass.
 
-#### Validations
+To provide a default function, you'll need to create a shape manually,
+using the special `G$` utility. Literal functions are used as [custom
+validators](#custom-validations), as this is the most common use case.
+
+```
+let { G$ } = Gubu
+let shape = Gubu({ fn: G$({ v: ()=>true }) })
+
+shape({}) // returns { fn: ()=>true }
+shape({ fn: ()=>false }) // returns { fn: ()=>false }
+```
 
 
 #### Custom Validations
+
+You can define custom validators by providing a function as the
+shape. The first argument to this function will the value to
+validate. Return `true` if the value is valid, and `false` if not.
+
+```
+let shape = Gubu({ a: (v) => 10 < v })
+shape({ a: 11 }) // passes, as 10 < 11 is true
+shape({ a: 9 })  // fails, as 10 < 9 is false
+```
+
+You modify the value using the second argument to the custom
+validation function:
+
+```
+let shape = Gubu({ a: (value, update) => {
+  update.val = value * 2 
+  return true
+})
+shape({ a: 3 }) // returns { a: 6 }
+```
+
+You can also provide a custom error message using the `update` argument:
+
+```
+let shape = Gubu({ a: (value, update) => {
+  update.err = 'BAD VALUE $VALUE AT $PATH'
+  return false // always fails
+})
+shape({ a: 3 }) // throws "BAD VALUE 3 AT a"
+```
+
+The special replacement tags `$VALUE` and `$PATH` are replaced with
+the value, and the path to value, respectively.
+
+
+TODO: State
+    expect(g0({ c: 'x' })).toEqual({ c: 'x (key=c)' })
+    
+
+
 
 
 ### Gubu function
 
 
+
 ### Errors
+
+paths
 
 
 ### Builders
