@@ -427,9 +427,32 @@ shape({ foo: 1, bar: { zed: false, baz: 2 }, qaz: 3 }) // new properties are all
 shape({ bar: { zed: false } }) // foo is required
 shape({ foo: 'abc', bar: { zed: false } }) // foo is not a number
 shape({ foo: 1 }) // bar is required
-shape({ foo: 1, bar: {} }) // zed is required
+shape({ foo: 1, bar: {} }) // bar.zed is required
 ```
 
+Object properties that are required must always be provided, even if
+they are children of optional objects&mdash;they wouldn't be required
+otherwise! To allow such deep required properties to be missing, use
+an explicit [Optional](#optional-builder) shape builder:
+
+```
+let strictShape = Gubu({ a: { b: String } })
+
+// Passes
+strictShape({ a: { b: 'ABC' } })
+
+// Fails, even though a is not required.
+strictShape({})
+
+
+let easyShape = Gubu({ a: Optional({ b: String }) })
+
+// Now both pass
+easyShape({ a: { b: 'ABC' } })
+easyShape({})
+
+```
+ 
 
 ##### Closed Objects
 
@@ -450,7 +473,7 @@ shape({ a: { x: 11 } }) // b is optional, returns { a: { x: 11 }, b: { y: 2 } }
 shape({}) // a is optional, returns { a: { x: 1 }, b: { y: 2 } }
 
 // These fail, throwing an Error.
-shape({ a: { x: 11 }, b: { y: 22 }, c: { z: 33} }) // z is not allowed
+shape({ a: { x: 11 }, b: { y: 22 }, c: { z: 33 } }) // c is not allowed
 shape({ a: { x: 11, k: 44 } }) // k is not allowed inside { x: 11 }
 ```
 

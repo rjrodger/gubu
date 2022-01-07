@@ -964,6 +964,8 @@ Validation failed for path "a" with value "" because the value is required.`)
     // TODO: note this in docs - deep child requires must be satisfied unless Optional
     let g3 = Gubu({ a: { b: String } })
     expect(() => g3()).toThrow(/"a.b".*required/)
+    expect(() => g3({})).toThrow(/"a.b".*required/)
+    expect(() => g3({ a: {} })).toThrow(/"a.b".*required/)
 
     let g4 = Gubu({ a: Optional({ b: String }) })
     expect(g4()).toEqual({})
@@ -1188,14 +1190,14 @@ Validation failed for path "y" with value "Y" because the value is not of type n
 
 
   test('builder-never', () => {
-    // let g0 = Gubu(Never())
-    // expect(() => g0(1)).toThrow('Validation failed for path "" with value "1" because no value is allowed.')
-    // let g1 = Gubu({ a: Never() })
-    // expect(() => g1({ a: 'x' })).toThrow('Validation failed for path "a" with value "x" because no value is allowed.')
+    let g0 = Gubu(Never())
+    expect(() => g0(1)).toThrow('Validation failed for path "" with value "1" because no value is allowed.')
+    let g1 = Gubu({ a: Never() })
+    expect(() => g1({ a: 'x' })).toThrow('Validation failed for path "a" with value "x" because no value is allowed.')
 
     // Another way to do closed arrays.
     let g2 = Gubu([Never(), 1, 'x'])
-    // expect(g2([2, 'y'])).toEqual([2, 'y'])
+    expect(g2([2, 'y'])).toEqual([2, 'y'])
     expect(() => g2([2, 'y', true])).toThrow('Validation failed for path "2" with value "true" because no value is allowed.')
   })
 
