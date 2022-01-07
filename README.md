@@ -521,8 +521,8 @@ let shape = Gubu(Value({
 }, String))
 
 // All new properties must be a String
-shape({ a: 11, b:'abc' }) // b is a string
-shape({ c:'foo', d:'bar' }) // c and d are strings
+shape({ a: 11, b: 'abc' }) // b is a string
+shape({ c: 'foo', d: 'bar' }) // c and d are strings
 
 // These fail
 shape({ a: 'abc' }) // a must be a number
@@ -581,9 +581,12 @@ shape({}) // people is a required object
 
 Unfortunately the empty string is not really a subtype of the `string`
 type, since it evaluates to `false`. In the case of HTTP input,
-missing parameters values are often provided as empty strings, when
-they are in fact `undefined`. There are heartfelt arguments on both
-sides of this issue.
+missing parameter values are often provided as empty strings, when
+they are in fact simply not present. 
+
+There are heartfelt arguments on both sides of this issue, but Gubu
+must choose, and Gubu chooses not to accept empty strings as a
+`string` type.
 
 The engineering compromise is based on the priniciple of explicit
 notice. Since reasonable people have a reasonable disagreement about
