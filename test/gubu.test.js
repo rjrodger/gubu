@@ -1487,7 +1487,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
     test('stringify', () => {
         expect(stringify({ a: 1 })).toEqual('{"a":1}');
         expect(stringify(Required()))
-            .toEqual('{"$":{"v$":"0.0.6"},"t":"any","r":true,"o":false,"d":-1,"u":{},"a":[],"b":[]}');
+            .toEqual(`{"$":{"v$":"${package_json_1.default.version}"},"t":"any","r":true,"o":false,"d":-1,"u":{},"a":[],"b":[]}`);
         let c0 = {};
         c0.x = c0;
         expect(stringify(c0)).toEqual('"[object Object]"');

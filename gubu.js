@@ -50,7 +50,6 @@ class State {
             nextNode = this.nodes[this.pI];
             this.dI--;
         }
-        // console.log('NODE-1', 'd=' + dI, pI, nI, +node, node?.k, node?.t)
         if (!nextNode) {
             this.stop = true;
             return;
@@ -718,7 +717,7 @@ const Rename = function (inopts, shape) {
         let vsa = (val, update, state) => {
             state.parent[name] = val;
             if (!keep &&
-                !(state.key === name) &&
+                state.key !== name &&
                 // Arrays require explicit deletion as validation is based on index
                 // and will be lost.
                 !(Array.isArray(state.parent) && false !== keep)) {
@@ -815,8 +814,6 @@ const Value = function (shape0, shape1) {
             let namedKeys = Object.keys(s.node.v);
             let valKeys = Object.keys(val)
                 .reduce((a, k) => ((namedKeys.includes(k) || a.push(k)), a), []);
-            // console.log('namedKeys', namedKeys)
-            // console.log('valKeys', valKeys)
             if (0 < valKeys.length) {
                 let endI = s.nI + valKeys.length - 1;
                 let nI = s.nI;
@@ -959,6 +956,7 @@ function clone(x) {
 }
 const G$ = (node) => norm({ ...node, $: { gubu$: true } });
 exports.G$ = G$;
+// Fix builder names after terser mangles them.
 /* istanbul ignore next */
 if ('undefined' !== typeof (window)) {
     Object.defineProperty(Above, 'name', { value: 'Above' });
@@ -1030,7 +1028,6 @@ function Args(shapes, wrapped) {
             else {
                 claim = undefined;
             }
-            // console.log('NAME', index, name, claim, shapes[fullname], shapes[index])
             as[index + 1] = Rename({ name, claim, keep: true }, shapes[fullname]);
         }
         return as;

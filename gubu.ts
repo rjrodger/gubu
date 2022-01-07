@@ -142,8 +142,6 @@ class State {
       this.dI--
     }
 
-    // console.log('NODE-1', 'd=' + dI, pI, nI, +node, node?.k, node?.t)
-
     if (!nextNode) {
       this.stop = true
       return
@@ -1037,7 +1035,7 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
       state.parent[name] = val
 
       if (!keep &&
-        !(state.key === name) &&
+        state.key !== name &&
         // Arrays require explicit deletion as validation is based on index
         // and will be lost.
         !(Array.isArray(state.parent) && false !== keep)
@@ -1188,9 +1186,6 @@ const Value: Builder = function(
       let valKeys = Object.keys(val)
         .reduce((a: string[], k: string) =>
           ((namedKeys.includes(k) || a.push(k)), a), [])
-
-      // console.log('namedKeys', namedKeys)
-      // console.log('valKeys', valKeys)
 
       if (0 < valKeys.length) {
         let endI = s.nI + valKeys.length - 1
@@ -1382,6 +1377,7 @@ type GubuShape =
 const G$ = (node: any): Node => norm({ ...node, $: { gubu$: true } })
 
 
+// Fix builder names after terser mangles them.
 /* istanbul ignore next */
 if ('undefined' !== typeof (window)) {
   Object.defineProperty(Above, 'name', { value: 'Above' })
@@ -1491,7 +1487,6 @@ function Args(shapes: Record<string, any>, wrapped?: any) {
           else {
             claim = undefined
           }
-          // console.log('NAME', index, name, claim, shapes[fullname], shapes[index])
           as[index + 1] = Rename({ name, claim, keep: true }, shapes[fullname])
         }
         return as
