@@ -75,6 +75,7 @@ window.expect = function(sval) {
       passEqualJSON(cval)
     },
     toBeDefined: (cval)=>pass(cval,undefined!==sval),
+    toBeUndefined: (cval)=>pass(cval,undefined===sval),
     toMatch: (cval)=>pass(cval,sval.match(cval)),
     toThrow: (cval)=>{
       try {

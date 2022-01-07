@@ -19,7 +19,7 @@
     "test": "jest --coverage",
     "test-some": "jest -t",
     "test-watch": "jest --coverage --watchAll",
-    "test-web": "npm run build-web && browserify -o test/web.js -e test/entry.js -im && open test/web.html",
+    "test-web": "npm run build && npm run build-web && browserify -o test/web.js -e test/entry.js -im && open test/web.html",
     "watch": "tsc -w -d",
     "build": "tsc -d",
     "build-web": "cp gubu.js gubu.min.js && browserify -o gubu.min.js -e gubu.web.js -s Gubu -im -p tinyify",

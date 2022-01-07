@@ -694,6 +694,7 @@ const Required: Builder = function(this: Node, shape?: any) {
   return node
 }
 
+
 const Optional: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   node.r = false
@@ -1351,6 +1352,7 @@ function stringify(x: any, r?: any) {
       else if ('bigint' === typeof (val)) {
         val = String(val.toString())
       }
+
       return val
     })
 
@@ -1378,6 +1380,31 @@ type GubuShape =
 
 
 const G$ = (node: any): Node => norm({ ...node, $: { gubu$: true } })
+
+
+/* istanbul ignore next */
+if ('undefined' !== typeof (window)) {
+  Object.defineProperty(Above, 'name', { value: 'Above' })
+  Object.defineProperty(After, 'name', { value: 'After' })
+  Object.defineProperty(All, 'name', { value: 'All' })
+  Object.defineProperty(Any, 'name', { value: 'Any' })
+  Object.defineProperty(Before, 'name', { value: 'Before' })
+  Object.defineProperty(Below, 'name', { value: 'Below' })
+  Object.defineProperty(Closed, 'name', { value: 'Closed' })
+  Object.defineProperty(Define, 'name', { value: 'Define' })
+  Object.defineProperty(Empty, 'name', { value: 'Empty' })
+  Object.defineProperty(Exact, 'name', { value: 'Exact' })
+  Object.defineProperty(Max, 'name', { value: 'Max' })
+  Object.defineProperty(Min, 'name', { value: 'Min' })
+  Object.defineProperty(Never, 'name', { value: 'Never' })
+  Object.defineProperty(One, 'name', { value: 'One' })
+  Object.defineProperty(Optional, 'name', { value: 'Optional' })
+  Object.defineProperty(Refer, 'name', { value: 'Refer' })
+  Object.defineProperty(Rename, 'name', { value: 'Rename' })
+  Object.defineProperty(Required, 'name', { value: 'Required' })
+  Object.defineProperty(Some, 'name', { value: 'Some' })
+  Object.defineProperty(Value, 'name', { value: 'Value' })
+}
 
 
 Object.assign(make, {
