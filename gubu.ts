@@ -5,6 +5,8 @@
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
 
+// TODO: GubuShape.d is damaged by composition
+
 
 import { inspect } from 'util'
 import Pkg from './package.json'
@@ -57,7 +59,6 @@ type Node = {
   v: any                 // Default value.
   r: boolean             // Value is required.
   o: boolean             // Value is explicitly optional.
-  // k: string              // Key of this node.
   u: Record<string, any> // Custom meta data
   b: Validate[]          // Custom before validation functions.
   a: Validate[]          // Custom after vaidation functions.
@@ -233,11 +234,12 @@ type Update = {
 type ErrDesc = {
   k: string  // Key of failing value.
   n: Node    // Failing spec node.
-  s: any     // Failing src value.
+  v: any     // Failing value.
   p: string  // Key path to src value.
   w: string  // Error code ("why").
   m: number  // Error mark for debugging.
   t: string  // Error message text.
+  u: any     // User custom info.
 }
 
 
@@ -645,7 +647,6 @@ function handleValidate(vf: Validate, s: State): Update {
     }
 
     let w = update.why || 'custom'
-    // let p = pathstr(s.path, s.dI)
     let p = pathstr(s)
 
     if ('string' === typeof (update.err)) {
@@ -1285,12 +1286,13 @@ function buildize(invs0?: any, invs1?: any): Node {
 
 
 // External utility to make ErrDesc objects.
-function makeErr(state: State, text?: string, why?: string) {
+function makeErr(state: State, text?: string, why?: string, user?: any) {
   return makeErrImpl(
     why || 'custom',
     state,
     4000,
     text,
+    user,
   )
 }
 
@@ -1299,11 +1301,6 @@ function makeErr(state: State, text?: string, why?: string) {
 function makeErrImpl(
   why: string,
   s: State,
-  // sval: any,
-  // key: string,
-  // path: string[],
-  // dI: number,
-  // node: Node,
   mark: number,
   text?: string,
   user?: any,
@@ -1312,12 +1309,12 @@ function makeErrImpl(
   let err: ErrDesc = {
     k: s.key,
     n: s.node,
-    s: s.val,
-    // p: pathstr(s.path, s.dI),
+    v: s.val,
     p: pathstr(s),
     w: why,
     m: mark,
     t: '',
+    u: user || {},
   }
 
   let jstr = undefined === s.val ? '' : stringify(s.val)
@@ -1453,6 +1450,27 @@ Object.assign(make, {
   Some,
   Value,
 
+  GAbove: Above,
+  GAfter: After,
+  GAll: All,
+  GAny: Any,
+  GBefore: Before,
+  GBelow: Below,
+  GClosed: Closed,
+  GDefine: Define,
+  GEmpty: Empty,
+  GExact: Exact,
+  GMax: Max,
+  GMin: Min,
+  GNever: Never,
+  GOne: One,
+  GOptional: Optional,
+  GRefer: Refer,
+  GRename: Rename,
+  GRequired: Required,
+  GSome: Some,
+  GValue: Value,
+
   G$,
   buildize,
   makeErr,
@@ -1488,6 +1506,28 @@ type Gubu = typeof make & {
   Required: typeof Required
   Some: typeof Some
   Value: typeof Value
+
+  GAbove: typeof Above
+  GAfter: typeof After
+  GAll: typeof All
+  GAny: typeof Any
+  GBefore: typeof Before
+  GBelow: typeof Below
+  GClosed: typeof Closed
+  GDefine: typeof Define
+  GEmpty: typeof Empty
+  GExact: typeof Exact
+  GMax: typeof Max
+  GMin: typeof Min
+  GNever: typeof Never
+  GOne: typeof One
+  GOptional: typeof Optional
+  GRefer: typeof Refer
+  GRename: typeof Rename
+  GRequired: typeof Required
+  GSome: typeof Some
+  GValue: typeof Value
+
 }
 
 Object.defineProperty(make, 'name', { value: 'gubu' })

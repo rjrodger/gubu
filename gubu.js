@@ -8,6 +8,7 @@ exports.GValue = exports.GSome = exports.GRequired = exports.GRename = exports.G
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
+// TODO: GubuShape.d is damaged by composition
 const util_1 = require("util");
 const package_json_1 = __importDefault(require("./package.json"));
 const GUBU$ = Symbol.for('gubu$');
@@ -403,7 +404,6 @@ function handleValidate(vf, s) {
             return update;
         }
         let w = update.why || 'custom';
-        // let p = pathstr(s.path, s.dI)
         let p = pathstr(s);
         if ('string' === typeof (update.err)) {
             s.err.push(makeErr(s, update.err));
@@ -896,27 +896,21 @@ function buildize(invs0, invs1) {
 }
 exports.buildize = buildize;
 // External utility to make ErrDesc objects.
-function makeErr(state, text, why) {
-    return makeErrImpl(why || 'custom', state, 4000, text);
+function makeErr(state, text, why, user) {
+    return makeErrImpl(why || 'custom', state, 4000, text, user);
 }
 exports.makeErr = makeErr;
 // Internal utility to make ErrDesc objects.
-function makeErrImpl(why, s, 
-// sval: any,
-// key: string,
-// path: string[],
-// dI: number,
-// node: Node,
-mark, text, user, fname) {
+function makeErrImpl(why, s, mark, text, user, fname) {
     let err = {
         k: s.key,
         n: s.node,
-        s: s.val,
-        // p: pathstr(s.path, s.dI),
+        v: s.val,
         p: pathstr(s),
         w: why,
         m: mark,
         t: '',
+        u: user || {},
     };
     let jstr = undefined === s.val ? '' : stringify(s.val);
     let valstr = jstr.replace(/"/g, '');
@@ -1023,6 +1017,26 @@ Object.assign(make, {
     Required,
     Some,
     Value,
+    GAbove: Above,
+    GAfter: After,
+    GAll: All,
+    GAny: Any,
+    GBefore: Before,
+    GBelow: Below,
+    GClosed: Closed,
+    GDefine: Define,
+    GEmpty: Empty,
+    GExact: Exact,
+    GMax: Max,
+    GMin: Min,
+    GNever: Never,
+    GOne: One,
+    GOptional: Optional,
+    GRefer: Refer,
+    GRename: Rename,
+    GRequired: Required,
+    GSome: Some,
+    GValue: Value,
     G$,
     buildize,
     makeErr,

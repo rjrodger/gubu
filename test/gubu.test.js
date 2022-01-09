@@ -159,6 +159,113 @@ describe('gubu', () => {
         let g0 = Gubu(Number);
         expect(g0(1)).toEqual(1);
         expect(() => g0('x')).toThrow('Validation failed for path "" with value "x" because the value is not of type number.');
+        let ctx0 = { err: [] };
+        g0('x', ctx0);
+        expect(ctx0).toMatchObject({
+            err: [
+                {
+                    n: { t: 'number' },
+                    v: 'x',
+                    p: '',
+                    w: 'type',
+                    m: 1050,
+                    t: 'Validation failed for path "" with value "x" because the value is not of type number.',
+                    u: {},
+                }
+            ]
+        });
+        try {
+            g0('x');
+        }
+        catch (e) {
+            expect(e.message).toEqual('Validation failed for path "" with value "x" because the value is not of type number.');
+            expect(e).toMatchObject({
+                gubu: true,
+                code: 'shape',
+            });
+            expect(e.desc()).toMatchObject({
+                name: 'GubuError',
+                code: 'shape',
+                err: [
+                    {
+                        k: undefined,
+                        n: { t: 'number' },
+                        v: 'x',
+                        p: '',
+                        w: 'type',
+                        m: 1050,
+                        t: 'Validation failed for path "" with value "x" because the value is not of type number.',
+                        u: {},
+                    }
+                ],
+                ctx: {}
+            });
+        }
+        let g1 = Gubu({ q: { a: String, b: Number } });
+        let ctx1 = { err: [] };
+        g1({ q: { a: 1, b: 'x' } }, ctx1);
+        expect(ctx1).toMatchObject({
+            err: [
+                {
+                    k: 'a',
+                    n: { t: 'string' },
+                    v: 1,
+                    p: 'q.a',
+                    w: 'type',
+                    m: 1050,
+                    t: 'Validation failed for path "q.a" with value "1" because the value is not of type string.',
+                    u: {},
+                },
+                {
+                    k: 'b',
+                    n: { t: 'number' },
+                    v: 'x',
+                    p: 'q.b',
+                    w: 'type',
+                    m: 1050,
+                    t: 'Validation failed for path "q.b" with value "x" because the value is not of type number.',
+                    u: {},
+                }
+            ]
+        });
+        try {
+            g1({ q: { a: 1, b: 'x' } });
+        }
+        catch (e) {
+            expect(e.message).toEqual(`Validation failed for path "q.a" with value "1" because the value is not of type string.
+Validation failed for path "q.b" with value "x" because the value is not of type number.`);
+            expect(e).toMatchObject({
+                gubu: true,
+                code: 'shape',
+            });
+            expect(e.desc()).toMatchObject({
+                name: 'GubuError',
+                code: 'shape',
+                err: [
+                    {
+                        k: 'a',
+                        n: { t: 'string' },
+                        v: 1,
+                        p: 'q.a',
+                        w: 'type',
+                        m: 1050,
+                        t: 'Validation failed for path "q.a" with value "1" because the value is not of type string.',
+                        u: {},
+                    },
+                    {
+                        k: 'b',
+                        n: { t: 'number' },
+                        v: 'x',
+                        p: 'q.b',
+                        w: 'type',
+                        m: 1050,
+                        t: 'Validation failed for path "q.b" with value "x" because the value is not of type number.',
+                        u: {},
+                    }
+                ],
+                ctx: {}
+            });
+        }
     });
     test('shapes-basic', () => {
         let tmp = {};

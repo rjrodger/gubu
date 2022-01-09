@@ -714,6 +714,9 @@ let shape = Gubu({ a: (value, update) => {
 shape({ a: 3 }) // returns { a: 6 }
 ```
 
+As a special case, if you want to explicitly set the value to
+`undefined` or `NaN`, use the property `uval`.
+
 You can also provide a custom error message using the `update` argument:
 
 ```
@@ -725,21 +728,133 @@ shape({ a: 3 }) // throws "BAD VALUE 3 AT a"
 ```
 
 The special replacement tags `$VALUE` and `$PATH` are replaced with
-the value, and the path to value, respectively.
+the value, and the path to the value, respectively.
 
+The third argument to a custom validator is the internal state of the
+validation process. This provided for special cases and workarounds,
+and the internal set of properties is not stable. Review the [source
+code](https://github.com/rjrodger/gubu/blob/main/gubu.ts#L80) to see
+what is available.
 
-TODO: State
-    expect(g0({ c: 'x' })).toEqual({ c: 'x (key=c)' })
-    
-
-
+```
+let shape = Gubu({ a: (value, update, state) => {
+  update.val = value + ` KEY=${state.key}`
+})
+shape({ a: 3 }) // returns { a: '3 KEY=a'}
+```
 
 
 ### Gubu function
 
+To construct a shape use the `Gubu` function exported by this module:
+
+```
+// Using require
+const { Gubu } = require(`gubu`)
+
+// Using import
+import { Gubu } from 'gubu'
+
+let shape = Gubu({ x: 1 })
+```
+
+In the browser, *Gubu* adds itself directly to the `window` object for
+immediate use, if you directly load this module using a `script`
+tag. However you'll probably just want to import *Gubu* in the usual
+way and let your package builder look after things.
+
+The `Gubu` function has arguments:
+* `shape` (optional): any valid shape definition (`'abc'`, `String`, `{ x: 123 }`, etc.).
+* `options` (optional): an options object.
+
+
+The shape argument can be anything, and is used to define the
+validation shape expected. See the sections above for descriptions of
+the various shapes.
+
+
+The options are:
+* `name`: a string defining a custom name for this shape (useful for debugging).
+
+The `Gubu` function provides all builtin [shape builders](#builders)
+(`Required`, `Closed`, etc.) as properties. These are also exported directly
+from the module, so the following are equivalent:
+
+```
+const { Gubu, Required } = import 'gubu'
+
+const { Gubu } = require('gubu')
+const { Require } = Gubu
+```
+
+If you are concerned about namespacing the builders (if the names
+clash with your own names), use a 'G' prefix as an alias:
+
+```
+Gubu.GRequired = Gubu.Required
+```
+
+
+
+### GubuShape function
+
+When you create a shape using `Gubu`, a `GubuShape` shape validator
+function is returned:
+
+```
+// TypeScript
+import { Gubu, GubuShape } from 'gubu'
+
+// Normally you just let this be inferred:
+const shape: GubuShape = Gubu(123)
+```
+
+The shape validator function has arguments:
+* `value`: the value to validate (and modify with defaults).
+* `context`: (optional) a context object containg your own data.
+
+The value can be anything. It is not duplicated and **will be
+mutated** if defaults are inserted.
+
+The context is a general purpose store for anything you might want to
+use in custom validation builders. It may also be used by builders to
+hold state information (the name of the builder is used for
+namespacing).
+
+The context does have reserved names:
+* `err`: an array of validation errors
+
+If you provide a context with the property `err` as an empty array,
+any validation errors will be added to this array, and an Error will
+**not be thrown**:
+
+```
+let ctx = { err: [] }
+Gubu(Number)('abc', ctx)  // does not throw
+console.log(err[0]) // prints error description (number was expected)
+```
+
+The [error descriptions](#errors) are plain objects, not Errors.
+
+The `GubuShape` function has the following properties:
+* `toString`: returns a short string describing this `GubuShape` instance
+* `[Util.inspect.custom]`: same as `toString`
+* `spec`: returns a declarative description of the shape
+
+The shape description provided by `spec` can be passed to `Gubu` to
+generate a new separate shape instance.
+
+Many shapes can be fully serialized to JSON, but those with custom
+validator function are not serializable in the current version.
+
+A `GubuShape` can be used be used as part of new shape
+definition. They are intended to be composable.
 
 
 ### Errors
+
+
+
 
 paths
 
