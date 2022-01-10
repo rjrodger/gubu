@@ -243,7 +243,6 @@ The above shape will match:
 }
 ```
 
-
 For arrays, the first elements is treated as the shape that all
 elements in the array must match:
 
@@ -321,11 +320,49 @@ const shape = Gubu({
 })
 ```
 
-You can also write your own builders - see the [API Builders](#builders) section.
+You can also write your own builders - see the [Shape
+Builders](#shape-builders) section.
 
 In addition to this README, the [unit tests](lib/gubu.test.ts) are
 comprehensive and provide many usage examples.
 
+
+### Shape Builders
+
+The built-in shape builders help you match the following shapes:
+
+* Required or optional:
+  * [Required](#required-builder): make a value required.
+  * [Optional](#optional-builder): make a value explicitly optional (no default created).
+* Value constraints:
+  * [Exact](#exact-builder): The value must one of an exact list of values.
+  * [All](#all-builder): all shapes must match value.
+  * [Some](#some-builder): Some shapes (at least one) must match value.
+  * [One](#one-builder): Exactly one shape (and no more) must match value.
+  * [Any](#any-builder): This shape will match any value.
+  * [Never](#never-builder): This shape will never match anything.
+* Length constraints (operate on values with a length or numeric value):
+  * [Below](#below-builder): Match a value (or length of value) less than the given amount.
+  * [Max](#max-builder): Match a value (or length of value) less than or equal to the given amount.
+  * [Min](#min-builder): Match a value (or length of value) greater than or equal to the given amount.
+  * [Above](#max-builder): Match a value (or length of value) greater than the given amount.
+* General constraints:
+  * [Closed](#closed-builder): allow only explicitly defined properties in an object.
+  * [Value](#value-builder): all non-explicit values of an object must match this shape.
+* Mutations:
+  * [Rename](#rename-builder): Rename the key of a property.
+  * [Define](#define-builder): Define a name for a value.
+  * [Refer](#refer-builder): Refer to a defined value by name.
+* Customizations:
+  * [Before](#before-builder): Define a custom validation function called before a value is processed.
+  * [After](#after-builder): Define a custom function called after a value is processed.
+
+
+### Recursive Shapes
+
+QUICK INTRO WITH EXAMPLE 
+[Define](#define-builder)
+[Refer](#refer-builder)
 
 
 ## API
@@ -776,7 +813,7 @@ the various shapes.
 The options are:
 * `name`: a string defining a custom name for this shape (useful for debugging).
 
-The `Gubu` function provides all builtin [shape builders](#builders)
+The `Gubu` function provides all built-in [shape builders](#shape-builders)
 (`Required`, `Closed`, etc.) as properties. These are also exported directly
 from the module, so the following are equivalent:
 
@@ -811,7 +848,7 @@ const shape: GubuShape = Gubu(123)
 
 The shape validator function has arguments:
 * `value`: the value to validate (and modify with defaults).
-* `context`: (optional) a context object containg your own data.
+* `context`: (optional) a context object containing your own data.
 
 The value can be anything. It is not duplicated and **will be
 mutated** if defaults are inserted.
@@ -851,20 +888,288 @@ A `GubuShape` can be used be used as part of new shape
 definition. They are intended to be composable.
 
 
+### Shape Nodes
+
+The data structure returned by `GubuShape.spec` is the internal
+representation of the validation shape. This is a hierarchical data
+structure where the validation for each key-value pair is defined by a
+shape `Node`, which has the following structure:
+
+* `$`: typeof GUBU         : Special marker to indicate normalized.
+* `t`: ValType             : Value type name.
+* `d`: number              : Depth.
+* `v`: any                 : Default value.
+* `r`: boolean             : Value is required.
+* `o`: boolean             : Value is explicitly optional.
+* `u`: Record<string, any> : Custom user meta data
+* `b`: Validate[]          : Custom before validation functions.
+* `a`: Validate[]          : Custom after validation functions.
+
+The `ValType` is string with exactly one of these values: 
+* `'any'` :       Any type.
+* `'array'` :     An array.
+* `'bigint'` :    A BigInt value.
+* `'boolean'` :   The values `true` or `false`.
+* `'custom'` :    Custom type defined by a validation function.
+* `'function'` :  A function.
+* `'instance'` :  An instance of a constructed object.
+* `'list'` :      A list of types under a given logical rule.
+* `'nan'` :       The `NaN` value.
+* `'never'` :     No type.
+* `'null'` :      The `null` value.
+* `'number'` :    A number.
+* `'object'` :    A plain object.
+* `'string'` :    A string (but *not* the empty string).
+* `'symbol'` :    A symbol reference.
+* `'undefined'` : The `undefined` value.
+
+
+This structure is deliberately terse to make eye-balling deep
+structure print-outs easier.
+
+As noted above, in the current version this structure is only fully
+serializable to JSON if there are no custom validations, and the
+custom user meta data is serializable.
+
+This structure can be accessed in [custom
+validators](#custom-validators) via the `state` parameter, and in
+[shape builders](#shape-builders) via the [before](#before-hook) and
+[after](#after-hook) hook functions. It is also provided in error
+messages under the `n` property.
+
+
+
 ### Errors
 
+*Gubu* will attempt a full validation of the input value, collect all
+errors, and throw an Error if any validation failed. The error object
+will be an instance of `GubuError`, which extends `TypeError` with the
+following extra properties:
+
+* `gubu`: A marker value, always `true`.
+* `code`: Top level error code, in this version, always `'shape'`
+* `desc()`: Call this function to get a more detailed description of the error.
+
+The error description returned by `desc()` has the properties:
+* `name`: Always `'GubuError'`
+* `code`: Top level error code, in this version, always `'shape'`
+* `err`: An array of `ErrDesc` objects (these are all the errors that occurred).
+* `ctx`: The context object (if any) passed to this `GubuShape` validation call.
+
+The message string of GubuError is a human readable generic
+description of the validation failure (with one issue per line) that
+is usable in your own application as-is. You can use the `ErrDesc`
+object instead to create entirely custom messages. Custom messages for
+specific custom errors can also be defined (see below).
+
+```
+Gubu(Number)('abc') // throws an Error with message:
+'Validation failed for path "" with value "x" because the value is not of type number.'
+
+Gubu({ top: { foo: String, bar: Number }})({ top: { foo: 123, bar: 'abc'}}) // throws an Error with message:
+`
+Validation failed for path "top.foo" with value "123" because the value is not of type string.
+Validation failed for path "top.bar" with value "abc" because the value is not of type number.
+`
+```
+
+### ErrDesc Object
+
+The `ErrDesc` object is the internal representation of an error,
+containing the full details of the error, which you can use for
+customization. The properties are:
+
+* `k: string`  : Key of failing value.
+* `n: Node`    : Failing shape node.
+* `v: any`     : Failing value.
+* `p: string`  : Key path to value.
+* `w: string`  : Error code ("why").
+* `m: number`  : Error mark for debugging.
+* `t: string`  : Error message text.
+* `u: any`     : User custom info.
+
+The property `n` is the [shape node](#shape-nodes) whose validation failed.
+
+```
+try {
+    Gubu({x: Number})({x: 'abc'})
+}
+catch(gubuError) {
+  gubuError.desc()) === {
+    name: 'GubuError',
+    code: 'shape',
+    err: [
+      {
+        k: undefined,
+        n: { 
+          '$': { 'gubu$': Symbol(gubu$), 'v$': '<VERSION>' },
+          t: 'number',
+          v: 0,
+          r: true,
+          o: false,
+          d: 0,
+          u: {},
+          a: [],
+          b: []
+        },
+        v: 'x',
+        p: '',
+        w: 'type',
+        m: 1050,
+        t: 'Validation failed for path "" with value "x" because the value is not of type number.',
+        u: {},
+      }
+    ],
+    ctx: {}
+  }
+}
+```
+
+From this description, you can determine that:
+* There was one err: `err.length === 1`
+* A type constraint failed: `err[0].w === 'type'`
+* The value was required: `err[0].n.r === true`
+* The value should be a number: `err[0].n.t === 'number'`
+* The value occurred at the top level: `err[0].p = ''`
+
+The *path* of an error is the chain of properties that you follow to
+reach the failing value. For example, the path of the value of `c` in
+`{ a: { b: { c: 123 } }}` is `a.b.c`.
+
+In the case of arrays, the index is used as the property value. Thus,
+the path of the second element (`=== 'y'`) of `{ a: ['x','y'] }` is
+`a.1`. Paths do not used `[]` notation for arrays.
+
+Values are converted to strings for the error message by using
+`JSON.stringify`. Circular values are handled safely. Long values are
+truncated to 30 characters.
+
+The *mark* value (property `m`) is a numeric code uniquely identifies
+the generation point of the error, and should be quoted in bug
+reports (or indeed you can use it yourself to inspect the source code). 
+
+
+#### Error Collection
+
+Instead of throwing validation errors, you can collect them using the
+reserved property `err` in the context argument:
+
+```
+let ctx = { err: [] }
+Gubu(Number)('abc', ctx)  // does not throw
+// ctx.err now contains an array of ErrDesc objects 
+```
+
+The return value from `Gubu` in this case (and the value passed in!)
+should be considered corrupted (defaults may only be partially
+applied).
+
+You can also set the context `err` property to `false`. In this case
+errors are not collected at all, and they are ignored, so that the
+full shape depth is always validated. The `GubuShape.spec` method used
+this feature to generate a normalized validation `Node` hierarchy
+against the `undefined` value.
+
+
+#### Custom Errors
+
+When using a (custom validator)[#custom-validations] you can provide a custom
+error message using the `Update.err` property.
+
+```
+let shape = Gubu({ a: (value, update) => {
+  update.err = 'BAD VALUE $VALUE AT $PATH'
+  return false // always fails
+})
+shape({ a: 3 }) // throws "BAD VALUE 3 AT a"
+```
+
+Where `$VALUE` and `$PATH` are replaced by the value and path to the
+value, respectively.
+
+
+### Shape Builders
+
+The validation rules for each value shape can be modified using shape
+builders. These are wrapping functions that add additional constraints
+to the value shape.
+
+The [Required](#required-builder) marks a value as required. This is
+most useful for objects and array, which are by default optional:
+
+```
+const { Gubu, Required } = require('gubu') // shaper builders are exported
+let easier = Gubu({ x: 1 })
+let stricter = Gubu(Required({ x: 1 }))
+
+easier() // returns { x: 1 }
+
+stricter() // fails
+stricter({}) // returns { x: 1 } (x itself is an optional default)
+```
+
+Most shape builders can also be chained. The [Closed](#closed-builder)
+prevents additional properties from being added to an object. To also
+make the object required you can use either of these expressions:
+
+```
+const { Required, Closed } = Gubu // shape builders are also properties of Gubu
+Gubu(Closed({ a: 1, b: 2 }).Required())
+Gubu(Required({ a: 1, b: 2 }).Closed())
+```
+
+Most shape builders can be composed (check their expected arguments!),
+so the following are also equivalent:
+
+```
+Gubu(Closed(Required({ a: 1, b: 2 })))
+Gubu(Required(Closed({ a: 1, b: 2 })))
+```
+
+This flexibility allows you to adjust shapes without too much
+refactoring.
+
+The built-in shape builders are:
+* [Above](#max-builder): Match a value (or length of value) greater than the given amount.
+* [After](#after-builder): Define a custom function called after a value is processed.
+* [All](#all-builder): all shapes must match value.
+* [Any](#any-builder): This shape will match any value.
+* [Before](#before-builder): Define a custom validation function called before a value is processed.
+* [Below](#below-builder): Match a value (or length of value) less than the given amount.
+* [Closed](#closed-builder): allow only explicitly defined properties in an object.
+* [Define](#define-builder): Define a name for a value.
+* [Exact](#exact-builder): The value must one of an exact list of values.
+* [Max](#max-builder): Match a value (or length of value) less than or equal to the given amount.
+* [Min](#min-builder): Match a value (or length of value) greater than or equal to the given amount.
+* [Never](#never-builder): This shape will never match anything.
+* [One](#one-builder): Exactly one shape (and no more) must match value.
+* [Optional](#optional-builder): make a value explicitly optional (no default created).
+* [Refer](#refer-builder): Refer to a defined value by name.
+* [Rename](#rename-builder): Rename the key of a property.
+* [Required](#required-builder): make a value required.
+* [Some](#some-builder): Some shapes (at least one) must match value.
+* [Value](#value-builder): all non-explicit values of an object must match this shape.
 
 
 
-paths
 
 
-### Builders
 
 
 #### Closed Builder
 
 does not work on arrays
+
+
+
+#### Custom Builders
+
+
+##### Before Hook
+
+
+##### After Hook
+
 
 
 
@@ -879,11 +1184,11 @@ they are in fact simply not present.
 
 There are heartfelt arguments on both sides of this issue, but Gubu
 must choose, and Gubu chooses not to accept empty strings as a
-`string` type. This protects you from all sorts of wierd bugs.
+`string` type. This protects you from all sorts of weird bugs.
 
-The engineering compromise is based on the priniciple of explicit
+The engineering compromise is based on the principle of explicit
 notice. Since reasonable people have a reasonable disagreement about
-this behaviour, a mitigation of the issue is to make it
+this behavior, a mitigation of the issue is to make it
 explicit. Thus, the `Empty(String)`, or `Empty('foo')` shapes need to
 be used if you want to accept empty strings (required or optional,
 respectively).

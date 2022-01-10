@@ -85,14 +85,16 @@ class State {
 }
 class GubuError extends TypeError {
     constructor(code, err, ctx) {
-        let message = err.map((e) => e.t).join('\n');
-        super(message);
+        // let message = err.map((e: ErrDesc) => e.t).join('\n')
+        // super(message)
+        super(err.map((e) => e.t).join('\n'));
+        this.gubu = true;
         let name = 'GubuError';
         let ge = this;
-        ge.gubu = true;
+        // ge.gubu = true
         ge.name = name;
-        ge.code = code;
-        ge.desc = () => ({ name, code, err, ctx, });
+        this.code = code;
+        this.desc = () => ({ name, code, err, ctx, });
     }
     toJSON() {
         return {
@@ -248,6 +250,7 @@ function make(intop, inopts) {
                     s.err.push(makeErrImpl('never', s, 1070));
                 }
                 else if ('object' === s.type) {
+                    let val;
                     if (s.node.r && undefined === s.val) {
                         s.err.push(makeErrImpl('required', s, 1010));
                     }
@@ -255,17 +258,23 @@ function make(intop, inopts) {
                         'object' !== s.valType ||
                         Array.isArray(s.val))) {
                         s.err.push(makeErrImpl('type', s, 1020));
+                        val = Array.isArray(s.val) ? s.val : {};
                     }
                     else if (!s.node.o || null != s.val) {
                         s.updateVal(s.val || (s.fromDefault = true, {}));
+                        val = s.val;
+                    }
+                    val = null == val && false === s.ctx.err ? {} : val;
+                    // console.log('KEY', s.key, s.val, val)
+                    if (null != val) {
                         let vkeys = Object.keys(s.node.v);
                         if (0 < vkeys.length) {
                             s.pI = s.nI;
                             for (let k of vkeys) {
                                 let nvs = s.node.v[k] = norm(s.node.v[k], 1 + s.dI);
                                 s.nodes[s.nI] = nvs;
-                                s.vals[s.nI] = s.val[k];
-                                s.parents[s.nI] = s.val;
+                                s.vals[s.nI] = val[k];
+                                s.parents[s.nI] = val;
                                 s.keys[s.nI] = k;
                                 s.nI++;
                             }
@@ -361,10 +370,10 @@ function make(intop, inopts) {
             }
         }
         if (0 < s.err.length) {
-            if (s.ctx.err) {
+            if (Array.isArray(s.ctx.err)) {
                 s.ctx.err.push(...s.err);
             }
-            else {
+            else if (false !== s.ctx.err) {
                 throw new GubuError('shape', s.err, s.ctx);
             }
         }
@@ -373,7 +382,7 @@ function make(intop, inopts) {
     // TODO: test Number, String, etc also in arrays
     gubuShape.spec = () => {
         // Normalize spec, discard errors.
-        gubuShape(undefined, { err: [] });
+        gubuShape(undefined, { err: false });
         return JSON.parse(stringify(top, (_key, val) => {
             if (GUBU$ === val) {
                 return true;
@@ -397,7 +406,8 @@ function make(intop, inopts) {
 function handleValidate(vf, s) {
     let update = {};
     let valid = vf(s.val, update, s);
-    if (!valid || update.err) {
+    let hasErrs = Array.isArray(update.err) ? 0 < update.err.length : null != update.err;
+    if (!valid || hasErrs) {
         // Explicit Optional allows undefined
         if (undefined === s.val && (s.node.o || !s.node.r)) {
             delete update.err;
@@ -618,21 +628,21 @@ const Closed = function (shape) {
         if (null != val && 'object' === typeof (val) && !Array.isArray(val)) {
             let vkeys = Object.keys(val);
             let allowed = node.v;
-            // NOTE: disabling array for now
-            // // For arrays, handle non-index properties, and special element offset.
-            // if ('array' === s.node.t) {
-            //   allowed = Object.keys(node.v).slice(1)
-            //     .map((x: any) => {
-            //       let i = parseInt(x)
-            //       if (isNaN(i)) {
-            //         return x
-            //       }
-            //       else {
-            //         return i - 1
-            //       }
-            //     })
-            //     .reduce((a: any, i: any) => (a[i] = true, a), {})
-            // }
+            //   // NOTE: disabling array for now
+            //   // // For arrays, handle non-index properties, and special element offset.
+            //   // if ('array' === s.node.t) {
+            //   //   allowed = Object.keys(node.v).slice(1)
+            //   //     .map((x: any) => {
+            //   //       let i = parseInt(x)
+            //   //       if (isNaN(i)) {
+            //   //         return x
+            //   //       }
+            //   //       else {
+            //   //         return i - 1
+            //   //       }
+            //   //     })
+            //   //     .reduce((a: any, i: any) => (a[i] = true, a), {})
+            //   // }
             update.err = [];
             for (let k of vkeys) {
                 if (undefined === allowed[k]) {
@@ -948,7 +958,7 @@ function stringify(x, r) {
                     'function' === typeof val.toString ? val.toString() : val.constructor.name;
             }
             else if ('function' === typeof (val)) {
-                if ('function' === typeof (make[val.name])) {
+                if ('function' === typeof (make[val.name]) && isNaN(+key)) {
                     val = undefined;
                 }
                 else {

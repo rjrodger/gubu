@@ -628,6 +628,7 @@ Validation failed for path "q.b" with value "x" because the value is not of type
       b: Optional({ y: 2 }),
       c: Optional({ z: Optional({ k: 3 }) }),
     })
+    expect(obj01()).toEqual({ a: { x: 1 } })
     expect(obj01({})).toEqual({ a: { x: 1 } })
     expect(obj01({ b: {} })).toEqual({ a: { x: 1 }, b: { y: 2 } })
     expect(obj01({ c: {} })).toEqual({ a: { x: 1 }, c: {} })
@@ -668,6 +669,60 @@ Validation failed for path "q.b" with value "x" because the value is not of type
 
     expect(shape({})).toEqual({ fn: f0 })
     expect(shape({ fn: f1 })).toEqual({ fn: f1 })
+  })
+
+
+
+  test('api-builders', () => {
+    let cr0s = Gubu(Closed(Required({ x: 1 })), { name: 'cr0' })
+    let cr1s = Gubu(Required(Closed({ x: 1 })), { name: 'cr1' })
+    let cr2s = Gubu(Closed({ x: 1 }).Required(), { name: 'cr2' })
+    let cr3s = Gubu(Required({ x: 1 }).Closed(), { name: 'cr3' })
+
+    let s0 = {
+      '$': { 'gubu$': true, 'v$': Pkg.version },
+      t: 'object',
+      v: {
+        x: {
+          '$': { 'gubu$': true, 'v$': Pkg.version },
+          t: 'number',
+          v: 1,
+          r: false,
+          o: false,
+          d: 1,
+          u: {},
+          a: [],
+          b: []
+        }
+      },
+      r: true,
+      o: false,
+      d: 0,
+      u: {},
+      a: [],
+      b: ['Closed']
+    }
+
+    expect(cr0s.spec()).toEqual(s0)
+    expect(cr1s.spec()).toEqual(s0)
+    expect(cr2s.spec()).toEqual(s0)
+    expect(cr3s.spec()).toEqual(s0)
+
+    expect(cr0s({ x: 11 })).toEqual({ x: 11 })
+    expect(cr1s({ x: 11 })).toEqual({ x: 11 })
+    expect(cr2s({ x: 11 })).toEqual({ x: 11 })
+    expect(cr3s({ x: 11 })).toEqual({ x: 11 })
+
+    expect(() => cr0s({ x: 11, y: 2 })).toThrow('property "y" is not allowed.')
+    expect(() => cr1s({ x: 11, y: 2 })).toThrow('property "y" is not allowed.')
+    expect(() => cr2s({ x: 11, y: 2 })).toThrow('property "y" is not allowed.')
+    expect(() => cr3s({ x: 11, y: 2 })).toThrow('property "y" is not allowed.')
+
+    expect(cr0s({})).toEqual({ x: 1 })
+    expect(cr1s({})).toEqual({ x: 1 })
+    expect(cr2s({})).toEqual({ x: 1 })
+    expect(cr3s({})).toEqual({ x: 1 })
+
   })
 
 
@@ -1137,10 +1192,12 @@ Validation failed for path "q.b" with value "x" because the value is not of type
     let g0 = Gubu({ a: Required({ x: 1 }) })
     expect(g0({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
     expect(() => g0({})).toThrow('Validation failed for path "a" with value "" because the value is required.')
+    expect(() => g0()).toThrow('Validation failed for path "a" with value "" because the value is required.')
 
     let g1 = Gubu({ a: Required([1]) })
     expect(g1({ a: [11] })).toEqual({ a: [11] })
     expect(() => g1({})).toThrow('Validation failed for path "a" with value "" because the value is required.')
+    expect(() => g1()).toThrow('Validation failed for path "a" with value "" because the value is required.')
 
     let g2 = Gubu(Required(1))
     expect(g2(1)).toEqual(1)
@@ -1188,6 +1245,11 @@ Validation failed for path "q.b" with value "x" because the value is not of type
 
     expect(r0 = g3({ a: [] })).toEqual({ a: [] })
     expect(r0.x).toBeUndefined()
+
+    let g4 = Gubu(Closed({ x: 1 }))
+    expect(g4({})).toEqual({ x: 1 })
+    expect(g4({ x: 11 })).toEqual({ x: 11 })
+    expect(() => g4({ x: 11, y: 2 })).toThrow('property \"y\" is not allowed')
   })
 
 
@@ -1795,7 +1857,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
     expect(o0).toEqual(1)
     expect(err).toMatchObject([{
       n: { t: 'nan', v: NaN, r: false, d: 0, u: {} },
-      s: 1,
+      v: 1,
       p: '',
       w: 'type',
       m: 1050,
@@ -1816,7 +1878,7 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
         err: [
           {
             n: { t: 'nan', v: NaN, r: false, d: 0, u: {} },
-            s: 1,
+            v: 1,
             p: '',
             w: 'type',
             m: 1050,
@@ -1824,7 +1886,8 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
           }
         ]
       })
-      expect(JSON.stringify(e)).toEqual("{\"gubu\":true,\"name\":\"GubuError\",\"code\":\"shape\",\"err\":[{\"n\":{\"$\":{\"v$\":\"" + Pkg.version + "\"},\"t\":\"nan\",\"v\":null,\"r\":false,\"o\":false,\"d\":0,\"u\":{},\"a\":[],\"b\":[]},\"s\":1,\"p\":\"\",\"w\":\"type\",\"m\":1050,\"t\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}],\"message\":\"Validation failed for path \\\"\\\" with value \\\"1\\\" because the value is not of type nan.\"}")
+
+      expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","err":[{"n":{"$":{"v$":"0.1.0"},"t":"nan","v":null,"r":false,"o":false,"d":0,"u":{},"a":[],"b":[]},"v":1,"p":"","w":"type","m":1050,"t":"Validation failed for path \\"\\" with value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for path \\"\\" with value \\"1\\" because the value is not of type nan."}')
     }
   })
 
@@ -1853,6 +1916,67 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
   })
 
 
+  test('spec-required', () => {
+    let g0 = Gubu(Required(1))
+    expect(g0.spec()).toMatchObject({ d: 0, o: false, r: true, t: 'number', v: 1 })
+
+    let g1 = Gubu(Required({ a: 1 }))
+    expect(g1.spec()).toMatchObject({
+      d: 0, o: false, r: true, t: 'object', v: {
+        a: { d: 1, o: false, r: false, t: 'number', v: 1 }
+      }
+    })
+
+    let g2 = Gubu(Required({ a: Required(1) }))
+    expect(g2.spec()).toMatchObject({
+      d: 0, o: false, r: true, t: 'object', v: {
+        a: { d: 1, o: false, r: true, t: 'number', v: 1 }
+      }
+    })
+
+    let g3 = Gubu(Required({ a: Required({ b: 1 }) }))
+    expect(g3.spec()).toMatchObject({
+      d: 0, o: false, r: true, t: 'object', v: {
+        a: {
+          d: 1, o: false, r: true, t: 'object', v: {
+            b: {
+              d: 2, o: false, r: false, t: 'number', v: 1
+            }
+          }
+        }
+      }
+    })
+
+    let g4 = Gubu(Required({ a: Optional({ b: 1 }) }))
+    expect(g4.spec()).toMatchObject({
+      d: 0, o: false, r: true, t: 'object', v: {
+        a: {
+          d: 1, o: true, r: false, t: 'object', v: {
+            b: {
+              d: 2, o: false, r: false, t: 'number', v: 1
+            }
+          }
+        }
+      }
+    })
+
+    let g5 = Gubu(Optional({ a: Required({ b: 1 }) }))
+    expect(g5.spec()).toMatchObject({
+      d: 0, o: true, r: false, t: 'object', v: {
+        a: {
+          d: 1, o: false, r: true, t: 'object', v: {
+            b: {
+              d: 2, o: false, r: false, t: 'number', v: 1
+            }
+          }
+        }
+      }
+    })
+
+
+  })
+
+
   test('spec-roundtrip', () => {
     let m0 = { a: 1 }
     let g0 = Gubu(m0)
@@ -1869,7 +1993,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
         v$: Pkg.version,
       },
       d: 0,
-      // k: '',
       r: false,
       o: false,
       t: 'object',
@@ -1883,7 +2006,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             v$: Pkg.version,
           },
           d: 1,
-          // k: 'a',
           r: false,
           o: false,
           t: 'number',
@@ -1931,7 +2053,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
         v$: Pkg.version,
       },
       d: 0,
-      // k: '',
       r: false,
       o: false,
       t: 'object',
@@ -1945,7 +2066,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
             v$: Pkg.version,
           },
           d: 1,
-          // k: 'a',
           r: false,
           o: false,
           t: 'array',
@@ -1959,7 +2079,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
                 v$: Pkg.version,
               },
               d: 2,
-              // k: '0',
               r: false,
               o: false,
               t: 'number',
@@ -2084,6 +2203,10 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
     let c0: any = {}
     c0.x = c0
     expect(stringify(c0)).toEqual('"[object Object]"')
+
+    function f0() { }
+    class C0 { }
+    expect(stringify([1, f0, () => true, C0])).toEqual('[1,"f0","","C0"]')
   })
 
 

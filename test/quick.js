@@ -409,4 +409,9 @@ function J(x,s) {
 // console.log(Gubu([Never()])(new Array(3)))
 //console.log(Gubu(Closed([1]))([2,3]))
 
-console.log(Gubu(Above(3,[1]))([2,3,4,5]))
+// console.log(Gubu(Above(3,[1]))([2,3,4,5]))
+
+
+let g4 = Gubu({ a: Optional({ b: String }) })
+console.log(g4())
+console.dir(g4.spec(),{depth:null})
