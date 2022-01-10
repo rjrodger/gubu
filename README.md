@@ -332,11 +332,11 @@ comprehensive and provide many usage examples.
 The built-in shape builders help you match the following shapes:
 
 * Required or optional:
-  * [Required](#required-builder): make a value required.
-  * [Optional](#optional-builder): make a value explicitly optional (no default created).
+  * [Required](#required-builder): Make a value required.
+  * [Optional](#optional-builder): Make a value explicitly optional (no default created).
 * Value constraints:
-  * [Exact](#exact-builder): The value must one of an exact list of values.
-  * [All](#all-builder): all shapes must match value.
+  * [Exact](#exact-builder): The value must match one of an exact list of values.
+  * [All](#all-builder): All shapes must match value.
   * [Some](#some-builder): Some shapes (at least one) must match value.
   * [One](#one-builder): Exactly one shape (and no more) must match value.
   * [Any](#any-builder): This shape will match any value.
@@ -347,15 +347,15 @@ The built-in shape builders help you match the following shapes:
   * [Min](#min-builder): Match a value (or length of value) greater than or equal to the given amount.
   * [Above](#max-builder): Match a value (or length of value) greater than the given amount.
 * General constraints:
-  * [Closed](#closed-builder): allow only explicitly defined properties in an object.
-  * [Value](#value-builder): all non-explicit values of an object must match this shape.
+  * [Closed](#closed-builder): Allow only explicitly defined properties in an object.
+  * [Value](#value-builder): All non-explicit values of an object must match this shape.
 * Mutations:
   * [Rename](#rename-builder): Rename the key of a property.
   * [Define](#define-builder): Define a name for a value.
   * [Refer](#refer-builder): Refer to a defined value by name.
 * Customizations:
   * [Before](#before-builder): Define a custom validation function called before a value is processed.
-  * [After](#after-builder): Define a custom function called after a value is processed.
+  * [After](#after-builder): Define a custom validation function called after a value is processed.
 
 
 ### Recursive Shapes
@@ -1131,22 +1131,22 @@ refactoring.
 
 The built-in shape builders are:
 * [Above](#max-builder): Match a value (or length of value) greater than the given amount.
-* [After](#after-builder): Define a custom function called after a value is processed.
-* [All](#all-builder): all shapes must match value.
+* [After](#after-builder): Define a custom validation function called after a value is processed.
+* [All](#all-builder): All shapes must match value.
 * [Any](#any-builder): This shape will match any value.
 * [Before](#before-builder): Define a custom validation function called before a value is processed.
 * [Below](#below-builder): Match a value (or length of value) less than the given amount.
-* [Closed](#closed-builder): allow only explicitly defined properties in an object.
+* [Closed](#closed-builder): Allow only explicitly defined properties in an object.
 * [Define](#define-builder): Define a name for a value.
 * [Exact](#exact-builder): The value must one of an exact list of values.
 * [Max](#max-builder): Match a value (or length of value) less than or equal to the given amount.
 * [Min](#min-builder): Match a value (or length of value) greater than or equal to the given amount.
 * [Never](#never-builder): This shape will never match anything.
 * [One](#one-builder): Exactly one shape (and no more) must match value.
-* [Optional](#optional-builder): make a value explicitly optional (no default created).
+* [Optional](#optional-builder): Make a value explicitly optional (no default created).
 * [Refer](#refer-builder): Refer to a defined value by name.
 * [Rename](#rename-builder): Rename the key of a property.
-* [Required](#required-builder): make a value required.
+* [Required](#required-builder): Make a value required.
 * [Some](#some-builder): Some shapes (at least one) must match value.
 * [Value](#value-builder): all non-explicit values of an object must match this shape.
 
@@ -1155,10 +1155,159 @@ The built-in shape builders are:
 
 
 
+#### Above Builder
+
+TODO
+
+```
+const { Above } = Gubu
+```
+
+#### After Builder
+
+TODO
+
+```
+const { After } = Gubu
+```
+
+#### All Builder
+
+TODO
+
+```
+const { All } = Gubu
+```
+
+#### Any Builder
+
+TODO
+
+```
+const { Any } = Gubu
+```
+
+#### Before Builder
+
+TODO
+
+```
+const { Before } = Gubu
+```
+
+#### Below Builder
+
+TODO
+
+```
+const { Below } = Gubu
+```
 
 #### Closed Builder
 
+TODO
 does not work on arrays
+
+```
+const { ### } = Gubu
+```
+
+#### Define Builder
+
+TODO
+
+```
+const { Define } = Gubu
+```
+
+#### Exact Builder
+
+TODO
+
+```
+const { Exact } = Gubu
+```
+
+#### Max Builder
+
+TODO
+
+```
+const { Max } = Gubu
+```
+
+#### Min Builder
+
+TODO
+
+```
+const { Min } = Gubu
+```
+
+#### Never Builder
+
+TODO
+
+```
+const { Never } = Gubu
+```
+
+#### One Builder
+
+TODO
+
+```
+const { One } = Gubu
+```
+
+#### Optional Builder
+
+TODO
+
+```
+const { Optional } = Gubu
+```
+
+#### Refer Builder
+
+TODO
+
+```
+const { Refer } = Gubu
+```
+
+#### Rename Builder
+
+TODO
+
+```
+const { Rename } = Gubu
+```
+
+#### Required Builder
+
+TODO
+
+```
+const { Required } = Gubu
+```
+
+#### Some Builder
+
+TODO
+
+```
+const { Some } = Gubu
+```
+
+#### Value Builder
+
+TODO
+
+```
+const { ### } = Gubu
+```
+
 
 
 
@@ -1196,6 +1345,15 @@ respectively).
 As a shortcut, you can use `''` directly for optional strings, and
 that shape will accept empty strings, and give you an empty string as
 a default.
+
+
+## Implementation
+
+TODO
+
+### Contributing
+
+TODO
 
 
 ## Credits
