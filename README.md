@@ -335,6 +335,7 @@ The built-in shape builders help you match the following shapes:
   * [Required](#required-builder): Make a value required.
   * [Optional](#optional-builder): Make a value explicitly optional (no default created).
 * Value constraints:
+  * [Empty](#empty-builder): Allow string values to be empty.
   * [Exact](#exact-builder): The value must match one of an exact list of values.
   * [All](#all-builder): All shapes must match value.
   * [Some](#some-builder): Some shapes (at least one) must match value.
@@ -1129,6 +1130,7 @@ Gubu(Required(Closed({ a: 1, b: 2 })))
 This flexibility allows you to adjust shapes without too much
 refactoring.
 
+<a name="builder-index"></a>
 The built-in shape builders are:
 * [Above](#max-builder): Match a value (or length of value) greater than the given amount.
 * [After](#after-builder): Define a custom validation function called after a value is processed.
@@ -1138,6 +1140,7 @@ The built-in shape builders are:
 * [Below](#below-builder): Match a value (or length of value) less than the given amount.
 * [Closed](#closed-builder): Allow only explicitly defined properties in an object.
 * [Define](#define-builder): Define a name for a value.
+* [Empty](#empty-builder): Allow string values to be empty.
 * [Exact](#exact-builder): The value must one of an exact list of values.
 * [Max](#max-builder): Match a value (or length of value) less than or equal to the given amount.
 * [Min](#min-builder): Match a value (or length of value) greater than or equal to the given amount.
@@ -1152,10 +1155,9 @@ The built-in shape builders are:
 
 
 
-
-
-
 #### Above Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
+
 
 TODO
 
@@ -1164,6 +1166,7 @@ const { Above } = Gubu
 ```
 
 #### After Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1172,6 +1175,7 @@ const { After } = Gubu
 ```
 
 #### All Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1180,6 +1184,7 @@ const { All } = Gubu
 ```
 
 #### Any Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1188,6 +1193,7 @@ const { Any } = Gubu
 ```
 
 #### Before Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1196,6 +1202,7 @@ const { Before } = Gubu
 ```
 
 #### Below Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1204,6 +1211,7 @@ const { Below } = Gubu
 ```
 
 #### Closed Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 does not work on arrays
@@ -1213,14 +1221,26 @@ const { ### } = Gubu
 ```
 
 #### Define Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
+depth first order, define before refer
 
 ```
 const { Define } = Gubu
 ```
 
+#### Empty Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
+
+TODO
+
+```
+const { Empty } = Gubu
+```
+
 #### Exact Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1229,6 +1249,7 @@ const { Exact } = Gubu
 ```
 
 #### Max Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1237,6 +1258,7 @@ const { Max } = Gubu
 ```
 
 #### Min Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1245,6 +1267,7 @@ const { Min } = Gubu
 ```
 
 #### Never Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1253,6 +1276,7 @@ const { Never } = Gubu
 ```
 
 #### One Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1261,6 +1285,7 @@ const { One } = Gubu
 ```
 
 #### Optional Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1269,14 +1294,17 @@ const { Optional } = Gubu
 ```
 
 #### Refer Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
+depth first order, define before refer
 
 ```
 const { Refer } = Gubu
 ```
 
 #### Rename Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1285,6 +1313,7 @@ const { Rename } = Gubu
 ```
 
 #### Required Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1293,6 +1322,7 @@ const { Required } = Gubu
 ```
 
 #### Some Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 
@@ -1301,6 +1331,7 @@ const { Some } = Gubu
 ```
 
 #### Value Builder
+<sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
 

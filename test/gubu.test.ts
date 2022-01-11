@@ -1,9 +1,7 @@
-/* Copyright (c) 2021 Richard Rodger and other contributors, MIT License */
+/* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 
 
 import Pkg from '../package.json'
-
-
 
 
 import type {
@@ -371,9 +369,6 @@ Validation failed for path "q.b" with value "x" because the value is not of type
 
     expect(Gubu((_v: any, u: Update) => (u.val = 1, true))(null)).toEqual(1)
 
-    // console.log(gubu(Date).spec())
-
-
     expect(() => Gubu(String)(1)).toThrow(/path "".*not of type string/)
     expect(() => Gubu(Number)('x')).toThrow(/path "".*not of type number/)
     expect(() => Gubu(Boolean)('x')).toThrow(/path "".*not of type boolean/)
@@ -390,8 +385,6 @@ Validation failed for path "q.b" with value "x" because the value is not of type
     expect(() => Gubu(Bar)(tmp.c4 = new Foo(9)))
       .toThrow(/path "".*not an instance of Bar/)
 
-
-    // console.log(gubu(new Date()).spec())
 
     expect(() => Gubu('a')(1)).toThrow(/path "".*not of type string/)
     expect(() => Gubu(0)('x')).toThrow(/path "".*not of type number/)
@@ -673,7 +666,7 @@ Validation failed for path "q.b" with value "x" because the value is not of type
 
 
 
-  test('api-builders', () => {
+  test('api-builders-chain-compose', () => {
     let cr0s = Gubu(Closed(Required({ x: 1 })), { name: 'cr0' })
     let cr1s = Gubu(Required(Closed({ x: 1 })), { name: 'cr1' })
     let cr2s = Gubu(Closed({ x: 1 }).Required(), { name: 'cr2' })
@@ -722,6 +715,127 @@ Validation failed for path "q.b" with value "x" because the value is not of type
     expect(cr1s({})).toEqual({ x: 1 })
     expect(cr2s({})).toEqual({ x: 1 })
     expect(cr3s({})).toEqual({ x: 1 })
+  })
+
+
+  test('api-builders-index', () => {
+
+    let shape_AboveB0 = Gubu(Above(10))
+    expect(shape_AboveB0(11)).toEqual(11)
+    expect(() => shape_AboveB0(10)).toThrow('Value "10" for path "" must be above 10 (was 10).')
+
+    let shape_AfterB0 = Gubu(After((v: any) => v > 10, 10))
+    expect(shape_AfterB0(11)).toEqual(11)
+    expect(() => shape_AfterB0(10)).toThrow('Validation failed for path "" with value "10" because check "custom: (v) => v > 10" failed.')
+    // TODO: modify value
+
+    let shape_AllB0 = Gubu(All(Number, (v: any) => v > 10))
+    expect(shape_AllB0(11)).toEqual(11)
+    expect(() => shape_AllB0(10)).toThrow(`Value "10" for path "" does not satisfy All shape:
+Validation failed for path "" with value "10" because check "custom: (v) => v > 10" failed.`)
+    // TODO: object props
+
+    let shape_AnyB0 = Gubu(Any())
+    expect(shape_AnyB0(11)).toEqual(11)
+    expect(shape_AnyB0(10)).toEqual(10)
+    expect(shape_AnyB0()).toEqual(undefined)
+    expect(shape_AnyB0(null)).toEqual(null)
+    expect(shape_AnyB0(NaN)).toEqual(NaN)
+    expect(shape_AnyB0({})).toEqual({})
+    expect(shape_AnyB0([])).toEqual([])
+
+    let shape_BeforeB0 = Gubu(Before((v: any) => v > 10, 10))
+    expect(shape_BeforeB0(11)).toEqual(11)
+    expect(() => shape_BeforeB0(10)).toThrow('Validation failed for path "" with value "10" because check "custom: (v) => v > 10" failed.')
+    // TODO: modify value
+
+    let shape_BelowB0 = Gubu(Below(10))
+    expect(shape_BelowB0(9)).toEqual(9)
+    expect(() => shape_BelowB0(10)).toThrow('Value "10" for path "" must be below 10 (was 10).')
+
+    let shape_ClosedB0 = Gubu(Closed({ a: 11 }))
+    expect(shape_ClosedB0({ a: 10 })).toEqual({ a: 10 })
+    expect(() => shape_ClosedB0({ a: 10, b: 11 })).toThrow('Validation failed for path "" with value "{a:10,b:11}" because the property "b" is not allowed.')
+
+    let shape_DefineB0 = Gubu({ a: Define('foo', 11), b: Refer('foo') })
+    expect(shape_DefineB0({ a: 10, b: 12 })).toEqual({ a: 10, b: 12 })
+    expect(() => shape_DefineB0({ a: 'A', b: 'B' })).toThrow(`Validation failed for path "a" with value "A" because the value is not of type number.
+Validation failed for path "b" with value "B" because the value is not of type number.`)
+
+    let shape_EmptyB0 = Gubu({ a: Empty(String), b: String })
+    expect(shape_EmptyB0({ a: '', b: 'ABC' })).toEqual({ a: '', b: 'ABC' })
+    expect(() => shape_EmptyB0({ a: '', b: '' })).toThrow('Validation failed for path "b" with value "" because the value is required.')
+
+    let shape_ExactB0 = Gubu(Exact(11, 12, true))
+    expect(shape_ExactB0(11)).toEqual(11)
+    expect(shape_ExactB0(12)).toEqual(12)
+    expect(shape_ExactB0(true)).toEqual(true)
+    expect(() => shape_ExactB0(10)).toThrow('Value "10" for path "" must be exactly one of: 11, 12, true.')
+    expect(() => shape_ExactB0(false)).toThrow('Value "false" for path "" must be exactly one of: 11, 12, true.')
+
+    let shape_MaxB0 = Gubu(Max(11))
+    expect(shape_MaxB0(11)).toEqual(11)
+    expect(shape_MaxB0(10)).toEqual(10)
+    expect(() => shape_MaxB0(12)).toThrow('Value "12" for path "" must be a maximum of 11 (was 12).')
+
+    let shape_MinB0 = Gubu(Min(11))
+    expect(shape_MinB0(11)).toEqual(11)
+    expect(shape_MinB0(12)).toEqual(12)
+    expect(() => shape_MinB0(10)).toThrow('Value "10" for path "" must be a minimum of 11 (was 10).')
+
+    let shape_NeverB0 = Gubu(Never())
+    expect(() => shape_NeverB0(10)).toThrow('Validation failed for path "" with value "10" because no value is allowed.')
+    expect(() => shape_NeverB0(true)).toThrow('Validation failed for path "" with value "true" because no value is allowed.')
+
+    // TODO: FIX
+    let shape_OneB0 = Gubu(One(10, 11, true))
+    expect(shape_OneB0(10)).toEqual(10)
+    expect(shape_OneB0(11)).toEqual(11)
+    // expect(shape_OneB0(true)).toEqual(true) // this should pass
+    // expect(() => shape_OneB0(12)).toThrow(`QQQ`)
+    // expect(() => shape_OneB0(false)).toThrow('QQQ')
+    // TODO: more complex objects
+
+    let shape_OptionalB0 = Gubu({ a: Optional(11) })
+    expect(shape_OptionalB0({ a: 10 })).toEqual({ a: 10 })
+    expect(shape_OptionalB0({})).toEqual({})
+
+
+    let shape_ReferB0 = Gubu({ a: Define('foo', 11), b: Refer('foo') })
+    expect(shape_ReferB0({ a: 10, b: 12 })).toEqual({ a: 10, b: 12 })
+    expect(() => shape_ReferB0({ a: 'A', b: 'B' })).toThrow(`Validation failed for path "a" with value "A" because the value is not of type number.
+Validation failed for path "b" with value "B" because the value is not of type number.`)
+    // TODO: also recursive
+
+    let shape_RenameB0 = Gubu({ a: Rename('b', Number) })
+    expect(shape_RenameB0({ a: 10 })).toEqual({ b: 10 })
+    expect(() => shape_RenameB0({})).toThrow('Validation failed for path "a" with value "" because the value is required.')
+
+    let shape_RenameB1 = Gubu({ a: Rename({ name: 'b', keep: true }, 123) })
+    expect(shape_RenameB1({ a: 10 })).toEqual({ a: 10, b: 10 })
+    expect(shape_RenameB1({})).toEqual({ a: 123, b: 123 })
+
+    let shape_RequiredB0 = Gubu(Required(11))
+    expect(shape_RequiredB0(11)).toEqual(11)
+    expect(() => shape_RequiredB0()).toThrow('Validation failed for path "" with value "" because the value is required.')
+
+    // FIX
+    let shape_SomeB0 = Gubu(Some({ x: 1 }, { y: 2 }))
+    // expect(shape_SomeB0({ x: 1 })).toEqual({ x: 1 }) 
+    // expect(shape_SomeB0({ y: 2 })).toEqual({ y: 2 })
+    expect(shape_SomeB0({ x: 1, y: 2 })).toEqual({ x: 1, y: 2 })
+    expect(shape_SomeB0({ x: true, y: 2 })).toEqual({ x: true, y: 2 })
+    expect(shape_SomeB0({ x: 1, y: true })).toEqual({ x: 1, y: true })
+    expect(() => shape_SomeB0({ x: true, y: true })).toThrow(`Value "{x:true,y:true}" for path "" does not satisfy Some shape:
+Validation failed for path "x" with value "true" because the value is not of type number.
+Validation failed for path "y" with value "true" because the value is not of type number.`)
+    // TODO: more complex objects
+
+    let shape_ValueB0 = Gubu(Value({}, Number))
+    expect(shape_ValueB0({ x: 10 })).toEqual({ x: 10 })
+    expect(shape_ValueB0({ x: 10, y: 11 })).toEqual({ x: 10, y: 11 })
+    expect(() => shape_ValueB0({ x: true })).toThrow('Validation failed for path "x" with value "true" because the value is not of type number.')
+    // TODO: with explicits
 
   })
 
@@ -830,17 +944,14 @@ Validation failed for path "q.b" with value "x" because the value is not of type
       boolean: false,
       object: { x: 22 },
       array: [33],
-      // function: f0,
     })).toMatchObject({
       string: 'S',
       number: 11,
       boolean: false,
       object: { x: 22 },
       array: [33],
-      // function: f0,
     })
 
-    // TODO: fails
   })
 
 
@@ -852,7 +963,6 @@ Validation failed for path "q.b" with value "x" because the value is not of type
       object: Object,
       array: Array,
       function: Function,
-      // TODO: any type? Date, RegExp, Custom ???
     })
 
     let o0 = {
@@ -871,8 +981,6 @@ Validation failed for path "q.b" with value "x" because the value is not of type
 
     expect(() => e0({ s0: 1 })).toThrow(/Validation failed for path "s0" with value "1" because the value is not of type string\./)
     expect(() => e0({ s1: 1 })).toThrow(/Validation failed for path "s0" with value "" because the value is required\.\nValidation failed for path "s1" with value "1" because the value is not of type string\./)
-
-    // TODO: more fails
 
   })
 
@@ -981,8 +1089,6 @@ Validation failed for path "q.b" with value "x" because the value is not of type
     expect(() => g7(new Array(1))).toThrow('Validation failed for path "0" with value "" because no value is allowed.')
 
 
-    // TODO: Closed over Array with no specials should have no effect
-
     let g8 = Gubu(Closed([Any()]))
     expect(g8([])).toEqual([])
     expect(g8([1])).toEqual([1])
@@ -1027,8 +1133,6 @@ Validation failed for path "q.b" with value "x" because the value is not of type
     expect(() => g2({ a: 9 })).toThrow('Validation failed for path "a" with value "9" because check "custom: (v) => v > 10" failed.')
     expect(() => g2({}))
       .toThrow('Validation failed for path "a" with value "" because check "custom: (v) => v > 10" failed.')
-    // .toThrow(`Validation failed for path "a" with value "" because check "custom: (v) => v > 10" failed.
-    // Validation failed for path "a" with value "" because the value is required.`)
 
     let g3 = Gubu((v: any) => v > 10)
     expect(g3(11)).toEqual(11)
@@ -1458,7 +1562,6 @@ Validation failed for path "y" with value "Y" because the value is not of type n
       Rename({ name: 'c', keep: false }, true)
     ])
     expect(g1(['x', 22])).toMatchObject({ 0: 'x', 1: 22, a: 'x', b: 22 })
-    // console.log(g1(['x', 22]))
     expect('' + g1(['x', 22])).toEqual('x,22')
     expect(g1(['x'])).toMatchObject({ 0: 'x', a: 'x', b: 2 })
     expect('' + g1(['x'])).toEqual('x,2')
@@ -1489,7 +1592,6 @@ Validation failed for path "y" with value "Y" because the value is not of type n
 
   test('builder-define-refer-basic', () => {
     let g0 = Gubu({ a: Define('A', { x: 1 }), b: Refer('A'), c: Refer('A') })
-    // console.log(g0.spec())
     expect(g0({ a: { x: 2 }, b: { x: 2 } }))
       .toEqual({ a: { x: 2 }, b: { x: 2 } })
     expect(g0({ a: { x: 33 }, b: { x: 44 }, c: { x: 55 } }))
@@ -1722,7 +1824,6 @@ Validation failed for path "y" with value "Y" because the value is not of type n
     expect(() => g0({ c: 'b' }))
       .toThrow(`Value "b" for path "c" must have length above 3 (was 1).`)
     expect(() => g0({ c: '' }))
-      // .toThrow(`Validation failed for path "c" with value "" because the value is required.`)
       .toThrow('Value "" for path "c" must have length above 3 (was 0).')
 
     expect(g0({ d: [5, 6] })).toMatchObject({ d: [5, 6] })
@@ -2123,7 +2224,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
     let g2 = Gubu({ a: Number })
     let g3 = Gubu({ b: g2 })
     let g3s = Gubu({ b: g2.spec() })
-    // console.dir(g3.spec(), { depth: null })
     expect(g3({ b: { a: 1 } })).toEqual({ b: { a: 1 } })
     expect(() => g3({ b: { a: 'x' } })).toThrow()
     expect(g3s({ b: { a: 1 } })).toEqual({ b: { a: 1 } })
@@ -2150,7 +2250,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
     expect(a1([{ x: 2, y: 'Y' }])).toMatchObject({ a: { x: 2, y: 'Y' } })
 
     let a2 = Args({ a: Closed({ x: 1 }), '...b': String })
-    // console.log(a2.spec())
     expect(a2([{ x: 2 }, 'A', 'B'])).toMatchObject({ a: { x: 2 }, b: ['A', 'B'] })
     expect(() => a2([{ x: 2, y: 3 }, 'A', 'B'])).toThrow('"y" is not allowed')
     expect(a2([{ x: 2 }])).toMatchObject({ a: { x: 2 }, b: [] })
@@ -2217,7 +2316,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
       v: 11,
       r: false,
       o: false,
-      // k: '',
       d: -1,
       a: [],
       b: [],
@@ -2230,7 +2328,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
       v: 0,
       r: false,
       o: false,
-      // k: '',
       d: -1,
       a: [],
       b: [],
@@ -2243,7 +2340,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
       v: BigInt(11),
       r: false,
       o: false,
-      // k: '',
       d: -1,
       a: [],
       b: [],
@@ -2257,7 +2353,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
       v: s0,
       r: false,
       o: false,
-      // k: '',
       d: -1,
       a: [],
       b: [],
@@ -2274,7 +2369,6 @@ Validation failed for path "" with value "11" because check "custom: (v, _u, s) 
       v: f0,
       r: false,
       o: false,
-      // k: '',
       d: -1,
       a: [],
       b: [],
