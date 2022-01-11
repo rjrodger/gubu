@@ -34,6 +34,7 @@ declare type Node = {
     u: Record<string, any>;
     b: Validate[];
     a: Validate[];
+    s?: string;
 };
 declare type Builder = (opts?: any, // Builder options.
 ...vals: any[]) => Node & // Builders build Nodes.
@@ -42,6 +43,7 @@ declare type Builder = (opts?: any, // Builder options.
 };
 declare type Validate = (val: any, update: Update, state: State) => boolean;
 declare class State {
+    match: boolean;
     dI: number;
     nI: number;
     cI: number;
@@ -117,8 +119,9 @@ declare const Below: Builder;
 declare const Value: Builder;
 declare function buildize(invs0?: any, invs1?: any): Node;
 declare function makeErr(state: State, text?: string, why?: string, user?: any): ErrDesc;
-declare function stringify(x: any, r?: any): string;
-declare type GubuShape = (<T>(inroot?: T, inctx?: any) => T) & {
+declare function stringify(src: any, replacer?: any, expand?: boolean): string;
+declare type GubuShape = (<T>(root?: T, ctx?: any) => T) & {
+    match: (root?: any, ctx?: any) => boolean;
     spec: () => any;
     gubu: typeof GUBU;
 };

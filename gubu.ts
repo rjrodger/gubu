@@ -62,6 +62,7 @@ type Node = {
   u: Record<string, any> // Custom user meta data
   b: Validate[]          // Custom before validation functions.
   a: Validate[]          // Custom after vaidation functions.
+  s?: string             // Custom stringification. 
 }
 
 
@@ -80,6 +81,8 @@ type Validate = (val: any, update: Update, state: State) => boolean
 
 // The current validation state.
 class State {
+  match: boolean = false
+
   dI: number = 0  // Node depth.
   nI: number = 2  // Next free slot in nodes.
   cI: number = -1 // Pointer to next node.
@@ -177,11 +180,9 @@ class State {
     if ('number' === this.valType && isNaN(this.val)) {
       this.valType = 'nan'
     }
-    if (this.isRoot) {
+    if (this.isRoot && !this.match) {
       this.root = this.val
     }
-
-    // console.log('UV', this.val)
   }
 
 
@@ -424,10 +425,16 @@ function make(intop?: any, inopts?: Options): GubuShape {
 
   let top: Node = norm(intop, 0)
 
-  let gubuShape = function GubuShape<T>(root?: T, inctx?: Context): T {
-    let s = new State(root, top, inctx)
+  // let gubuShape = function GubuShape<T>(root?: T, ctx?: Context): T {
+  function exec<T>(
+    root: T | undefined,
+    ctx: Context | undefined,
+    match: boolean
+  ): T | boolean {
+    let s = new State(root, top, ctx)
+    s.match = match
 
-    // Iterative depth-first traversal of the shape.
+    // Iterative depth-first traversal of the shape using append-only array stacks.
     while (true) {
       s.next()
 
@@ -591,8 +598,7 @@ function make(intop?: any, inopts?: Options): GubuShape {
         }
       }
 
-      if (s.parent && !done && !s.ignoreVal && !s.node.o) {
-        // console.log('PS', s.key, s.val)
+      if (!s.match && s.parent && !done && !s.ignoreVal && !s.node.o) {
         s.parent[s.key] = s.val
       }
 
@@ -605,16 +611,26 @@ function make(intop?: any, inopts?: Options): GubuShape {
       if (Array.isArray(s.ctx.err)) {
         s.ctx.err.push(...s.err)
       }
-      else if (false !== s.ctx.err) {
+      else if (!s.match && false !== s.ctx.err) {
         throw new GubuError('shape', s.err, s.ctx)
       }
     }
 
-    return s.root
-  } as GubuShape
+    return s.match ? 0 === s.err.length : s.root
+  }
 
 
-  // TODO: test Number, String, etc also in arrays
+  let gubuShape = (function GubuShape<T>(root?: T, ctx?: Context): T {
+    return (exec(root, ctx, false) as T)
+  }) as GubuShape
+
+
+  gubuShape.match = (root?: any, ctx?: any): boolean => {
+    ctx = ctx || {}
+    return (exec(root, ctx, true) as boolean)
+  }
+
+
   gubuShape.spec = () => {
     // Normalize spec, discard errors.
     gubuShape(undefined, { err: false })
@@ -623,7 +639,7 @@ function make(intop?: any, inopts?: Options): GubuShape {
         return true
       }
       return val
-    }))
+    }, true))
   }
 
 
@@ -654,10 +670,12 @@ function handleValidate(vf: Validate, s: State): Update {
   let valid = vf(s.val, update, s)
   let hasErrs = Array.isArray(update.err) ? 0 < update.err.length : null != update.err
 
+  // console.log('HV', valid, hasErrs, update)
+
   if (!valid || hasErrs) {
 
     // Explicit Optional allows undefined
-    if (undefined === s.val && (s.node.o || !s.node.r)) {
+    if (undefined === s.val && (s.node.o || !s.node.r) && true !== update.done) {
       delete update.err
       return update
     }
@@ -694,7 +712,6 @@ function handleValidate(vf: Validate, s: State): Update {
     s.updateVal(update.val)
   }
   else if (undefined !== update.val && !Number.isNaN(update.val)) {
-    // console.log('QQQ', update)
     s.updateVal(update.val)
   }
   else if ('custom' === s.node.t) {
@@ -709,9 +726,9 @@ function handleValidate(vf: Validate, s: State): Update {
   }
 
   // TODO: remove?
-  s.nI = undefined === update.nI ? s.nI : update.nI
-  s.sI = undefined === update.sI ? s.sI : update.sI
-  s.pI = undefined === update.pI ? s.pI : update.pI
+  // s.nI = undefined === update.nI ? s.nI : update.nI
+  // s.sI = undefined === update.sI ? s.sI : update.sI
+  // s.pI = undefined === update.pI ? s.pI : update.pI
 
   return update
 }
@@ -776,6 +793,8 @@ const Never: Builder = function(this: Node, shape?: any) {
 const All: Builder = function(this: Node, ...inshapes: any[]) {
   let node = buildize()
   node.t = 'list'
+  node.r = true
+
   let shapes = inshapes.map(s => Gubu(s))
   node.u.list = inshapes
 
@@ -796,8 +815,8 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = 'all'
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for path "$PATH" does not satisfy All shape:`),
-        ...err]
+          `Value "$VALUE" for path "$PATH" does not satisfy all of: ${inshapes.map(x => stringify(x))}`)
+      ]
     }
 
     return pass
@@ -811,22 +830,19 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
 const Some: Builder = function(this: Node, ...inshapes: any[]) {
   let node = buildize()
   node.t = 'list'
+  node.r = true
+
   let shapes = inshapes.map(s => Gubu(s))
   node.u.list = inshapes
 
   node.b.push(function Some(val: any, update: Update, state: State) {
     let pass = false
 
-    let err: any = []
     for (let shape of shapes) {
       let subctx = { ...state.ctx, err: [] }
-      shape(val, subctx)
-      if (0 < subctx.err.length) {
-        pass ||= false
-        err.push(...subctx.err)
-      }
-      else {
-        pass = true
+      pass ||= shape.match(val, subctx)
+      if (pass) {
+        break
       }
     }
 
@@ -834,8 +850,8 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = 'some'
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for path "$PATH" does not satisfy Some shape:`),
-        ...err]
+          `Value "$VALUE" for path "$PATH" does not satisfy some of: ${inshapes.map(x => stringify(x))}`)
+      ]
     }
 
     return pass
@@ -849,19 +865,18 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
 const One: Builder = function(this: Node, ...inshapes: any[]) {
   let node = buildize()
   node.t = 'list'
+  node.r = true
+
   let shapes = inshapes.map(s => Gubu(s))
   node.u.list = inshapes
 
   node.b.push(function One(val: any, update: Update, state: State) {
     let passN = 0
 
-    let err: any = []
     for (let shape of shapes) {
       let subctx = { ...state.ctx, err: [] }
-      shape(val, subctx)
-      if (0 < subctx.err.length) {
+      if (shape.match(val, subctx)) {
         passN++
-        err.push(...subctx.err)
       }
     }
 
@@ -869,8 +884,8 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = 'one'
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for path "$PATH" does not satisfy One shape:`),
-        ...err]
+          `Value "$VALUE" for path "$PATH" does not satisfy one of: ${inshapes.map(x => stringify(x))}`)
+      ]
     }
 
     return true
@@ -884,18 +899,26 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
 const Exact: Builder = function(this: Node, ...vals: any[]) {
   let node = buildize()
   node.b.push(function Exact(val: any, update: Update, state: State) {
+    // console.log('EXACT B', val, vals)
+
     for (let i = 0; i < vals.length; i++) {
       if (val === vals[i]) {
         return true
       }
     }
+
     update.err =
       makeErr(state,
-        `Value "$VALUE" for path "$PATH" must be exactly one of: ` +
-        `${vals.map(v => stringify(v)).join(', ')}.`)
+        `Value "$VALUE" for path "$PATH" must be exactly one of: ${state.node.s}.`
+      )
+
+    update.done = true
+
+    // console.log('EXACT U', update)
 
     return false
   })
+  node.s = vals.map(v => stringify(v)).join(',')
 
   return node
 }
@@ -1012,6 +1035,7 @@ const Refer: Builder = function(this: Node, inopts: any, shape?: any): Node {
 }
 
 
+// TODO: no mutate is State.match
 const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
   let node = buildize(this, shape)
 
@@ -1026,7 +1050,7 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
 
     // If there is a claim, grab the value so that validations
     // can be applied to it.
-    let vsb = (val: any, update: Update, s: State) => {
+    let before = (val: any, update: Update, s: State) => {
       if (undefined === val && 0 < claim.length) {
         s.ctx.Rename = (s.ctx.Rename || {})
         s.ctx.Rename.fromDefault = (s.ctx.Rename.fromDefault || {})
@@ -1036,7 +1060,10 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
 
           // Only use claim if it was not a default value.
           if (undefined !== s.parent[cn] && !fromDefault.yes) {
-            update.val = s.parent[name] = s.parent[cn]
+            update.val = s.parent[cn]
+            if (!s.match) {
+              s.parent[name] = update.val
+            }
             update.node = fromDefault.node
 
             // Old errors on the claimed value are no longer valid.
@@ -1074,35 +1101,36 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
       }
       return true
     }
-    Object.defineProperty(vsb, 'name', { value: 'Rename:' + name })
-    node.b.push(vsb)
+    Object.defineProperty(before, 'name', { value: 'Rename:' + name })
+    node.b.push(before)
 
-    let vsa = (val: any, update: Update, state: State) => {
-      state.parent[name] = val
+    let after = (val: any, update: Update, s: State) => {
+      s.parent[name] = val
 
-      if (!keep &&
-        state.key !== name &&
+      if (!s.match &&
+        !keep &&
+        s.key !== name &&
         // Arrays require explicit deletion as validation is based on index
         // and will be lost.
-        !(Array.isArray(state.parent) && false !== keep)
+        !(Array.isArray(s.parent) && false !== keep)
       ) {
-        delete state.parent[state.key]
+        delete s.parent[s.key]
         update.done = true
       }
 
-      state.ctx.Rename = (state.ctx.Rename || {})
-      state.ctx.Rename.fromDefault = (state.ctx.Rename.fromDefault || {})
-      state.ctx.Rename.fromDefault[name] = {
-        yes: state.fromDefault,
-        key: state.key,
-        dval: state.node.v,
-        node: state.node
+      s.ctx.Rename = (s.ctx.Rename || {})
+      s.ctx.Rename.fromDefault = (s.ctx.Rename.fromDefault || {})
+      s.ctx.Rename.fromDefault[name] = {
+        yes: s.fromDefault,
+        key: s.key,
+        dval: s.node.v,
+        node: s.node
       }
 
       return true
     }
-    Object.defineProperty(vsa, 'name', { value: 'Rename:' + name })
-    node.a.push(vsa)
+    Object.defineProperty(after, 'name', { value: 'Rename:' + name })
+    node.a.push(after)
   }
 
   return node
@@ -1343,8 +1371,9 @@ function makeErrImpl(
       `with value "${valstr}" because ` +
 
       ('type' === why ? (
-        'instance' === s.node.t ? `the value is not an instance of ${s.node.u.n}` :
-          `the value is not of type ${s.node.t}`) :
+        'instance' === s.node.t ? `the value is not an instance of ${s.node.u.n} ` :
+          `the value is not of type ${s.node.t
+          }`) :
         'required' === why ? `the value is required` :
           'closed' === why ? `the property "${user?.k}" is not allowed` :
             'never' === why ? 'no value is allowed' :
@@ -1361,11 +1390,11 @@ function makeErrImpl(
 }
 
 
-function stringify(x: any, r?: any) {
+function stringify(src: any, replacer?: any, expand?: boolean) {
   try {
-    let str = JSON.stringify(x, (key: any, val: any) => {
-      if (r) {
-        val = r(key, val)
+    let str = JSON.stringify(src, (key: any, val: any) => {
+      if (replacer) {
+        val = replacer(key, val)
       }
 
       if (
@@ -1382,12 +1411,24 @@ function stringify(x: any, r?: any) {
         if ('function' === typeof ((make as any)[val.name]) && isNaN(+key)) {
           val = undefined
         }
-        else {
+        else if (null != val.name && '' !== val.name) {
           val = val.name
+        }
+        else {
+          val = val.toString().replace(/[ \t\r\n]+/g, ' ')
+          let vlen = val.length
+          val = val.substring(0, 30) + (30 < vlen ? '...' : '')
         }
       }
       else if ('bigint' === typeof (val)) {
         val = String(val.toString())
+      }
+      else if (Number.isNaN(val)) {
+        return 'NaN'
+      }
+      else if (true !== expand &&
+        (true === val?.$?.gubu$ || GUBU$ === val?.$?.gubu$)) {
+        val = (null == val.s || '' === val.s) ? val.t : val.s
       }
 
       return val
@@ -1396,7 +1437,7 @@ function stringify(x: any, r?: any) {
     return String(str)
   }
   catch (e: any) {
-    return JSON.stringify(String(x))
+    return JSON.stringify(String(src))
   }
 }
 
@@ -1409,8 +1450,9 @@ function clone(x: any) {
 
 
 type GubuShape =
-  (<T>(inroot?: T, inctx?: any) => T) &
+  (<T>(root?: T, ctx?: any) => T) &
   {
+    match: (root?: any, ctx?: any) => boolean,
     spec: () => any,
     gubu: typeof GUBU
   }

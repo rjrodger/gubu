@@ -16,6 +16,7 @@ const GUBU = { gubu$: GUBU$, v$: package_json_1.default.version };
 // The current validation state.
 class State {
     constructor(root, top, ctx) {
+        this.match = false;
         this.dI = 0; // Node depth.
         this.nI = 2; // Next free slot in nodes.
         this.cI = -1; // Pointer to next node.
@@ -77,10 +78,9 @@ class State {
         if ('number' === this.valType && isNaN(this.val)) {
             this.valType = 'nan';
         }
-        if (this.isRoot) {
+        if (this.isRoot && !this.match) {
             this.root = this.val;
         }
-        // console.log('UV', this.val)
     }
 }
 class GubuError extends TypeError {
@@ -227,9 +227,11 @@ function make(intop, inopts) {
     opts.name =
         null == opts.name ? 'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name;
     let top = norm(intop, 0);
-    let gubuShape = function GubuShape(root, inctx) {
-        let s = new State(root, top, inctx);
-        // Iterative depth-first traversal of the shape.
+    // let gubuShape = function GubuShape<T>(root?: T, ctx?: Context): T {
+    function exec(root, ctx, match) {
+        let s = new State(root, top, ctx);
+        s.match = match;
+        // Iterative depth-first traversal of the shape using append-only array stacks.
         while (true) {
             s.next();
             if (s.stop) {
@@ -361,8 +363,7 @@ function make(intop, inopts) {
                     }
                 }
             }
-            if (s.parent && !done && !s.ignoreVal && !s.node.o) {
-                // console.log('PS', s.key, s.val)
+            if (!s.match && s.parent && !done && !s.ignoreVal && !s.node.o) {
                 s.parent[s.key] = s.val;
             }
             if (s.nextSibling) {
@@ -373,13 +374,19 @@ function make(intop, inopts) {
             if (Array.isArray(s.ctx.err)) {
                 s.ctx.err.push(...s.err);
             }
-            else if (false !== s.ctx.err) {
+            else if (!s.match && false !== s.ctx.err) {
                 throw new GubuError('shape', s.err, s.ctx);
             }
         }
-        return s.root;
+        return s.match ? 0 === s.err.length : s.root;
+    }
+    let gubuShape = (function GubuShape(root, ctx) {
+        return exec(root, ctx, false);
+    });
+    gubuShape.match = (root, ctx) => {
+        ctx = ctx || {};
+        return exec(root, ctx, true);
     };
-    // TODO: test Number, String, etc also in arrays
     gubuShape.spec = () => {
         // Normalize spec, discard errors.
         gubuShape(undefined, { err: false });
@@ -388,7 +395,7 @@ function make(intop, inopts) {
                 return true;
             }
             return val;
-        }));
+        }, true));
     };
     let desc = '';
     gubuShape.toString = gubuShape[util_1.inspect.custom] = () => {
@@ -407,9 +414,10 @@ function handleValidate(vf, s) {
     let update = {};
     let valid = vf(s.val, update, s);
     let hasErrs = Array.isArray(update.err) ? 0 < update.err.length : null != update.err;
+    // console.log('HV', valid, hasErrs, update)
     if (!valid || hasErrs) {
         // Explicit Optional allows undefined
-        if (undefined === s.val && (s.node.o || !s.node.r)) {
+        if (undefined === s.val && (s.node.o || !s.node.r) && true !== update.done) {
             delete update.err;
             return update;
         }
@@ -441,7 +449,6 @@ function handleValidate(vf, s) {
         s.updateVal(update.val);
     }
     else if (undefined !== update.val && !Number.isNaN(update.val)) {
-        // console.log('QQQ', update)
         s.updateVal(update.val);
     }
     else if ('custom' === s.node.t) {
@@ -454,9 +461,9 @@ function handleValidate(vf, s) {
         s.type = update.type;
     }
     // TODO: remove?
-    s.nI = undefined === update.nI ? s.nI : update.nI;
-    s.sI = undefined === update.sI ? s.sI : update.sI;
-    s.pI = undefined === update.pI ? s.pI : update.pI;
+    // s.nI = undefined === update.nI ? s.nI : update.nI
+    // s.sI = undefined === update.sI ? s.sI : update.sI
+    // s.pI = undefined === update.pI ? s.pI : update.pI
     return update;
 }
 // function pathstr(path: string[], dI: number) {
@@ -507,6 +514,7 @@ exports.Never = Never;
 const All = function (...inshapes) {
     let node = buildize();
     node.t = 'list';
+    node.r = true;
     let shapes = inshapes.map(s => Gubu(s));
     node.u.list = inshapes;
     node.b.push(function All(val, update, state) {
@@ -523,8 +531,7 @@ const All = function (...inshapes) {
         if (!pass) {
             update.why = 'all';
             update.err = [
-                makeErr(state, `Value "$VALUE" for path "$PATH" does not satisfy All shape:`),
-                ...err
+                makeErr(state, `Value "$VALUE" for path "$PATH" does not satisfy all of: ${inshapes.map(x => stringify(x))}`)
             ];
         }
         return pass;
@@ -536,27 +543,22 @@ exports.All = All;
 const Some = function (...inshapes) {
     let node = buildize();
     node.t = 'list';
+    node.r = true;
     let shapes = inshapes.map(s => Gubu(s));
     node.u.list = inshapes;
     node.b.push(function Some(val, update, state) {
         let pass = false;
-        let err = [];
         for (let shape of shapes) {
             let subctx = { ...state.ctx, err: [] };
-            shape(val, subctx);
-            if (0 < subctx.err.length) {
-                pass || (pass = false);
-                err.push(...subctx.err);
-            }
-            else {
-                pass = true;
+            pass || (pass = shape.match(val, subctx));
+            if (pass) {
+                break;
             }
         }
         if (!pass) {
             update.why = 'some';
             update.err = [
-                makeErr(state, `Value "$VALUE" for path "$PATH" does not satisfy Some shape:`),
-                ...err
+                makeErr(state, `Value "$VALUE" for path "$PATH" does not satisfy some of: ${inshapes.map(x => stringify(x))}`)
             ];
         }
         return pass;
@@ -568,24 +570,21 @@ exports.Some = Some;
 const One = function (...inshapes) {
     let node = buildize();
     node.t = 'list';
+    node.r = true;
     let shapes = inshapes.map(s => Gubu(s));
     node.u.list = inshapes;
     node.b.push(function One(val, update, state) {
         let passN = 0;
-        let err = [];
         for (let shape of shapes) {
             let subctx = { ...state.ctx, err: [] };
-            shape(val, subctx);
-            if (0 < subctx.err.length) {
+            if (shape.match(val, subctx)) {
                 passN++;
-                err.push(...subctx.err);
             }
         }
         if (1 !== passN) {
             update.why = 'one';
             update.err = [
-                makeErr(state, `Value "$VALUE" for path "$PATH" does not satisfy One shape:`),
-                ...err
+                makeErr(state, `Value "$VALUE" for path "$PATH" does not satisfy one of: ${inshapes.map(x => stringify(x))}`)
             ];
         }
         return true;
@@ -596,16 +595,19 @@ exports.One = One;
 const Exact = function (...vals) {
     let node = buildize();
     node.b.push(function Exact(val, update, state) {
+        // console.log('EXACT B', val, vals)
         for (let i = 0; i < vals.length; i++) {
             if (val === vals[i]) {
                 return true;
             }
         }
         update.err =
-            makeErr(state, `Value "$VALUE" for path "$PATH" must be exactly one of: ` +
-                `${vals.map(v => stringify(v)).join(', ')}.`);
+            makeErr(state, `Value "$VALUE" for path "$PATH" must be exactly one of: ${state.node.s}.`);
+        update.done = true;
+        // console.log('EXACT U', update)
         return false;
     });
+    node.s = vals.map(v => stringify(v)).join(',');
     return node;
 };
 exports.Exact = Exact;
@@ -694,6 +696,7 @@ const Refer = function (inopts, shape) {
     return node;
 };
 exports.Refer = Refer;
+// TODO: no mutate is State.match
 const Rename = function (inopts, shape) {
     let node = buildize(this, shape);
     let opts = 'object' === typeof inopts ? inopts || {} : {};
@@ -704,7 +707,7 @@ const Rename = function (inopts, shape) {
     if (null != name && '' != name) {
         // If there is a claim, grab the value so that validations
         // can be applied to it.
-        let vsb = (val, update, s) => {
+        let before = (val, update, s) => {
             if (undefined === val && 0 < claim.length) {
                 s.ctx.Rename = (s.ctx.Rename || {});
                 s.ctx.Rename.fromDefault = (s.ctx.Rename.fromDefault || {});
@@ -712,7 +715,10 @@ const Rename = function (inopts, shape) {
                     let fromDefault = s.ctx.Rename.fromDefault[cn] || {};
                     // Only use claim if it was not a default value.
                     if (undefined !== s.parent[cn] && !fromDefault.yes) {
-                        update.val = s.parent[name] = s.parent[cn];
+                        update.val = s.parent[cn];
+                        if (!s.match) {
+                            s.parent[name] = update.val;
+                        }
                         update.node = fromDefault.node;
                         // Old errors on the claimed value are no longer valid.
                         for (let eI = 0; eI < s.err.length; eI++) {
@@ -744,30 +750,31 @@ const Rename = function (inopts, shape) {
             }
             return true;
         };
-        Object.defineProperty(vsb, 'name', { value: 'Rename:' + name });
-        node.b.push(vsb);
-        let vsa = (val, update, state) => {
-            state.parent[name] = val;
-            if (!keep &&
-                state.key !== name &&
+        Object.defineProperty(before, 'name', { value: 'Rename:' + name });
+        node.b.push(before);
+        let after = (val, update, s) => {
+            s.parent[name] = val;
+            if (!s.match &&
+                !keep &&
+                s.key !== name &&
                 // Arrays require explicit deletion as validation is based on index
                 // and will be lost.
-                !(Array.isArray(state.parent) && false !== keep)) {
-                delete state.parent[state.key];
+                !(Array.isArray(s.parent) && false !== keep)) {
+                delete s.parent[s.key];
                 update.done = true;
             }
-            state.ctx.Rename = (state.ctx.Rename || {});
-            state.ctx.Rename.fromDefault = (state.ctx.Rename.fromDefault || {});
-            state.ctx.Rename.fromDefault[name] = {
-                yes: state.fromDefault,
-                key: state.key,
-                dval: state.node.v,
-                node: state.node
+            s.ctx.Rename = (s.ctx.Rename || {});
+            s.ctx.Rename.fromDefault = (s.ctx.Rename.fromDefault || {});
+            s.ctx.Rename.fromDefault[name] = {
+                yes: s.fromDefault,
+                key: s.key,
+                dval: s.node.v,
+                node: s.node
             };
             return true;
         };
-        Object.defineProperty(vsa, 'name', { value: 'Rename:' + name });
-        node.a.push(vsa);
+        Object.defineProperty(after, 'name', { value: 'Rename:' + name });
+        node.a.push(after);
     }
     return node;
 };
@@ -928,7 +935,7 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     if (null == text || '' === text) {
         err.t = `Validation failed for path "${err.p}" ` +
             `with value "${valstr}" because ` +
-            ('type' === why ? ('instance' === s.node.t ? `the value is not an instance of ${s.node.u.n}` :
+            ('type' === why ? ('instance' === s.node.t ? `the value is not an instance of ${s.node.u.n} ` :
                 `the value is not of type ${s.node.t}`) :
                 'required' === why ? `the value is required` :
                     'closed' === why ? `the property "${user === null || user === void 0 ? void 0 : user.k}" is not allowed` :
@@ -943,11 +950,12 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     }
     return err;
 }
-function stringify(x, r) {
+function stringify(src, replacer, expand) {
     try {
-        let str = JSON.stringify(x, (key, val) => {
-            if (r) {
-                val = r(key, val);
+        let str = JSON.stringify(src, (key, val) => {
+            var _a, _b;
+            if (replacer) {
+                val = replacer(key, val);
             }
             if (null != val &&
                 'object' === typeof (val) &&
@@ -961,19 +969,31 @@ function stringify(x, r) {
                 if ('function' === typeof (make[val.name]) && isNaN(+key)) {
                     val = undefined;
                 }
-                else {
+                else if (null != val.name && '' !== val.name) {
                     val = val.name;
+                }
+                else {
+                    val = val.toString().replace(/[ \t\r\n]+/g, ' ');
+                    let vlen = val.length;
+                    val = val.substring(0, 30) + (30 < vlen ? '...' : '');
                 }
             }
             else if ('bigint' === typeof (val)) {
                 val = String(val.toString());
+            }
+            else if (Number.isNaN(val)) {
+                return 'NaN';
+            }
+            else if (true !== expand &&
+                (true === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$) || GUBU$ === ((_b = val === null || val === void 0 ? void 0 : val.$) === null || _b === void 0 ? void 0 : _b.gubu$))) {
+                val = (null == val.s || '' === val.s) ? val.t : val.s;
             }
             return val;
         });
         return String(str);
     }
     catch (e) {
-        return JSON.stringify(String(x));
+        return JSON.stringify(String(src));
     }
 }
 exports.stringify = stringify;

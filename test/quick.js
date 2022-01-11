@@ -3,6 +3,7 @@ const {
   Gubu,
   Args,
   G$,
+  stringify,
   One,
   Some,
   All,
@@ -26,6 +27,8 @@ const {
 function J(x,s) {
   console.log(null == x ? '' : JSON.stringify(x,null,s).replace(/"/g, ''))
 }
+
+let tmp = {}
 
 
 // let a1 = Gubu({ a: 1 })
@@ -96,10 +99,24 @@ function J(x,s) {
 
 
 // let o0 = Gubu({ a: One(String,Number) })
-// // let o0 = Gubu({ a: One(String) })
+// J(o0({a:undefined}))
 // J(o0({a:'x'}))
 // J(o0({a:1}))
 // J(o0({a:true}))
+
+
+let o0 = Gubu(One(String,Number))
+// let o0 = Gubu(Optional(One(Number,String)))
+console.log(o0())
+
+
+
+// let o1 = Gubu({ a: One({x:Exact(1)},{y:Exact(2)}) })
+// J(o1(tmp.a1={a:{x:11}})); console.log(tmp.a1)
+// J(o1(tmp.a1={a:{y:22}})); console.log(tmp.a1)
+// J(o1(tmp.a1={a:{x:11,y:22}})) // fails
+// J(o1({a:true})) // fails
+
 
 
 // let log = []
@@ -412,6 +429,20 @@ function J(x,s) {
 // console.log(Gubu(Above(3,[1]))([2,3,4,5]))
 
 
-let g4 = Gubu({ a: Optional({ b: String }) })
-console.log(g4())
-console.dir(g4.spec(),{depth:null})
+// let g4 = Gubu({ a: Optional({ b: String }) })
+// console.log(g4())
+// console.dir(g4.spec(),{depth:null})
+
+
+// let m0 = Gubu({a:{b:1}})
+// console.log(m0(tmp.a0={}),tmp.a0)
+// console.log(m0.match(tmp.a1={}),tmp.a1)
+// console.log(m0.match(tmp.a2={a:2}),tmp.a2)
+
+// console.log(stringify(NaN))
+
+// console.log(Gubu(Exact(1))(1))
+// // console.log(Gubu(Exact(1))(undefined))
+// console.log(Gubu(Exact(1))(NaN))
+// // console.log(Gubu(Exact(1))())
+

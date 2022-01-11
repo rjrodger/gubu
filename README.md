@@ -1178,6 +1178,7 @@ const { After } = Gubu
 <sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
+implicit Required, use Optional explicitly
 
 ```
 const { All } = Gubu
@@ -1279,6 +1280,8 @@ const { Never } = Gubu
 <sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
+implicit Required, use Optional explicitly
+
 
 ```
 const { One } = Gubu
@@ -1325,6 +1328,7 @@ const { Required } = Gubu
 <sub><sup>[builders](#builder-index)</sup></sub>
 
 TODO
+implicit Required, use Optional explicitly
 
 ```
 const { Some } = Gubu
