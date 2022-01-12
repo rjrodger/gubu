@@ -349,7 +349,7 @@ The built-in shape builders help you match the following shapes:
   * [Below](#below-builder): Match a value (or length of value) less than the given amount.
   * [Max](#max-builder): Match a value (or length of value) less than or equal to the given amount.
   * [Min](#min-builder): Match a value (or length of value) greater than or equal to the given amount.
-  * [Above](#max-builder): Match a value (or length of value) greater than the given amount.
+  * [Above](#above-builder): Match a value (or length of value) greater than the given amount.
 * General constraints:
   * [Closed](#closed-builder): Allow only explicitly defined properties in an object.
   * [Value](#value-builder): All non-explicit values of an object must match this shape.
@@ -371,6 +371,12 @@ QUICK INTRO WITH EXAMPLE
 
 ## API
 <sub><sup>[top](#top)</sup></sub>
+
+[API](#api) | 
+[Shapes](#shape) | 
+[Errors](#errors) | 
+[Custom Validation](#custom-validation) |
+[Builders](#shape-builder-reference)
 
 
 ### Shape
@@ -732,7 +738,14 @@ shape({ fn: ()=>false }) // returns { fn: ()=>false }
 ```
 
 
-#### Custom Validations
+#### Custom Validation
+
+[API](#api) | 
+[Shapes](#shape) | 
+[Errors](#errors) | 
+[Custom Validation](#custom-validation) |
+[Builders](#shape-builder-reference)
+
 
 You can define custom validators by providing a function as the
 shape. The first argument to this function will the value to
@@ -945,6 +958,13 @@ messages under the `n` property.
 
 ### Errors
 
+[API](#api) | 
+[Shapes](#shape) | 
+[Errors](#errors) | 
+[Custom Validation](#custom-validation) |
+[Builders](#shape-builder-reference)
+
+
 *Gubu* will attempt a full validation of the input value, collect all
 errors, and throw an Error if any validation failed. The error object
 will be an instance of `GubuError`, which extends `TypeError` with the
@@ -977,7 +997,7 @@ Validation failed for path "top.bar" with value "abc" because the value is not o
 `
 ```
 
-### ErrDesc Object
+#### ErrDesc Object
 
 The `ErrDesc` object is the internal representation of an error,
 containing the full details of the error, which you can use for
@@ -1103,7 +1123,14 @@ https://www.typescriptneedstypes.com/
 
 
 
-### Shape Builders
+### Shape Builder Usage
+
+[API](#api) | 
+[Shapes](#shape) | 
+[Errors](#errors) | 
+[Custom Validation](#custom-validation) |
+[Builders](#shape-builder-reference)
+
 
 The validation rules for each value shape can be modified using shape
 builders. These are wrapping functions that add additional constraints
@@ -1144,9 +1171,11 @@ Gubu(Required(Closed({ a: 1, b: 2 })))
 This flexibility allows you to adjust shapes without too much
 refactoring.
 
-<a name="builder-index"></a>
+
+### Shape Builder Reference
+
 The built-in shape builders are:
-* [Above](#max-builder): Match a value (or length of value) greater than the given amount.
+* [Above](#above-builder): Match a value (or length of value) greater than the given amount.
 * [After](#after-builder): Define a custom validation function called after a value is processed.
 * [All](#all-builder): All shapes must match value.
 * [Any](#any-builder): This shape will match any value.
@@ -1170,17 +1199,46 @@ The built-in shape builders are:
 
 
 #### Above Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
-
-TODO
-
+```ts
+Above( value: number|string, child?: any )`
 ```
+
+* **Standalone:** `Above(2)`
+* **As Parent:** `Above(2,Number)`
+* **As Child:** `Optional(Above(2))`
+* **Chainable:** `Required(Number).Above(2)`
+
+Only allow values that are above the given value in length. "Length" means:
+* Arrays: array length; 
+* Strings: string length; 
+* Objects: number of keys;
+* Numbers: numberic value;
+* Object with property `length`: numeric value of `length`;
+* Anything else fails.
+
+If the given value is a `string`, then a lexical comparison is made
+(thus, `'b'` is above `'a'` as `'b' > 'a'`)
+
+
+```js
 const { Above } = Gubu
+let shape = Gubu(Above(2))
+
+shape(3) // PASS: 3 > 2; returns 3
+shape(2) // FAIL: throws 'Value "2" for path "" must be above 2 (was 2).'
+
+shape('abc') // PASS: 'abc'.length 3 > 2 
+shape('ab')  // FAIL: 'Value "ab" for path "" must have length above 2 (was 2).'
+
+shape([1, 2, 3]) // PASS: array length 3 > 2
+shape([1, 2])    // FAIL: throws: 'Value "[1,2]" for path "" must have length above 2 (was 2).'
+
 ```
 
 #### After Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1189,7 +1247,7 @@ const { After } = Gubu
 ```
 
 #### All Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 implicit Required, use Optional explicitly
@@ -1199,7 +1257,7 @@ const { All } = Gubu
 ```
 
 #### Any Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1208,7 +1266,7 @@ const { Any } = Gubu
 ```
 
 #### Before Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1217,7 +1275,7 @@ const { Before } = Gubu
 ```
 
 #### Below Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1226,7 +1284,7 @@ const { Below } = Gubu
 ```
 
 #### Closed Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 does not work on arrays
@@ -1236,7 +1294,7 @@ const { ### } = Gubu
 ```
 
 #### Define Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 depth first order, define before refer
@@ -1246,7 +1304,7 @@ const { Define } = Gubu
 ```
 
 #### Empty Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1255,7 +1313,7 @@ const { Empty } = Gubu
 ```
 
 #### Exact Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1264,7 +1322,7 @@ const { Exact } = Gubu
 ```
 
 #### Max Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1273,7 +1331,7 @@ const { Max } = Gubu
 ```
 
 #### Min Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1282,7 +1340,7 @@ const { Min } = Gubu
 ```
 
 #### Never Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1291,7 +1349,7 @@ const { Never } = Gubu
 ```
 
 #### One Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 implicit Required, use Optional explicitly
@@ -1302,7 +1360,7 @@ const { One } = Gubu
 ```
 
 #### Optional Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1311,7 +1369,7 @@ const { Optional } = Gubu
 ```
 
 #### Refer Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 depth first order, define before refer
@@ -1321,7 +1379,7 @@ const { Refer } = Gubu
 ```
 
 #### Rename Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1330,7 +1388,7 @@ const { Rename } = Gubu
 ```
 
 #### Required Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1339,7 +1397,7 @@ const { Required } = Gubu
 ```
 
 #### Some Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 implicit Required, use Optional explicitly
@@ -1349,7 +1407,7 @@ const { Some } = Gubu
 ```
 
 #### Value Builder
-<sub><sup>[builders](#builder-index)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
 TODO
 
@@ -1360,13 +1418,13 @@ const { ### } = Gubu
 
 
 
-#### Custom Builders
+### Custom Builders
 
 
-##### Before Hook
+#### Before Hook
 
 
-##### After Hook
+#### After Hook
 
 
 
