@@ -1125,13 +1125,6 @@ https://www.typescriptneedstypes.com/
 
 ### Shape Builder Usage
 
-[API](#api) | 
-[Shapes](#shape) | 
-[Errors](#errors) | 
-[Custom Validation](#custom-validation) |
-[Builders](#shape-builder-reference)
-
-
 The validation rules for each value shape can be modified using shape
 builders. These are wrapping functions that add additional constraints
 to the value shape.
@@ -1173,6 +1166,12 @@ refactoring.
 
 
 ### Shape Builder Reference
+
+[API](#api) | 
+[Shapes](#shape) | 
+[Errors](#errors) | 
+[Custom Validation](#custom-validation) |
+[Builders](#shape-builder-reference)
 
 The built-in shape builders are:
 * [Above](#above-builder): Match a value (or length of value) greater than the given amount.
