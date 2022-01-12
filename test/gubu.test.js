@@ -4,9 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Bar = exports.Foo = void 0;
 const package_json_1 = __importDefault(require("../package.json"));
 const Large = require('./large');
 const Long = require('./long');
+// import { Gubu } from '../gubu'
 // Handle web (Gubu) versus node ({Gubu}) export.
 let GubuModule = require('../gubu');
 if (GubuModule.Gubu) {
@@ -44,12 +46,14 @@ class Foo {
         this.a = a;
     }
 }
+exports.Foo = Foo;
 class Bar {
     constructor(b) {
         this.b = -2;
         this.b = b;
     }
 }
+exports.Bar = Bar;
 describe('gubu', () => {
     test('happy', () => {
         expect(Gubu()).toBeDefined();
@@ -65,6 +69,55 @@ describe('gubu', () => {
         expect(g0({ b: 999 })).toEqual({ a: 'foo', b: 999 });
         expect(g0({ a: 'bar', b: 999 })).toEqual({ a: 'bar', b: 999 });
         expect(g0({ a: 'bar', b: 999, c: true })).toEqual({ a: 'bar', b: 999, c: true });
+    });
+    test('valid-basic', () => {
+        let g0 = Gubu({ x: 1, y: 'Y' });
+        let d0 = { x: 2, z: true };
+        if (g0.valid(d0)) {
+            expect(d0).toEqual({ x: 2, y: 'Y', z: true });
+            expect(d0.x).toEqual(2);
+            expect(d0.y).toEqual('Y');
+            expect(d0.z).toEqual(true);
+        }
+        let g0d = Gubu({ x: 1, y: 'Y' });
+        let d0d = { x: 2, z: true };
+        let d0do = g0d(d0d);
+        expect(d0do).toEqual({ x: 2, y: 'Y', z: true });
+        expect(d0do.x).toEqual(2);
+        expect(d0do.y).toEqual('Y');
+        expect(d0do.z).toEqual(true);
+        let g1 = Gubu({ x: Number, y: 'Y' });
+        let d1 = { x: 2, z: true };
+        if (g1.valid(d1)) {
+            expect(d1).toEqual({ x: 2, y: 'Y', z: true });
+            expect(d1.x).toEqual(2);
+            expect(d1.y).toEqual('Y');
+            expect(d1.z).toEqual(true);
+        }
+        let g2 = Gubu({ x: { k: 1 }, y: 'Y' });
+        let d2 = { x: { k: 2 }, z: true };
+        if (g2.valid(d2)) {
+            expect(d2).toEqual({ x: { k: 2 }, y: 'Y', z: true });
+            expect(d2.x).toEqual({ k: 2 });
+            expect(d2.y).toEqual('Y');
+            expect(d2.z).toEqual(true);
+        }
+        let g3 = Gubu({ ...new Foo(1) });
+        let d3 = { a: 11, x: true };
+        if (g3.valid(d3)) {
+            expect(d3).toEqual({ a: 11, x: true });
+            expect(d3.a).toEqual(11);
+            expect(d3.x).toEqual(true);
+        }
+        let g4 = Gubu({ x: Closed({ k: 1 }), y: 'Y' });
+        let d4 = { z: true };
+        if (g4.valid(d4)) {
+            expect(d4).toEqual({ x: { k: 1 }, y: 'Y', z: true });
+            expect(d4.x).toEqual({ k: 1 });
+            expect(d4.x.k).toEqual(1);
+            expect(d4.y).toEqual('Y');
+            expect(d4.z).toEqual(true);
+        }
     });
     test('readme-quick', () => {
         // Property a is optional, must be a Number, and defaults to 1.

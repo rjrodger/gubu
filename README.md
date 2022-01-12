@@ -177,6 +177,9 @@ import { Gubu } from 'gubu'
 
 Types are provided in [gubu.d.ts](gubu.d.ts).
 
+Gubu tries to play nice with compile-time type validation of your
+shapes, and [mostly succeeds](#typescript-types).
+
 
 ### Browser
 
@@ -1087,6 +1090,17 @@ shape({ a: 3 }) // throws "BAD VALUE 3 AT a"
 
 Where `$VALUE` and `$PATH` are replaced by the value and path to the
 value, respectively.
+
+
+### TypeScript Types
+
+
+type predicate:
+unit test valid-basic
+
+
+https://www.typescriptneedstypes.com/
+
 
 
 ### Shape Builders

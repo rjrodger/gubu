@@ -15,7 +15,7 @@ const GUBU$ = Symbol.for('gubu$');
 const GUBU = { gubu$: GUBU$, v$: package_json_1.default.version };
 // The current validation state.
 class State {
-    constructor(root, top, ctx) {
+    constructor(root, top, ctx, match) {
         this.match = false;
         this.dI = 0; // Node depth.
         this.nI = 2; // Next free slot in nodes.
@@ -39,6 +39,7 @@ class State {
         this.node = top;
         this.nodes = [top, -1];
         this.ctx = ctx || {};
+        this.match = !!match;
     }
     next() {
         // this.printStacks()
@@ -223,14 +224,14 @@ function norm(shape, depth) {
 }
 exports.norm = norm;
 function make(intop, inopts) {
+    // : GubuShape {
     const opts = null == inopts ? {} : inopts;
     opts.name =
         null == opts.name ? 'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name;
     let top = norm(intop, 0);
-    // let gubuShape = function GubuShape<T>(root?: T, ctx?: Context): T {
     function exec(root, ctx, match) {
-        let s = new State(root, top, ctx);
-        s.match = match;
+        let s = new State(root, top, ctx, match);
+        // s.match = match
         // Iterative depth-first traversal of the shape using append-only array stacks.
         while (true) {
             s.next();
@@ -380,9 +381,15 @@ function make(intop, inopts) {
         }
         return s.match ? 0 === s.err.length : s.root;
     }
-    let gubuShape = (function GubuShape(root, ctx) {
+    function gubuShape(root, ctx) {
         return exec(root, ctx, false);
-    });
+    }
+    function valid(root, ctx) {
+        let actx = ctx || {};
+        exec(root, actx, false);
+        return null == actx.err || 0 === actx.err.length;
+    }
+    gubuShape.valid = valid;
     gubuShape.match = (root, ctx) => {
         ctx = ctx || {};
         return exec(root, ctx, true);
@@ -460,10 +467,6 @@ function handleValidate(vf, s) {
     if (undefined !== update.type) {
         s.type = update.type;
     }
-    // TODO: remove?
-    // s.nI = undefined === update.nI ? s.nI : update.nI
-    // s.sI = undefined === update.sI ? s.sI : update.sI
-    // s.pI = undefined === update.pI ? s.pI : update.pI
     return update;
 }
 // function pathstr(path: string[], dI: number) {
@@ -1000,31 +1003,47 @@ exports.stringify = stringify;
 function clone(x) {
     return null == x ? x : 'object' !== typeof (x) ? x : JSON.parse(JSON.stringify(x));
 }
+// type GubuShape = ReturnType<typeof make>
+/*
+
+(<R>(root?: R, ctx?: any) => R) &
+{
+  valid: <D, S>(root?: D, ctx?: any) => root is (D & S),
+  match: (root?: any, ctx?: any) => boolean,
+  spec: () => any,
+  gubu: typeof GUBU
+}
+*/
 const G$ = (node) => norm({ ...node, $: { gubu$: true } });
 exports.G$ = G$;
 // Fix builder names after terser mangles them.
 /* istanbul ignore next */
 if ('undefined' !== typeof (window)) {
-    Object.defineProperty(Above, 'name', { value: 'Above' });
-    Object.defineProperty(After, 'name', { value: 'After' });
-    Object.defineProperty(All, 'name', { value: 'All' });
-    Object.defineProperty(Any, 'name', { value: 'Any' });
-    Object.defineProperty(Before, 'name', { value: 'Before' });
-    Object.defineProperty(Below, 'name', { value: 'Below' });
-    Object.defineProperty(Closed, 'name', { value: 'Closed' });
-    Object.defineProperty(Define, 'name', { value: 'Define' });
-    Object.defineProperty(Empty, 'name', { value: 'Empty' });
-    Object.defineProperty(Exact, 'name', { value: 'Exact' });
-    Object.defineProperty(Max, 'name', { value: 'Max' });
-    Object.defineProperty(Min, 'name', { value: 'Min' });
-    Object.defineProperty(Never, 'name', { value: 'Never' });
-    Object.defineProperty(One, 'name', { value: 'One' });
-    Object.defineProperty(Optional, 'name', { value: 'Optional' });
-    Object.defineProperty(Refer, 'name', { value: 'Refer' });
-    Object.defineProperty(Rename, 'name', { value: 'Rename' });
-    Object.defineProperty(Required, 'name', { value: 'Required' });
-    Object.defineProperty(Some, 'name', { value: 'Some' });
-    Object.defineProperty(Value, 'name', { value: 'Value' });
+    let builds = [
+        { b: Above, n: 'Above' },
+        { b: After, n: 'After' },
+        { b: All, n: 'All' },
+        { b: Any, n: 'Any' },
+        { b: Before, n: 'Before' },
+        { b: Below, n: 'Below' },
+        { b: Closed, n: 'Closed' },
+        { b: Define, n: 'Define' },
+        { b: Empty, n: 'Empty' },
+        { b: Exact, n: 'Exact' },
+        { b: Max, n: 'Max' },
+        { b: Min, n: 'Min' },
+        { b: Never, n: 'Never' },
+        { b: One, n: 'One' },
+        { b: Optional, n: 'Optional' },
+        { b: Refer, n: 'Refer' },
+        { b: Rename, n: 'Rename' },
+        { b: Required, n: 'Required' },
+        { b: Some, n: 'Some' },
+        { b: Value, n: 'Value' },
+    ];
+    for (let build of builds) {
+        Object.defineProperty(build.b, 'name', { value: build.n });
+    }
 }
 Object.assign(make, {
     Above,

@@ -26,7 +26,7 @@ type Options = {
 // Add your own references here for use in your own custom validations.
 // The reserved properties are: `err`.
 type Context = Record<string, any> & {
-  err?: ErrDesc[] // Provide an array to collect errors, instead of throwing.
+  err?: ErrDesc[] | boolean // Provide an array to collect errors, instead of throwing.
 }
 
 
@@ -122,12 +122,14 @@ class State {
     root: any,
     top: Node,
     ctx?: Context,
+    match?: boolean
   ) {
     this.root = root
     this.vals = [root, -1]
     this.node = top
     this.nodes = [top, -1]
     this.ctx = ctx || {}
+    this.match = !!match
   }
 
   next() {
@@ -418,21 +420,21 @@ function norm(shape?: any, depth?: number): Node {
 }
 
 
-function make(intop?: any, inopts?: Options): GubuShape {
+function make<S>(intop?: S, inopts?: Options) {
+  // : GubuShape {
   const opts = null == inopts ? {} : inopts
   opts.name =
     null == opts.name ? 'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name
 
   let top: Node = norm(intop, 0)
 
-  // let gubuShape = function GubuShape<T>(root?: T, ctx?: Context): T {
-  function exec<T>(
-    root: T | undefined,
-    ctx: Context | undefined,
-    match: boolean
-  ): T | boolean {
-    let s = new State(root, top, ctx)
-    s.match = match
+  function exec(
+    root: any,
+    ctx?: Context,
+    match?: boolean
+  ) {
+    let s = new State(root, top, ctx, match)
+    // s.match = match
 
     // Iterative depth-first traversal of the shape using append-only array stacks.
     while (true) {
@@ -620,12 +622,22 @@ function make(intop?: any, inopts?: Options): GubuShape {
   }
 
 
-  let gubuShape = (function GubuShape<T>(root?: T, ctx?: Context): T {
-    return (exec(root, ctx, false) as T)
-  }) as GubuShape
+  function gubuShape<R>(root?: R, ctx?: Context): R & S {
+    return (exec(root, ctx, false) as R & S)
+  }
 
 
-  gubuShape.match = (root?: any, ctx?: any): boolean => {
+  function valid<D>(root?: D, ctx?: Context): root is (D & S) {
+    let actx: any = ctx || {}
+    exec(root, actx, false)
+    return null == actx.err || 0 === actx.err.length
+  }
+
+
+  gubuShape.valid = valid
+
+
+  gubuShape.match = (root?: any, ctx?: Context): boolean => {
     ctx = ctx || {}
     return (exec(root, ctx, true) as boolean)
   }
@@ -724,11 +736,6 @@ function handleValidate(vf: Validate, s: State): Update {
   if (undefined !== update.type) {
     s.type = update.type
   }
-
-  // TODO: remove?
-  // s.nI = undefined === update.nI ? s.nI : update.nI
-  // s.sI = undefined === update.sI ? s.sI : update.sI
-  // s.pI = undefined === update.pI ? s.pI : update.pI
 
   return update
 }
@@ -1449,13 +1456,18 @@ function clone(x: any) {
 
 
 
-type GubuShape =
-  (<T>(root?: T, ctx?: any) => T) &
-  {
-    match: (root?: any, ctx?: any) => boolean,
-    spec: () => any,
-    gubu: typeof GUBU
-  }
+// type GubuShape = ReturnType<typeof make>
+
+/*
+
+(<R>(root?: R, ctx?: any) => R) &
+{
+  valid: <D, S>(root?: D, ctx?: any) => root is (D & S),
+  match: (root?: any, ctx?: any) => boolean,
+  spec: () => any,
+  gubu: typeof GUBU
+}
+*/
 
 
 const G$ = (node: any): Node => norm({ ...node, $: { gubu$: true } })
@@ -1464,26 +1476,31 @@ const G$ = (node: any): Node => norm({ ...node, $: { gubu$: true } })
 // Fix builder names after terser mangles them.
 /* istanbul ignore next */
 if ('undefined' !== typeof (window)) {
-  Object.defineProperty(Above, 'name', { value: 'Above' })
-  Object.defineProperty(After, 'name', { value: 'After' })
-  Object.defineProperty(All, 'name', { value: 'All' })
-  Object.defineProperty(Any, 'name', { value: 'Any' })
-  Object.defineProperty(Before, 'name', { value: 'Before' })
-  Object.defineProperty(Below, 'name', { value: 'Below' })
-  Object.defineProperty(Closed, 'name', { value: 'Closed' })
-  Object.defineProperty(Define, 'name', { value: 'Define' })
-  Object.defineProperty(Empty, 'name', { value: 'Empty' })
-  Object.defineProperty(Exact, 'name', { value: 'Exact' })
-  Object.defineProperty(Max, 'name', { value: 'Max' })
-  Object.defineProperty(Min, 'name', { value: 'Min' })
-  Object.defineProperty(Never, 'name', { value: 'Never' })
-  Object.defineProperty(One, 'name', { value: 'One' })
-  Object.defineProperty(Optional, 'name', { value: 'Optional' })
-  Object.defineProperty(Refer, 'name', { value: 'Refer' })
-  Object.defineProperty(Rename, 'name', { value: 'Rename' })
-  Object.defineProperty(Required, 'name', { value: 'Required' })
-  Object.defineProperty(Some, 'name', { value: 'Some' })
-  Object.defineProperty(Value, 'name', { value: 'Value' })
+  let builds: { b: Builder, n: string }[] = [
+    { b: Above, n: 'Above' },
+    { b: After, n: 'After' },
+    { b: All, n: 'All' },
+    { b: Any, n: 'Any' },
+    { b: Before, n: 'Before' },
+    { b: Below, n: 'Below' },
+    { b: Closed, n: 'Closed' },
+    { b: Define, n: 'Define' },
+    { b: Empty, n: 'Empty' },
+    { b: Exact, n: 'Exact' },
+    { b: Max, n: 'Max' },
+    { b: Min, n: 'Min' },
+    { b: Never, n: 'Never' },
+    { b: One, n: 'One' },
+    { b: Optional, n: 'Optional' },
+    { b: Refer, n: 'Refer' },
+    { b: Rename, n: 'Rename' },
+    { b: Required, n: 'Required' },
+    { b: Some, n: 'Some' },
+    { b: Value, n: 'Value' },
+  ]
+  for (let build of builds) {
+    Object.defineProperty(build.b, 'name', { value: build.n })
+  }
 }
 
 
@@ -1688,6 +1705,7 @@ export type {
   Builder,
   Node,
   State,
+  // GubuShape,
 }
 
 export {

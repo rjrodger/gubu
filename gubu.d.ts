@@ -6,7 +6,7 @@ declare type Options = {
     name?: string;
 };
 declare type Context = Record<string, any> & {
-    err?: ErrDesc[];
+    err?: ErrDesc[] | boolean;
 };
 declare type ValType = 'any' | // Any type.
 'array' | // An array.
@@ -69,7 +69,7 @@ declare class State {
     vals: any[];
     ctx: any;
     oval: any;
-    constructor(root: any, top: Node, ctx?: Context);
+    constructor(root: any, top: Node, ctx?: Context, match?: boolean);
     next(): void;
     updateVal(val: any): void;
 }
@@ -96,7 +96,17 @@ declare type ErrDesc = {
     u: any;
 };
 declare function norm(shape?: any, depth?: number): Node;
-declare function make(intop?: any, inopts?: Options): GubuShape;
+declare function make<S>(intop?: S, inopts?: Options): {
+    <R>(root?: R | undefined, ctx?: Context | undefined): R & S;
+    valid: <D>(root?: D | undefined, ctx?: Context | undefined) => root is D & S;
+    match(root?: any, ctx?: Context | undefined): boolean;
+    spec(): any;
+    toString: () => string;
+    gubu: {
+        gubu$: symbol;
+        v$: string;
+    };
+};
 declare const Required: Builder;
 declare const Optional: Builder;
 declare const Empty: Builder;
@@ -120,11 +130,6 @@ declare const Value: Builder;
 declare function buildize(invs0?: any, invs1?: any): Node;
 declare function makeErr(state: State, text?: string, why?: string, user?: any): ErrDesc;
 declare function stringify(src: any, replacer?: any, expand?: boolean): string;
-declare type GubuShape = (<T>(root?: T, ctx?: any) => T) & {
-    match: (root?: any, ctx?: any) => boolean;
-    spec: () => any;
-    gubu: typeof GUBU;
-};
 declare const G$: (node: any) => Node;
 declare type Gubu = typeof make & {
     G$: typeof G$;
@@ -174,7 +179,17 @@ declare type Gubu = typeof make & {
     GValue: typeof Value;
 };
 declare const Gubu: Gubu;
-declare function Args(shapes: Record<string, any>, wrapped?: any): GubuShape | ((this: any) => any);
+declare function Args(shapes: Record<string, any>, wrapped?: any): {
+    <R>(root?: R | undefined, ctx?: Context | undefined): any;
+    valid: <D>(root?: D | undefined, ctx?: Context | undefined) => root is any;
+    match(root?: any, ctx?: Context | undefined): boolean;
+    spec(): any;
+    toString: () => string;
+    gubu: {
+        gubu$: symbol;
+        v$: string;
+    };
+} | ((this: any) => any);
 declare const GAbove: Builder;
 declare const GAfter: Builder;
 declare const GAll: Builder;

@@ -105,9 +105,9 @@ let tmp = {}
 // J(o0({a:true}))
 
 
-let o0 = Gubu(One(String,Number))
+// let o0 = Gubu(One(String,Number))
 // let o0 = Gubu(Optional(One(Number,String)))
-console.log(o0())
+// console.log(o0())
 
 
 
