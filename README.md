@@ -372,14 +372,14 @@ QUICK INTRO WITH EXAMPLE
 ## API
 <sub><sup>[top](#top)</sup></sub>
 
+### Shape
+
 [API](#api) | 
 [Shapes](#shape) | 
 [Errors](#errors) | 
 [Custom Validation](#custom-validation) |
 [Builders](#shape-builder-reference)
 
-
-### Shape
 
 A shape specification can either be at the root of a JSON structure,
 an array element, or the value of an object property.  For a value to
