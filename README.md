@@ -1198,15 +1198,16 @@ The built-in shape builders are:
 
 
 
+---
 #### Above Builder
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-Above( value: number|string, child?: any )`
+Above( value: number|string, child?: any )
 ```
 
 * **Standalone:** `Above(2)`
-* **As Parent:** `Above(2,Number)`
+* **As Parent:** `Above(2, Number)`
 * **As Child:** `Optional(Above(2))`
 * **Chainable:** `Required(Number).Above(2)`
 
@@ -1214,7 +1215,7 @@ Only allow values that are above the given value in length. "Length" means:
 * Arrays: array length; 
 * Strings: string length; 
 * Objects: number of keys;
-* Numbers: numberic value;
+* Numbers: numeric value;
 * Object with property `length`: numeric value of `length`;
 * Anything else fails.
 
@@ -1236,7 +1237,7 @@ shape([1, 2, 3]) // PASS: array length 3 > 2
 shape([1, 2])    // FAIL: throws: 'Value "[1,2]" for path "" must have length above 2 (was 2).'
 
 ```
-
+---
 #### After Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1245,7 +1246,7 @@ TODO
 ```
 const { After } = Gubu
 ```
-
+---
 #### All Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1255,7 +1256,7 @@ implicit Required, use Optional explicitly
 ```
 const { All } = Gubu
 ```
-
+---
 #### Any Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1264,7 +1265,7 @@ TODO
 ```
 const { Any } = Gubu
 ```
-
+---
 #### Before Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1273,7 +1274,7 @@ TODO
 ```
 const { Before } = Gubu
 ```
-
+---
 #### Below Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1282,7 +1283,7 @@ TODO
 ```
 const { Below } = Gubu
 ```
-
+---
 #### Closed Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1292,7 +1293,7 @@ does not work on arrays
 ```
 const { ### } = Gubu
 ```
-
+---
 #### Define Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1302,7 +1303,7 @@ depth first order, define before refer
 ```
 const { Define } = Gubu
 ```
-
+---
 #### Empty Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1311,7 +1312,7 @@ TODO
 ```
 const { Empty } = Gubu
 ```
-
+---
 #### Exact Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1320,7 +1321,7 @@ TODO
 ```
 const { Exact } = Gubu
 ```
-
+---
 #### Max Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1329,7 +1330,7 @@ TODO
 ```
 const { Max } = Gubu
 ```
-
+---
 #### Min Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1338,7 +1339,7 @@ TODO
 ```
 const { Min } = Gubu
 ```
-
+---
 #### Never Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1347,7 +1348,7 @@ TODO
 ```
 const { Never } = Gubu
 ```
-
+---
 #### One Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1358,7 +1359,7 @@ implicit Required, use Optional explicitly
 ```
 const { One } = Gubu
 ```
-
+---
 #### Optional Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1367,7 +1368,7 @@ TODO
 ```
 const { Optional } = Gubu
 ```
-
+---
 #### Refer Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1377,7 +1378,7 @@ depth first order, define before refer
 ```
 const { Refer } = Gubu
 ```
-
+---
 #### Rename Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1386,7 +1387,7 @@ TODO
 ```
 const { Rename } = Gubu
 ```
-
+---
 #### Required Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1395,7 +1396,7 @@ TODO
 ```
 const { Required } = Gubu
 ```
-
+---
 #### Some Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
@@ -1405,7 +1406,7 @@ implicit Required, use Optional explicitly
 ```
 const { Some } = Gubu
 ```
-
+---
 #### Value Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
