@@ -528,13 +528,13 @@ const All = function (...inshapes) {
     node.u.list = inshapes;
     node.b.push(function All(val, update, state) {
         let pass = true;
-        let err = [];
+        // let err: any = []
         for (let shape of shapes) {
             let subctx = { ...state.ctx, err: [] };
             shape(val, subctx);
             if (0 < subctx.err.length) {
                 pass = false;
-                err.push(...subctx.err);
+                // err.push(...subctx.err)
             }
         }
         if (!pass) {
