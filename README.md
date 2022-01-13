@@ -1235,6 +1235,7 @@ shape('ab')  // FAIL: 'Value "ab" for path "" must have length above 2 (was 2).'
 shape([1, 2, 3]) // PASS: array length 3 > 2
 shape([1, 2])    // FAIL: throws: 'Value "[1,2]" for path "" must have length above 2 (was 2).'
 
+
 ```
 ---
 #### After Builder
@@ -1329,15 +1330,52 @@ TODO
 ```
 const { Max } = Gubu
 ```
+
+
 ---
 #### Min Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
-TODO
-
+```ts
+Min( value: number|string, child?: any )
 ```
+
+* **Standalone:** `Min(2)`
+* **As Parent:** `Min(2, Number)`
+* **As Child:** `Optional(Min(2))`
+* **Chainable:** `Required(Number).Min(2)`
+
+Only allow values that have length greater than or equal to the given
+minimum value. "Length" means:
+* Arrays: array length; 
+* Strings: string length; 
+* Objects: number of keys;
+* Numbers: numeric value;
+* Object with property `length`: numeric value of `length`;
+* Anything else fails.
+
+If the given value is a `string`, then a lexical comparison is made
+(thus, `'b'` is greater than `'a'` as `'b' > 'a'`)
+
+
+```js
 const { Min } = Gubu
+let shape = Gubu(Min(2))
+
+shape(3) // PASS: 3 >= 2; returns 3
+shape(2) // PASS: 2 >= 2; returns 2
+shape(1) // FAIL: throws 'Value "1" for path "" must be a minimum of 2 (was 1).'
+
+shape('abc') // PASS: 'abc'.length 3 >= 2 
+shape('ab')  // PASS: 'ab'.length 2 >= 2 
+shape('a')   // FAIL: 'Value "a" for path "" must be a minimum length of 2 (was 1).'
+
+shape([1, 2, 3]) // PASS: array length 3 >= 2
+shape([1, 2])    // PASS: array length 2 >= 2
+shape([1])       // FAIL: throws: 'Value "[1]" for path "" must be a minimum length of 2 (was 1).'
 ```
+
+
 ---
 #### Never Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
