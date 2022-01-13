@@ -446,3 +446,8 @@ let tmp = {}
 // console.log(Gubu(Exact(1))(NaN))
 // // console.log(Gubu(Exact(1))())
 
+
+
+let a0 = Gubu(Optional(Number).After((v) => 0 === v % 2))
+console.log(a0.spec())
+console.log(a0())

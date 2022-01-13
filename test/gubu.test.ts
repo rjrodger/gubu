@@ -33,6 +33,7 @@ const G$ = Gubu.G$
 const buildize = Gubu.buildize
 const makeErr = Gubu.makeErr
 const stringify = Gubu.stringify
+const truncate = Gubu.truncate
 const Args = Gubu.Args
 
 const Above = Gubu.Above
@@ -686,7 +687,7 @@ Validation failed for path "q.b" with value "x" because the value is not of type
 
 
     // Long values are truncated in error descriptions.
-    expect(() => Gubu(Number)('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toThrow('Validation failed for path "" with value "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..." because the value is not of type number.')
+    expect(() => Gubu(Number)('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toThrow('Validation failed for path "" with value "aaaaaaaaaaaaaaaaaaaaaaaaaaa..." because the value is not of type number.')
 
 
     // Explicit `undefined` and `null`
@@ -841,15 +842,37 @@ Validation failed for path "q.b" with value "x" because the value is not of type
     expect(shape_AboveB3()).toEqual(undefined)
 
 
-    let shape_AfterB0 = Gubu(After((v: any) => v > 10, 10))
+    let shape_AfterB0 = Gubu(After((v: any) => v > 10, 15))
     expect(shape_AfterB0(11)).toEqual(11)
     expect(() => shape_AfterB0(10)).toThrow('Validation failed for path "" with value "10" because check "custom: (v) => v > 10" failed.')
+    expect(() => shape_AfterB0('x')).toThrow(`Validation failed for path "" with value "x" because the value is not of type number.
+Validation failed for path "" with value "x" because check "custom: (v) => v > 10" failed.`)
+    expect(shape_AfterB0()).toEqual(15)
+
+    let shape_AfterB1 = Gubu(Optional(Number).After((v: any) => 0 === v % 2))
+    expect(shape_AfterB1(2)).toEqual(2)
+    expect(() => shape_AfterB1(3)).toThrow('Validation failed for path "" with value "3" because check "custom: (v) => 0 === v % 2" failed.')
+    expect(() => shape_AfterB1('x')).toThrow('Validation failed for path "" with value "x" because check "custom: (v) => 0 === v % 2" failed.')
+    expect(shape_AfterB1()).toEqual(undefined)
+
+    let shape_AfterB2 = Gubu(After((v: any) => 0 === v.x % 2, Required({ x: Number })))
+    expect(shape_AfterB2({ x: 2 })).toEqual({ x: 2 })
+    expect(() => shape_AfterB2({ x: 3 })).toThrow('Validation failed for path "" with value "{x:3}" because check "custom: (v) => 0 === v.x % 2" failed.')
+
+    expect(() => shape_AfterB2({})).toThrow(`Validation failed for path "" with value "{}" because check "custom: (v) => 0 === v.x % 2" failed.
+Validation failed for path "x" with value "" because the value is required.`)
+
+    expect(() => shape_AfterB2()).toThrow(`Validation failed for path "" with value "" because the value is required.
+Validation failed for path "" with value "" because check "custom: (v) => 0 === v.x % 2" failed (threw: Cannot read property 'x' of undefined)`)
+
     // TODO: modify value
+
 
     let shape_AllB0 = Gubu(All(Number, (v: any) => v > 10))
     expect(shape_AllB0(11)).toEqual(11)
     expect(() => shape_AllB0(10)).toThrow(`Value "10" for path "" does not satisfy all of: "Number","(v) => v > 10"`)
     // TODO: object props
+
 
     let shape_AnyB0 = Gubu(Any())
     expect(shape_AnyB0(11)).toEqual(11)
@@ -860,6 +883,7 @@ Validation failed for path "q.b" with value "x" because the value is not of type
     expect(shape_AnyB0({})).toEqual({})
     expect(shape_AnyB0([])).toEqual([])
 
+
     let shape_BeforeB0 = Gubu(Before((v: any) => v > 10, 10))
     expect(shape_BeforeB0(11)).toEqual(11)
     expect(() => shape_BeforeB0(10)).toThrow('Validation failed for path "" with value "10" because check "custom: (v) => v > 10" failed.')
@@ -869,9 +893,11 @@ Validation failed for path "q.b" with value "x" because the value is not of type
     expect(shape_BelowB0(9)).toEqual(9)
     expect(() => shape_BelowB0(10)).toThrow('Value "10" for path "" must be below 10 (was 10).')
 
+
     let shape_ClosedB0 = Gubu(Closed({ a: 11 }))
     expect(shape_ClosedB0({ a: 10 })).toEqual({ a: 10 })
     expect(() => shape_ClosedB0({ a: 10, b: 11 })).toThrow('Validation failed for path "" with value "{a:10,b:11}" because the property "b" is not allowed.')
+
 
     let shape_DefineB0 = Gubu({ a: Define('foo', 11), b: Refer('foo') })
     expect(shape_DefineB0({ a: 10, b: 12 })).toEqual({ a: 10, b: 12 })
@@ -882,6 +908,7 @@ Validation failed for path "b" with value "B" because the value is not of type n
     expect(shape_EmptyB0({ a: '', b: 'ABC' })).toEqual({ a: '', b: 'ABC' })
     expect(() => shape_EmptyB0({ a: '', b: '' })).toThrow('Validation failed for path "b" with value "" because the value is required.')
 
+
     let shape_ExactB0 = Gubu(Exact(11, 12, true))
     expect(shape_ExactB0(11)).toEqual(11)
     expect(shape_ExactB0(12)).toEqual(12)
@@ -889,15 +916,18 @@ Validation failed for path "b" with value "B" because the value is not of type n
     expect(() => shape_ExactB0(10)).toThrow('Value "10" for path "" must be exactly one of: 11,12,true.')
     expect(() => shape_ExactB0(false)).toThrow('Value "false" for path "" must be exactly one of: 11,12,true.')
 
+
     let shape_MaxB0 = Gubu(Max(11))
     expect(shape_MaxB0(11)).toEqual(11)
     expect(shape_MaxB0(10)).toEqual(10)
     expect(() => shape_MaxB0(12)).toThrow('Value "12" for path "" must be a maximum of 11 (was 12).')
 
+
     let shape_MinB0 = Gubu(Min(11))
     expect(shape_MinB0(11)).toEqual(11)
     expect(shape_MinB0(12)).toEqual(12)
     expect(() => shape_MinB0(10)).toThrow('Value "10" for path "" must be a minimum of 11 (was 10).')
+
 
     let shape_NeverB0 = Gubu(Never())
     expect(() => shape_NeverB0(10)).toThrow('Validation failed for path "" with value "10" because no value is allowed.')
@@ -915,6 +945,7 @@ Validation failed for path "b" with value "B" because the value is not of type n
     expect(() => shape_OneB0()).toThrow('Value "" for path "" does not satisfy one of: "10","11","true"')
     // TODO: more complex objects
 
+
     let shape_OptionalB0 = Gubu({ a: Optional(11) })
     expect(shape_OptionalB0({ a: 10 })).toEqual({ a: 10 })
     expect(shape_OptionalB0({})).toEqual({})
@@ -926,6 +957,7 @@ Validation failed for path "b" with value "B" because the value is not of type n
 Validation failed for path "b" with value "B" because the value is not of type number.`)
     // TODO: also recursive
 
+
     let shape_RenameB0 = Gubu({ a: Rename('b', Number) })
     expect(shape_RenameB0({ a: 10 })).toEqual({ b: 10 })
     expect(() => shape_RenameB0({})).toThrow('Validation failed for path "a" with value "" because the value is required.')
@@ -934,19 +966,21 @@ Validation failed for path "b" with value "B" because the value is not of type n
     expect(shape_RenameB1({ a: 10 })).toEqual({ a: 10, b: 10 })
     expect(shape_RenameB1({})).toEqual({ a: 123, b: 123 })
 
+
     let shape_RequiredB0 = Gubu(Required(11))
     expect(shape_RequiredB0(11)).toEqual(11)
     expect(() => shape_RequiredB0()).toThrow('Validation failed for path "" with value "" because the value is required.')
 
     // FIX
     let shape_SomeB0 = Gubu(Some({ x: 1 }, { y: 2 }))
-    // expect(shape_SomeB0({ x: 1 })).toEqual({ x: 1 }) 
-    // expect(shape_SomeB0({ y: 2 })).toEqual({ y: 2 })
+    expect(shape_SomeB0({ x: 1 })).toEqual({ x: 1 })
+    expect(shape_SomeB0({ y: 2 })).toEqual({ y: 2 })
     expect(shape_SomeB0({ x: 1, y: 2 })).toEqual({ x: 1, y: 2 })
     expect(shape_SomeB0({ x: true, y: 2 })).toEqual({ x: true, y: 2 })
     expect(shape_SomeB0({ x: 1, y: true })).toEqual({ x: 1, y: true })
     expect(() => shape_SomeB0({ x: true, y: true })).toThrow(`Value "{x:true,y:true}" for path "" does not satisfy some of: {"x":1},{"y":2}`)
     // TODO: more complex objects
+
 
     let shape_ValueB0 = Gubu(Value({}, Number))
     expect(shape_ValueB0({ x: 10 })).toEqual({ x: 10 })
@@ -2400,6 +2434,124 @@ Value "5" for path "d.1" must be below 4 (was 5).`)
     let f2 = Args({ a: 1 }, n0)
     expect(f2()).toEqual(1)
     expect(f2(2)).toEqual(2)
+  })
+
+
+  test('truncate', () => {
+    expect(truncate('')).toEqual('')
+    expect(truncate('0')).toEqual('0')
+    expect(truncate('01')).toEqual('01')
+    expect(truncate('012')).toEqual('012')
+    expect(truncate('0123')).toEqual('0123')
+    expect(truncate('01234')).toEqual('01234')
+    expect(truncate('012345')).toEqual('012345')
+    expect(truncate('0123456')).toEqual('0123456')
+    expect(truncate('01234567')).toEqual('01234567')
+    expect(truncate('012345678')).toEqual('012345678')
+    expect(truncate('0123456789')).toEqual('0123456789')
+    expect(truncate('01234567890123456789012345678')).toEqual('01234567890123456789012345678')
+    expect(truncate('012345678901234567890123456789')).toEqual('012345678901234567890123456789')
+    expect(truncate('0123456789012345678901234567890')).toEqual('012345678901234567890123456...')
+
+    expect(truncate('', 6)).toEqual('')
+    expect(truncate('0', 6)).toEqual('0')
+    expect(truncate('01', 6)).toEqual('01')
+    expect(truncate('012', 6)).toEqual('012')
+    expect(truncate('0123', 6)).toEqual('0123')
+    expect(truncate('01234', 6)).toEqual('01234')
+    expect(truncate('012345', 6)).toEqual('012345')
+    expect(truncate('0123456', 6)).toEqual('012...')
+    expect(truncate('01234567', 6)).toEqual('012...')
+    expect(truncate('012345678', 6)).toEqual('012...')
+    expect(truncate('0123456789', 6)).toEqual('012...')
+
+    expect(truncate('', 5)).toEqual('')
+    expect(truncate('0', 5)).toEqual('0')
+    expect(truncate('01', 5)).toEqual('01')
+    expect(truncate('012', 5)).toEqual('012')
+    expect(truncate('0123', 5)).toEqual('0123')
+    expect(truncate('01234', 5)).toEqual('01234')
+    expect(truncate('012345', 5)).toEqual('01...')
+    expect(truncate('0123456', 5)).toEqual('01...')
+    expect(truncate('01234567', 5)).toEqual('01...')
+    expect(truncate('012345678', 5)).toEqual('01...')
+    expect(truncate('0123456789', 5)).toEqual('01...')
+
+    expect(truncate('', 4)).toEqual('')
+    expect(truncate('0', 4)).toEqual('0')
+    expect(truncate('01', 4)).toEqual('01')
+    expect(truncate('012', 4)).toEqual('012')
+    expect(truncate('0123', 4)).toEqual('0123')
+    expect(truncate('01234', 4)).toEqual('0...')
+    expect(truncate('012345', 4)).toEqual('0...')
+    expect(truncate('0123456', 4)).toEqual('0...')
+    expect(truncate('01234567', 4)).toEqual('0...')
+    expect(truncate('012345678', 4)).toEqual('0...')
+    expect(truncate('0123456789', 4)).toEqual('0...')
+
+    expect(truncate('', 3)).toEqual('')
+    expect(truncate('0', 3)).toEqual('0')
+    expect(truncate('01', 3)).toEqual('01')
+    expect(truncate('012', 3)).toEqual('012')
+    expect(truncate('0123', 3)).toEqual('...')
+    expect(truncate('01234', 3)).toEqual('...')
+    expect(truncate('012345', 3)).toEqual('...')
+    expect(truncate('0123456', 3)).toEqual('...')
+    expect(truncate('01234567', 3)).toEqual('...')
+    expect(truncate('012345678', 3)).toEqual('...')
+    expect(truncate('0123456789', 3)).toEqual('...')
+
+    expect(truncate('', 2)).toEqual('')
+    expect(truncate('0', 2)).toEqual('0')
+    expect(truncate('01', 2)).toEqual('01')
+    expect(truncate('012', 2)).toEqual('..')
+    expect(truncate('0123', 2)).toEqual('..')
+    expect(truncate('01234', 2)).toEqual('..')
+    expect(truncate('012345', 2)).toEqual('..')
+    expect(truncate('0123456', 2)).toEqual('..')
+    expect(truncate('01234567', 2)).toEqual('..')
+    expect(truncate('012345678', 2)).toEqual('..')
+    expect(truncate('0123456789', 2)).toEqual('..')
+
+    expect(truncate('', 1)).toEqual('')
+    expect(truncate('0', 1)).toEqual('0')
+    expect(truncate('01', 1)).toEqual('.')
+    expect(truncate('012', 1)).toEqual('.')
+    expect(truncate('0123', 1)).toEqual('.')
+    expect(truncate('01234', 1)).toEqual('.')
+    expect(truncate('012345', 1)).toEqual('.')
+    expect(truncate('0123456', 1)).toEqual('.')
+    expect(truncate('01234567', 1)).toEqual('.')
+    expect(truncate('012345678', 1)).toEqual('.')
+    expect(truncate('0123456789', 1)).toEqual('.')
+
+    expect(truncate('', 0)).toEqual('')
+    expect(truncate('0', 0)).toEqual('')
+    expect(truncate('01', 0)).toEqual('')
+    expect(truncate('012', 0)).toEqual('')
+    expect(truncate('0123', 0)).toEqual('')
+    expect(truncate('01234', 0)).toEqual('')
+    expect(truncate('012345', 0)).toEqual('')
+    expect(truncate('0123456', 0)).toEqual('')
+    expect(truncate('01234567', 0)).toEqual('')
+    expect(truncate('012345678', 0)).toEqual('')
+    expect(truncate('0123456789', 0)).toEqual('')
+
+    expect(truncate('', -1)).toEqual('')
+    expect(truncate('0', -1)).toEqual('')
+    expect(truncate('01', -1)).toEqual('')
+    expect(truncate('012', -1)).toEqual('')
+    expect(truncate('0123', -1)).toEqual('')
+    expect(truncate('01234', -1)).toEqual('')
+    expect(truncate('012345', -1)).toEqual('')
+    expect(truncate('0123456', -1)).toEqual('')
+    expect(truncate('01234567', -1)).toEqual('')
+    expect(truncate('012345678', -1)).toEqual('')
+    expect(truncate('0123456789', -1)).toEqual('')
+
+    expect(truncate((NaN as unknown as string), 5)).toEqual('NaN')
+    expect(truncate((null as unknown as string), 5)).toEqual('')
+    expect(truncate((undefined as unknown as string), 5)).toEqual('')
   })
 
 

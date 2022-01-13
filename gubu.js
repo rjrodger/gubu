@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GValue = exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.Args = exports.stringify = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
+exports.GValue = exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.Args = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
@@ -406,12 +406,12 @@ function make(intop, inopts) {
     };
     let desc = '';
     gubuShape.toString = gubuShape[util_1.inspect.custom] = () => {
-        desc = '' === desc ?
+        desc = truncate('' === desc ?
             stringify((top &&
                 top.$ &&
                 (GUBU$ === top.$.gubu$ || true === top.$.gubu$)) ? top.v : top) :
-            desc;
-        desc = desc.substring(0, 33) + (33 < desc.length ? '...' : '');
+            desc);
+        // desc = desc.substring(0, 33) + (33 < desc.length ? '...' : '')
         return `[Gubu ${opts.name} ${desc}]`;
     };
     gubuShape.gubu = GUBU;
@@ -419,9 +419,15 @@ function make(intop, inopts) {
 }
 function handleValidate(vf, s) {
     let update = {};
-    let valid = vf(s.val, update, s);
+    let valid = false;
+    let thrown;
+    try {
+        valid = vf(s.val, update, s);
+    }
+    catch (ve) {
+        thrown = ve;
+    }
     let hasErrs = Array.isArray(update.err) ? 0 < update.err.length : null != update.err;
-    // console.log('HV', valid, hasErrs, update)
     if (!valid || hasErrs) {
         // Explicit Optional allows undefined
         if (undefined === s.val && (s.node.o || !s.node.r) && true !== update.done) {
@@ -444,10 +450,10 @@ function handleValidate(vf, s) {
         else {
             let fname = vf.name;
             if (null == fname || '' == fname) {
-                fname = vf.toString().replace(/[ \t\r\n]+/g, ' ');
-                fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname;
+                fname = truncate(vf.toString().replace(/[ \t\r\n]+/g, ' '));
+                // fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname
             }
-            s.err.push(makeErrImpl(w, s, 1045, undefined, {}, fname));
+            s.err.push(makeErrImpl(w, s, 1045, undefined, { thrown }, fname));
         }
         update.done = null == update.done ? true : update.done;
     }
@@ -607,7 +613,6 @@ const Exact = function (...vals) {
         update.err =
             makeErr(state, `Value "$VALUE" for path "$PATH" must be exactly one of: ${state.node.s}.`);
         update.done = true;
-        // console.log('EXACT U', update)
         return false;
     });
     node.s = vals.map(v => stringify(v)).join(',');
@@ -633,21 +638,6 @@ const Closed = function (shape) {
         if (null != val && 'object' === typeof (val) && !Array.isArray(val)) {
             let vkeys = Object.keys(val);
             let allowed = node.v;
-            //   // NOTE: disabling array for now
-            //   // // For arrays, handle non-index properties, and special element offset.
-            //   // if ('array' === s.node.t) {
-            //   //   allowed = Object.keys(node.v).slice(1)
-            //   //     .map((x: any) => {
-            //   //       let i = parseInt(x)
-            //   //       if (isNaN(i)) {
-            //   //         return x
-            //   //       }
-            //   //       else {
-            //   //         return i - 1
-            //   //       }
-            //   //     })
-            //   //     .reduce((a: any, i: any) => (a[i] = true, a), {})
-            //   // }
             update.err = [];
             for (let k of vkeys) {
                 if (undefined === allowed[k]) {
@@ -788,6 +778,15 @@ function valueLen(val) {
             null != val && 'object' === typeof (val) ? Object.keys(val).length :
                 NaN;
 }
+function truncate(str, len) {
+    let strval = String(str);
+    let outlen = null == len || isNaN(len) ? 30 : len < 0 ? 0 : ~~len;
+    let strlen = null == str ? 0 : strval.length;
+    let substr = null == str ? '' : strval.substring(0, strlen);
+    substr = outlen < strlen ? substr.substring(0, outlen - 3) + '...' : substr;
+    return substr.substring(0, outlen);
+}
+exports.truncate = truncate;
 const Min = function (min, shape) {
     let node = buildize(this, shape);
     node.b.push(function Min(val, update, state) {
@@ -933,8 +932,8 @@ function makeErrImpl(why, s, mark, text, user, fname) {
         u: user || {},
     };
     let jstr = undefined === s.val ? '' : stringify(s.val);
-    let valstr = jstr.replace(/"/g, '');
-    valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '');
+    let valstr = truncate(jstr.replace(/"/g, ''));
+    // valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '')
     if (null == text || '' === text) {
         err.t = `Validation failed for path "${err.p}" ` +
             `with value "${valstr}" because ` +
@@ -944,7 +943,7 @@ function makeErrImpl(why, s, mark, text, user, fname) {
                     'closed' === why ? `the property "${user === null || user === void 0 ? void 0 : user.k}" is not allowed` :
                         'never' === why ? 'no value is allowed' :
                             `check "${why + (fname ? ': ' + fname : '')}" failed`) +
-            '.';
+            (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.');
     }
     else {
         err.t = text
@@ -976,9 +975,9 @@ function stringify(src, replacer, expand) {
                     val = val.name;
                 }
                 else {
-                    val = val.toString().replace(/[ \t\r\n]+/g, ' ');
-                    let vlen = val.length;
-                    val = val.substring(0, 30) + (30 < vlen ? '...' : '');
+                    val = truncate(val.toString().replace(/[ \t\r\n]+/g, ' '));
+                    // let vlen = val.length
+                    // val = val.substring(0, 30) + (30 < vlen ? '...' : '')
                 }
             }
             else if ('bigint' === typeof (val)) {
@@ -1090,6 +1089,7 @@ Object.assign(make, {
     buildize,
     makeErr,
     stringify,
+    truncate,
     Args,
 });
 Object.defineProperty(make, 'name', { value: 'gubu' });

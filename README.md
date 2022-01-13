@@ -757,7 +757,8 @@ shape({ a: 11 }) // passes, as 10 < 11 is true
 shape({ a: 9 })  // fails, as 10 < 9 is false
 ```
 
-You modify the value using the second argument to the custom
+<a name="update-type"></a>
+You modify the value using the second argument (`Update`) to the custom
 validation function:
 
 ```
@@ -784,7 +785,8 @@ shape({ a: 3 }) // throws "BAD VALUE 3 AT a"
 The special replacement tags `$VALUE` and `$PATH` are replaced with
 the value, and the path to the value, respectively.
 
-The third argument to a custom validator is the internal state of the
+<a name="state-type"></a>
+The third argument (`State`) to a custom validator is the internal state of the
 validation process. This provided for special cases and workarounds,
 and the internal set of properties is not stable. Review the [source
 code](https://github.com/rjrodger/gubu/blob/main/gubu.ts#L80) to see
@@ -1229,97 +1231,302 @@ let shape = Gubu(Above(2))
 shape(3) // PASS: 3 > 2; returns 3
 shape(2) // FAIL: throws 'Value "2" for path "" must be above 2 (was 2).'
 
-shape('abc') // PASS: 'abc'.length 3 > 2 
+shape('abc') // PASS: 'abc'.length 3 > 2; returns 'abc'
 shape('ab')  // FAIL: 'Value "ab" for path "" must have length above 2 (was 2).'
 
-shape([1, 2, 3]) // PASS: array length 3 > 2
+shape([1, 2, 3]) // PASS: array length 3 > 2; returns [1, 2, 3]
 shape([1, 2])    // FAIL: throws: 'Value "[1,2]" for path "" must have length above 2 (was 2).'
-
-
 ```
+
+
 ---
 #### After Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
-TODO
+```ts
+After( validate: Validate, child?: any )
+```
+
+* **Standalone:** `After(() => true)`
+* **As Parent:** `After({() => true, {x: 1})`
+* **As Child:** `Required(After(() => true))`
+* **Chainable:** `Optional({x: 1}).After(() => true)`
+
+Provide a validation function that will run after the value has been
+processed normally. The validation function has the form:
 
 ```
-const { After } = Gubu
+Validate(value: any, update: Update, state: State): boolean
 ```
+
+Return `true` if the value is valid, `false` otherwise. See the 
+[Custom Validations](#custom-validations) section.
+
+
+```js
+const { After } = Gubu
+let shape = Gubu(After(v => 0 === v%2)) // Pass if value is even
+
+shape(1) // FAIL: 1 is not even
+shape(2) // PASS: 2 is even; returns 2
+shape()  // PASS: returns undefined
+
+shape = Gubu(After(v => 0 === v.x%2, Required({x: Number})))
+shape({x: 1}) // FAIL: 1 is not even
+shape({x: 2)) // PASS: 2 is even; returns 2
+shape({x: 'X'}) // FAIL: 'X' is not a number
+shape({}) // FAIL: x is required
+shape() // FAIL: {x: Number} is required
+```
+
+See also: [Update](#update-type), [State](#state-type).
+
 ---
 #### All Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+All( child?: any )
+```
+
+* **Standalone:** `All`
+* **As Parent:** `All({x: 1})`
+* **As Child:** `Required(All())`
+* **Chainable:** `Optional({x: 1}).All()`
+
 TODO
 implicit Required, use Optional explicitly
 
-```
+```js
 const { All } = Gubu
+let shape = Gubu(All())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_AllB0 = Gubu(All(Number, (v: any) => v > 10))
+    expect(shape_AllB0(11)).toEqual(11)
+    expect(() => shape_AllB0(10)).toThrow(`Value "10" for path "" does not satisfy all of: "Number","(v) => v > 10"`)
+    // TODO: object props
 ```
+
+
 ---
 #### Any Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+Any( child?: any )
+```
+
+* **Standalone:** `Any`
+* **As Parent:** `Any({x: 1})`
+* **As Child:** `Required(Any())`
+* **Chainable:** `Optional({x: 1}).Any()`
+
 TODO
 
-```
+```js
 const { Any } = Gubu
+let shape = Gubu(Any())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_AnyB0 = Gubu(Any())
+    expect(shape_AnyB0(11)).toEqual(11)
+    expect(shape_AnyB0(10)).toEqual(10)
+    expect(shape_AnyB0()).toEqual(undefined)
+    expect(shape_AnyB0(null)).toEqual(null)
+    expect(shape_AnyB0(NaN)).toEqual(NaN)
+    expect(shape_AnyB0({})).toEqual({})
+    expect(shape_AnyB0([])).toEqual([])
 ```
+
+
 ---
 #### Before Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+Before( child?: any )
+```
+
+* **Standalone:** `Before`
+* **As Parent:** `Before({x: 1})`
+* **As Child:** `Required(Before())`
+* **Chainable:** `Optional({x: 1}).Before()`
+
 TODO
 
-```
+```js
 const { Before } = Gubu
+let shape = Gubu(Before())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_BeforeB0 = Gubu(Before((v: any) => v > 10, 10))
+    expect(shape_BeforeB0(11)).toEqual(11)
+    expect(() => shape_BeforeB0(10)).toThrow('Validation failed for path "" with value "10" because check "custom: (v) => v > 10" failed.')
+    // TODO: modify value
 ```
+
+
 ---
 #### Below Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
-TODO
+```ts
+Below( value: number|string, child?: any )
+```
 
-```
+* **Standalone:** `Below(2)`
+* **As Parent:** `Below(2, Number)`
+* **As Child:** `Optional(Below(2))`
+* **Chainable:** `Required(Number).Below(2)`
+
+Only allow values that are below the given value in length. "Length" means:
+* Arrays: array length; 
+* Strings: string length; 
+* Objects: number of keys;
+* Numbers: numeric value;
+* Object with property `length`: numeric value of `length`;
+* Anything else fails.
+
+If the given value is a `string`, then a lexical comparison is made
+(thus, `'b'` is below `'a'` as `'b' > 'a'`)
+
+
+```js
 const { Below } = Gubu
+let shape = Gubu(Below(2))
+
+shape(1) // PASS: 1 < 2; returns 1
+shape(2) // FAIL: throws 'Value "2" for path "" must be below 2 (was 2).'
+
+shape('abc') // PASS: 'abc'.length 1 < 2; returns 'abc' 
+shape('ab')  // FAIL: 'Value "ab" for path "" must have length below 2 (was 2).'
+
+shape([1])    // PASS: array length 1 < 2; returns [1]
+shape([1, 2]) // FAIL: throws: 'Value "[1, 2]" for path "" must have length below 2 (was 2).'
 ```
+
+
 ---
 #### Closed Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
-TODO
-does not work on arrays
+```ts
+Closed( child?: any )
+```
 
+* **Standalone:** `Closed`
+* **As Parent:** `Closed({x: 1})`
+* **As Child:** `Required(Closed())`
+* **Chainable:** `Optional({x: 1}).Closed()`
+
+TODO
+
+```js
+const { Closed } = Gubu
+let shape = Gubu(Closed())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_ClosedB0 = Gubu(Closed({ a: 11 }))
+    expect(shape_ClosedB0({ a: 10 })).toEqual({ a: 10 })
+    expect(() => shape_ClosedB0({ a: 10, b: 11 })).toThrow('Validation failed for path "" with value "{a:10,b:11}" because the property "b" is not allowed.')
 ```
-const { ### } = Gubu
-```
+
+
 ---
 #### Define Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+Define( child?: any )
+```
+
+* **Standalone:** `Define`
+* **As Parent:** `Define({x: 1})`
+* **As Child:** `Required(Define())`
+* **Chainable:** `Optional({x: 1}).Define()`
+
 TODO
 depth first order, define before refer
 
-```
+```js
 const { Define } = Gubu
+let shape = Gubu(Define())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_DefineB0 = Gubu({ a: Define('foo', 11), b: Refer('foo') })
+    expect(shape_DefineB0({ a: 10, b: 12 })).toEqual({ a: 10, b: 12 })
+    expect(() => shape_DefineB0({ a: 'A', b: 'B' })).toThrow(`Validation failed for path "a" with value "A" because the value is not of type number.
+Validation failed for path "b" with value "B" because the value is not of type number.`)
 ```
+
+
 ---
 #### Empty Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+Empty( child?: any )
+```
+
+* **Standalone:** `Empty`
+* **As Parent:** `Empty({x: 1})`
+* **As Child:** `Required(Empty())`
+* **Chainable:** `Optional({x: 1}).Empty()`
+
 TODO
 
-```
+```js
 const { Empty } = Gubu
+let shape = Gubu(Empty())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_EmptyB0 = Gubu({ a: Empty(String), b: String })
+    expect(shape_EmptyB0({ a: '', b: 'ABC' })).toEqual({ a: '', b: 'ABC' })
+    expect(() => shape_EmptyB0({ a: '', b: '' })).toThrow('Validation failed for path "b" with value "" because the value is required.')
 ```
+
+
 ---
 #### Exact Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+Exact( child?: any )
+```
+
+* **Standalone:** `Exact`
+* **As Parent:** `Exact({x: 1})`
+* **As Child:** `Required(Exact())`
+* **Chainable:** `Optional({x: 1}).Exact()`
+
 TODO
 
-```
+```js
 const { Exact } = Gubu
+let shape = Gubu(Exact())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_ExactB0 = Gubu(Exact(11, 12, true))
+    expect(shape_ExactB0(11)).toEqual(11)
+    expect(shape_ExactB0(12)).toEqual(12)
+    expect(shape_ExactB0(true)).toEqual(true)
+    expect(() => shape_ExactB0(10)).toThrow('Value "10" for path "" must be exactly one of: 11,12,true.')
+    expect(() => shape_ExactB0(false)).toThrow('Value "false" for path "" must be exactly one of: 11,12,true.')
 ```
 
 
@@ -1357,12 +1564,12 @@ shape(1) // PASS: 1 <= 1; returns 1
 shape(2) // PASS: 1 <= 2; returns 2
 shape(3) // FAIL: throws 'Value "3" for path "" must be a maximum of 2 (was 3).'
 
-shape('a')   // PASS: 'a'.length 1 <= 2 
-shape('ab')  // PASS: 'ab'.length 2 <= 2 
+shape('a')   // PASS: 'a'.length 1 <= 2; returns 'a'
+shape('ab')  // PASS: 'ab'.length 2 <= 2 ; returns 'ab'
 shape('abc') // FAIL: 'Value "abc" for path "" must be a maximum length of 2 (was 3).'
 
-shape([1])       // PASS: array length 1 <= 2
-shape([1, 2])    // PASS: array length 2 <= 2
+shape([1])       // PASS: array length 1 <= 2; returns [1]
+shape([1, 2])    // PASS: array length 2 <= 2; returns [1, 2]
 shape([1, 2, 3]) // FAIL: throws: 'Value "[1, 2, 3]" for path "" must be a maximum length of 2 (was 3).'
 
 
@@ -1400,12 +1607,12 @@ shape(3) // PASS: 3 >= 2; returns 3
 shape(2) // PASS: 2 >= 2; returns 2
 shape(1) // FAIL: throws 'Value "1" for path "" must be a minimum of 2 (was 1).'
 
-shape('abc') // PASS: 'abc'.length 3 >= 2 
-shape('ab')  // PASS: 'ab'.length 2 >= 2 
+shape('abc') // PASS: 'abc'.length 3 >= 2; returns 'abc'
+shape('ab')  // PASS: 'ab'.length 2 >= 2 ; returns 'ab'
 shape('a')   // FAIL: 'Value "a" for path "" must be a minimum length of 2 (was 1).'
 
-shape([1, 2, 3]) // PASS: array length 3 >= 2
-shape([1, 2])    // PASS: array length 2 >= 2
+shape([1, 2, 3]) // PASS: array length 3 >= 2; returns [1, 2, 3]
+shape([1, 2])    // PASS: array length 2 >= 2; returns [1, 2]
 shape([1])       // FAIL: throws: 'Value "[1]" for path "" must be a minimum length of 2 (was 1).'
 ```
 
@@ -1414,79 +1621,248 @@ shape([1])       // FAIL: throws: 'Value "[1]" for path "" must be a minimum len
 #### Never Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+Never( child?: any )
+```
+
+* **Standalone:** `Never`
+* **As Parent:** `Never({x: 1})`
+* **As Child:** `Required(Never())`
+* **Chainable:** `Optional({x: 1}).Never()`
+
 TODO
 
-```
+```js
 const { Never } = Gubu
+let shape = Gubu(Never())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_NeverB0 = Gubu(Never())
+    expect(() => shape_NeverB0(10)).toThrow('Validation failed for path "" with value "10" because no value is allowed.')
+    expect(() => shape_NeverB0(true)).toThrow('Validation failed for path "" with value "true" because no value is allowed.')
 ```
+
+
 ---
 #### One Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+One( child?: any )
+```
+
+* **Standalone:** `One`
+* **As Parent:** `One({x: 1})`
+* **As Child:** `Required(One())`
+* **Chainable:** `Optional({x: 1}).One()`
+
 TODO
 implicit Required, use Optional explicitly
 
-
-```
+```js
 const { One } = Gubu
+let shape = Gubu(One())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_OneB0 = Gubu(One(Exact(10), Exact(11), Exact(true)))
+    expect(shape_OneB0(10)).toEqual(10)
+    expect(shape_OneB0(11)).toEqual(11)
+    expect(shape_OneB0(true)).toEqual(true)
+    expect(() => shape_OneB0(12)).toThrow('Value "12" for path "" does not satisfy one of: "10","11","true"')
+    expect(() => shape_OneB0(false)).toThrow('Value "false" for path "" does not satisfy one of: "10","11","true"')
+    expect(() => shape_OneB0(null)).toThrow('Value "null" for path "" does not satisfy one of: "10","11","true"')
+    expect(() => shape_OneB0(NaN)).toThrow('Value "NaN" for path "" does not satisfy one of: "10","11","true"')
+    expect(() => shape_OneB0(undefined)).toThrow('Value "" for path "" does not satisfy one of: "10","11","true"')
+    expect(() => shape_OneB0()).toThrow('Value "" for path "" does not satisfy one of: "10","11","true"')
+    // TODO: more complex objects
 ```
+
+
 ---
 #### Optional Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+Optional( child?: any )
+```
+
+* **Standalone:** `Optional`
+* **As Parent:** `Optional({x: 1})`
+* **As Child:** `Required(Optional())`
+* **Chainable:** `Optional({x: 1}).Optional()`
+
 TODO
 
-```
+```js
 const { Optional } = Gubu
+let shape = Gubu(Optional())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_OptionalB0 = Gubu({ a: Optional(11) })
+    expect(shape_OptionalB0({ a: 10 })).toEqual({ a: 10 })
+    expect(shape_OptionalB0({})).toEqual({})
 ```
+
+
 ---
 #### Refer Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+Refer( child?: any )
+```
+
+* **Standalone:** `Refer`
+* **As Parent:** `Refer({x: 1})`
+* **As Child:** `Required(Refer())`
+* **Chainable:** `Optional({x: 1}).Refer()`
+
 TODO
 depth first order, define before refer
 
-```
+```js
 const { Refer } = Gubu
+let shape = Gubu(Refer())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_ReferB0 = Gubu({ a: Define('foo', 11), b: Refer('foo') })
+    expect(shape_ReferB0({ a: 10, b: 12 })).toEqual({ a: 10, b: 12 })
+    expect(() => shape_ReferB0({ a: 'A', b: 'B' })).toThrow(`Validation failed for path "a" with value "A" because the value is not of type number.
+Validation failed for path "b" with value "B" because the value is not of type number.`)
+    // TODO: also recursive
 ```
+
+
 ---
 #### Rename Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+Rename( child?: any )
+```
+
+* **Standalone:** `Rename`
+* **As Parent:** `Rename({x: 1})`
+* **As Child:** `Required(Rename())`
+* **Chainable:** `Optional({x: 1}).Rename()`
+
 TODO
 
-```
+```js
 const { Rename } = Gubu
+let shape = Gubu(Rename())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_RenameB0 = Gubu({ a: Rename('b', Number) })
+    expect(shape_RenameB0({ a: 10 })).toEqual({ b: 10 })
+    expect(() => shape_RenameB0({})).toThrow('Validation failed for path "a" with value "" because the value is required.')
+
+    let shape_RenameB1 = Gubu({ a: Rename({ name: 'b', keep: true }, 123) })
+    expect(shape_RenameB1({ a: 10 })).toEqual({ a: 10, b: 10 })
+    expect(shape_RenameB1({})).toEqual({ a: 123, b: 123 })
 ```
+
+
 ---
 #### Required Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+Required( child?: any )
+```
+
+* **Standalone:** `Required`
+* **As Parent:** `Required({x: 1})`
+* **As Child:** `Required(Required())`
+* **Chainable:** `Optional({x: 1}).Required()`
+
 TODO
 
-```
+```js
 const { Required } = Gubu
+let shape = Gubu(Required())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_RequiredB0 = Gubu(Required(11))
+    expect(shape_RequiredB0(11)).toEqual(11)
+    expect(() => shape_RequiredB0()).toThrow('Validation failed for path "" with value "" because the value is required.')
 ```
+
+
 ---
 #### Some Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+Some( child?: any )
+```
+
+* **Standalone:** `Some`
+* **As Parent:** `Some({x: 1})`
+* **As Child:** `Required(Some())`
+* **Chainable:** `Optional({x: 1}).Some()`
+
 TODO
 implicit Required, use Optional explicitly
 
-```
+```js
 const { Some } = Gubu
+let shape = Gubu(Some())
+
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_SomeB0 = Gubu(Some({ x: 1 }, { y: 2 }))
+    expect(shape_SomeB0({ x: 1 })).toEqual({ x: 1 }) 
+    expect(shape_SomeB0({ y: 2 })).toEqual({ y: 2 })
+    expect(shape_SomeB0({ x: 1, y: 2 })).toEqual({ x: 1, y: 2 })
+    expect(shape_SomeB0({ x: true, y: 2 })).toEqual({ x: true, y: 2 })
+    expect(shape_SomeB0({ x: 1, y: true })).toEqual({ x: 1, y: true })
+    expect(() => shape_SomeB0({ x: true, y: true })).toThrow(`Value "{x:true,y:true}" for path "" does not satisfy some of: {"x":1},{"y":2}`)
+    // TODO: more complex objects
 ```
+
+
 ---
 #### Value Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
+```ts
+Value( child?: any )
+```
+
+* **Standalone:** `Value`
+* **As Parent:** `Value({x: 1})`
+* **As Child:** `Required(Value())`
+* **Chainable:** `Optional({x: 1}).Value()`
+
 TODO
 
-```
-const { ### } = Gubu
-```
+```js
+const { Value } = Gubu
+let shape = Gubu(Value())
 
+shape(1) // PASS:
+shape(2) // FAIL:
+
+    let shape_ValueB0 = Gubu(Value({}, Number))
+    expect(shape_ValueB0({ x: 10 })).toEqual({ x: 10 })
+    expect(shape_ValueB0({ x: 10, y: 11 })).toEqual({ x: 10, y: 11 })
+    expect(() => shape_ValueB0({ x: true })).toThrow('Validation failed for path "x" with value "true" because the value is not of type number.')
+    // TODO: with explicits
+```
 
 
 

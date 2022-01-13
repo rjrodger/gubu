@@ -657,15 +657,15 @@ function make<S>(intop?: S, inopts?: Options) {
 
   let desc: string = ''
   gubuShape.toString = (gubuShape as any)[inspect.custom] = () => {
-    desc = '' === desc ?
+    desc = truncate('' === desc ?
       stringify(
         (
           top &&
           top.$ &&
           (GUBU$ === top.$.gubu$ || true === (top.$ as any).gubu$)
         ) ? top.v : top) :
-      desc
-    desc = desc.substring(0, 33) + (33 < desc.length ? '...' : '')
+      desc)
+    // desc = desc.substring(0, 33) + (33 < desc.length ? '...' : '')
     return `[Gubu ${opts.name} ${desc}]`
   }
 
@@ -679,10 +679,18 @@ function make<S>(intop?: S, inopts?: Options) {
 function handleValidate(vf: Validate, s: State): Update {
   let update: Update = {}
 
-  let valid = vf(s.val, update, s)
-  let hasErrs = Array.isArray(update.err) ? 0 < update.err.length : null != update.err
 
-  // console.log('HV', valid, hasErrs, update)
+  let valid = false
+  let thrown
+
+  try {
+    valid = vf(s.val, update, s)
+  }
+  catch (ve: any) {
+    thrown = ve
+  }
+
+  let hasErrs = Array.isArray(update.err) ? 0 < update.err.length : null != update.err
 
   if (!valid || hasErrs) {
 
@@ -709,11 +717,11 @@ function handleValidate(vf: Validate, s: State): Update {
     else {
       let fname = vf.name
       if (null == fname || '' == fname) {
-        fname = vf.toString().replace(/[ \t\r\n]+/g, ' ')
-        fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname
+        fname = truncate(vf.toString().replace(/[ \t\r\n]+/g, ' '))
+        // fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname
       }
       s.err.push(makeErrImpl(
-        w, s, 1045, undefined, {}, fname))
+        w, s, 1045, undefined, { thrown }, fname))
     }
 
     update.done = null == update.done ? true : update.done
@@ -921,15 +929,12 @@ const Exact: Builder = function(this: Node, ...vals: any[]) {
 
     update.done = true
 
-    // console.log('EXACT U', update)
-
     return false
   })
   node.s = vals.map(v => stringify(v)).join(',')
 
   return node
 }
-
 
 
 const Before: Builder = function(this: Node, validate: Validate, shape?: any) {
@@ -954,22 +959,6 @@ const Closed: Builder = function(this: Node, shape?: any) {
     if (null != val && 'object' === typeof (val) && !Array.isArray(val)) {
       let vkeys = Object.keys(val)
       let allowed = node.v
-
-      //   // NOTE: disabling array for now
-      //   // // For arrays, handle non-index properties, and special element offset.
-      //   // if ('array' === s.node.t) {
-      //   //   allowed = Object.keys(node.v).slice(1)
-      //   //     .map((x: any) => {
-      //   //       let i = parseInt(x)
-      //   //       if (isNaN(i)) {
-      //   //         return x
-      //   //       }
-      //   //       else {
-      //   //         return i - 1
-      //   //       }
-      //   //     })
-      //   //     .reduce((a: any, i: any) => (a[i] = true, a), {})
-      //   // }
 
       update.err = []
       for (let k of vkeys) {
@@ -1150,6 +1139,17 @@ function valueLen(val: any) {
       null != val && 'object' === typeof (val) ? Object.keys(val).length :
         NaN
 }
+
+
+function truncate(str?: string, len?: number): string {
+  let strval = String(str)
+  let outlen = null == len || isNaN(len) ? 30 : len < 0 ? 0 : ~~len
+  let strlen = null == str ? 0 : strval.length
+  let substr = null == str ? '' : strval.substring(0, strlen)
+  substr = outlen < strlen ? substr.substring(0, outlen - 3) + '...' : substr
+  return substr.substring(0, outlen)
+}
+
 
 
 const Min: Builder = function(
@@ -1370,8 +1370,8 @@ function makeErrImpl(
   }
 
   let jstr = undefined === s.val ? '' : stringify(s.val)
-  let valstr = jstr.replace(/"/g, '')
-  valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '')
+  let valstr = truncate(jstr.replace(/"/g, ''))
+  // valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '')
 
   if (null == text || '' === text) {
     err.t = `Validation failed for path "${err.p}" ` +
@@ -1385,7 +1385,7 @@ function makeErrImpl(
           'closed' === why ? `the property "${user?.k}" is not allowed` :
             'never' === why ? 'no value is allowed' :
               `check "${why + (fname ? ': ' + fname : '')}" failed`) +
-      '.'
+      (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.')
   }
   else {
     err.t = text
@@ -1422,9 +1422,9 @@ function stringify(src: any, replacer?: any, expand?: boolean) {
           val = val.name
         }
         else {
-          val = val.toString().replace(/[ \t\r\n]+/g, ' ')
-          let vlen = val.length
-          val = val.substring(0, 30) + (30 < vlen ? '...' : '')
+          val = truncate(val.toString().replace(/[ \t\r\n]+/g, ' '))
+          // let vlen = val.length
+          // val = val.substring(0, 30) + (30 < vlen ? '...' : '')
         }
       }
       else if ('bigint' === typeof (val)) {
@@ -1551,6 +1551,7 @@ Object.assign(make, {
   buildize,
   makeErr,
   stringify,
+  truncate,
   Args,
 })
 
@@ -1560,6 +1561,7 @@ type Gubu = typeof make & {
   buildize: typeof buildize,
   makeErr: typeof makeErr,
   stringify: typeof stringify,
+  truncate: typeof truncate,
   Args: typeof Args,
 
   Above: typeof Above
@@ -1715,6 +1717,7 @@ export {
   buildize,
   makeErr,
   stringify,
+  truncate,
   Args,
 
   Above,
@@ -1759,7 +1762,4 @@ export {
   GSome,
   GValue,
 }
-
-
-
 
