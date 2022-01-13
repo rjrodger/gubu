@@ -716,7 +716,7 @@ shape([]) // length is 0, not >= minimum 2
 JavaScript allows arrays to have properties: `let a = []; a.foo = 1`.
 Matching against array properties is not supported in the current
 version. The workaround is write a [custom
-validator](#custom-validations).
+validator](#custom-validation).
 
 
 
@@ -727,7 +727,7 @@ To require a function, use the shape `Function`:
 
 To provide a default function, you'll need to create a shape manually,
 using the special `G$` utility. Literal functions are used as [custom
-validators](#custom-validations), as this is the most common use case.
+validators](#custom-validation), as this is the most common use case.
 
 ```
 let { G$ } = Gubu
@@ -1099,7 +1099,7 @@ against the `undefined` value.
 
 #### Custom Errors
 
-When using a (custom validator)[#custom-validations] you can provide a custom
+When using a (custom validator)[#custom-validation] you can provide a custom
 error message using the `Update.err` property.
 
 ```
@@ -1241,7 +1241,7 @@ shape([1, 2])    // FAIL: throws: 'Value "[1,2]" for path "" must have length ab
 
 ---
 #### After Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 After( validate: Validate, child?: any )
@@ -1256,11 +1256,11 @@ Provide a validation function that will run after the value has been
 processed normally. The validation function has the form:
 
 ```
-Validate(value: any, update: Update, state: State): boolean
+Validate(value: any, update?: Update, state?: State): boolean
 ```
 
 Return `true` if the value is valid, `false` otherwise. See the 
-[Custom Validations](#custom-validations) section.
+[Custom Validations](#custom-validation) section.
 
 
 ```js
@@ -1283,7 +1283,7 @@ See also: [Update](#update-type), [State](#state-type).
 
 ---
 #### All Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 All( child?: any )
@@ -1313,7 +1313,7 @@ shape(2) // FAIL:
 
 ---
 #### Any Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Any( child?: any )
@@ -1346,7 +1346,7 @@ shape(2) // FAIL:
 
 ---
 #### Before Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Before( child?: any )
@@ -1375,7 +1375,7 @@ shape(2) // FAIL:
 
 ---
 #### Below Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Below( value: number|string, child?: any )
@@ -1415,7 +1415,7 @@ shape([1, 2]) // FAIL: throws: 'Value "[1, 2]" for path "" must have length belo
 
 ---
 #### Closed Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Closed( child?: any )
@@ -1443,7 +1443,7 @@ shape(2) // FAIL:
 
 ---
 #### Define Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Define( child?: any )
@@ -1473,7 +1473,7 @@ Validation failed for path "b" with value "B" because the value is not of type n
 
 ---
 #### Empty Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Empty( child?: any )
@@ -1501,7 +1501,7 @@ shape(2) // FAIL:
 
 ---
 #### Exact Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Exact( child?: any )
@@ -1532,7 +1532,7 @@ shape(2) // FAIL:
 
 ---
 #### Max Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Max( value: number|string, child?: any )
@@ -1619,7 +1619,7 @@ shape([1])       // FAIL: throws: 'Value "[1]" for path "" must be a minimum len
 
 ---
 #### Never Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Never( child?: any )
@@ -1647,7 +1647,7 @@ shape(2) // FAIL:
 
 ---
 #### One Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 One( child?: any )
@@ -1684,7 +1684,7 @@ shape(2) // FAIL:
 
 ---
 #### Optional Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Optional( child?: any )
@@ -1712,7 +1712,7 @@ shape(2) // FAIL:
 
 ---
 #### Refer Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Refer( child?: any )
@@ -1743,7 +1743,7 @@ Validation failed for path "b" with value "B" because the value is not of type n
 
 ---
 #### Rename Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Rename( child?: any )
@@ -1775,7 +1775,7 @@ shape(2) // FAIL:
 
 ---
 #### Required Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Required( child?: any )
@@ -1803,7 +1803,7 @@ shape(2) // FAIL:
 
 ---
 #### Some Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Some( child?: any )
@@ -1837,7 +1837,7 @@ shape(2) // FAIL:
 
 ---
 #### Value Builder
-<sub><sup>[builders](#shape-builder-reference)</sup></sub>
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
 Value( child?: any )
