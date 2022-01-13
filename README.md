@@ -1321,15 +1321,49 @@ TODO
 ```
 const { Exact } = Gubu
 ```
+
+
 ---
 #### Max Builder
 <sub><sup>[builders](#shape-builder-reference)</sup></sub>
 
-TODO
+```ts
+Max( value: number|string, child?: any )
+```
 
-```
+* **Standalone:** `Max(2)`
+* **As Parent:** `Max(2, Number)`
+* **As Child:** `Optional(Max(2))`
+* **Chainable:** `Required(Number).Max(2)`
+
+Only allow values that have length greater than or equal to the given
+maximum value. "Length" means:
+* Arrays: array length; 
+* Strings: string length; 
+* Objects: number of keys;
+* Numbers: numeric value;
+* Object with property `length`: numeric value of `length`;
+* Anything else fails.
+
+If the given value is a `string`, then a lexical comparison is made
+(thus, `'b'` is greater than `'a'` as `'b' > 'a'`)
+
+
+```js
 const { Max } = Gubu
-```
+let shape = Gubu(Max(2))
+
+shape(1) // PASS: 1 <= 1; returns 1
+shape(2) // PASS: 1 <= 2; returns 2
+shape(3) // FAIL: throws 'Value "3" for path "" must be a maximum of 2 (was 3).'
+
+shape('a')   // PASS: 'a'.length 1 <= 2 
+shape('ab')  // PASS: 'ab'.length 2 <= 2 
+shape('abc') // FAIL: 'Value "abc" for path "" must be a maximum length of 2 (was 3).'
+
+shape([1])       // PASS: array length 1 <= 2
+shape([1, 2])    // PASS: array length 2 <= 2
+shape([1, 2, 3]) // FAIL: throws: 'Value "[1, 2, 3]" for path "" must be a maximum length of 2 (was 3).'
 
 
 ---
