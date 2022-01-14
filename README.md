@@ -115,40 +115,7 @@ console.log(optionShape({ host: '' }))     // Not really a usable string!
 You're building a front end component that displays data from the back
 end, and you want to handle bad data gracefully.
 
-```
-const productListShape = Gubu({
-  view: {
-    discounts: [
-      // All elements must match this shape.
-      { 
-        name: String, 
-
-        // A custom validation!
-        percent: (v: any) => 0 < v && v < 100 
-      }
-    ],
-    products: [
-      { 
-        name: String, 
-        price: Number, 
-      }
-    ]
-  }
-})
-
-
-// Oh noes! The back end gave me nothing! Luckily I can still work with a
-// valid, if empty, data structure.
-
-productListShape({}) // returns:
-{ view: { discounts: [], products: [] } }
-
-
-
-
-
-```
-
+TODO
 
 
 ## Install
@@ -364,7 +331,7 @@ The built-in shape builders help you match the following shapes:
 
 ### Recursive Shapes
 
-QUICK INTRO WITH EXAMPLE 
+TODO: QUICK INTRO WITH EXAMPLE 
 [Define](#define-builder)
 [Refer](#refer-builder)
 
@@ -1116,7 +1083,7 @@ value, respectively.
 
 ### TypeScript Types
 
-
+TODO
 type predicate:
 unit test valid-basic
 
@@ -2048,7 +2015,7 @@ Also I like short names.
 
 
 ## License
-Copyright (c) 2021, Richard Rodger and other contributors.
+Copyright (c) 2021-2022, Richard Rodger and other contributors.
 Licensed under [MIT][].
 
 [MIT]: ./LICENSE
