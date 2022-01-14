@@ -101,7 +101,7 @@ declare function make<S>(intop?: S, inopts?: Options): {
     valid: <D>(root?: D | undefined, ctx?: Context | undefined) => root is D & S;
     match(root?: any, ctx?: Context | undefined): boolean;
     spec(): any;
-    toString: () => string;
+    toString(): string;
     gubu: {
         gubu$: symbol;
         v$: string;
@@ -131,6 +131,12 @@ declare const Value: Builder;
 declare function buildize(node0?: any, node1?: any): Node;
 declare function makeErr(state: State, text?: string, why?: string, user?: any): ErrDesc;
 declare function stringify(src: any, replacer?: any, expand?: boolean): string;
+declare type GubuShape = ReturnType<typeof make> & {
+    valid: <D, S>(root?: D, ctx?: any) => root is (D & S);
+    match: (root?: any, ctx?: any) => boolean;
+    spec: () => any;
+    gubu: typeof GUBU;
+};
 declare const G$: (node: any) => Node;
 declare type Gubu = typeof make & {
     G$: typeof G$;
@@ -186,7 +192,7 @@ declare function Args(shapes: Record<string, any>, wrapped?: any): {
     valid: <D>(root?: D | undefined, ctx?: Context | undefined) => root is any;
     match(root?: any, ctx?: Context | undefined): boolean;
     spec(): any;
-    toString: () => string;
+    toString(): string;
     gubu: {
         gubu$: symbol;
         v$: string;
@@ -212,5 +218,5 @@ declare const GRename: Builder;
 declare const GRequired: Builder;
 declare const GSome: Builder;
 declare const GValue: Builder;
-export type { Validate, Update, Context, Builder, Node, State, };
+export type { Validate, Update, Context, Builder, Node, State, GubuShape, };
 export { Gubu, G$, norm, buildize, makeErr, stringify, truncate, Args, Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Optional, Refer, Rename, Required, Some, Value, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GOptional, GRefer, GRename, GRequired, GSome, GValue, };

@@ -4,16 +4,17 @@
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
+// FEATURE: !!! recognize and apply regexes
 
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
 
 import { inspect } from 'util'
-import Pkg from './package.json'
 
+const VERSION = '0.2.0'
 
 const GUBU$ = Symbol.for('gubu$')
-const GUBU = { gubu$: GUBU$, v$: Pkg.version }
+const GUBU = { gubu$: GUBU$, v$: VERSION }
 
 
 // Options for creating a GubuShape.
@@ -318,7 +319,7 @@ function norm(shape?: any, depth?: number): Node {
     // Normalize an incomplete Node, avoiding any recursive calls to norm.
     else if (true === shape.$.gubu$) {
       let node = { ...shape }
-      node.$ = { v$: Pkg.version, ...node.$, gubu$: GUBU$ }
+      node.$ = { v$: VERSION, ...node.$, gubu$: GUBU$ }
 
       node.v =
         (null != node.v && 'object' === typeof (node.v)) ? { ...node.v } : node.v
@@ -421,7 +422,6 @@ function norm(shape?: any, depth?: number): Node {
 
 
 function make<S>(intop?: S, inopts?: Options) {
-  // : GubuShape {
   const opts = null == inopts ? {} : inopts
   opts.name =
     null == opts.name ? 'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name
@@ -656,7 +656,7 @@ function make<S>(intop?: S, inopts?: Options) {
 
 
   let desc: string = ''
-  gubuShape.toString = (gubuShape as any)[inspect.custom] = () => {
+  gubuShape.toString = () => {
     desc = truncate('' === desc ?
       stringify(
         (
@@ -667,6 +667,10 @@ function make<S>(intop?: S, inopts?: Options) {
       desc)
     // desc = desc.substring(0, 33) + (33 < desc.length ? '...' : '')
     return `[Gubu ${opts.name} ${desc}]`
+  }
+
+  if (inspect && inspect.custom) {
+    (gubuShape as any)[inspect.custom] = gubuShape.toString
   }
 
 
@@ -1457,18 +1461,15 @@ function clone(x: any) {
 
 
 
-// type GubuShape = ReturnType<typeof make>
 
-/*
-
-(<R>(root?: R, ctx?: any) => R) &
+type GubuShape = ReturnType<typeof make> &
 {
   valid: <D, S>(root?: D, ctx?: any) => root is (D & S),
   match: (root?: any, ctx?: any) => boolean,
   spec: () => any,
   gubu: typeof GUBU
 }
-*/
+
 
 
 const G$ = (node: any): Node => norm({ ...node, $: { gubu$: true } })
@@ -1708,7 +1709,7 @@ export type {
   Builder,
   Node,
   State,
-  // GubuShape,
+  GubuShape,
 }
 
 export {

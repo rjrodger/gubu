@@ -1,19 +1,17 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GValue = exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.Args = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.norm = exports.G$ = exports.Gubu = void 0;
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
+// FEATURE: !!! recognize and apply regexes
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
 const util_1 = require("util");
-const package_json_1 = __importDefault(require("./package.json"));
+const VERSION = '0.2.0';
 const GUBU$ = Symbol.for('gubu$');
-const GUBU = { gubu$: GUBU$, v$: package_json_1.default.version };
+const GUBU = { gubu$: GUBU$, v$: VERSION };
 // The current validation state.
 class State {
     constructor(root, top, ctx, match) {
@@ -140,7 +138,7 @@ function norm(shape, depth) {
         // Normalize an incomplete Node, avoiding any recursive calls to norm.
         else if (true === shape.$.gubu$) {
             let node = { ...shape };
-            node.$ = { v$: package_json_1.default.version, ...node.$, gubu$: GUBU$ };
+            node.$ = { v$: VERSION, ...node.$, gubu$: GUBU$ };
             node.v =
                 (null != node.v && 'object' === typeof (node.v)) ? { ...node.v } : node.v;
             node.t = node.t || typeof (node.v);
@@ -225,7 +223,6 @@ function norm(shape, depth) {
 }
 exports.norm = norm;
 function make(intop, inopts) {
-    // : GubuShape {
     const opts = null == inopts ? {} : inopts;
     opts.name =
         null == opts.name ? 'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name;
@@ -406,7 +403,7 @@ function make(intop, inopts) {
         }, true));
     };
     let desc = '';
-    gubuShape.toString = gubuShape[util_1.inspect.custom] = () => {
+    gubuShape.toString = () => {
         desc = truncate('' === desc ?
             stringify((top &&
                 top.$ &&
@@ -415,6 +412,9 @@ function make(intop, inopts) {
         // desc = desc.substring(0, 33) + (33 < desc.length ? '...' : '')
         return `[Gubu ${opts.name} ${desc}]`;
     };
+    if (util_1.inspect && util_1.inspect.custom) {
+        gubuShape[util_1.inspect.custom] = gubuShape.toString;
+    }
     gubuShape.gubu = GUBU;
     return gubuShape;
 }
@@ -1002,17 +1002,6 @@ exports.stringify = stringify;
 function clone(x) {
     return null == x ? x : 'object' !== typeof (x) ? x : JSON.parse(JSON.stringify(x));
 }
-// type GubuShape = ReturnType<typeof make>
-/*
-
-(<R>(root?: R, ctx?: any) => R) &
-{
-  valid: <D, S>(root?: D, ctx?: any) => root is (D & S),
-  match: (root?: any, ctx?: any) => boolean,
-  spec: () => any,
-  gubu: typeof GUBU
-}
-*/
 const G$ = (node) => norm({ ...node, $: { gubu$: true } });
 exports.G$ = G$;
 // Fix builder names after terser mangles them.

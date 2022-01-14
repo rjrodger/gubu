@@ -9,6 +9,7 @@ import type {
   Node,
   State,
   Update,
+  GubuShape,
 } from '../gubu'
 
 
@@ -114,6 +115,7 @@ describe('gubu', () => {
       expect(d0.z).toEqual(true)
     }
 
+
     let g0d = Gubu({ x: 1, y: 'Y' })
     let d0d = { x: 2, z: true }
     let d0do = g0d(d0d)
@@ -187,7 +189,7 @@ describe('gubu', () => {
   })
 
 
-  test('readme-common', () => {
+  test('readme-options', () => {
     const optionShape = Gubu({
       host: 'localhost',
       port: 8080
@@ -223,39 +225,132 @@ describe('gubu', () => {
     expect(() => optionShape({ host: 9090 })).toThrow('type')
     expect(() => optionShape({ port: '9090' })).toThrow('type')
     expect(() => optionShape({ host: '' })).toThrow('required')
+  })
 
 
-    // TODO: better example to show deep structure defaults
+  test('readme-deep', () => {
 
-    // const productListShape = Gubu({
-    //   v: { p: [{ name: String, price: Number }] }
-    //   // view: {
-    //   // discounts: [{ name: String, percent: (v: any) => 0 < v && v < 100 }],
-    //   // products: [
-    //   //   { name: String, price: Number }
-    //   // ]
-    //   // }
-    // })
+    const productListShape = Gubu({
+      products: [
+        {
+          name: String,
+          img: 'generic.png'
+        }
+      ]
+    })
 
-    // // expect(productListShape({})).toEqual({ view: { discounts: [], products: [] } })
+    expect(productListShape({})).toEqual({ products: [] })
 
-    // let update = { err: [] }
-    // let result = productListShape({
-    //   // FIX - ARRAYS BROKEN!
-    //   v: { p: [{ name: 'x', price: 1 }, { name: 'foo', price: undefined }] }
-    //   // view: {
-    //   // products: [
-    //   //   { name: 'Apple', price: 100 },
-    //   //   { name: 'Pear', price: 200 },
-    //   //   // { name: 'Banana', price: undefined }
-    //   //   { name: 'Banana', price: 'x' }
-    //   // ]
-    //   // }
-    // })// , update)
+    let result = productListShape({
+      products: [
+        { name: 'Apple', img: 'apple.png' },
+        { name: 'Pear', img: 'pear.png' },
+        { name: 'Banana' } // Missing image!
+      ]
+    })
 
     // console.dir(result, { depth: null })
-    // console.log(update)
+
+    expect(result).toEqual({
+      products: [
+        { name: 'Apple', img: 'apple.png' },
+        { name: 'Pear', img: 'pear.png' },
+        { name: 'Banana', img: 'generic.png' }
+      ]
+    })
   })
+
+
+  test('readme-shape-builder', () => {
+    const userShape = Gubu({
+      person: Required({
+        name: String,
+        age: Number,
+      })
+    })
+
+    expect(() => userShape({})).toThrow('Validation failed for path "person" with value "" because the value is required.')
+
+    expect(userShape({
+      person: {
+        name: 'Alice',
+        age: 99
+      }
+    })).toEqual({
+      person: {
+        name: 'Alice',
+        age: 99
+      }
+    })
+  })
+
+
+  test('readme-recursive', () => {
+    let tree = Gubu({
+      root: Define('BRANCH', {
+        value: String,
+        left: Refer('BRANCH'),
+        right: Refer('BRANCH'),
+      })
+    })
+
+    expect(tree({
+      root: {
+        value: 'A',
+        left: {
+          value: 'AB',
+          left: {
+            value: 'ABC'
+          },
+          right: {
+            value: 'ABD'
+          },
+        },
+        right: {
+          value: 'AE',
+          left: {
+            value: 'AEF'
+          },
+        },
+      }
+    })).toMatchObject({
+      root: {
+        value: 'A',
+        left: {
+          value: 'AB',
+          left: {
+            value: 'ABC'
+          },
+          right: {
+            value: 'ABD'
+          },
+        },
+        right: {
+          value: 'AE',
+          left: {
+            value: 'AEF'
+          },
+        },
+      }
+    })
+
+    expect(() => tree({
+      root: {
+        value: 'A',
+        left: {
+          value: 'AB',
+          left: {
+            value: 'ABC',
+            left: {
+              value: 123
+            },
+          },
+        },
+      }
+    })).toThrow('Validation failed for path "root.left.left.left.value" with value "123" because the value is not of type string')
+
+  })
+
 
 
   test('scalar-optional-basic', () => {

@@ -14,7 +14,13 @@ NOTE: WORK IN PROGRESS
 This is a schema validator in the tradition of [Joi](https://joi.dev)
 or any JSON-Schema validator, with the key features:
 
-* Schemas are WYSIWYG - you define a schema with a template matching your object structure;
+* Schemas are WYSIWYG - you define a schema with a template exactly matching your object structure;
+```
+const optionValidator = Gubu({
+  port: 8080,        // port must be a number; if not defined, it will be 8080
+  host: 'localhost'  // host must be a string; if not defined, it will be 'localhost'
+})
+```
 * The most useful cases are the easiest to specify (e.g. optional defaults are just literal values);
 * The implementation is iterative (a depth-first loop over the
   property tree) not recursive, so it's nice and fast and can handle
@@ -112,10 +118,75 @@ console.log(optionShape({ host: '' }))     // Not really a usable string!
 
 ### Deep structures
 
-You're building a front end component that displays data from the back
-end, and you want to handle bad data gracefully.
+You're building a front end component that displays complex data from
+the back end, and you want to handle missing data gracefully, at any
+depth in the struture.
 
-TODO
+```js
+const productListShape = Gubu({
+  products: [
+    {
+      name: String, // Product name is a required String
+      img: 'generic.png' // Use a default image if not defined
+    }
+  ]
+})
+
+let result = productListShape({})
+
+// No products, but our data structure still has an array where
+// one is expected, so no `undefined` errors.
+result === {
+  products: []
+}
+
+// Fix data with missing fields
+let result = productListShape({
+  products: [
+    { name: 'Apple', img: 'apple.png' },
+    { name: 'Pear', img: 'pear.png' },
+    { name: 'Banana' } // Missing image!
+  ]
+})
+
+// Banana will not have a broken image.
+result === {
+  products: [
+    { name: 'Apple', img: 'apple.png' },
+    { name: 'Pear', img: 'pear.png' },
+    { name: 'Banana', img: 'generic.png' }
+  ]
+}
+
+```
+
+
+### Shape Building
+
+For more specific shapes, such as required objects and arrays, you can
+use shape builder functions that still respect your data structure.
+
+The [Required](#required-builder) makes a value explicitly required.
+
+```
+const userShape = Gubu({
+  person: Required({  // person must be an object
+    name: String,
+    age: Number,
+  })
+})
+
+
+userShape({}) // FAILS: 'Validation failed for path "person" with value "" because the value is required.')
+
+// This will pass, returning the object:
+userShape({
+  person: {
+    name: 'Alice',
+    age: 99
+  }
+})
+```
 
 
 ## Install
@@ -331,9 +402,59 @@ The built-in shape builders help you match the following shapes:
 
 ### Recursive Shapes
 
-TODO: QUICK INTRO WITH EXAMPLE 
-[Define](#define-builder)
-[Refer](#refer-builder)
+You can use the [Define](#define-builder) and [Refer](#refer-builder)
+shape builders to validate recursive shapes. Use `Define` first to
+name a given shape. Then use `Refer` to apply the definition of the shape.
+
+```
+let tree = Gubu({
+  root: Define('BRANCH', {
+    value: String,
+    left: Refer('BRANCH'),
+    right: Refer('BRANCH'),
+  })
+})
+
+// This passes, returning the object.
+tree({
+  root: {
+    value: 'A',
+    left: {
+      value: 'AB',
+      left: {
+        value: 'ABC'
+      },
+      right: {
+        value: 'ABD'
+      },
+    },
+    right: {
+      value: 'AE',
+      left: {
+        value: 'AEF'
+      },
+    },
+  }
+})
+
+// This fails with error:
+// "Validation failed for path "root.left.left.left.value" with value "123" because the value is not of type string."
+
+tree({
+  root: {
+    value: 'A',
+    left: {
+      value: 'AB',
+      left: {
+        value: 'ABC',
+        left: {
+          value: 123
+        },
+      },
+    },
+  }
+})
+```
 
 
 ## API
@@ -828,8 +949,8 @@ function is returned:
 // TypeScript
 import { Gubu, GubuShape } from 'gubu'
 
-// Normally you just let this be inferred:
-const shape: GubuShape = Gubu(123)
+// GubuShape is inferred:
+const shape = Gubu(123) // shape is a generic GubuShape
 ```
 
 The shape validator function has arguments:
@@ -859,10 +980,12 @@ console.log(err[0]) // prints error description (number was expected)
 
 The [error descriptions](#errors) are plain objects, not Errors.
 
-The `GubuShape` function has the following properties:
-* `toString`: returns a short string describing this `GubuShape` instance
-* `[Util.inspect.custom]`: same as `toString`
-* `spec`: returns a declarative description of the shape
+The `GubuShape` function has the following methods:
+* `valid(value: any, context?: any): boolean`: `true` if the shape matches (can be used as type guard in TypeScript),
+* `match(value: any, context?: any): any`: Same as `GubuShape`, but can be used as type guard in TypeScript
+* `toString()`: returns a short string describing this `GubuShape` instance
+* `[Util.inspect.custom]()`: same as `toString`
+* `spec()`: returns a declarative description of the shape
 
 The shape description provided by `spec` can be passed to `Gubu` to
 generate a new separate shape instance.
