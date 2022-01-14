@@ -888,13 +888,12 @@ const Value = function (shape0, shape1) {
     return node;
 };
 exports.Value = Value;
-function buildize(invs0, invs1) {
-    let invs = undefined === invs0 ? invs1 : invs0.window === invs0 ? invs1 : invs0;
-    let node = norm(invs);
+function buildize(node0, node1) {
+    let node = norm(undefined === node0 ? node1 : node0.window === node0 ? node1 : node0);
     return Object.assign(node, {
         Above,
         After,
-        // All,
+        // All, // TODO: make list Nodes chainable?
         Any,
         Before,
         Below,

@@ -1068,6 +1068,32 @@ Validation failed for path "b" with value "B" because the value is not of type n
         });
         expect(g1({ x: { a: 2 } })).toMatchObject({ x: { a: 2, b: 3, c: 20 } });
     });
+    test('custom-builder-hyperbole', () => {
+        const Hyperbole = function (shape0) {
+            let node = buildize(this, shape0);
+            node.b.push((v, u) => {
+                if ('string' === typeof (v)) {
+                    u.val = v.toUpperCase();
+                }
+                return true;
+            });
+            node.a.push((v, u) => {
+                if ('string' === typeof (v)) {
+                    u.val = v + '!';
+                }
+                return true;
+            });
+            return node;
+        };
+        const g0 = Gubu(Hyperbole('foo'));
+        expect(g0('a')).toEqual('A!');
+        expect(() => g0(1)).toThrow('type');
+        expect(g0()).toEqual('foo!'); // before called before processing!
+        const g1 = Gubu(Optional(Hyperbole(One(String, Number))));
+        expect(g1('a')).toEqual('A!');
+        expect(g1(1)).toEqual(1);
+        expect(g1()).toEqual(undefined);
+    });
     test('deep-object-basic', () => {
         let a1 = Gubu({ a: 1 });
         expect(a1({})).toMatchObject({ a: 1 });

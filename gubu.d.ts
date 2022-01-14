@@ -128,7 +128,7 @@ declare const Max: Builder;
 declare const Above: Builder;
 declare const Below: Builder;
 declare const Value: Builder;
-declare function buildize(invs0?: any, invs1?: any): Node;
+declare function buildize(node0?: any, node1?: any): Node;
 declare function makeErr(state: State, text?: string, why?: string, user?: any): ErrDesc;
 declare function stringify(src: any, replacer?: any, expand?: boolean): string;
 declare const G$: (node: any) => Node;

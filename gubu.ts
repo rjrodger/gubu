@@ -778,6 +778,7 @@ const Optional: Builder = function(this: Node, shape?: any) {
   return node
 }
 
+
 const Empty: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   node.u.empty = true
@@ -1308,14 +1309,14 @@ const Value: Builder = function(
 
 
 
-function buildize(invs0?: any, invs1?: any): Node {
-  let invs = undefined === invs0 ? invs1 : invs0.window === invs0 ? invs1 : invs0
+function buildize(node0?: any, node1?: any): Node {
+  let node =
+    norm(undefined === node0 ? node1 : node0.window === node0 ? node1 : node0)
 
-  let node = norm(invs)
   return Object.assign(node, {
     Above,
     After,
-    // All,
+    // All, // TODO: make list Nodes chainable?
     Any,
     Before,
     Below,

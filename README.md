@@ -952,8 +952,8 @@ custom user meta data is serializable.
 
 This structure can be accessed in [custom
 validators](#custom-validators) via the `state` parameter, and in
-[shape builders](#shape-builders) via the [before](#before-hook) and
-[after](#after-hook) hook functions. It is also provided in error
+[shape builders](#shape-builders) via the [before](#custom-builders) and
+[after](#custom-builders) hook functions. It is also provided in error
 messages under the `n` property.
 
 
@@ -1899,13 +1899,98 @@ shape(2) // FAIL:
 
 ### Custom Builders
 
+You can write your shape builders. A shape builder is a function that
+generates the internal [Shape Node](#shape-nodes) data structure,
+possibly using parameters.
 
-#### Before Hook
+Here is the actual source code for the [Optional](#optional-builder) shape builder:
 
+```ts
+const Optional: Builder = function(this: Node, shape?: any) {
+  let node = buildize(this, shape)
+  node.r = false
 
-#### After Hook
+  // Mark Optional as explicit => do not insert empty arrays and objects.
+  node.o = true
 
+  return node
+}
+```
 
+A shape builder function has the form:
+
+```
+Builder( options?: any, ...values?: any[] ): Node
+```
+
+You can use the utility function `buildize` to create an initial
+[Shape Node](#shape-nodes) instance. To make your builder chainable,
+pass in the `this` variable (NOTE: not supported in this version, but
+please do so anyway to future proof!). To accept a child shape, pass
+in the first shape value provided to your `Builder`:
+
+```
+const Optional: Builder = function(this: Node, shape?: any) {
+  let node = buildize(this, shape)
+  ...
+```
+
+Once you have a `Node`, you can manipulate it directly:
+
+```
+  node.r = false
+
+  // Mark Optional as explicit => do not insert empty arrays and objects.
+  node.o = true
+```
+
+The `Node` structure is deliberately kept small. Most custom behavior
+is implemented using the [Before](#custom-builders) and
+[After](#custom-builders) extension hook [Validate](#custom-validation)
+functions.
+
+To add your own extension hooks, append `Validate` functions to the
+`a` and `b` array properties of the `Node` structure, to add *before*
+and *after* hooks, respectively. Here is a custom validator that
+capitalizes strings, and then modifies them:
+
+```ts
+// NOTE: This example code is TypeScript
+const Hyperbole: Builder = function(this: Node, shape0?: any) {
+  let node = buildize(this, shape0)
+
+  // Append a before hook  
+  node.b.push((v: any, u: Update) => {
+    if ('string' === typeof (v)) {
+      u.val = v.toUpperCase()
+    }
+    return true // always pass, just alters strings
+  })
+
+  // Append an after hook  
+  node.a.push((v: any, u: Update) => {
+    if ('string' === typeof (v)) {
+      u.val = v + '!'
+    }
+    return true // always pass, just alters strings
+  })
+
+  return node
+}
+
+let shape = Gubu(Hyperbole('foo'))
+shape('a') // PASS: returns 'A!'
+shape(1)   // FAIL: 'foo' defines an optional string shape
+shape()    // PASS: optional string; returns 'foo!' as before is called before standard processing
+
+shape = Gubu(Optional(Hyperbole(One(String, Number))))
+shape('a') // PASS; returns 'A!'
+shape(1)   // PASS: a number is allowed; ignore by Hyperbole; returns 1
+shape()    // PASS: optional; returns undefined
+```
+
+For more inspiration, review the [source code](gubu/blob/main/gubu.ts)
+to see how the built-in shape builders are implemented.
 
 
 ### Edge Cases
