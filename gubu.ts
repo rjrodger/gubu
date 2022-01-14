@@ -5,6 +5,8 @@
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
 // FEATURE: !!! recognize and apply regexes
+// FEATURE: Value without chain or two vals should just be a convenience wrapper for chaining
+// FEATURE: support custom builder registration so that can chain on builtins
 
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
@@ -956,7 +958,6 @@ const After: Builder = function(this: Node, validate: Validate, shape?: any) {
 }
 
 
-// TODO: array without specials should have no effect
 const Closed: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
 

@@ -9,8 +9,6 @@
 [API](#api)
 
 
-NOTE: WORK IN PROGRESS
-
 This is a schema validator in the tradition of [Joi](https://joi.dev)
 or any JSON-Schema validator, with the key features:
 
@@ -166,7 +164,7 @@ result === {
 For more specific shapes, such as required objects and arrays, you can
 use shape builder functions that still respect your data structure.
 
-The [Required](#required-builder) makes a value explicitly required.
+The [Required](#required-builder) makes a value explicitly required:
 
 ```
 const userShape = Gubu({
@@ -177,7 +175,8 @@ const userShape = Gubu({
 })
 
 
-userShape({}) // FAILS: 'Validation failed for path "person" with value "" because the value is required.')
+// FAILS: 'Validation failed for path "person" with value "" because the value is required.')
+userShape({}) 
 
 // This will pass, returning the object:
 userShape({
@@ -187,6 +186,8 @@ userShape({
   }
 })
 ```
+
+For the full list of shape builders, see the [API reference](#shape-builders).
 
 
 ## Install
@@ -284,7 +285,7 @@ The above shape will match:
 }
 ```
 
-For arrays, the first elements is treated as the shape that all
+For arrays, the first element is treated as the shape that all
 elements in the array must match:
 
 * `Gubu([String])` matches `['a', 'b', 'c']`
@@ -294,11 +295,10 @@ elements in the array must match:
 If you need specific elements to match specific shapes, add these
 shapes after the first element:
 
-* `Gubu([String,Number])` matches `[1, 'b', 'c']` - the first element is a `Number`, the rest `Strings`.
+* `Gubu([String,Number])` matches `[1, 'b', 'c']` - as the first element (of the shape) is a `Number`, and the general element is `String`.
 
 Thus, the element `0` of a shape array defines the general element,
 and following elements define special cases (offset by 1).
-
 
 You can specify custom validation using functions:
 
@@ -982,7 +982,7 @@ The [error descriptions](#errors) are plain objects, not Errors.
 
 The `GubuShape` function has the following methods:
 * `valid(value: any, context?: any): boolean`: `true` if the shape matches (can be used as type guard in TypeScript),
-* `match(value: any, context?: any): any`: Same as `GubuShape`, but can be used as type guard in TypeScript
+* `match(value: any, context?: any): any`: Same as `GubuShape`, but does not mutate the value, and can be used as type guard in TypeScript
 * `toString()`: returns a short string describing this `GubuShape` instance
 * `[Util.inspect.custom]()`: same as `toString`
 * `spec()`: returns a declarative description of the shape
@@ -1218,7 +1218,7 @@ function `valid` with form:
 valid(value: any, context?: any): boolean: true
 ```
 
-This can be used as a type guard:
+This can be used as a [type guard](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates):
 
 ```
 const shape = Gubu({ x: 1, y: 'Y' })
@@ -1255,7 +1255,7 @@ The holy grail would be for Gubu to use your type definitions directly:
 interface User {
   name: string
   age: number
-  job? string
+  job?: string
 }
 
 // DOES NOT WORK!
@@ -1281,7 +1281,7 @@ const shape = Gubu({ ...new Car() })
 ```
 
 2. Use code generation. Perhaps you are already building types from a
-   SQL Schema? use the same approach to build the shapes.
+   SQL Schema? Use the same approach to build the shapes.
    
 3. Parse the `d.ts` type definitions at runtime use those to
    dynamically define your shapes.
@@ -1290,6 +1290,11 @@ None of these options are that great. For moment, I recommend that you
 use the instance trick above if you can, and live with some manual fix
 up.
 
+One more thing: at the moment I don't plan to support definitions in
+the other direction, going from shapes to TypeScript types. That would
+just be building a bad copy of the TypeScript type system using
+different syntax. That said, never say never, and if TypeScript
+inference can support it, I may look at it again.
 
 
 ### Shape Builder Usage
@@ -1493,28 +1498,31 @@ shape({}) // PASS: `a` is optional, returns {}
 Any( child?: any )
 ```
 
-* **Standalone:** `Any`
+* **Standalone:** `Any()`
 * **As Parent:** `Any({x: 1})`
 * **As Child:** `Required(Any())`
 * **Chainable:** `Optional({x: 1}).Any()`
 
-TODO
+Accept any value. If a child value is provided, it will be used as a
+default (when the source value is `undefined`).
 
 ```js
 const { Any } = Gubu
 let shape = Gubu(Any())
 
-shape(1) // PASS:
-shape(2) // FAIL:
+console.log(shape(11)) // prints 11
+console.log(shape(10)) // prints 10
+console.log(shape()) // prints undefined
+console.log(shape(null)) // prints null
+console.log(shape(NaN)) // prints NaN
+console.log(shape({})) // prints {}
+console.log(shape([])) // prints []
 
-    let shape_AnyB0 = Gubu(Any())
-    expect(shape_AnyB0(11)).toEqual(11)
-    expect(shape_AnyB0(10)).toEqual(10)
-    expect(shape_AnyB0()).toEqual(undefined)
-    expect(shape_AnyB0(null)).toEqual(null)
-    expect(shape_AnyB0(NaN)).toEqual(NaN)
-    expect(shape_AnyB0({})).toEqual({})
-    expect(shape_AnyB0([])).toEqual([])
+// with default
+shape = Gubu(Any({x: 1}))
+console.log(shape(11)) // prints 11
+console.log(shape(10)) // prints 10
+console.log(shape()) // prints {x: 1}
 ```
 
 
@@ -1614,12 +1622,13 @@ shape([1, 2]) // FAIL: throws: 'Value "[1, 2]" for path "" must have length belo
 Closed( child?: any )
 ```
 
-* **Standalone:** `Closed`
-* **As Parent:** `Closed({x: 1})`
-* **As Child:** `Required(Closed())`
+* **Standalone:** `Closed({x: 1})`
+* **As Parent:** INVALID
+* **As Child:** `Required(Closed({x: 1}))`
 * **Chainable:** `Optional({x: 1}).Closed()`
 
-TODO
+Prevents an object from accepting unspecified properties. The object
+is "closed" and can only have the properties defined in the shape.
 
 ```js
 const { Closed } = Gubu
@@ -1697,29 +1706,31 @@ shape(2) // FAIL:
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-Exact( child?: any )
+Exact( value: any )
 ```
 
-* **Standalone:** `Exact`
-* **As Parent:** `Exact({x: 1})`
-* **As Child:** `Required(Exact())`
-* **Chainable:** `Optional({x: 1}).Exact()`
+* **Standalone:** `Exact(123)`
+* **As Parent:** INVALID
+* **As Child:** `Required(Exact('abc'))`
+* **Chainable:** `Optional(String).Exact('A')`
 
-TODO
+Specific an exact list of one or more values that the shape can be
+exactly equal to. Use this to restrict the allowed literal values of
+the shape. Use this for enumeration-like values.
+
+Only literal values are accepted. Child shapes are not supported.
+
 
 ```js
 const { Exact } = Gubu
-let shape = Gubu(Exact())
 
-shape(1) // PASS:
-shape(2) // FAIL:
+let shape = Gubu(Exact(11, 12, true))
 
-    let shape_ExactB0 = Gubu(Exact(11, 12, true))
-    expect(shape_ExactB0(11)).toEqual(11)
-    expect(shape_ExactB0(12)).toEqual(12)
-    expect(shape_ExactB0(true)).toEqual(true)
-    expect(() => shape_ExactB0(10)).toThrow('Value "10" for path "" must be exactly one of: 11,12,true.')
-    expect(() => shape_ExactB0(false)).toThrow('Value "false" for path "" must be exactly one of: 11,12,true.')
+console.log(shape(11)) // prints 11
+console.log(shape(12)) // prints 12
+console.log(shape(true)) // prints true
+console.log(shape(10)) // FAILS: 10 is not one of 11, 12, true
+console.log(shape(false)) // FAILS: undefined is not one of 11, 12, true
 ```
 
 
@@ -1818,23 +1829,22 @@ shape([1])       // FAIL: throws: 'Value "[1]" for path "" must be a minimum len
 Never( child?: any )
 ```
 
-* **Standalone:** `Never`
+* **Standalone:** `Never()`
 * **As Parent:** `Never({x: 1})`
 * **As Child:** `Required(Never())`
 * **Chainable:** `Optional({x: 1}).Never()`
 
-TODO
+Never match a value. This builder causes the shape to always fail. It
+supports parent, child, and chainable forms to make temporary
+debugging shape changes easier&mdash;these forms also always fail.
+
 
 ```js
 const { Never } = Gubu
 let shape = Gubu(Never())
 
-shape(1) // PASS:
-shape(2) // FAIL:
-
-    let shape_NeverB0 = Gubu(Never())
-    expect(() => shape_NeverB0(10)).toThrow('Validation failed for path "" with value "10" because no value is allowed.')
-    expect(() => shape_NeverB0(true)).toThrow('Validation failed for path "" with value "true" because no value is allowed.')
+shape(123) // FAIL: always fails
+shape()    // FAIL: always fails, even on undefined
 ```
 
 
@@ -2038,28 +2048,74 @@ shape({ z: 3 })  // FAIL: does not match { x: 1 } or { y: 2 }
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-Value( child?: any )
+Value( target: any, general: any )
 ```
 
-* **Standalone:** `Value`
-* **As Parent:** `Value({x: 1})`
-* **As Child:** `Required(Value())`
-* **Chainable:** `Optional({x: 1}).Value()`
+* **Standalone:** `Value({},Number)`
+* **As Parent:** `Value({x: 1}, Number)`
+* **As Child:** `Required(Value({x: 1}, Number))`
+* **Chainable:** `Optional({x: 1}).Value(Number)`
 
-TODO
+Specify the general shape that each value of an object must
+satisfy. Does not apply to any explicitly defined property values.
+
 
 ```js
 const { Value } = Gubu
 let shape = Gubu(Value())
 
-shape(1) // PASS:
-shape(2) // FAIL:
+let shape = Gubu(Value({}, Number))
+console.log(shape({ x: 10 })) // PASS: prints { x: 10 }
+console.log(shape({ x: 10, y: 11 })) // PASS: prints { x: 10, y: 11 }
+console.log(shape({ x: true })) // FAIL: 
 
-    let shape_ValueB0 = Gubu(Value({}, Number))
-    expect(shape_ValueB0({ x: 10 })).toEqual({ x: 10 })
-    expect(shape_ValueB0({ x: 10, y: 11 })).toEqual({ x: 10, y: 11 })
-    expect(() => shape_ValueB0({ x: true })).toThrow('Validation failed for path "x" with value "true" because the value is not of type number.')
-    // TODO: with explicits
+shape = Gubu({
+  page: Value({
+    home: {
+      title: 'Home',
+      template: 'home'
+    },
+    sitemap: {
+      title: 'Site Map',
+      template: 'sitemap'
+    },
+  }, {
+    title: String,
+    template: 'standard'
+  })
+})
+
+let result = shape({
+  page: {
+    about: {
+      title: 'About'
+    },
+    contact: {
+      title: 'Contact'
+    }
+  }
+})
+
+result === {
+  page: {
+    about: {
+      template: 'standard',
+      title: 'About',
+    },
+    contact: {
+      template: 'standard',
+      title: 'Contact',
+    },
+    home: {
+      template: 'home',
+      title: 'Home',
+    },
+    sitemap: {
+      template: 'sitemap',
+      title: 'Site Map',
+    },
+  }
+}
 ```
 
 
@@ -2188,6 +2244,7 @@ a default.
 ## Implementation
 
 TODO
+
 
 ### Contributing
 

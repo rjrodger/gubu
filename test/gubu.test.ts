@@ -985,6 +985,9 @@ Validation failed for path "" with value "" because check "custom: (v) => 0 === 
     expect(shape_AnyB0({})).toEqual({})
     expect(shape_AnyB0([])).toEqual([])
 
+    let shape_AnyB1 = Gubu(Any({ x: 1 }))
+    expect(shape_AnyB1()).toEqual({ x: 1 })
+
 
     let shape_BeforeB0 = Gubu(Before((v: any) => v > 10, 10))
     expect(shape_BeforeB0(11)).toEqual(11)
@@ -1094,7 +1097,52 @@ Validation failed for path "b" with value "B" because the value is not of type n
     expect(shape_ValueB0({ x: 10 })).toEqual({ x: 10 })
     expect(shape_ValueB0({ x: 10, y: 11 })).toEqual({ x: 10, y: 11 })
     expect(() => shape_ValueB0({ x: true })).toThrow('Validation failed for path "x" with value "true" because the value is not of type number.')
-    // TODO: with explicits
+
+    let shape_ValueB1 = Gubu({
+      page: Value({
+        home: {
+          title: 'Home',
+          template: 'home'
+        },
+        sitemap: {
+          title: 'Site Map',
+          template: 'sitemap'
+        },
+      }, {
+        title: String,
+        template: 'standard'
+      })
+    })
+
+    expect(shape_ValueB1({
+      page: {
+        about: {
+          title: 'About'
+        },
+        contact: {
+          title: 'Contact'
+        }
+      }
+    })).toEqual({
+      page: {
+        about: {
+          template: 'standard',
+          title: 'About',
+        },
+        contact: {
+          template: 'standard',
+          title: 'Contact',
+        },
+        home: {
+          template: 'home',
+          title: 'Home',
+        },
+        sitemap: {
+          template: 'sitemap',
+          title: 'Site Map',
+        },
+      },
+    })
 
   })
 

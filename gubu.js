@@ -6,6 +6,8 @@ exports.GValue = exports.GSome = exports.GRequired = exports.GRename = exports.G
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
 // FEATURE: !!! recognize and apply regexes
+// FEATURE: Value without chain or two vals should just be a convenience wrapper for chaining
+// FEATURE: support custom builder registration so that can chain on builtins
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
 const util_1 = require("util");
@@ -632,7 +634,6 @@ const After = function (validate, shape) {
     return node;
 };
 exports.After = After;
-// TODO: array without specials should have no effect
 const Closed = function (shape) {
     let node = buildize(this, shape);
     node.b.push(function Closed(val, update, s) {
