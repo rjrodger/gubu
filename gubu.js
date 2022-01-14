@@ -9,6 +9,7 @@ exports.GValue = exports.GSome = exports.GRequired = exports.GRename = exports.G
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
 // TODO: GubuShape.d is damaged by composition
+// TODO: Better stringifys for builder shapes
 const util_1 = require("util");
 const package_json_1 = __importDefault(require("./package.json"));
 const GUBU$ = Symbol.for('gubu$');
@@ -893,7 +894,7 @@ function buildize(invs0, invs1) {
     return Object.assign(node, {
         Above,
         After,
-        All,
+        // All,
         Any,
         Before,
         Below,
@@ -904,12 +905,12 @@ function buildize(invs0, invs1) {
         Max,
         Min,
         Never,
-        One,
+        // One,
         Optional,
         Refer,
         Rename,
         Required,
-        Some,
+        // Some,
         Value,
     });
 }

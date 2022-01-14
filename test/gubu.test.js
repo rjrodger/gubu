@@ -691,7 +691,12 @@ Validation failed for path "" with value "" because check "custom: (v) => 0 === 
         let shape_AllB0 = Gubu(All(Number, (v) => v > 10));
         expect(shape_AllB0(11)).toEqual(11);
         expect(() => shape_AllB0(10)).toThrow(`Value "10" for path "" does not satisfy all of: "Number","(v) => v > 10"`);
-        // TODO: object props
+        let shape_AllB1 = Gubu(All());
+        expect(shape_AllB1(123)).toEqual(123);
+        expect(() => shape_AllB1()).toThrow('required');
+        let shape_AllB2 = Gubu({ a: Optional(All({ b: String }, Min(2))) });
+        expect(shape_AllB2({ a: { b: 'X', c: 1 } })).toEqual({ a: { b: 'X', c: 1 } });
+        expect(shape_AllB2({})).toEqual({});
         let shape_AnyB0 = Gubu(Any());
         expect(shape_AnyB0(11)).toEqual(11);
         expect(shape_AnyB0(10)).toEqual(10);
@@ -744,6 +749,10 @@ Validation failed for path "b" with value "B" because the value is not of type n
         expect(() => shape_OneB0(NaN)).toThrow('Value "NaN" for path "" does not satisfy one of: "10","11","true"');
         expect(() => shape_OneB0(undefined)).toThrow('Value "" for path "" does not satisfy one of: "10","11","true"');
         expect(() => shape_OneB0()).toThrow('Value "" for path "" does not satisfy one of: "10","11","true"');
+        let shape_OneB1 = Gubu(One(Number, String));
+        expect(shape_OneB1(123)).toEqual(123);
+        expect(shape_OneB1('abc')).toEqual('abc');
+        expect(() => shape_OneB1(true)).toThrow('Value "true" for path "" does not satisfy one of: "Number","String"');
         // TODO: more complex objects
         let shape_OptionalB0 = Gubu({ a: Optional(11) });
         expect(shape_OptionalB0({ a: 10 })).toEqual({ a: 10 });

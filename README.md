@@ -1,5 +1,13 @@
 <a name="top"></a>
 
+```mermaid
+graph TD;
+    A-->B;
+    A-->C;
+    B-->D;
+    C-->D;
+```
+
 # Gubu: An object shape validation utility.
 
 [Quick Example](#quick-example) | 
@@ -1281,33 +1289,40 @@ shape() // FAIL: {x: Number} is required
 
 See also: [Update](#update-type), [State](#state-type).
 
+
 ---
 #### All Builder
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-All( child?: any )
+All( ...children: any[] )
 ```
 
-* **Standalone:** `All`
-* **As Parent:** `All({x: 1})`
-* **As Child:** `Required(All())`
-* **Chainable:** `Optional({x: 1}).All()`
+* **Standalone:** `All(Number, v => v>10)`
+* **As Parent:** INVALID
+* **As Child:** `Optional(All({x: 1}, Min(2)))`
+* **Chainable:** INVALID
 
-TODO
-implicit Required, use Optional explicitly
+To be valid, the source value must match all of the shapes given as
+arguments. All shapes are always evaluated, even if some fail, to
+ensure all errors are collected.
+
+This shape builder implicitly creates a [Required](#required-builder)
+value. Use the shape builder [Optional](#optional-builder) to make the
+value explicitly optional.
+
 
 ```js
 const { All } = Gubu
-let shape = Gubu(All())
+let shape = Gubu(All(Number, v => v>10))
 
-shape(1) // PASS:
-shape(2) // FAIL:
+shape(11) // PASS: 11 is a number, and 11 > 10 
+shape(9)  // FAIL: 9 is a number, but 9 < 10 
+shape()   // FAIL: a value is required (implicitly)
 
-    let shape_AllB0 = Gubu(All(Number, (v: any) => v > 10))
-    expect(shape_AllB0(11)).toEqual(11)
-    expect(() => shape_AllB0(10)).toThrow(`Value "10" for path "" does not satisfy all of: "Number","(v) => v > 10"`)
-    // TODO: object props
+shape = Gubu({ a: Optional(All({ b: String }, Min(2))) })
+shape({ a: { b: 'X', c: 1 } }) // PASS: returns same object
+shape({}) // PASS: `a` is optional, returns {}
 ```
 
 
@@ -1349,28 +1364,47 @@ shape(2) // FAIL:
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-Before( child?: any )
+Before( validate: Validate, child?: any )
 ```
 
-* **Standalone:** `Before`
-* **As Parent:** `Before({x: 1})`
-* **As Child:** `Required(Before())`
-* **Chainable:** `Optional({x: 1}).Before()`
+* **Standalone:** `Before(() => true)`
+* **As Parent:** `Before({() => true, {x: 1})`
+* **As Child:** `Required(Before(() => true))`
+* **Chainable:** `Optional({x: 1}).Before(() => true)`
 
-TODO
+Provide a validation function that will run before the value has been
+processed normally. The validation function has the form:
+
+```
+Validate(value: any, update?: Update, state?: State): boolean
+```
+
+Return `true` if the value is valid, `false` otherwise. See the 
+[Custom Validations](#custom-validation) section.
+
+Even if validation fails, the value will still be processed
+normally. This ensures that all errors, particularly those in child
+values, are also captured. To prevent further processing, set
+`Update.done = true`.
+
 
 ```js
 const { Before } = Gubu
-let shape = Gubu(Before())
+let shape = Gubu(Before(v => 0 === v%2)) // Pass if value is even
 
-shape(1) // PASS:
-shape(2) // FAIL:
+shape(1) // FAIL: 1 is not even
+shape(2) // PASS: 2 is even; returns 2
+shape()  // PASS: returns undefined
 
-    let shape_BeforeB0 = Gubu(Before((v: any) => v > 10, 10))
-    expect(shape_BeforeB0(11)).toEqual(11)
-    expect(() => shape_BeforeB0(10)).toThrow('Validation failed for path "" with value "10" because check "custom: (v) => v > 10" failed.')
-    // TODO: modify value
+shape = Gubu(Before(v => 0 === v.x%2, Required({x: Number})))
+shape({x: 1}) // FAIL: 1 is not even
+shape({x: 2)) // PASS: 2 is even; returns 2
+shape({x: 'X'}) // FAIL: 'X' is not a number
+shape({}) // FAIL: x is required
+shape() // FAIL: {x: Number} is required
 ```
+
+See also: [Update](#update-type), [State](#state-type).
 
 
 ---
@@ -1650,35 +1684,41 @@ shape(2) // FAIL:
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-One( child?: any )
+One( ...children: any[] )
 ```
 
-* **Standalone:** `One`
-* **As Parent:** `One({x: 1})`
-* **As Child:** `Required(One())`
-* **Chainable:** `Optional({x: 1}).One()`
+* **Standalone:** `One(Number, String)`
+* **As Parent:** INVALID
+* **As Child:** `Optional(One({x: 1}, {x: 2}))`
+* **Chainable:** INVALID
 
-TODO
-implicit Required, use Optional explicitly
+To be valid, the source value must match exactly one of the shapes
+given as arguments. All shapes are always evaluated, to ensure all
+errors are collected.
+
+This shape builder implicitly creates a [Required](#required-builder)
+value. Use the shape builder [Optional](#optional-builder) to make the
+value explicitly optional.
+
+To match exact values, use the shape builder [Exact](#exact-builder)
+(literal values alone will just create optional defaults).
 
 ```js
 const { One } = Gubu
-let shape = Gubu(One())
+let shape = Gubu(One(Number, String))
 
-shape(1) // PASS:
-shape(2) // FAIL:
+shape(123)   // PASS: 123 is a number
+shape('abc') // PASS: 'abc' is a string
+shape(true)  // FAIL: `true` is not a number or string
+shape()      // FAIL: a value is required
 
-    let shape_OneB0 = Gubu(One(Exact(10), Exact(11), Exact(true)))
-    expect(shape_OneB0(10)).toEqual(10)
-    expect(shape_OneB0(11)).toEqual(11)
-    expect(shape_OneB0(true)).toEqual(true)
-    expect(() => shape_OneB0(12)).toThrow('Value "12" for path "" does not satisfy one of: "10","11","true"')
-    expect(() => shape_OneB0(false)).toThrow('Value "false" for path "" does not satisfy one of: "10","11","true"')
-    expect(() => shape_OneB0(null)).toThrow('Value "null" for path "" does not satisfy one of: "10","11","true"')
-    expect(() => shape_OneB0(NaN)).toThrow('Value "NaN" for path "" does not satisfy one of: "10","11","true"')
-    expect(() => shape_OneB0(undefined)).toThrow('Value "" for path "" does not satisfy one of: "10","11","true"')
-    expect(() => shape_OneB0()).toThrow('Value "" for path "" does not satisfy one of: "10","11","true"')
-    // TODO: more complex objects
+shape = Gubu(One(Exact(10), Exact(11), Exact(true)))
+shape(10)    // PASS: exact match for `10`
+shape(11)    // PASS: exact match for `11`
+shape(true)) // PASS: exact match for `true`
+shape(12)    // FAIL: no exact match
+shape(false) // FAIL: no exact match
+shape()      // FAIL: a value is required
 ```
 
 
@@ -1806,32 +1846,31 @@ shape(2) // FAIL:
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-Some( child?: any )
+Some( ...children: any[] )
 ```
 
-* **Standalone:** `Some`
-* **As Parent:** `Some({x: 1})`
-* **As Child:** `Required(Some())`
-* **Chainable:** `Optional({x: 1}).Some()`
+* **Standalone:** `Some({x: 1}, {y: 2})`
+* **As Parent:** INVALID
+* **As Child:** `Optional(Some({x: 1}, {y: 2}))`
+* **Chainable:** INVALID
 
-TODO
-implicit Required, use Optional explicitly
+To be valid, the source value must match some of the shapes given as
+arguments (at least one). All shapes are always evaluated, even if
+some fail, to ensure all errors are collected.
+
+This shape builder implicitly creates a [Required](#required-builder)
+value. Use the shape builder [Optional](#optional-builder) to make the
+value explicitly optional.
+
 
 ```js
 const { Some } = Gubu
-let shape = Gubu(Some())
+let shape = Gubu(Some({x: 1}, {y: 2}))
 
-shape(1) // PASS:
-shape(2) // FAIL:
-
-    let shape_SomeB0 = Gubu(Some({ x: 1 }, { y: 2 }))
-    expect(shape_SomeB0({ x: 1 })).toEqual({ x: 1 }) 
-    expect(shape_SomeB0({ y: 2 })).toEqual({ y: 2 })
-    expect(shape_SomeB0({ x: 1, y: 2 })).toEqual({ x: 1, y: 2 })
-    expect(shape_SomeB0({ x: true, y: 2 })).toEqual({ x: true, y: 2 })
-    expect(shape_SomeB0({ x: 1, y: true })).toEqual({ x: 1, y: true })
-    expect(() => shape_SomeB0({ x: true, y: true })).toThrow(`Value "{x:true,y:true}" for path "" does not satisfy some of: {"x":1},{"y":2}`)
-    // TODO: more complex objects
+shape({ x: 1 }) // PASS: { x: 1 } matches; returns { x: 1 }
+shape({ y: 2 }) // PASS: { y: 2 } matches; returns { y: 2 }
+shape({ x: 1, y: 2 }) // PASS: { x: 1, y: 2 } matches; returns { x: 1, y: 2 }
+shape({ z: 3 })  // FAIL: does not match { x: 1 } or { y: 2 }
 ```
 
 

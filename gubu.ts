@@ -6,7 +6,7 @@
 // FEATURE: state should indicate if value was present, not just undefined
 
 // TODO: GubuShape.d is damaged by composition
-
+// TODO: Better stringifys for builder shapes
 
 import { inspect } from 'util'
 import Pkg from './package.json'
@@ -1315,7 +1315,7 @@ function buildize(invs0?: any, invs1?: any): Node {
   return Object.assign(node, {
     Above,
     After,
-    All,
+    // All,
     Any,
     Before,
     Below,
@@ -1326,12 +1326,12 @@ function buildize(invs0?: any, invs1?: any): Node {
     Max,
     Min,
     Never,
-    One,
+    // One,
     Optional,
     Refer,
     Rename,
     Required,
-    Some,
+    // Some,
     Value,
   })
 }
