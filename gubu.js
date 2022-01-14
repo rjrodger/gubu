@@ -9,7 +9,7 @@ exports.GValue = exports.GSome = exports.GRequired = exports.GRename = exports.G
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
 const util_1 = require("util");
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 const GUBU$ = Symbol.for('gubu$');
 const GUBU = { gubu$: GUBU$, v$: VERSION };
 // The current validation state.

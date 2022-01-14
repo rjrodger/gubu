@@ -1,6 +1,6 @@
 {
   "name": "gubu",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "An object shape validation utility.",
   "main": "gubu.js",
   "browser": "gubu.min.js",
@@ -16,16 +16,16 @@
     "url": "git://github.com/rjrodger/gubu.git"
   },
   "scripts": {
-    "test": "jest --coverage",
-    "test-some": "jest -t",
-    "test-watch": "jest --coverage --watchAll",
+    "test": "npm run version && jest --coverage",
+    "test-some": "npm run version && jest -t",
+    "test-watch": "npm run version && jest --coverage --watchAll",
     "test-web": "npm run build && npm run build-web && browserify -i util -o test/web.js -e test/entry.js -im && open test/web.html",
-    "watch": "tsc -w -d",
-    "build": "tsc -d",
+    "watch": "npm run version && tsc -w -d",
+    "build": "npm run version && tsc -d",
     "build-web": "cp gubu.js gubu.min.js && browserify -i util -o gubu.min.js -e gubu.web.js -s Gubu -im -p tinyify",
-    "version": "node -r fs -pe \"v=require('./package.json').version;s=fs.readFileSync('./gubu.ts').toString().replace(/VERSION = '.*?'/,'VERSION = \\''+v+'\\'');fs.writeFileSync('./gubu.ts',s)\"",
+    "version": "node -r fs -e \"v=require('./package.json').version;s=fs.readFileSync('./gubu.ts').toString().replace(/VERSION = '.*?'/,'VERSION = \\''+v+'\\'');fs.writeFileSync('./gubu.ts',s)\"",
     "clean": "rm -rf node_modules yarn.lock package-lock.json",
-    "reset": "npm run clean && npm i && npm test",
+    "reset": "npm run clean && npm i && npm build && npm test",
     "repo-tag": "REPO_VERSION=`node -e \"console.log(require('./package').version)\"` && echo TAG: v$REPO_VERSION && git commit -a -m v$REPO_VERSION && git push && git tag v$REPO_VERSION && git push --tags;",
     "repo-publish": "npm run clean && npm i && npm run repo-publish-quick",
     "repo-publish-quick": "npm run build && npm run test && npm run build-web && npm run test-web && npm run repo-tag && npm publish --access public --registry https://registry.npmjs.org "
