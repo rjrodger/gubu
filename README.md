@@ -1206,12 +1206,89 @@ value, respectively.
 
 ### TypeScript Types
 
-TODO
-type predicate:
-unit test valid-basic
+Gubu makes a best-effort to support TypeScript types. The intersection
+of the type of the schema and the type of the value is used as the
+return type. This almost always does what you want, especially with
+optional default values (from which types will be infered).
 
+The [GubuShape](#gubushape-function) function also contains a property
+function `valid` with form:
 
-https://www.typescriptneedstypes.com/
+```
+valid(value: any, context?: any): boolean: true
+```
+
+This can be used as a type guard:
+
+```
+const shape = Gubu({ x: 1, y: 'Y' })
+let data = { x: 2, z: true }
+
+if (shape.valid(data)) {
+  console.log(data) // prints { x: 2, y: 'Y', z: true }
+  console.log(data.x) // no type errors; prints 2
+  console.log(data.y) // no type errors; prints 'Y'
+  console.log(data.z) // no type errors; prints true
+  console.log(data.q) // type error! does not compile
+}
+```
+
+Where TypeScript cannot infer your types properly, you'll need to
+manually define them:
+
+```
+let shape = Gubu({ x: (Closed({ k: 1 }) as unknown as { k: number }), y: 'Y' })
+let data = { z: true }
+
+if (shape.valid(data)) {
+  console.log(data) // prints{ x: { k: 1 }, y: 'Y', z: true })
+  console.log(data.x) // no type errors due to manual definition; prints { k: 1 }
+  console.log(data.x.k) // no type errors; prints 1
+  console.log(data.y) // no type errors; prints'Y'
+  console.log(data.z) // no type errors; prints true 
+}
+```
+
+The holy grail would be for Gubu to use your type definitions directly:
+
+```
+interface User {
+  name: string
+  age: number
+  job? string
+}
+
+// DOES NOT WORK!
+let shape = Gubu(...User...)
+```
+
+Sadly TypeScript does not provide runtime type information at
+present&mdash;[it should](https://www.typescriptneedstypes.com/)!
+
+If you're really keen on being ultra-DRY, and really want to avoid
+duplicating type definition into almost, but not quite, the same shape
+definitions, here are your options:
+
+1. Create an instance of your type, and use that as the shape definition:
+
+```
+Class Car {
+  // Thsse defaults become the shape definitions
+  make: string = ''
+  model: string = ''
+}
+const shape = Gubu({ ...new Car() })
+```
+
+2. Use code generation. Perhaps you are already building types from a
+   SQL Schema? use the same approach to build the shapes.
+   
+3. Parse the `d.ts` type definitions at runtime use those to
+   dynamically define your shapes.
+   
+None of these options are that great. For moment, I recommend that you
+use the instance trick above if you can, and live with some manual fix
+up.
 
 
 
