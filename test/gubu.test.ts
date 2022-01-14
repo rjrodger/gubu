@@ -1666,6 +1666,24 @@ Validation failed for path "b" with value "B" because the value is not of type n
     expect(g4({})).toEqual({})
     expect(g4({ a: undefined })).toEqual({})
     expect(() => g4({ a: {} })).toThrow(/"a.b".*required/)
+
+
+    let g5 = Gubu(Required({ x: 1 }))
+    expect(g5({ x: 2 })).toEqual({ x: 2 })
+    expect(g5({ x: 2, y: 3 })).toEqual({ x: 2, y: 3 })
+    expect(() => g5()).toThrow('required')
+
+    let g6 = Gubu(Closed(Required({ x: 1 })))
+    expect(g6({ x: 2 })).toEqual({ x: 2 })
+    expect(() => g6({ x: 2, y: 3 })).toThrow('Validation failed for path "" with value "{x:2,y:3}" because the property "y" is not allowed.')
+    expect(() => g6()).toThrow('required')
+
+    let g7 = Gubu(Closed({ x: 1 }).Required())
+    expect(g7({ x: 2 })).toEqual({ x: 2 })
+    expect(() => g7({ x: 2, y: 3 })).toThrow('Validation failed for path "" with value "{x:2,y:3}" because the property "y" is not allowed.')
+    expect(() => g7()).toThrow('required')
+
+
   })
 
 

@@ -1990,23 +1990,33 @@ shape(2) // FAIL:
 Required( child?: any )
 ```
 
-* **Standalone:** `Required`
+* **Standalone:** `Required({x: 1})`
 * **As Parent:** `Required({x: 1})`
-* **As Child:** `Required(Required())`
-* **Chainable:** `Optional({x: 1}).Required()`
+* **As Child:** `Closed(Required({x: 1}))`
+* **Chainable:** `Closed({x: 1}).Required()`
 
-TODO
+Make the value explicitly required. Undefined values will fail. This
+is most useful for objects and arrays, as these are optional be
+default.
 
 ```js
 const { Required } = Gubu
-let shape = Gubu(Required())
+let shape = Gubu(Required({x: 1}))
 
-shape(1) // PASS:
-shape(2) // FAIL:
+console.log(g5({ x: 2 })) // PASS: prints { x: 2 })
+console.log(g5({ x: 2, y: 3 })) // PASS: prints { x: 2, y: 3 })
+console.log(() => g5()) // FAIL: object is required
 
-    let shape_RequiredB0 = Gubu(Required(11))
-    expect(shape_RequiredB0(11)).toEqual(11)
-    expect(() => shape_RequiredB0()).toThrow('Validation failed for path "" with value "" because the value is required.')
+shape = Gubu(Closed(Required({ x: 1 })))
+console.log(g6({ x: 2 })) // PASS: prints { x: 2 })
+console.log(() => g6({ x: 2, y: 3 })) // FAIL: property "y" is not allowed
+console.log(() => g6()) // FAIL: object is required
+
+shape = Gubu(Closed({ x: 1 }).Required())
+console.log(g7({ x: 2 })) // prints { x: 2 })
+console.log(() => g7({ x: 2, y: 3 })) // FAIL: property "y" is not allowed.
+console.log(() => g7()) // FAIL: object is required
+
 ```
 
 
