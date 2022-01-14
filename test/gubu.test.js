@@ -686,7 +686,7 @@ Validation failed for path "" with value "x" because check "custom: (v) => v > 1
         expect(() => shape_AfterB2({})).toThrow(`Validation failed for path "" with value "{}" because check "custom: (v) => 0 === v.x % 2" failed.
 Validation failed for path "x" with value "" because the value is required.`);
         expect(() => shape_AfterB2()).toThrow(`Validation failed for path "" with value "" because the value is required.
-Validation failed for path "" with value "" because check "custom: (v) => 0 === v.x % 2" failed (threw: Cannot read property 'x' of undefined)`);
+Validation failed for path "" with value "" because check "custom: (v) => 0 === v.x % 2" failed (threw: Cannot read prop`);
         // TODO: modify value
         let shape_AllB0 = Gubu(All(Number, (v) => v > 10));
         expect(shape_AllB0(11)).toEqual(11);
