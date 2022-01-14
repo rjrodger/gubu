@@ -1,13 +1,5 @@
 <a name="top"></a>
 
-```mermaid
-graph TD;
-    A-->B;
-    A-->C;
-    B-->D;
-    C-->D;
-```
-
 # Gubu: An object shape validation utility.
 
 [Quick Example](#quick-example) | 
