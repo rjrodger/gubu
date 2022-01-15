@@ -13,7 +13,7 @@
 
 import { inspect } from 'util'
 
-const VERSION = '0.2.1'
+const VERSION = '0.3.0'
 
 const GUBU$ = Symbol.for('gubu$')
 const GUBU = { gubu$: GUBU$, v$: VERSION }

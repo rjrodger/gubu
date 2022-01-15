@@ -118,7 +118,7 @@ console.log(optionShape({ host: '' }))     // Not really a usable string!
 
 You're building a front end component that displays complex data from
 the back end, and you want to handle missing data gracefully, at any
-depth in the struture.
+depth in the structure.
 
 ```js
 const productListShape = Gubu({
@@ -1209,7 +1209,7 @@ value, respectively.
 Gubu makes a best-effort to support TypeScript types. The intersection
 of the type of the schema and the type of the value is used as the
 return type. This almost always does what you want, especially with
-optional default values (from which types will be infered).
+optional default values (from which types will be inferred).
 
 The [GubuShape](#gubushape-function) function also contains a property
 function `valid` with form:
@@ -1244,7 +1244,7 @@ if (shape.valid(data)) {
   console.log(data) // prints{ x: { k: 1 }, y: 'Y', z: true })
   console.log(data.x) // no type errors due to manual definition; prints { k: 1 }
   console.log(data.x.k) // no type errors; prints 1
-  console.log(data.y) // no type errors; prints'Y'
+  console.log(data.y) // no type errors; prints 'Y'
   console.log(data.z) // no type errors; prints true 
 }
 ```
@@ -1273,7 +1273,7 @@ definitions, here are your options:
 
 ```
 Class Car {
-  // Thsse defaults become the shape definitions
+  // These defaults become the shape definitions
   make: string = ''
   model: string = ''
 }
@@ -1632,14 +1632,9 @@ is "closed" and can only have the properties defined in the shape.
 
 ```js
 const { Closed } = Gubu
-let shape = Gubu(Closed())
-
-shape(1) // PASS:
-shape(2) // FAIL:
-
-    let shape_ClosedB0 = Gubu(Closed({ a: 11 }))
-console.log(shape_ClosedB0({ a: 10 })).toEqual({ a: 10 })
-console.log(() => shape_ClosedB0({ a: 10, b: 11 })).toThrow('Validation failed for path "" with value "{a:10,b:11}" because the property "b" is not allowed.')
+let shape = Gubu(Closed({ a: 11 }))
+shape({ a: 10 }) // PASS; returns { a: 10 }
+shape({ a: 10, b: 11 }) // FAIL: property "b" is not allowed
 ```
 
 
@@ -1657,13 +1652,13 @@ Define( options: string | { name: string }, child?: any )
 * **Chainable:** `Optional({x: 1}).Define('FOO')`
 
 Define a name for a sub value that can be referenced by the
-[Refer](#refer-builder) shape builder. Definitions must preceed usage
+[Refer](#refer-builder) shape builder. Definitions must precede usage
 by `Refer`, in depth-first order.
 
 Note that in order to prevent infinite loops, by default `Refer` does
 *not* insert default values. To do so, use the `fill` option. Note
-also that `Refer` does not copy the refered value, it copies the
-refered shape, thus `fill` only inserts the default value. 
+also that `Refer` does not copy the referred value, it copies the
+referred shape, thus `fill` only inserts the default value. 
 
 ```js
 const { Define, Refer } = Gubu
@@ -1692,23 +1687,36 @@ shape({ a: 'A', b: 'B' }) // FAILS: b is not a number
 Empty( child?: any )
 ```
 
-* **Standalone:** `Empty`
-* **As Parent:** `Empty({x: 1})`
-* **As Child:** `Required(Empty())`
-* **Chainable:** `Optional({x: 1}).Empty()`
+* **Standalone:** `Empty(String)`
+* **As Parent:** INVALID
+* **As Child:** `Optional(Empty(String))`
+* **Chainable:** `Optional(String).Empty()`
 
-TODO
+Allow the [empty string](#empty-strings) to satisfy a string value.
 
 ```js
 const { Empty } = Gubu
-let shape = Gubu(Empty())
+let shape = Gubu(Empty(String))
 
-shape(1) // PASS:
-shape(2) // FAIL:
+shape('abc') // PASS: returns 'abc'
+shape('') // PASS: returns ''
+shape() // FAIL: a string is still required
 
-    let shape_EmptyB0 = Gubu({ a: Empty(String), b: String })
-console.log(shape_EmptyB0({ a: '', b: 'ABC' })) // prints { a: '', b: 'ABC' })
-console.log(() => shape_EmptyB0({ a: '', b: '' })).toThrow('Validation failed for path "b" with value "" because the value is required.')
+shape = Gubu(Empty('abc'))
+shape('def') // PASS: returns 'def'
+shape('') // PASS: returns ''
+shape() // PASS: returns 'abc' as default
+
+shape = Gubu(Optional(Empty(String)))
+shape('abc') // PASS: returns 'abc'
+shape('') // PASS: returns ''
+shape() // PASS: returns undefined
+
+shape = Gubu(Optional(String).Empty())
+shape('abc') // PASS: returns 'abc'
+shape('') // PASS: returns ''
+shape() // PASS: returns undefined
+
 ```
 
 
@@ -1945,13 +1953,13 @@ Refer( options: string | { name: string, fill?: boolean }, child?: any )
 * **Chainable:** `Optional({x: 1}).Refer('FOO')`
 
 Reference a previously defined sub-shape by name (using
-[Define](#define-builder)). Definitions with `Define` must preceed
+[Define](#define-builder)). Definitions with `Define` must precede
 usage by `Refer`, in depth-first order.
 
 Note that in order to prevent infinite loops, by default `Refer` does
 *not* insert default values. To do so, use the `fill` option. Note
-also that `Refer` does not copy the refered value, it copies the
-refered shape, thus `fill` only inserts the default value. 
+also that `Refer` does not copy the referred value, it copies the
+referred shape, thus `fill` only inserts the default value. 
 
 ```js
 const { Define, Refer } = Gubu
@@ -2273,12 +2281,35 @@ a default.
 
 ## Implementation
 
-TODO
+Unlike most validation libraries, *Gubu* does not use recursion,
+avoiding the overhead of a deep function call stack. Instead a single
+loop builds append-only stack arrays to track position in a depth
+first traversal of the input value to validate. The stack array
+elements are references to values, so do not consume much memory.
+
+*Gubu* traverses over the shape definition, not the input value, which
+further protects you from unexpectedly deep inputs.
+
+If you're looking for a depth-first tree iterative traversal algorithm
+you've got one right here!
+
+*Gubu* compiles the schema shape on a just-in-time basis. Each value
+node is converted into a [Node](#shape-nodes) that describes the
+expected value. Core validation such as types and required and
+optional values are implemented inline. Shape builders provide further
+validation. Each shape builder can accept raw values, or a Node, and
+outputs a Node. Thus, shape builders are closed over Nodes under
+composition, which means you can pretty much plug them together any
+way you want. It also means you can [write your own shape
+builders](#custom-builders) and just use them directly without any
+setup.
+
 
 
 ### Contributing
 
-TODO
+Contributions are welcome! Just submit a PR. Note that this project
+uses the MIT license so your contribution is made on the same terms.
 
 
 ## Credits

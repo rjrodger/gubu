@@ -624,6 +624,10 @@ Validation failed for path "q.b" with value "x" because the value is not of type
         expect(os1e()).toEqual(undefined);
         expect(os1e('')).toEqual('');
         expect(os1e('x')).toEqual('x');
+        const os2e = Gubu(Optional(String).Empty());
+        expect(os2e()).toEqual(undefined);
+        expect(os2e('')).toEqual('');
+        expect(os2e('x')).toEqual('x');
         const os1eO = Gubu({ a: Optional(Empty(String)) });
         expect(os1eO({})).toEqual({});
         expect(os1eO({ a: '' })).toEqual({ a: '' });
