@@ -667,6 +667,7 @@ const Define = function (inopts, shape) {
     return node;
 };
 exports.Define = Define;
+// TODO: copy option to copy value instead of node - need index of value in stack
 const Refer = function (inopts, shape) {
     let node = buildize(this, shape);
     let opts = 'object' === typeof inopts ? inopts || {} : {};

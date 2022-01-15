@@ -1004,6 +1004,7 @@ const Define: Builder = function(this: Node, inopts: any, shape?: any): Node {
 }
 
 
+// TODO: copy option to copy value instead of node - need index of value in stack
 const Refer: Builder = function(this: Node, inopts: any, shape?: any): Node {
   let node = buildize(this, shape)
 

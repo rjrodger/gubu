@@ -1638,8 +1638,8 @@ shape(1) // PASS:
 shape(2) // FAIL:
 
     let shape_ClosedB0 = Gubu(Closed({ a: 11 }))
-    expect(shape_ClosedB0({ a: 10 })).toEqual({ a: 10 })
-    expect(() => shape_ClosedB0({ a: 10, b: 11 })).toThrow('Validation failed for path "" with value "{a:10,b:11}" because the property "b" is not allowed.')
+console.log(shape_ClosedB0({ a: 10 })).toEqual({ a: 10 })
+console.log(() => shape_ClosedB0({ a: 10, b: 11 })).toThrow('Validation failed for path "" with value "{a:10,b:11}" because the property "b" is not allowed.')
 ```
 
 
@@ -1648,28 +1648,39 @@ shape(2) // FAIL:
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-Define( child?: any )
+Define( options: string | { name: string }, child?: any )
 ```
 
-* **Standalone:** `Define`
-* **As Parent:** `Define({x: 1})`
-* **As Child:** `Required(Define())`
-* **Chainable:** `Optional({x: 1}).Define()`
+* **Standalone:** `Define('FOO',{x: 1})`
+* **As Parent:** `Define('FOO", {x: 1})`
+* **As Child:** `Required(Define('FOO', {x: 1}))`
+* **Chainable:** `Optional({x: 1}).Define('FOO')`
 
-TODO
-depth first order, define before refer
+Define a name for a sub value that can be referenced by the
+[Refer](#refer-builder) shape builder. Definitions must preceed usage
+by `Refer`, in depth-first order.
+
+Note that in order to prevent infinite loops, by default `Refer` does
+*not* insert default values. To do so, use the `fill` option. Note
+also that `Refer` does not copy the refered value, it copies the
+refered shape, thus `fill` only inserts the default value. 
 
 ```js
-const { Define } = Gubu
-let shape = Gubu(Define())
+const { Define, Refer } = Gubu
 
-shape(1) // PASS:
-shape(2) // FAIL:
+let shape = Gubu({ a: Define('foo', 11), b: Refer('foo') })
+console.log(shape({ a: 10, b: 12 })) // prints { a: 10, b: 12 })
+console.log(shape({ a: 10 })) // prints { a: 10, b: undefined }) - b is not filled!
+console.log(shape({})) // prints { a: 11, b: undefined }) - b is not filled!
+console.log(shape({ b: 12 })) // prints { a: 11, b: 12 })
+shape({ a: 'A', b: 'B' }) // FAILS: b is not a number
 
-    let shape_DefineB0 = Gubu({ a: Define('foo', 11), b: Refer('foo') })
-    expect(shape_DefineB0({ a: 10, b: 12 })).toEqual({ a: 10, b: 12 })
-    expect(() => shape_DefineB0({ a: 'A', b: 'B' })).toThrow(`Validation failed for path "a" with value "A" because the value is not of type number.
-Validation failed for path "b" with value "B" because the value is not of type number.`)
+shape = Gubu({ a: Define('foo', 11), b: Refer({ name: 'foo', fill: true }) })
+console.log(shape({ a: 10, b: 12 })) // prints { a: 10, b: 12 })
+console.log(shape({ a: 10 })) // prints { a: 10, b: 11 }) - b is filled with the default, not a copy
+console.log(shape({})) // prints { a: 11, b: 11 }) - b is filled with the default, not a copy
+console.log(shape({ b: 12 })) // prints { a: 11, b: 12 })
+shape({ a: 'A', b: 'B' }) // FAILS: b is not a number
 ```
 
 
@@ -1696,8 +1707,8 @@ shape(1) // PASS:
 shape(2) // FAIL:
 
     let shape_EmptyB0 = Gubu({ a: Empty(String), b: String })
-    expect(shape_EmptyB0({ a: '', b: 'ABC' })).toEqual({ a: '', b: 'ABC' })
-    expect(() => shape_EmptyB0({ a: '', b: '' })).toThrow('Validation failed for path "b" with value "" because the value is required.')
+console.log(shape_EmptyB0({ a: '', b: 'ABC' })) // prints { a: '', b: 'ABC' })
+console.log(() => shape_EmptyB0({ a: '', b: '' })).toThrow('Validation failed for path "b" with value "" because the value is required.')
 ```
 
 
@@ -1899,23 +1910,24 @@ shape()      // FAIL: a value is required
 Optional( child?: any )
 ```
 
-* **Standalone:** `Optional`
+* **Standalone:** `Optional(Number)`
 * **As Parent:** `Optional({x: 1})`
-* **As Child:** `Required(Optional())`
-* **Chainable:** `Optional({x: 1}).Optional()`
+* **As Child:** `Closed(Optional({x: 1}))`
+* **Chainable:** `Optional({x: 1}).Closed()`
 
-TODO
+Make the value explicitly optional. If the value was implicitly
+required ([One](#one-builder), [All](#all-builder), etc.) then the
+value becomes optional. If the value is undefined, a required child
+value will no longer cause validation to fail. If the value is absent,
+no default will be inserted.
 
 ```js
 const { Optional } = Gubu
-let shape = Gubu(Optional())
-
-shape(1) // PASS:
-shape(2) // FAIL:
-
-    let shape_OptionalB0 = Gubu({ a: Optional(11) })
-    expect(shape_OptionalB0({ a: 10 })).toEqual({ a: 10 })
-    expect(shape_OptionalB0({})).toEqual({})
+let shape = Gubu({a: Optional(123)})
+console.log(shape({ a: 456 })) // prints { a: 456 }
+console.log(shape({}))  // prints {} - no default inserted
+console.log(shape({ a: undefined })) // prints { a: undefined }
+console.log(shape({ a: true })) // FAILS: true is not a number
 ```
 
 
@@ -1924,29 +1936,39 @@ shape(2) // FAIL:
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-Refer( child?: any )
+Refer( options: string | { name: string, fill?: boolean }, child?: any )
 ```
 
-* **Standalone:** `Refer`
-* **As Parent:** `Refer({x: 1})`
-* **As Child:** `Required(Refer())`
-* **Chainable:** `Optional({x: 1}).Refer()`
+* **Standalone:** `Refer('FOO',{x: 1})`
+* **As Parent:** `Refer('FOO", {x: 1})`
+* **As Child:** `Required(Refer('FOO', {x: 1}))`
+* **Chainable:** `Optional({x: 1}).Refer('FOO')`
 
-TODO
-depth first order, define before refer
+Reference a previously defined sub-shape by name (using
+[Define](#define-builder)). Definitions with `Define` must preceed
+usage by `Refer`, in depth-first order.
+
+Note that in order to prevent infinite loops, by default `Refer` does
+*not* insert default values. To do so, use the `fill` option. Note
+also that `Refer` does not copy the refered value, it copies the
+refered shape, thus `fill` only inserts the default value. 
 
 ```js
-const { Refer } = Gubu
-let shape = Gubu(Refer())
+const { Define, Refer } = Gubu
 
-shape(1) // PASS:
-shape(2) // FAIL:
+let shape = Gubu({ a: Define('foo', 11), b: Refer('foo') })
+console.log(shape({ a: 10, b: 12 })) // prints { a: 10, b: 12 })
+console.log(shape({ a: 10 })) // prints { a: 10, b: undefined }) - b is not filled!
+console.log(shape({})) // prints { a: 11, b: undefined }) - b is not filled!
+console.log(shape({ b: 12 })) // prints { a: 11, b: 12 })
+shape({ a: 'A', b: 'B' }) // FAILS: b is not a number
 
-    let shape_ReferB0 = Gubu({ a: Define('foo', 11), b: Refer('foo') })
-    expect(shape_ReferB0({ a: 10, b: 12 })).toEqual({ a: 10, b: 12 })
-    expect(() => shape_ReferB0({ a: 'A', b: 'B' })).toThrow(`Validation failed for path "a" with value "A" because the value is not of type number.
-Validation failed for path "b" with value "B" because the value is not of type number.`)
-    // TODO: also recursive
+shape = Gubu({ a: Define('foo', 11), b: Refer({ name: 'foo', fill: true }) })
+console.log(shape({ a: 10, b: 12 })) // prints { a: 10, b: 12 })
+console.log(shape({ a: 10 })) // prints { a: 10, b: 11 }) - b is filled with the default, not a copy
+console.log(shape({})) // prints { a: 11, b: 11 }) - b is filled with the default, not a copy
+console.log(shape({ b: 12 })) // prints { a: 11, b: 12 })
+shape({ a: 'A', b: 'B' }) // FAILS: b is not a number
 ```
 
 
@@ -1955,30 +1977,28 @@ Validation failed for path "b" with value "B" because the value is not of type n
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-Rename( child?: any )
+Rename( options?: string | { name: string, keep: boolean }, value: any )
 ```
 
-* **Standalone:** `Rename`
-* **As Parent:** `Rename({x: 1})`
-* **As Child:** `Required(Rename())`
-* **Chainable:** `Optional({x: 1}).Rename()`
+* **Standalone:** `Rename('bar', Number)`
+* **As Parent:** `Rename('bar', {x: 1})`
+* **As Child:** `Required({foo: Rename('bar', Number)})`
+* **Chainable:** `{foo: Optional(Number).Rename('bar')}`
 
-TODO
+Rename the key of a value. The first argument to the `Rename` builder
+is the new string value of the key, or an options object with properties:
+* `name`: `string`: required, new name for the key
+* `keep`: `boolean`: optional, keep the old property
 
 ```js
 const { Rename } = Gubu
-let shape = Gubu(Rename())
 
-shape(1) // PASS:
-shape(2) // FAIL:
+let shape = Gubu({ a: Rename('b', Number) })
+console.log(shape({ a: 10 })) // prints { b: 10 })
 
-    let shape_RenameB0 = Gubu({ a: Rename('b', Number) })
-    expect(shape_RenameB0({ a: 10 })).toEqual({ b: 10 })
-    expect(() => shape_RenameB0({})).toThrow('Validation failed for path "a" with value "" because the value is required.')
-
-    let shape_RenameB1 = Gubu({ a: Rename({ name: 'b', keep: true }, 123) })
-    expect(shape_RenameB1({ a: 10 })).toEqual({ a: 10, b: 10 })
-    expect(shape_RenameB1({})).toEqual({ a: 123, b: 123 })
+shape = Gubu({ a: Rename({ name: 'b', keep: true }, 123) })
+console.log(shape({ a: 10 })) // prints { a: 10, b: 10 })
+console.log(shape({})) // prints { a: 123, b: 123 })
 ```
 
 

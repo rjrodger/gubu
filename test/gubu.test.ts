@@ -1059,13 +1059,29 @@ Validation failed for path "b" with value "B" because the value is not of type n
 
     let shape_OptionalB0 = Gubu({ a: Optional(11) })
     expect(shape_OptionalB0({ a: 10 })).toEqual({ a: 10 })
+    expect(shape_OptionalB0({ a: undefined })).toEqual({ a: undefined })
     expect(shape_OptionalB0({})).toEqual({})
+    expect(() => shape_OptionalB0({ a: null })).toThrow('type')
+    expect(() => shape_OptionalB0({ a: true })).toThrow('type')
 
 
     let shape_ReferB0 = Gubu({ a: Define('foo', 11), b: Refer('foo') })
     expect(shape_ReferB0({ a: 10, b: 12 })).toEqual({ a: 10, b: 12 })
+    expect(shape_ReferB0({ a: 10 })).toEqual({ a: 10, b: undefined })
+    expect(shape_ReferB0({})).toEqual({ a: 11, b: undefined })
+    expect(shape_ReferB0({ b: 12 })).toEqual({ a: 11, b: 12 })
     expect(() => shape_ReferB0({ a: 'A', b: 'B' })).toThrow(`Validation failed for path "a" with value "A" because the value is not of type number.
 Validation failed for path "b" with value "B" because the value is not of type number.`)
+
+    let shape_ReferB1 =
+      Gubu({ a: Define('foo', 11), b: Refer({ name: 'foo', fill: true }) })
+    expect(shape_ReferB1({ a: 10, b: 12 })).toEqual({ a: 10, b: 12 })
+    expect(shape_ReferB1({ a: 10 })).toEqual({ a: 10, b: 11 })
+    expect(shape_ReferB1({})).toEqual({ a: 11, b: 11 })
+    expect(shape_ReferB1({ b: 12 })).toEqual({ a: 11, b: 12 })
+    expect(() => shape_ReferB1({ a: 'A', b: 'B' })).toThrow(`Validation failed for path "a" with value "A" because the value is not of type number.
+Validation failed for path "b" with value "B" because the value is not of type number.`)
+
     // TODO: also recursive
 
 
