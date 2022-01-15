@@ -9,7 +9,6 @@ import type {
   Node,
   State,
   Update,
-  GubuShape,
 } from '../gubu'
 
 
