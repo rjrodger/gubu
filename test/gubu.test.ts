@@ -3010,112 +3010,90 @@ Value "5" for path "d.1" must be below 4 (was 5).`)
     // expect(() => opter({ a: 3.3 })).toThrow('integer')
 
     expect(opter({ b: 4 })).toEqual({ a: 1, b: 4, c: 'x', d: true })
-
     expect(() => opter({ b: 'z' })).toThrow('number')
-
     expect(() => opter({ c: 1 })).toThrow('string')
-
     expect(() => opter({ d: 'q' })).toThrow('boolean')
 
 
+    // 'inject' - not supported
+    // expect(Optioner.inject(null, { x: 1 }, { y: 1 })).to.equal({ x: 1 })
+    // expect(Optioner.inject('', { x: 1 }, { y: 1 })).to.equal({ x: 1 })
+    // expect(Optioner.inject('', { '0': 1 }, [1])).to.equal({ '0': 1 })
+    // expect(Optioner.inject('a', 1, null)).to.equal(null)
+
+    // expect(Optioner.inject('a', 1, {})).to.equal({ a: 1 })
+    // expect(Optioner.inject('a.b', 2, { a: {} })).to.equal({ a: { b: 2 } })
+    // expect(Optioner.inject('a.b', 2, {})).to.equal({ a: { b: 2 } })
+
+    // expect(Optioner.inject('0', 1, [])).to.equal([1])
+    // expect(Optioner.inject('a.0', 1, { a: [2, 2] })).to.equal({
+    //   a: [1, 2],
+    // })
+    // expect(Optioner.inject('a.0', 1, {})).to.equal({ a: [1] })
+    // expect(Optioner.inject('a.0.b', 1, { a: [{ c: 2 }] })).to.equal({
+    //   a: [{ c: 2, b: 1 }],
+    // })
+
+    // 'arr2obj' - not supported
+    //   expect(Optioner.arr2obj({ a: [1] }, { arrpaths: ['a'] })).to.equal({
+    //     a: { '0': 1 },
+    //   })
+    //   expect(Optioner.arr2obj({ a: [1] }, { arrpaths: [] })).to.equal({
+    //     a: [1],
+    //   })
+
+    //   expect(Optioner.arr2obj([1], { arrpaths: [''] })).to.equal({ '0': 1 })
+    //   expect(Optioner.arr2obj(null, { arrpaths: ['a'] })).to.equal(null)
+
+    //   expect(
+    //     Optioner.arr2obj({ a: [1], b: { c: [2] } }, { arrpaths: ['a', 'b.c'] })
+    //   ).to.equal({ a: { '0': 1 }, b: { c: { '0': 2 } } })
+    // })
+
+
+    // 'obj2arr' - not supported
+    //   expect(Optioner.obj2arr({ a: { '0': 1 } }, { arrpaths: ['a'] })).to.equal({
+    //     a: [1],
+    //   })
+    //   expect(Optioner.obj2arr({ a: { '0': 1 } }, { arrpaths: [] })).to.equal({
+    //     a: { '0': 1 },
+    //   })
+    //   expect(Optioner.obj2arr({ a: [1] }, { arrpaths: ['a'] })).to.equal({
+    //     a: [1],
+    //   })
+    //   expect(
+    //     Optioner.obj2arr({ a: { '0': 1, '-1': 2, x: 3 } }, { arrpaths: ['a'] })
+    //   ).to.equal({ a: [1] })
+
+    //   expect(Optioner.obj2arr({ '0': 1 }, { arrpaths: [''] })).to.equal([1])
+
+    //   expect(Optioner.obj2arr(null, { arrpaths: [''] })).to.equal(null)
+
+    //   expect(
+    //     Optioner.obj2arr(
+    //       { a: { '0': 1 }, b: { c: { '0': 2 } } },
+    //       { arrpaths: ['a', 'b.c'] }
+    //     )
+    //   ).to.equal({ a: [1], b: { c: [2] } })
+    // })
+
+
+
+    // 'readme'
+    let optioner = Gubu({
+      color: 'red',
+      // size: Joi.number().integer().max(5).min(1).default(3),
+      size: Max(5, Min(1, 3)),
+      range: [Never(), 100, 200],
+    })
+
+    expect(optioner({ size: 2 })).toEqual({ color: 'red', size: 2, range: [100, 200] })
+    expect(optioner({})).toEqual({ color: 'red', size: 3, range: [100, 200] })
+    expect(optioner({ range: [50] })).toEqual({ range: [50, 200], color: 'red', size: 3 })
+    expect(() => optioner({ size: 6 })).toThrow('maximum')
+
     /*
     
-        it('inject', async () => {
-          expect(Optioner.inject(null, { x: 1 }, { y: 1 })).to.equal({ x: 1 })
-          expect(Optioner.inject('', { x: 1 }, { y: 1 })).to.equal({ x: 1 })
-          expect(Optioner.inject('', { '0': 1 }, [1])).to.equal({ '0': 1 })
-          expect(Optioner.inject('a', 1, null)).to.equal(null)
-      
-          expect(Optioner.inject('a', 1, {})).to.equal({ a: 1 })
-          expect(Optioner.inject('a.b', 2, { a: {} })).to.equal({ a: { b: 2 } })
-          expect(Optioner.inject('a.b', 2, {})).to.equal({ a: { b: 2 } })
-      
-          expect(Optioner.inject('0', 1, [])).to.equal([1])
-          expect(Optioner.inject('a.0', 1, { a: [2, 2] })).to.equal({
-            a: [1, 2],
-          })
-          expect(Optioner.inject('a.0', 1, {})).to.equal({ a: [1] })
-          expect(Optioner.inject('a.0.b', 1, { a: [{ c: 2 }] })).to.equal({
-            a: [{ c: 2, b: 1 }],
-          })
-        })
-      
-        it('arr2obj', async () => {
-          expect(Optioner.arr2obj({ a: [1] }, { arrpaths: ['a'] })).to.equal({
-            a: { '0': 1 },
-          })
-          expect(Optioner.arr2obj({ a: [1] }, { arrpaths: [] })).to.equal({
-            a: [1],
-          })
-      
-          expect(Optioner.arr2obj([1], { arrpaths: [''] })).to.equal({ '0': 1 })
-          expect(Optioner.arr2obj(null, { arrpaths: ['a'] })).to.equal(null)
-      
-          expect(
-            Optioner.arr2obj({ a: [1], b: { c: [2] } }, { arrpaths: ['a', 'b.c'] })
-          ).to.equal({ a: { '0': 1 }, b: { c: { '0': 2 } } })
-        })
-      
-        it('obj2arr', async () => {
-          expect(Optioner.obj2arr({ a: { '0': 1 } }, { arrpaths: ['a'] })).to.equal({
-            a: [1],
-          })
-          expect(Optioner.obj2arr({ a: { '0': 1 } }, { arrpaths: [] })).to.equal({
-            a: { '0': 1 },
-          })
-          expect(Optioner.obj2arr({ a: [1] }, { arrpaths: ['a'] })).to.equal({
-            a: [1],
-          })
-          expect(
-            Optioner.obj2arr({ a: { '0': 1, '-1': 2, x: 3 } }, { arrpaths: ['a'] })
-          ).to.equal({ a: [1] })
-      
-          expect(Optioner.obj2arr({ '0': 1 }, { arrpaths: [''] })).to.equal([1])
-      
-          expect(Optioner.obj2arr(null, { arrpaths: [''] })).to.equal(null)
-      
-          expect(
-            Optioner.obj2arr(
-              { a: { '0': 1 }, b: { c: { '0': 2 } } },
-              { arrpaths: ['a', 'b.c'] }
-            )
-          ).to.equal({ a: [1], b: { c: [2] } })
-        })
-      
-        it('readme', async () => {
-          var optioner = Optioner({
-            color: 'red',
-            size: Joi.number().integer().max(5).min(1).default(3),
-            range: [100, 200],
-          })
-      
-          var promise = optioner({ size: 2 })
-          // prints: { color: 'red', size: 2, range: [ 100, 200 ] }
-          // console.log(promise.value)
-      
-          // prints: { color: 'red', size: 2, range: [ 100, 200 ] }
-          // promise
-          // .then(console.log)
-      
-          optioner({}, function (err, out) {
-            if (err) return fail(err)
-            // prints: { color: 'red', size: 3, range: [ 100, 200 ] }
-            // console.log(out)
-          })
-      
-          optioner({ range: [50] }, function (err, out) {
-            if (err) return fail(err)
-            // prints: { range: [ 50, 200 ], color: 'red', size: 3 }
-            // console.log(out)
-          })
-      
-          optioner({ size: 6 }, function (err, out) {
-            if (err) return
-            // prints: child "size" fails because ["size" must be less than or equal to 5
-            // console.log(err)
-          })
-        })
-      
         it('check', async () => {
           var optioner = Optioner({
             bool: Joi.boolean().default(true),
