@@ -769,6 +769,15 @@ Validation failed for path "q.b" with value "x" because the value is not of type
     expect(os0e2('x')).toEqual('x')
     expect(os0e2('y')).toEqual('y')
 
+    // Use literal '' as a shortcut
+    const os0e3 = Gubu('')
+    expect(os0e3('')).toEqual('')
+    expect(os0e3()).toEqual('')
+    expect(os0e3(undefined)).toEqual('')
+    expect(os0e3('x')).toEqual('x')
+    expect(os0e3('y')).toEqual('y')
+
+
     const os1e = Gubu(Optional(Empty(String)))
     expect(os1e()).toEqual(undefined)
     expect(os1e('')).toEqual('')
@@ -2931,7 +2940,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`)
     // * option: treat functon as raw default value
     // ** thus need a builder for validation functions
     // ** and a builder for raw functions
-
+    // * Do Array, Object work?
 
     // 'happy'
     let opter = Gubu({
@@ -3015,70 +3024,6 @@ Value "5" for path "d.1" must be below 4 (was 5).`)
     expect(() => opter({ d: 'q' })).toThrow('boolean')
 
 
-    // 'inject' - not supported
-    // expect(Optioner.inject(null, { x: 1 }, { y: 1 })).to.equal({ x: 1 })
-    // expect(Optioner.inject('', { x: 1 }, { y: 1 })).to.equal({ x: 1 })
-    // expect(Optioner.inject('', { '0': 1 }, [1])).to.equal({ '0': 1 })
-    // expect(Optioner.inject('a', 1, null)).to.equal(null)
-
-    // expect(Optioner.inject('a', 1, {})).to.equal({ a: 1 })
-    // expect(Optioner.inject('a.b', 2, { a: {} })).to.equal({ a: { b: 2 } })
-    // expect(Optioner.inject('a.b', 2, {})).to.equal({ a: { b: 2 } })
-
-    // expect(Optioner.inject('0', 1, [])).to.equal([1])
-    // expect(Optioner.inject('a.0', 1, { a: [2, 2] })).to.equal({
-    //   a: [1, 2],
-    // })
-    // expect(Optioner.inject('a.0', 1, {})).to.equal({ a: [1] })
-    // expect(Optioner.inject('a.0.b', 1, { a: [{ c: 2 }] })).to.equal({
-    //   a: [{ c: 2, b: 1 }],
-    // })
-
-    // 'arr2obj' - not supported
-    //   expect(Optioner.arr2obj({ a: [1] }, { arrpaths: ['a'] })).to.equal({
-    //     a: { '0': 1 },
-    //   })
-    //   expect(Optioner.arr2obj({ a: [1] }, { arrpaths: [] })).to.equal({
-    //     a: [1],
-    //   })
-
-    //   expect(Optioner.arr2obj([1], { arrpaths: [''] })).to.equal({ '0': 1 })
-    //   expect(Optioner.arr2obj(null, { arrpaths: ['a'] })).to.equal(null)
-
-    //   expect(
-    //     Optioner.arr2obj({ a: [1], b: { c: [2] } }, { arrpaths: ['a', 'b.c'] })
-    //   ).to.equal({ a: { '0': 1 }, b: { c: { '0': 2 } } })
-    // })
-
-
-    // 'obj2arr' - not supported
-    //   expect(Optioner.obj2arr({ a: { '0': 1 } }, { arrpaths: ['a'] })).to.equal({
-    //     a: [1],
-    //   })
-    //   expect(Optioner.obj2arr({ a: { '0': 1 } }, { arrpaths: [] })).to.equal({
-    //     a: { '0': 1 },
-    //   })
-    //   expect(Optioner.obj2arr({ a: [1] }, { arrpaths: ['a'] })).to.equal({
-    //     a: [1],
-    //   })
-    //   expect(
-    //     Optioner.obj2arr({ a: { '0': 1, '-1': 2, x: 3 } }, { arrpaths: ['a'] })
-    //   ).to.equal({ a: [1] })
-
-    //   expect(Optioner.obj2arr({ '0': 1 }, { arrpaths: [''] })).to.equal([1])
-
-    //   expect(Optioner.obj2arr(null, { arrpaths: [''] })).to.equal(null)
-
-    //   expect(
-    //     Optioner.obj2arr(
-    //       { a: { '0': 1 }, b: { c: { '0': 2 } } },
-    //       { arrpaths: ['a', 'b.c'] }
-    //     )
-    //   ).to.equal({ a: [1], b: { c: [2] } })
-    // })
-
-
-
     // 'readme'
     let optioner = Gubu({
       color: 'red',
@@ -3092,216 +3037,178 @@ Value "5" for path "d.1" must be below 4 (was 5).`)
     expect(optioner({ range: [50] })).toEqual({ range: [50, 200], color: 'red', size: 3 })
     expect(() => optioner({ size: 6 })).toThrow('maximum')
 
-    /*
-    
-        it('check', async () => {
-          var optioner = Optioner({
-            bool: Joi.boolean().default(true),
-          })
-      
-          expect(optioner.check({})).contains({ bool: true })
-          expect(optioner.check({ bool: true })).contains({ bool: true })
-          expect(optioner.check({ bool: false })).contains({ bool: false })
-      
-          try {
-            optioner.check({ bool: 'foo' })
-            Code.fail('never')
-          } catch (e) {
-            expect(e.name).equal('ValidationError')
-          }
-        })
-      
-        it('ignore', async () => {
-          var optioner_ignore = Optioner({
-            a: 1,
-          })
-      
-          expect(optioner_ignore.check({})).contains({ a: 1 })
-          expect(optioner_ignore.check({ b: 2 })).contains({ a: 1, b: 2 })
-          expect(optioner_ignore.check({ a: 1, b: 2 })).contains({ a: 1, b: 2 })
-      
-          var optioner_fail = Optioner(
-            {
-              a: 1,
-            },
-            { allow_unknown: false }
-          )
-      
-          expect(optioner_fail.check({})).contains({ a: 1 })
-      
-          try {
-            optioner_fail.check({ a: 1, b: 2 })
-            Code.fail('never')
-          } catch (e) {
-            expect(e.name).equal('ValidationError')
-          }
-      
-          var optioner_ignore_deep = Optioner({
-            a: 1,
-            b: { c: 2 },
-          })
-      
-          expect(optioner_ignore_deep.check({})).contains({ a: 1, b: { c: 2 } })
-          expect(optioner_ignore_deep.check({ b: { d: 3 } })).contains({
-            a: 1,
-            b: { c: 2, d: 3 },
-          })
-      
-          var optioner_ignore_deep_fail = Optioner(
-            {
-              a: 1,
-              b: { c: 2 },
-            },
-            { allow_unknown: false }
-          )
-      
-          expect(optioner_ignore_deep_fail.check({})).contains({ a: 1, b: { c: 2 } })
-      
-          try {
-            expect(optioner_ignore_deep_fail.check({ b: { d: 3 } })).contains({
-              a: 1,
-              b: { c: 2, d: 3 },
-            })
-            Code.fail('never')
-          } catch (e) {
-            expect(e.name).equal('ValidationError')
-          }
-        })
-      
-        it('must_match', async () => {
-          var o0 = Optioner(
-            {
-              a: 1,
-            },
-            { must_match_literals: true }
-          )
-      
-          expect(o0.check({ a: 1 })).equals({ a: 1 })
-          expect(o0.check({ a: 1, b: 2 })).includes({ a: 1 })
-      
-          expect(o0({}).error.message).equals('"a" is required')
-          expect(o0({ a: 2 }).error.message).equals('"a" must be [1]')
-          expect(o0({ a: 'x' }).error.message).equals('"a" must be [1]')
-      
-          var o1 = Optioner(
-            {
-              a: 1,
-              b: { c: 2 },
-            },
-            { must_match_literals: true }
-          )
-      
-          expect(o1.check({ a: 1, b: { c: 2 } })).equals({ a: 1, b: { c: 2 } })
-          expect(o1.check({ a: 1, b: { c: 2, z: 3 }, y: 4 })).equals({
-            a: 1,
-            b: { c: 2, z: 3 },
-            y: 4,
-          })
-      
-          expect(o1({ a: 1 }).error.message).equals(
-            '"b.c" is required'
-            //'child "b" fails because [child "c" fails because ["c" is required]]'
-          )
-          expect(o1({ a: 1, b: {} }).error.message).equals(
-            '"b.c" is required'
-            //'child "b" fails because [child "c" fails because ["c" is required]]'
-          )
-          expect(o1({ a: 1, b: { c: 'x' } }).error.message).equals(
-            '"b.c" must be [2]'
-            //'child "b" fails because [child "c" fails because ["c" must be one of [2]]]'
-          )
-      
-          var o2 = Optioner(
-            {
-              a: 1,
-              b: Joi.string(),
-            },
-            { must_match_literals: true }
-          )
-      
-          expect(o2.check({ a: 1, b: 'x' })).equals({ a: 1, b: 'x' })
-          expect(o2({ a: 1, b: 2 }).error.message).equals('"b" must be a string')
-      
-          var o3 = Optioner(
-            {
-              a: { b: { c: 1 } },
-            },
-            { must_match_literals: true }
-          )
-      
-          expect(o3.check({ a: { b: { c: 1 } } })).equals({ a: { b: { c: 1 } } })
-          expect(o3({ a: { b: { c: 2 } } }).error.message).equals(
-            '"a.b.c" must be [1]'
-            //'child "a" fails because [child "b" fails because [child "c" fails because ["c" must be one of [1]]]]'
-          )
-      
-          var o4 = Optioner(
-            {
-              a: [1],
-            },
-            { must_match_literals: true }
-          )
-      
-          expect(o4.check({ a: [1] })).equals({ a: [1] })
-          expect(o4.check({ a: [1, 2] })).equals({ a: [1, 2] })
-          expect(o4({ a: [2] }).error.message).equals(
-            '"a.0" must be [1]'
-            //'child "a" fails because [child "0" fails because ["0" must be one of [1]]]'
-          )
-      
-          var o5 = Optioner(
-            {
-              a: [{ b: 1 }],
-            },
-            { must_match_literals: true }
-          )
-      
-          expect(o5.check({ a: [{ b: 1 }] })).equals({ a: [{ b: 1 }] })
-          expect(o5.check({ a: [{ b: 1, c: 2 }, { b: 3 }] })).equals({
-            a: [{ b: 1, c: 2 }, { b: 3 }],
-          })
-          expect(o5({ a: [{ b: 11, c: 2 }, { b: 3 }] }).error.message).equals(
-            '"a.0.b" must be [1]'
-            //'child "a" fails because [child "0" fails because [child "b" fails because ["b" must be one of [1]]]]'
-          )
-      
-          var o6 = Optioner([1], { must_match_literals: true })
-          expect(o6.check([1])).equals([1])
-          expect(o6([2]).error.message).equals(
-            '"0" must be [1]'
-            //'child "0" fails because ["0" must be one of [1]]'
-          )
-      
-          var o7 = Optioner([{}, { a: 2 }], { must_match_literals: true })
-          expect(o7.check([{ a: 1 }, { a: 2 }, { a: 3 }])).equals([
-            { a: 1 },
-            { a: 2 },
-            { a: 3 },
-          ])
-          expect(o7([{ a: 1 }, { a: 3 }]).error.message).equals(
-            '"1.a" must be [2]'
-            //'child "1" fails because [child "a" fails because ["a" must be one of [2]]]'
-          )
-        })
-      
-        it('empty-string', async () => {
-          var opt0 = Optioner({
-            a: '',
-            b: 'x',
-          })
-      
-          //console.dir(opt0.joi.describe(),{depth:null})
-      
-          var res0 = opt0.check({ a: 'x' })
-          //console.log(res0)
-          expect(res0).equals({ a: 'x', b: 'x' })
-      
-          var res1 = opt0.check({ a: '' })
-          //console.log(res1)
-          expect(res1).equals({ a: '', b: 'x' })
-        })
-      */
 
+    // 'check'
+    optioner = Gubu({
+      bool: true
+    })
+
+    expect(optioner({})).toEqual({ bool: true })
+    expect(optioner({ bool: true })).toEqual({ bool: true })
+    expect(optioner({ bool: false })).toEqual({ bool: false })
+
+    try {
+      optioner({ bool: 'foo' })
+      throw new Error('fail')
+    } catch (e: any) {
+      expect(e.name).toMatch(/GubuError/)
+    }
+
+
+    // 'ignore'
+    let optioner_ignore = Gubu({
+      a: 1,
+    })
+
+    expect(optioner_ignore({})).toEqual({ a: 1 })
+    expect(optioner_ignore({ b: 2 })).toEqual({ a: 1, b: 2 })
+    expect(optioner_ignore({ a: 1, b: 2 })).toEqual({ a: 1, b: 2 })
+
+    let optioner_fail = Gubu(
+      Closed({
+        a: 1,
+      })
+    )
+
+    expect(optioner_fail({})).toEqual({ a: 1 })
+
+    try {
+      optioner_fail({ a: 1, b: 2 })
+      throw new Error('fail')
+    } catch (e: any) {
+      expect(e.name).toMatch(/GubuError/)
+    }
+
+    let optioner_ignore_deep = Gubu({
+      a: 1,
+      b: { c: 2 },
+    })
+
+    expect(optioner_ignore_deep({})).toEqual({ a: 1, b: { c: 2 } })
+    expect(optioner_ignore_deep({ b: { d: 3 } })).toEqual({
+      a: 1,
+      b: { c: 2, d: 3 },
+    })
+
+    let optioner_ignore_deep_fail = Gubu(
+      {
+        a: 1,
+        b: Closed({ c: 2 }),
+      },
+    )
+
+    expect(optioner_ignore_deep_fail({})).toEqual({ a: 1, b: { c: 2 } })
+
+    try {
+      expect(optioner_ignore_deep_fail({ b: { d: 3 } })).toEqual({
+        a: 1,
+        b: { c: 2, d: 3 },
+      })
+      throw new Error('fail')
+    } catch (e: any) {
+      expect(e.name).toMatch(/GubuError/)
+    }
+
+
+    // 'must_match'
+    let g0 = Gubu(
+      {
+        a: Exact(1),
+      },
+    )
+
+    expect(g0({ a: 1 })).toEqual({ a: 1 })
+    expect(g0({ a: 1, b: 2 })).toMatchObject({ a: 1 })
+
+    expect(() => g0({})).toThrow('exactly')
+    expect(() => g0({ a: 2 })).toThrow('exactly')
+    expect(() => g0({ a: 'x' })).toThrow('exactly')
+
+
+    let g1 = Gubu(
+      {
+        a: Exact(1),
+        b: { c: Exact(2) },
+      },
+    )
+
+    expect(g1({ a: 1, b: { c: 2 } })).toEqual({ a: 1, b: { c: 2 } })
+    expect(g1({ a: 1, b: { c: 2, z: 3 }, y: 4 })).toEqual({
+      a: 1,
+      b: { c: 2, z: 3 },
+      y: 4,
+    })
+
+    expect(() => g1({ a: 1 })).toThrow('exactly')
+    expect(() => g1({ a: 1, b: {} })).toThrow('exactly')
+    expect(() => g1({ a: 1, b: { c: 'x' } })).toThrow('exactly')
+
+
+    let g2 = Gubu(
+      {
+        a: Exact(1),
+        b: String
+      },
+    )
+
+    expect(g2({ a: 1, b: 'x' })).toEqual({ a: 1, b: 'x' })
+    expect(() => g2({ a: 1, b: 2 })).toThrow('type')
+
+    var g3 = Gubu(
+      {
+        a: { b: { c: Exact(1) } },
+      },
+    )
+
+    expect(g3({ a: { b: { c: 1 } } })).toEqual({ a: { b: { c: 1 } } })
+    expect(() => g3({ a: { b: { c: 2 } } })).toThrow('exactly')
+
+    var g4 = Gubu(
+      {
+        a: [Number, Exact(1)],
+      },
+    )
+
+    expect(g4({ a: [1] })).toEqual({ a: [1] })
+    expect(g4({ a: [1, 2] })).toEqual({ a: [1, 2] })
+    expect(() => g4({ a: [2] })).toThrow('exactly')
+
+    var g5 = Gubu(
+      {
+        a: [Any(), { b: Exact(1) }],
+      },
+    )
+
+    expect(g5({ a: [{ b: 1 }] })).toEqual({ a: [{ b: 1 }] })
+    expect(g5({ a: [{ b: 1, c: 2 }, { b: 3 }] })).toEqual({
+      a: [{ b: 1, c: 2 }, { b: 3 }],
+    })
+    expect(() => g5({ a: [{ b: 11, c: 2 }, { b: 3 }] })).toThrow('exactly')
+
+    var g6 = Gubu([Never(), Exact(1)])
+    expect(g6([1])).toEqual([1])
+    expect(() => g6([2])).toThrow('exactly')
+
+    var g7 = Gubu([{}, {}, { a: Exact(2) }])
+    expect(g7([{ a: 1 }, { a: 2 }, { a: 3 }])).toEqual([
+      { a: 1 },
+      { a: 2 },
+      { a: 3 },
+    ])
+    expect(() => g7([{ a: 1 }, { a: 3 }])).toThrow('exactly')
+
+
+    // 'empty-string'
+    let opt0 = Gubu({
+      a: '',
+      b: 'x',
+    })
+
+    let res0 = opt0({ a: 'x' })
+    expect(res0).toEqual({ a: 'x', b: 'x' })
+
+    let res1 = opt0({ a: '' })
+    expect(res1).toEqual({ a: '', b: 'x' })
   })
 })
 

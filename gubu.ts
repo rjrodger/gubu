@@ -402,6 +402,9 @@ function norm(shape?: any, depth?: number): Node {
   else if ('number' === t && isNaN(v)) {
     t = 'nan'
   }
+  else if ('string' === t && '' === v) {
+    u.empty = true
+  }
 
   let node: Node = {
     $: GUBU,

@@ -2031,19 +2031,19 @@ default.
 const { Required } = Gubu
 let shape = Gubu(Required({x: 1}))
 
-console.log(g5({ x: 2 })) // PASS: prints { x: 2 })
-console.log(g5({ x: 2, y: 3 })) // PASS: prints { x: 2, y: 3 })
-console.log(() => g5()) // FAIL: object is required
+console.log(shape({ x: 2 })) // PASS: prints { x: 2 })
+console.log(shapey({ x: 2, y: 3 })) // PASS: prints { x: 2, y: 3 })
+console.log(() => shape()) // FAIL: object is required
 
 shape = Gubu(Closed(Required({ x: 1 })))
-console.log(g6({ x: 2 })) // PASS: prints { x: 2 })
-console.log(() => g6({ x: 2, y: 3 })) // FAIL: property "y" is not allowed
-console.log(() => g6()) // FAIL: object is required
+console.log(shape({ x: 2 })) // PASS: prints { x: 2 })
+console.log(() => shape({ x: 2, y: 3 })) // FAIL: property "y" is not allowed
+console.log(() => shape()) // FAIL: object is required
 
 shape = Gubu(Closed({ x: 1 }).Required())
-console.log(g7({ x: 2 })) // prints { x: 2 })
-console.log(() => g7({ x: 2, y: 3 })) // FAIL: property "y" is not allowed.
-console.log(() => g7()) // FAIL: object is required
+console.log(shape({ x: 2 })) // prints { x: 2 })
+console.log(() => shape({ x: 2, y: 3 })) // FAIL: property "y" is not allowed.
+console.log(() => shape()) // FAIL: object is required
 
 ```
 
