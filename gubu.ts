@@ -468,6 +468,7 @@ function make<S>(intop?: S, inopts?: Options) {
         else if ('object' === s.type) {
           let val
           if (s.node.r && undefined === s.val) {
+            s.ignoreVal = true
             s.err.push(makeErrImpl('required', s, 1010))
           }
           else if (
@@ -513,6 +514,7 @@ function make<S>(intop?: S, inopts?: Options) {
 
         else if ('array' === s.type) {
           if (s.node.r && undefined === s.val) {
+            s.ignoreVal = true
             s.err.push(makeErrImpl('required', s, 1030))
           }
           else if (undefined !== s.val && !Array.isArray(s.val)) {

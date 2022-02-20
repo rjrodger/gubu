@@ -12,7 +12,7 @@ const {
   Required,
   Define,
   Refer,
-  Optional,
+  Skip,
   Empty,
   Exact,
   Never,
@@ -106,7 +106,7 @@ let tmp = {}
 
 
 // let o0 = Gubu(One(String,Number))
-// let o0 = Gubu(Optional(One(Number,String)))
+// let o0 = Gubu(Skip(One(Number,String)))
 // console.log(o0())
 
 
@@ -211,7 +211,7 @@ let tmp = {}
 //J(d0({a:{x:2},b:{x:'z'}}))
 
 
-// let o0 = Gubu({ a: Optional({x:1}) })
+// let o0 = Gubu({ a: Skip({x:1}) })
 // J(o0({a:{}}))
 // J(o0({}))
 
@@ -372,7 +372,7 @@ let tmp = {}
 // // console.log(a3(['x',1]))
 
 
-// let a4 = Args({ a: {x:1}, 'b:a': Optional(Function) })
+// let a4 = Args({ a: {x:1}, 'b:a': Skip(Function) })
 // // console.dir(a3.spec(),{depth:null})
 
 // function f0(){}
@@ -384,9 +384,9 @@ let tmp = {}
 
 // let obj01 = Gubu({
 //   a: { x: 1 },
-//   b: Optional({ y: 2 }),
-//   c: Optional({ z: Optional({ k: 3 }) }),
-//   d: Optional(9)
+//   b: Skip({ y: 2 }),
+//   c: Skip({ z: Skip({ k: 3 }) }),
+//   d: Skip(9)
 // })
 // console.log(obj01({}))
 // console.log(obj01({ b: {} }))
@@ -429,7 +429,7 @@ let tmp = {}
 // console.log(Gubu(Above(3,[1]))([2,3,4,5]))
 
 
-// let g4 = Gubu({ a: Optional({ b: String }) })
+// let g4 = Gubu({ a: Skip({ b: String }) })
 // console.log(g4())
 // console.dir(g4.spec(),{depth:null})
 
@@ -448,7 +448,7 @@ let tmp = {}
 
 
 
-// let a0 = Gubu(Optional(Number).After((v) => 0 === v % 2))
+// let a0 = Gubu(Skip(Number).After((v) => 0 === v % 2))
 // console.log(a0.spec())
 // console.log(a0())
 
@@ -479,4 +479,15 @@ let tmp = {}
 // }
 
 
-console.log(Gubu({a:Optional(String)})())
+// console.log(Gubu({a:Skip(String)})())
+
+
+let g0 = Gubu({b:Required({a:Number})})
+let o0 = {}
+try {
+  g0(o0)
+}
+catch(e) {
+  console.log(e.desc())
+  console.log(o0)
+}

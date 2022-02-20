@@ -1,6 +1,5 @@
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 
-
 import Pkg from '../package.json'
 
 
@@ -17,8 +16,6 @@ import { Gubu as GubuX } from '../gubu'
 const Large = require('./large')
 const Long = require('./long')
 
-
-// import { Gubu } from '../gubu'
 
 // Handle web (Gubu) versus node ({Gubu}) export.
 let GubuModule = require('../gubu')
@@ -839,6 +836,14 @@ Validation failed for path "q.b" with value "x" because the value is not of type
     expect(u2({ a: NaN })).toEqual({ a: NaN })
     expect(() => u2({})).toThrow('required')
 
+
+    // Required does inject undefined
+    let r0 = Gubu({ b: Required({ a: Number }), c: Required([]) })
+    let o0 = {}
+    expect(() => r0(o0)).toThrow('required')
+    expect(o0).toEqual({})
+    expect(o0.hasOwnProperty('b')).toBeFalsy()
+    expect(o0.hasOwnProperty('c')).toBeFalsy()
   })
 
 

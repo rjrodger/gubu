@@ -8,7 +8,6 @@ exports.Bar = exports.Foo = void 0;
 const package_json_1 = __importDefault(require("../package.json"));
 const Large = require('./large');
 const Long = require('./long');
-// import { Gubu } from '../gubu'
 // Handle web (Gubu) versus node ({Gubu}) export.
 let GubuModule = require('../gubu');
 if (GubuModule.Gubu) {
@@ -651,6 +650,13 @@ Validation failed for path "q.b" with value "x" because the value is not of type
         const u2 = Gubu({ a: Required(NaN) });
         expect(u2({ a: NaN })).toEqual({ a: NaN });
         expect(() => u2({})).toThrow('required');
+        // Required does inject undefined
+        let r0 = Gubu({ b: Required({ a: Number }), c: Required([]) });
+        let o0 = {};
+        expect(() => r0(o0)).toThrow('required');
+        expect(o0).toEqual({});
+        expect(o0.hasOwnProperty('b')).toBeFalsy();
+        expect(o0.hasOwnProperty('c')).toBeFalsy();
     });
     test('api-object', () => {
         let obj01 = Gubu({
