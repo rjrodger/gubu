@@ -61,7 +61,7 @@ type Node = {
   d: number              // Depth.
   v: any                 // Default value.
   r: boolean             // Value is required.
-  o: boolean             // Value is explicitly optional.
+  p: boolean             // Value is skippable - can be missing or undefined.
   u: Record<string, any> // Custom user meta data
   b: Validate[]          // Custom before validation functions.
   a: Validate[]          // Custom after vaidation functions.
@@ -333,7 +333,7 @@ function norm(shape?: any, depth?: number): Node {
       }
 
       node.r = !!node.r
-      node.o = !!node.o
+      node.p = !!node.p
       node.d = null == depth ? null == node.d ? -1 : node.d : depth
 
       node.b = node.b || []
@@ -351,7 +351,7 @@ function norm(shape?: any, depth?: number): Node {
 
   let v = shape
   let r = false // Not required by default.
-  let o = false // Only true when Skip builder is used.
+  let p = false // Only true when Skip builder is used.
   let b = undefined
   let u: any = {}
 
@@ -411,7 +411,7 @@ function norm(shape?: any, depth?: number): Node {
     t,
     v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
     r,
-    o,
+    p,
     d: null == depth ? -1 : depth,
     u,
     a: [],
@@ -481,7 +481,7 @@ function make<S>(intop?: S, inopts?: Options) {
             val = Array.isArray(s.val) ? s.val : {}
           }
 
-          else if (!s.node.o || null != s.val) {
+          else if (!s.node.p || null != s.val) {
             s.updateVal(s.val || (s.fromDefault = true, {}))
             val = s.val
           }
@@ -518,7 +518,7 @@ function make<S>(intop?: S, inopts?: Options) {
           else if (undefined !== s.val && !Array.isArray(s.val)) {
             s.err.push(makeErrImpl('type', s, 1040))
           }
-          else if (!s.node.o || null != s.val) {
+          else if (!s.node.p || null != s.val) {
             s.updateVal(s.val || (s.fromDefault = true, []))
 
             let vkeys = Object.keys(s.node.v).filter(k => !isNaN(+k))
@@ -582,7 +582,7 @@ function make<S>(intop?: S, inopts?: Options) {
           else if (
             'custom' !== s.type &&
             undefined !== s.node.v &&
-            !s.node.o ||
+            !s.node.p ||
             'undefined' === s.type
           ) {
             s.updateVal(s.node.v)
@@ -605,7 +605,7 @@ function make<S>(intop?: S, inopts?: Options) {
         }
       }
 
-      if (!s.match && s.parent && !done && !s.ignoreVal && !s.node.o) {
+      if (!s.match && s.parent && !done && !s.ignoreVal && !s.node.p) {
         s.parent[s.key] = s.val
       }
 
@@ -704,7 +704,7 @@ function handleValidate(vf: Validate, s: State): Update {
   if (!valid || hasErrs) {
 
     // Skip allows undefined
-    if (undefined === s.val && (s.node.o || !s.node.r) && true !== update.done) {
+    if (undefined === s.val && (s.node.p || !s.node.r) && true !== update.done) {
       delete update.err
       return update
     }
@@ -767,7 +767,7 @@ function pathstr(s: State) {
 const Required: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   node.r = true
-  node.o = false
+  node.p = false
 
   // Handle an explicit undefined.
   if (undefined === shape && 1 === arguments.length) {
@@ -791,7 +791,7 @@ const Skip: Builder = function(this: Node, shape?: any) {
   node.r = false
 
   // Do not insert empty arrays and objects.
-  node.o = true
+  node.p = true
 
   return node
 }
@@ -1331,8 +1331,6 @@ const Value: Builder = function(
 }
 
 
-
-
 function buildize(node0?: any, node1?: any): Node {
   let node =
     norm(undefined === node0 ? node1 : node0.window === node0 ? node1 : node0)
@@ -1394,7 +1392,6 @@ function makeErrImpl(
 
   let jstr = undefined === s.val ? '' : stringify(s.val)
   let valstr = truncate(jstr.replace(/"/g, ''))
-  // valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '')
 
   if (null == text || '' === text) {
     err.t = `Validation failed for path "${err.p}" ` +

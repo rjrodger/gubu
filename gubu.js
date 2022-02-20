@@ -149,7 +149,7 @@ function norm(shape, depth) {
                 node.v = clone(EMPTY_VAL[node.t]);
             }
             node.r = !!node.r;
-            node.o = !!node.o;
+            node.p = !!node.p;
             node.d = null == depth ? null == node.d ? -1 : node.d : depth;
             node.b = node.b || [];
             node.a = node.a || [];
@@ -162,7 +162,7 @@ function norm(shape, depth) {
     t = ('undefined' === t ? 'any' : t);
     let v = shape;
     let r = false; // Not required by default.
-    let o = false; // Only true when Skip builder is used.
+    let p = false; // Only true when Skip builder is used.
     let b = undefined;
     let u = {};
     if ('object' === t) {
@@ -215,7 +215,7 @@ function norm(shape, depth) {
         t,
         v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
         r,
-        o,
+        p,
         d: null == depth ? -1 : depth,
         u,
         a: [],
@@ -266,7 +266,7 @@ function make(intop, inopts) {
                         s.err.push(makeErrImpl('type', s, 1020));
                         val = Array.isArray(s.val) ? s.val : {};
                     }
-                    else if (!s.node.o || null != s.val) {
+                    else if (!s.node.p || null != s.val) {
                         s.updateVal(s.val || (s.fromDefault = true, {}));
                         val = s.val;
                     }
@@ -297,7 +297,7 @@ function make(intop, inopts) {
                     else if (undefined !== s.val && !Array.isArray(s.val)) {
                         s.err.push(makeErrImpl('type', s, 1040));
                     }
-                    else if (!s.node.o || null != s.val) {
+                    else if (!s.node.p || null != s.val) {
                         s.updateVal(s.val || (s.fromDefault = true, []));
                         let vkeys = Object.keys(s.node.v).filter(k => !isNaN(+k));
                         if (0 < s.val.length || 1 < vkeys.length) {
@@ -348,7 +348,7 @@ function make(intop, inopts) {
                     }
                     else if ('custom' !== s.type &&
                         undefined !== s.node.v &&
-                        !s.node.o ||
+                        !s.node.p ||
                         'undefined' === s.type) {
                         s.updateVal(s.node.v);
                         s.fromDefault = true;
@@ -367,7 +367,7 @@ function make(intop, inopts) {
                     }
                 }
             }
-            if (!s.match && s.parent && !done && !s.ignoreVal && !s.node.o) {
+            if (!s.match && s.parent && !done && !s.ignoreVal && !s.node.p) {
                 s.parent[s.key] = s.val;
             }
             if (s.nextSibling) {
@@ -436,7 +436,7 @@ function handleValidate(vf, s) {
     let hasErrs = Array.isArray(update.err) ? 0 < update.err.length : null != update.err;
     if (!valid || hasErrs) {
         // Skip allows undefined
-        if (undefined === s.val && (s.node.o || !s.node.r) && true !== update.done) {
+        if (undefined === s.val && (s.node.p || !s.node.r) && true !== update.done) {
             delete update.err;
             return update;
         }
@@ -488,7 +488,7 @@ function pathstr(s) {
 const Required = function (shape) {
     let node = buildize(this, shape);
     node.r = true;
-    node.o = false;
+    node.p = false;
     // Handle an explicit undefined.
     if (undefined === shape && 1 === arguments.length) {
         node.t = 'undefined';
@@ -506,7 +506,7 @@ const Skip = function (shape) {
     let node = buildize(this, shape);
     node.r = false;
     // Do not insert empty arrays and objects.
-    node.o = true;
+    node.p = true;
     return node;
 };
 exports.Skip = Skip;
@@ -947,7 +947,6 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     };
     let jstr = undefined === s.val ? '' : stringify(s.val);
     let valstr = truncate(jstr.replace(/"/g, ''));
-    // valstr = valstr.substring(0, 77) + (77 < valstr.length ? '...' : '')
     if (null == text || '' === text) {
         err.t = `Validation failed for path "${err.p}" ` +
             `with value "${valstr}" because ` +

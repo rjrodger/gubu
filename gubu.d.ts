@@ -30,7 +30,7 @@ declare type Node = {
     d: number;
     v: any;
     r: boolean;
-    o: boolean;
+    p: boolean;
     u: Record<string, any>;
     b: Validate[];
     a: Validate[];

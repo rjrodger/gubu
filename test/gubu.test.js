@@ -274,13 +274,13 @@ describe('gubu', () => {
     });
     test('spec-revert-skip-required', () => {
         let or = Gubu(Skip(Required(1)));
-        expect(or.spec()).toMatchObject({ r: false, o: true, v: 1, t: 'number' });
+        expect(or.spec()).toMatchObject({ r: false, p: true, v: 1, t: 'number' });
         let ror = Gubu(Required(Skip(Required(1))));
-        expect(ror.spec()).toMatchObject({ r: true, o: false, v: 1, t: 'number' });
+        expect(ror.spec()).toMatchObject({ r: true, p: false, v: 1, t: 'number' });
         let ro = Gubu(Required(Skip(1)));
-        expect(ro.spec()).toMatchObject({ r: true, o: false, v: 1, t: 'number' });
+        expect(ro.spec()).toMatchObject({ r: true, p: false, v: 1, t: 'number' });
         let oro = Gubu(Skip(Required(Skip(1))));
-        expect(oro.spec()).toMatchObject({ r: false, o: true, v: 1, t: 'number' });
+        expect(oro.spec()).toMatchObject({ r: false, p: true, v: 1, t: 'number' });
     });
     test('match-basic', () => {
         let tmp = {};
@@ -707,7 +707,7 @@ Validation failed for path "q.b" with value "x" because the value is not of type
                     t: 'number',
                     v: 1,
                     r: false,
-                    o: false,
+                    p: false,
                     d: 1,
                     u: {},
                     a: [],
@@ -715,7 +715,7 @@ Validation failed for path "q.b" with value "x" because the value is not of type
                 }
             },
             r: true,
-            o: false,
+            p: false,
             d: 0,
             u: {},
             a: [],
@@ -1939,7 +1939,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
                     }
                 ]
             });
-            expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","err":[{"n":{"$":{"v$":"' + package_json_1.default.version + '"},"t":"nan","v":null,"r":false,"o":false,"d":0,"u":{},"a":[],"b":[]},"v":1,"p":"","w":"type","m":1050,"t":"Validation failed for path \\"\\" with value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for path \\"\\" with value \\"1\\" because the value is not of type nan."}');
+            expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","err":[{"n":{"$":{"v$":"' + package_json_1.default.version + '"},"t":"nan","v":null,"r":false,"p":false,"d":0,"u":{},"a":[],"b":[]},"v":1,"p":"","w":"type","m":1050,"t":"Validation failed for path \\"\\" with value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for path \\"\\" with value \\"1\\" because the value is not of type nan."}');
         }
     });
     test('spec-basic', () => {
@@ -1962,26 +1962,26 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
     });
     test('spec-required', () => {
         let g0 = Gubu(Required(1));
-        expect(g0.spec()).toMatchObject({ d: 0, o: false, r: true, t: 'number', v: 1 });
+        expect(g0.spec()).toMatchObject({ d: 0, p: false, r: true, t: 'number', v: 1 });
         let g1 = Gubu(Required({ a: 1 }));
         expect(g1.spec()).toMatchObject({
-            d: 0, o: false, r: true, t: 'object', v: {
-                a: { d: 1, o: false, r: false, t: 'number', v: 1 }
+            d: 0, p: false, r: true, t: 'object', v: {
+                a: { d: 1, p: false, r: false, t: 'number', v: 1 }
             }
         });
         let g2 = Gubu(Required({ a: Required(1) }));
         expect(g2.spec()).toMatchObject({
-            d: 0, o: false, r: true, t: 'object', v: {
-                a: { d: 1, o: false, r: true, t: 'number', v: 1 }
+            d: 0, p: false, r: true, t: 'object', v: {
+                a: { d: 1, p: false, r: true, t: 'number', v: 1 }
             }
         });
         let g3 = Gubu(Required({ a: Required({ b: 1 }) }));
         expect(g3.spec()).toMatchObject({
-            d: 0, o: false, r: true, t: 'object', v: {
+            d: 0, p: false, r: true, t: 'object', v: {
                 a: {
-                    d: 1, o: false, r: true, t: 'object', v: {
+                    d: 1, p: false, r: true, t: 'object', v: {
                         b: {
-                            d: 2, o: false, r: false, t: 'number', v: 1
+                            d: 2, p: false, r: false, t: 'number', v: 1
                         }
                     }
                 }
@@ -1989,11 +1989,11 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
         });
         let g4 = Gubu(Required({ a: Skip({ b: 1 }) }));
         expect(g4.spec()).toMatchObject({
-            d: 0, o: false, r: true, t: 'object', v: {
+            d: 0, p: false, r: true, t: 'object', v: {
                 a: {
-                    d: 1, o: true, r: false, t: 'object', v: {
+                    d: 1, p: true, r: false, t: 'object', v: {
                         b: {
-                            d: 2, o: false, r: false, t: 'number', v: 1
+                            d: 2, p: false, r: false, t: 'number', v: 1
                         }
                     }
                 }
@@ -2001,11 +2001,11 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
         });
         let g5 = Gubu(Skip({ a: Required({ b: 1 }) }));
         expect(g5.spec()).toMatchObject({
-            d: 0, o: true, r: false, t: 'object', v: {
+            d: 0, p: true, r: false, t: 'object', v: {
                 a: {
-                    d: 1, o: false, r: true, t: 'object', v: {
+                    d: 1, p: false, r: true, t: 'object', v: {
                         b: {
-                            d: 2, o: false, r: false, t: 'number', v: 1
+                            d: 2, p: false, r: false, t: 'number', v: 1
                         }
                     }
                 }
@@ -2027,7 +2027,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
             },
             d: 0,
             r: false,
-            o: false,
+            p: false,
             t: 'object',
             u: {},
             a: [],
@@ -2040,7 +2040,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
                     },
                     d: 1,
                     r: false,
-                    o: false,
+                    p: false,
                     t: 'number',
                     u: {},
                     a: [],
@@ -2080,7 +2080,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
             },
             d: 0,
             r: false,
-            o: false,
+            p: false,
             t: 'object',
             u: {},
             a: [],
@@ -2093,7 +2093,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
                     },
                     d: 1,
                     r: false,
-                    o: false,
+                    p: false,
                     t: 'array',
                     u: {},
                     a: [],
@@ -2106,7 +2106,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
                             },
                             d: 2,
                             r: false,
-                            o: false,
+                            p: false,
                             t: 'number',
                             u: {},
                             a: [],
@@ -2315,7 +2315,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
             t: 'number',
             v: 11,
             r: false,
-            o: false,
+            p: false,
             d: -1,
             a: [],
             b: [],
@@ -2326,7 +2326,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
             t: 'number',
             v: 0,
             r: false,
-            o: false,
+            p: false,
             d: -1,
             a: [],
             b: [],
@@ -2337,7 +2337,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
             t: 'bigint',
             v: BigInt(11),
             r: false,
-            o: false,
+            p: false,
             d: -1,
             a: [],
             b: [],
@@ -2349,7 +2349,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
             t: 'symbol',
             v: s0,
             r: false,
-            o: false,
+            p: false,
             d: -1,
             a: [],
             b: [],
@@ -2363,7 +2363,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
             t: 'function',
             v: f0,
             r: false,
-            o: false,
+            p: false,
             d: -1,
             a: [],
             b: [],
