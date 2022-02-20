@@ -651,10 +651,11 @@ Validation failed for path "q.b" with value "x" because the value is not of type
         expect(u2({ a: NaN })).toEqual({ a: NaN });
         expect(() => u2({})).toThrow('required');
         // Required does inject undefined
-        let r0 = Gubu({ b: Required({ a: Number }), c: Required([]) });
+        let r0 = Gubu({ a: Boolean, b: Required({ x: Number }), c: Required([]) });
         let o0 = {};
         expect(() => r0(o0)).toThrow('required');
         expect(o0).toEqual({});
+        expect(o0.hasOwnProperty('a')).toBeFalsy();
         expect(o0.hasOwnProperty('b')).toBeFalsy();
         expect(o0.hasOwnProperty('c')).toBeFalsy();
     });

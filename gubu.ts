@@ -579,6 +579,7 @@ function make<S>(intop?: S, inopts?: Options) {
 
           if (s.node.r &&
             ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
+            s.ignoreVal = true
             s.err.push(makeErrImpl('required', s, 1060))
           }
           else if (

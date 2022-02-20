@@ -482,7 +482,7 @@ let tmp = {}
 // console.log(Gubu({a:Skip(String)})())
 
 
-let g0 = Gubu({b:Required({a:Number})})
+let g0 = Gubu({a:Boolean})
 let o0 = {}
 try {
   g0(o0)

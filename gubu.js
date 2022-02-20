@@ -346,6 +346,7 @@ function make(intop, inopts) {
                     let parentKey = s.path[s.dI];
                     if (s.node.r &&
                         ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
+                        s.ignoreVal = true;
                         s.err.push(makeErrImpl('required', s, 1060));
                     }
                     else if ('custom' !== s.type &&
