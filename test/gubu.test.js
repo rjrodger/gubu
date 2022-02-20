@@ -21,26 +21,7 @@ const makeErr = Gubu.makeErr;
 const stringify = Gubu.stringify;
 const truncate = Gubu.truncate;
 const Args = Gubu.Args;
-const Above = Gubu.Above;
-const After = Gubu.After;
-const All = Gubu.All;
-const Any = Gubu.Any;
-const Before = Gubu.Before;
-const Below = Gubu.Below;
-const Closed = Gubu.Closed;
-const Define = Gubu.Define;
-const Empty = Gubu.Empty;
-const Exact = Gubu.Exact;
-const Max = Gubu.Max;
-const Min = Gubu.Min;
-const Never = Gubu.Never;
-const Optional = Gubu.Optional;
-const One = Gubu.One;
-const Refer = Gubu.Refer;
-const Rename = Gubu.Rename;
-const Required = Gubu.Required;
-const Some = Gubu.Some;
-const Value = Gubu.Value;
+const { Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Refer, Rename, Required, Some, Value, Skip, } = Gubu;
 class Foo {
     constructor(a) {
         this.a = -1;
@@ -290,6 +271,16 @@ describe('gubu', () => {
         expect(g0([])).toEqual([]);
         expect(g0()).toEqual([]);
         expect(() => g0('x')).toThrow('Validation failed for path "" with value "x" because the value is not of type array.');
+    });
+    test('spec-revert-skip-required', () => {
+        let or = Gubu(Skip(Required(1)));
+        expect(or.spec()).toMatchObject({ r: false, o: true, v: 1, t: 'number' });
+        let ror = Gubu(Required(Skip(Required(1))));
+        expect(ror.spec()).toMatchObject({ r: true, o: false, v: 1, t: 'number' });
+        let ro = Gubu(Required(Skip(1)));
+        expect(ro.spec()).toMatchObject({ r: true, o: false, v: 1, t: 'number' });
+        let oro = Gubu(Skip(Required(Skip(1))));
+        expect(oro.spec()).toMatchObject({ r: false, o: true, v: 1, t: 'number' });
     });
     test('match-basic', () => {
         let tmp = {};
@@ -573,8 +564,9 @@ Validation failed for path "q.b" with value "x" because the value is not of type
         expect(() => g0({})).toThrow('required');
         expect(() => g0({ a: Date })).toThrow('instance');
         expect(() => g0({ a: /QXQ/ })).toThrow(/QXQ.*instance/);
-        let g1 = Gubu({ a: Optional(Date) });
+        let g1 = Gubu({ a: Skip(Date) });
         expect(g1({ a: d0 })).toEqual({ a: d0 });
+        expect(g1({ a: undefined })).toEqual({ a: undefined });
         expect(g1({})).toEqual({});
         let r0 = /a/;
         let g2 = Gubu({ a: RegExp });
@@ -582,7 +574,7 @@ Validation failed for path "q.b" with value "x" because the value is not of type
         expect(() => g2({})).toThrow('required');
         expect(() => g2({ a: RegExp })).toThrow('instance');
         expect(() => g2({ a: d0 })).toThrow(/2121.*instance/);
-        let g3 = Gubu({ a: Optional(RegExp) });
+        let g3 = Gubu({ a: Skip(RegExp) });
         expect(g3({ a: r0 })).toEqual({ a: r0 });
         expect(g3({})).toEqual({});
     });
@@ -627,15 +619,15 @@ Validation failed for path "q.b" with value "x" because the value is not of type
         expect(os0e3(undefined)).toEqual('');
         expect(os0e3('x')).toEqual('x');
         expect(os0e3('y')).toEqual('y');
-        const os1e = Gubu(Optional(Empty(String)));
+        const os1e = Gubu(Skip(Empty(String)));
         expect(os1e()).toEqual(undefined);
         expect(os1e('')).toEqual('');
         expect(os1e('x')).toEqual('x');
-        const os2e = Gubu(Optional(String).Empty());
+        const os2e = Gubu(Skip(String).Empty());
         expect(os2e()).toEqual(undefined);
         expect(os2e('')).toEqual('');
         expect(os2e('x')).toEqual('x');
-        const os1eO = Gubu({ a: Optional(Empty(String)) });
+        const os1eO = Gubu({ a: Skip(Empty(String)) });
         expect(os1eO({})).toEqual({});
         expect(os1eO({ a: '' })).toEqual({ a: '' });
         expect(os1eO({ a: 'x' })).toEqual({ a: 'x' });
@@ -663,8 +655,8 @@ Validation failed for path "q.b" with value "x" because the value is not of type
     test('api-object', () => {
         let obj01 = Gubu({
             a: { x: 1 },
-            b: Optional({ y: 2 }),
-            c: Optional({ z: Optional({ k: 3 }) }),
+            b: Skip({ y: 2 }),
+            c: Skip({ z: Skip({ k: 3 }) }),
         });
         expect(obj01()).toEqual({ a: { x: 1 } });
         expect(obj01({})).toEqual({ a: { x: 1 } });
@@ -759,7 +751,7 @@ Validation failed for path "q.b" with value "x" because the value is not of type
         let shape_AboveB2 = Gubu(Above(2, Number));
         expect(shape_AboveB2(3)).toEqual(3);
         expect(() => shape_AboveB2([1, 2, 3])).toThrow('Validation failed for path "" with value "[1,2,3]" because the value is not of type number.');
-        let shape_AboveB3 = Gubu(Optional(Above(2, Number)));
+        let shape_AboveB3 = Gubu(Skip(Above(2, Number)));
         expect(shape_AboveB3(3)).toEqual(3);
         expect(shape_AboveB3()).toEqual(undefined);
         let shape_AfterB0 = Gubu(After((v) => v > 10, 15));
@@ -768,7 +760,7 @@ Validation failed for path "q.b" with value "x" because the value is not of type
         expect(() => shape_AfterB0('x')).toThrow(`Validation failed for path "" with value "x" because the value is not of type number.
 Validation failed for path "" with value "x" because check "custom: (v) => v > 10" failed.`);
         expect(shape_AfterB0()).toEqual(15);
-        let shape_AfterB1 = Gubu(Optional(Number).After((v) => 0 === v % 2));
+        let shape_AfterB1 = Gubu(Skip(Number).After((v) => 0 === v % 2));
         expect(shape_AfterB1(2)).toEqual(2);
         expect(() => shape_AfterB1(3)).toThrow('Validation failed for path "" with value "3" because check "custom: (v) => 0 === v % 2" failed.');
         expect(() => shape_AfterB1('x')).toThrow('Validation failed for path "" with value "x" because check "custom: (v) => 0 === v % 2" failed.');
@@ -787,7 +779,7 @@ Validation failed for path "" with value "" because check "custom: (v) => 0 === 
         let shape_AllB1 = Gubu(All());
         expect(shape_AllB1(123)).toEqual(123);
         expect(() => shape_AllB1()).toThrow('required');
-        let shape_AllB2 = Gubu({ a: Optional(All({ b: String }, Min(2))) });
+        let shape_AllB2 = Gubu({ a: Skip(All({ b: String }, Min(2))) });
         expect(shape_AllB2({ a: { b: 'X', c: 1 } })).toEqual({ a: { b: 'X', c: 1 } });
         expect(shape_AllB2({})).toEqual({});
         let shape_AnyB0 = Gubu(Any());
@@ -849,12 +841,12 @@ Validation failed for path "b" with value "B" because the value is not of type n
         expect(shape_OneB1('abc')).toEqual('abc');
         expect(() => shape_OneB1(true)).toThrow('Value "true" for path "" does not satisfy one of: "Number","String"');
         // TODO: more complex objects
-        let shape_OptionalB0 = Gubu({ a: Optional(11) });
-        expect(shape_OptionalB0({ a: 10 })).toEqual({ a: 10 });
-        expect(shape_OptionalB0({ a: undefined })).toEqual({ a: undefined });
-        expect(shape_OptionalB0({})).toEqual({});
-        expect(() => shape_OptionalB0({ a: null })).toThrow('type');
-        expect(() => shape_OptionalB0({ a: true })).toThrow('type');
+        let shape_SkipB0 = Gubu({ a: Skip(11) });
+        expect(shape_SkipB0({ a: 10 })).toEqual({ a: 10 });
+        expect(shape_SkipB0({ a: undefined })).toEqual({ a: undefined });
+        expect(shape_SkipB0({})).toEqual({});
+        expect(() => shape_SkipB0({ a: null })).toThrow('type');
+        expect(() => shape_SkipB0({ a: true })).toThrow('type');
         let shape_ReferB0 = Gubu({ a: Define('foo', 11), b: Refer('foo') });
         expect(shape_ReferB0({ a: 10, b: 12 })).toEqual({ a: 10, b: 12 });
         expect(shape_ReferB0({ a: 10 })).toEqual({ a: 10, b: undefined });
@@ -879,10 +871,10 @@ Validation failed for path "b" with value "B" because the value is not of type n
         let shape_RequiredB0 = Gubu(Required(11));
         expect(shape_RequiredB0(11)).toEqual(11);
         expect(() => shape_RequiredB0()).toThrow('Validation failed for path "" with value "" because the value is required.');
-        // FIX
+        // TODO: update docs - need better example where one prop differentiates
         let shape_SomeB0 = Gubu(Some({ x: 1 }, { y: 2 }));
-        expect(shape_SomeB0({ x: 1 })).toEqual({ x: 1 });
-        expect(shape_SomeB0({ y: 2 })).toEqual({ y: 2 });
+        expect(shape_SomeB0({ x: 1 })).toEqual({ x: 1, y: 2 });
+        expect(shape_SomeB0({ y: 2 })).toEqual({ x: 1, y: 2 });
         expect(shape_SomeB0({ x: 1, y: 2 })).toEqual({ x: 1, y: 2 });
         expect(shape_SomeB0({ x: true, y: 2 })).toEqual({ x: true, y: 2 });
         expect(shape_SomeB0({ x: 1, y: true })).toEqual({ x: 1, y: true });
@@ -945,7 +937,7 @@ Validation failed for path "b" with value "B" because the value is not of type n
             v: 'x',
             r: true,
         });
-        expect(Optional(String)).toMatchObject({
+        expect(Skip(String)).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
@@ -957,7 +949,7 @@ Validation failed for path "b" with value "B" because the value is not of type n
             v: 'x',
             r: true,
         });
-        expect(Optional(Required('x'))).toMatchObject({
+        expect(Skip(Required('x'))).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: 'x',
@@ -969,31 +961,31 @@ Validation failed for path "b" with value "B" because the value is not of type n
             v: 'x',
             r: true,
         });
-        expect(Required('x').Optional()).toMatchObject({
+        expect(Required('x').Skip()).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: 'x',
             r: false,
         });
-        expect(Optional(Optional(String))).toMatchObject({
+        expect(Skip(Skip(String))).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
             r: false,
         });
-        expect(Optional(String).Optional()).toMatchObject({
+        expect(Skip(String).Skip()).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
             r: false,
         });
-        expect(Optional(String).Required()).toMatchObject({
+        expect(Skip(String).Required()).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
             r: true,
         });
-        expect(Required(Optional(String))).toMatchObject({
+        expect(Required(Skip(String))).toMatchObject({
             '$': { 'gubu$': GUBU$ },
             t: 'string',
             v: '',
@@ -1056,15 +1048,15 @@ Validation failed for path "b" with value "B" because the value is not of type n
         expect(() => e0({ s1: 1 })).toThrow(/Validation failed for path "s0" with value "" because the value is required\.\nValidation failed for path "s1" with value "1" because the value is not of type string\./);
     });
     test('type-native-optional', () => {
-        let { Optional } = Gubu;
-        // Explicit Optional over native type sets no value.
+        let { Skip } = Gubu;
+        // Explicit Skip over native type sets no value.
         let g0 = Gubu({
-            string: Optional(String),
-            number: Optional(Number),
-            boolean: Optional(Boolean),
-            object: Optional(Object),
-            array: Optional(Array),
-            function: Optional(Function),
+            string: Skip(String),
+            number: Skip(Number),
+            boolean: Skip(Boolean),
+            object: Skip(Object),
+            array: Skip(Array),
+            function: Skip(Function),
         });
         expect(g0({})).toEqual({});
     });
@@ -1158,7 +1150,7 @@ Validation failed for path "b" with value "B" because the value is not of type n
         let g0 = Gubu({ a: (v) => v > 10 });
         expect(g0({ a: 11 })).toMatchObject({ a: 11 });
         expect(() => g0({ a: 9 })).toThrow(/Validation failed for path "a" with value "9" because check "custom: a" failed\./);
-        let g1 = Gubu({ a: Optional((v) => v > 10) });
+        let g1 = Gubu({ a: Skip((v) => v > 10) });
         expect(g1({ a: 11 })).toMatchObject({ a: 11 });
         expect(() => g1({ a: 9 })).toThrow('Validation failed for path "a" with value "9" because check "custom: (v) => v > 10" failed.');
         expect(g1({})).toMatchObject({});
@@ -1240,7 +1232,7 @@ Validation failed for path "b" with value "B" because the value is not of type n
         expect(g0('a')).toEqual('A!');
         expect(() => g0(1)).toThrow('type');
         expect(g0()).toEqual('foo!'); // before called before processing!
-        const g1 = Gubu(Optional(Hyperbole(One(String, Number))));
+        const g1 = Gubu(Skip(Hyperbole(One(String, Number))));
         expect(g1('a')).toEqual('A!');
         expect(g1(1)).toEqual(1);
         expect(g1()).toEqual(undefined);
@@ -1327,12 +1319,12 @@ Validation failed for path "b" with value "B" because the value is not of type n
         let g2 = Gubu(Required(1));
         expect(g2(1)).toEqual(1);
         expect(g2(2)).toEqual(2);
-        // TODO: note this in docs - deep child requires must be satisfied unless Optional
+        // TODO: note this in docs - deep child requires must be satisfied unless Skip
         let g3 = Gubu({ a: { b: String } });
         expect(() => g3()).toThrow(/"a.b".*required/);
         expect(() => g3({})).toThrow(/"a.b".*required/);
         expect(() => g3({ a: {} })).toThrow(/"a.b".*required/);
-        let g4 = Gubu({ a: Optional({ b: String }) });
+        let g4 = Gubu({ a: Skip({ b: String }) });
         expect(g4()).toEqual({});
         expect(g4({})).toEqual({});
         expect(g4({ a: undefined })).toEqual({});
@@ -1383,7 +1375,7 @@ Validation failed for path "b" with value "B" because the value is not of type n
         expect(g0('x')).toEqual('x');
         expect(() => g0(true)).toThrow('Value "true" for path "" does not satisfy one of: "Number","String"');
         expect(() => g0()).toThrow('Value "" for path "" does not satisfy one of: "Number","String"');
-        let g0o = Gubu(Optional(One(Number, String)));
+        let g0o = Gubu(Skip(One(Number, String)));
         expect(g0o(1)).toEqual(1);
         expect(g0o('x')).toEqual('x');
         expect(g0o()).toEqual(undefined);
@@ -1489,9 +1481,9 @@ Value "{x:green,z:Z}" for path "1" does not satisfy one of: {"x":"\\"red\\"","y"
         expect(() => g0({ a: 'x' })).toThrow(/number/);
     });
     test('builder-optional', () => {
-        let g0 = Gubu({ a: Optional(String) });
+        let g0 = Gubu({ a: Skip(String) });
         expect(g0({ a: 'x' })).toMatchObject({ a: 'x' });
-        // NOTE: Optional(Type) does not insert a default value.
+        // NOTE: Skip(Type) does not insert a default value.
         expect(g0({})).toMatchObject({});
         expect(() => g0({ a: 1 })).toThrow(/string/);
     });
@@ -1827,6 +1819,61 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
             .toMatchObject({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } });
         expect(() => g1({ a: { b: 2, c: 3 } })).toThrow('Validation failed for path "a.c" with value "3" because the value is not of type object.');
     });
+    test('builder-void', () => {
+        // Skip does not insert, but does check type.
+        let t0 = Gubu(Skip());
+        expect(t0()).toEqual(undefined);
+        expect(t0(undefined)).toEqual(undefined);
+        expect(t0(null)).toEqual(null);
+        expect(t0(NaN)).toEqual(NaN);
+        expect(t0(true)).toEqual(true);
+        expect(t0(false)).toEqual(false);
+        expect(t0(0)).toEqual(0);
+        expect(t0(1)).toEqual(1);
+        expect(t0('a')).toEqual('a');
+        expect(t0('')).toEqual('');
+        expect(t0({})).toEqual({});
+        expect(t0([])).toEqual([]);
+        let t1 = Gubu(Skip(1));
+        expect(t1()).toEqual(undefined);
+        expect(t1(undefined)).toEqual(undefined);
+        expect(() => t1(null)).toThrow('type');
+        expect(() => t1(NaN)).toThrow('type');
+        expect(() => t1(true)).toThrow('type');
+        expect(() => t1(false)).toThrow('type');
+        expect(t1(0)).toEqual(0);
+        expect(t1(1)).toEqual(1);
+        expect(() => t1('a')).toThrow('type');
+        expect(() => t1('')).toThrow('type');
+        expect(() => t1({})).toThrow('type');
+        expect(() => t1([])).toThrow('type');
+        let t2 = Gubu(Skip(Number));
+        expect(t2()).toEqual(undefined);
+        expect(t2(undefined)).toEqual(undefined);
+        expect(() => t2(null)).toThrow('type');
+        expect(() => t2(NaN)).toThrow('type');
+        expect(() => t2(true)).toThrow('type');
+        expect(() => t2(false)).toThrow('type');
+        expect(t2(0)).toEqual(0);
+        expect(t2(1)).toEqual(1);
+        expect(() => t2('a')).toThrow('type');
+        expect(() => t2('')).toThrow('type');
+        expect(() => t2({})).toThrow('type');
+        expect(() => t2([])).toThrow('type');
+        let d1 = Gubu({ a: Skip(1) });
+        expect(d1({})).toEqual({});
+        expect(d1({ a: undefined })).toEqual({ a: undefined });
+        expect(() => d1({ a: null })).toThrow('type');
+        expect(() => d1({ a: NaN })).toThrow('type');
+        expect(() => d1({ a: true })).toThrow('type');
+        expect(() => d1({ a: false })).toThrow('type');
+        expect(d1({ a: 0 })).toEqual({ a: 0 });
+        expect(d1({ a: 1 })).toEqual({ a: 1 });
+        expect(() => d1({ a: 'a' })).toThrow('type');
+        expect(() => d1({ a: '' })).toThrow('type');
+        expect(() => d1({ a: {} })).toThrow('type');
+        expect(() => d1({ a: [] })).toThrow('type');
+    });
     test('context-basic', () => {
         let c0 = { max: 10 };
         let g0 = Gubu({
@@ -1940,7 +1987,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
                 }
             }
         });
-        let g4 = Gubu(Required({ a: Optional({ b: 1 }) }));
+        let g4 = Gubu(Required({ a: Skip({ b: 1 }) }));
         expect(g4.spec()).toMatchObject({
             d: 0, o: false, r: true, t: 'object', v: {
                 a: {
@@ -1952,7 +1999,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
                 }
             }
         });
-        let g5 = Gubu(Optional({ a: Required({ b: 1 }) }));
+        let g5 = Gubu(Skip({ a: Required({ b: 1 }) }));
         expect(g5.spec()).toMatchObject({
             d: 0, o: true, r: false, t: 'object', v: {
                 a: {
@@ -2376,6 +2423,7 @@ Value "5" for path "d.1" must be below 4 (was 5).`);
         // ** thus need a builder for validation functions
         // ** and a builder for raw functions
         // * Do Array, Object work?
+        // * default value within One, Some, etc
         // 'happy'
         let opter = Gubu({
             a: 1,

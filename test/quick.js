@@ -448,6 +448,35 @@ let tmp = {}
 
 
 
-let a0 = Gubu(Optional(Number).After((v) => 0 === v % 2))
-console.log(a0.spec())
-console.log(a0())
+// let a0 = Gubu(Optional(Number).After((v) => 0 === v % 2))
+// console.log(a0.spec())
+// console.log(a0())
+
+
+
+// let d01 = Gubu(One(String,1))
+// console.log(d01('a'))
+// console.log(d01(2))
+
+// try {
+//   console.log(d01())
+// }
+// catch(e) {
+//   console.log(e.desc())
+// }
+
+
+
+// let d02 = Gubu(Some(String,1))
+// console.log(d02('a'))
+// console.log(d02(2))
+
+// try {
+//   console.log(d02())
+// }
+// catch(e) {
+//   console.log(e.desc())
+// }
+
+
+console.log(Gubu({a:Optional(String)})())

@@ -350,8 +350,8 @@ function norm(shape?: any, depth?: number): Node {
   t = ('undefined' === t ? 'any' : t) as ValType
 
   let v = shape
-  let r = false // Optional by default.
-  let o = false // Only true when Optional builder is used.
+  let r = false // Not required by default.
+  let o = false // Only true when Skip builder is used.
   let b = undefined
   let u: any = {}
 
@@ -703,7 +703,7 @@ function handleValidate(vf: Validate, s: State): Update {
 
   if (!valid || hasErrs) {
 
-    // Explicit Optional allows undefined
+    // Skip allows undefined
     if (undefined === s.val && (s.node.o || !s.node.r) && true !== update.done) {
       delete update.err
       return update
@@ -767,7 +767,9 @@ function pathstr(s: State) {
 const Required: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   node.r = true
+  node.o = false
 
+  // Handle an explicit undefined.
   if (undefined === shape && 1 === arguments.length) {
     node.t = 'undefined'
     node.v = undefined
@@ -777,15 +779,23 @@ const Required: Builder = function(this: Node, shape?: any) {
 }
 
 
-const Optional: Builder = function(this: Node, shape?: any) {
+// const Optional: Builder = function(this: Node, shape?: any) {
+//   let node = buildize(this, shape)
+//   node.r = false
+//   return node
+// }
+
+
+const Skip: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   node.r = false
 
-  // Mark Optional as explicit => do not insert empty arrays and objects.
+  // Do not insert empty arrays and objects.
   node.o = true
 
   return node
 }
+
 
 
 const Empty: Builder = function(this: Node, shape?: any) {
@@ -796,7 +806,7 @@ const Empty: Builder = function(this: Node, shape?: any) {
 
 
 
-// Optional value provides default.
+// Value provides default.
 const Any: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   node.t = 'any'
@@ -851,7 +861,8 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
 }
 
 
-// Pass if some match. Does not short circuit (as defaults may be missed).
+// Pass if some match.
+// TODO: UDPATE DOC: Does not short circuit (as defaults may be missed).
 const Some: Builder = function(this: Node, ...inshapes: any[]) {
   let node = buildize()
   node.t = 'list'
@@ -866,8 +877,9 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
     for (let shape of shapes) {
       let subctx = { ...state.ctx, err: [] }
       pass ||= shape.match(val, subctx)
+
       if (pass) {
-        break
+        update.val = shape(val, subctx)
       }
     }
 
@@ -902,6 +914,9 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
       let subctx = { ...state.ctx, err: [] }
       if (shape.match(val, subctx)) {
         passN++
+        update.val = shape(val, subctx)
+        // TODO: update docs - short circuits!
+        break
       }
     }
 
@@ -1322,10 +1337,10 @@ function buildize(node0?: any, node1?: any): Node {
   let node =
     norm(undefined === node0 ? node1 : node0.window === node0 ? node1 : node0)
 
+  // NOTE: One, Some, All not chainable.
   return Object.assign(node, {
     Above,
     After,
-    // All, // TODO: make list Nodes chainable?
     Any,
     Before,
     Below,
@@ -1336,13 +1351,11 @@ function buildize(node0?: any, node1?: any): Node {
     Max,
     Min,
     Never,
-    // One,
-    Optional,
     Refer,
     Rename,
     Required,
-    // Some,
     Value,
+    Skip,
   })
 }
 
@@ -1433,8 +1446,6 @@ function stringify(src: any, replacer?: any, expand?: boolean) {
         }
         else {
           val = truncate(val.toString().replace(/[ \t\r\n]+/g, ' '))
-          // let vlen = val.length
-          // val = val.substring(0, 30) + (30 < vlen ? '...' : '')
         }
       }
       else if ('bigint' === typeof (val)) {
@@ -1498,12 +1509,12 @@ if ('undefined' !== typeof (window)) {
     { b: Min, n: 'Min' },
     { b: Never, n: 'Never' },
     { b: One, n: 'One' },
-    { b: Optional, n: 'Optional' },
     { b: Refer, n: 'Refer' },
     { b: Rename, n: 'Rename' },
     { b: Required, n: 'Required' },
     { b: Some, n: 'Some' },
     { b: Value, n: 'Value' },
+    { b: Skip, n: 'Skip' },
   ]
   for (let build of builds) {
     Object.defineProperty(build.b, 'name', { value: build.n })
@@ -1526,12 +1537,12 @@ Object.assign(make, {
   Min,
   Never,
   One,
-  Optional,
   Refer,
   Rename,
   Required,
   Some,
   Value,
+  Skip,
 
   GAbove: Above,
   GAfter: After,
@@ -1547,12 +1558,12 @@ Object.assign(make, {
   GMin: Min,
   GNever: Never,
   GOne: One,
-  GOptional: Optional,
   GRefer: Refer,
   GRename: Rename,
   GRequired: Required,
   GSome: Some,
   GValue: Value,
+  GSkip: Skip,
 
   G$,
   buildize,
@@ -1585,12 +1596,12 @@ type Gubu = typeof make & {
   Min: typeof Min
   Never: typeof Never
   One: typeof One
-  Optional: typeof Optional
   Refer: typeof Refer
   Rename: typeof Rename
   Required: typeof Required
   Some: typeof Some
   Value: typeof Value
+  Skip: typeof Skip
 
   GAbove: typeof Above
   GAfter: typeof After
@@ -1606,12 +1617,12 @@ type Gubu = typeof make & {
   GMin: typeof Min
   GNever: typeof Never
   GOne: typeof One
-  GOptional: typeof Optional
   GRefer: typeof Refer
   GRename: typeof Rename
   GRequired: typeof Required
   GSome: typeof Some
   GValue: typeof Value
+  GSkip: typeof Skip
 
 }
 
@@ -1699,12 +1710,12 @@ const GMax = Max
 const GMin = Min
 const GNever = Never
 const GOne = One
-const GOptional = Optional
 const GRefer = Refer
 const GRename = Rename
 const GRequired = Required
 const GSome = Some
 const GValue = Value
+const GSkip = Skip
 
 
 export type {
@@ -1741,12 +1752,12 @@ export {
   Min,
   Never,
   One,
-  Optional,
   Refer,
   Rename,
   Required,
   Some,
   Value,
+  Skip,
 
   GAbove,
   GAfter,
@@ -1762,11 +1773,11 @@ export {
   GMin,
   GNever,
   GOne,
-  GOptional,
   GRefer,
   GRename,
   GRequired,
   GSome,
   GValue,
+  GSkip,
 }
 
