@@ -251,6 +251,7 @@ function make(intop, inopts) {
                     }
                 }
             }
+            // console.log('NODE', s.pI, done, s.val, s.node)
             if (!done) {
                 if ('never' === s.type) {
                     s.err.push(makeErrImpl('never', s, 1070));
@@ -301,33 +302,49 @@ function make(intop, inopts) {
                     }
                     else if (!s.node.p || null != s.val) {
                         s.updateVal(s.val || (s.fromDefault = true, []));
-                        let vkeys = Object.keys(s.node.v).filter(k => !isNaN(+k));
-                        if (0 < s.val.length || 1 < vkeys.length) {
+                        let elementKeys = Object.keys(s.node.v).filter(k => !isNaN(+k));
+                        if (0 < s.val.length || 1 < elementKeys.length) {
                             s.pI = s.nI;
-                            let nvs = undefined === s.node.v[0] ? Any() :
-                                s.node.v[0] = norm(s.node.v[0], 1 + s.dI);
-                            // Special elements
-                            let j = 1;
-                            if (1 < vkeys.length) {
-                                for (; j < vkeys.length; j++) {
-                                    let jvs = s.node.v[j] = norm(s.node.v[j], 1 + s.dI);
-                                    s.nodes[s.nI] = jvs;
-                                    s.vals[s.nI] = s.val[(j - 1)];
-                                    s.parents[s.nI] = s.val;
-                                    s.keys[s.nI] = '' + (j - 1);
-                                    s.nI++;
+                            // Single element array shape means 0 or more elements of shape
+                            if (1 === elementKeys.length) {
+                                if (0 < s.val.length) {
+                                    let elementIndex = 0;
+                                    let elementShape = s.node.v[elementIndex] =
+                                        norm(s.node.v[elementIndex], 1 + s.dI);
+                                    if (elementShape) {
+                                        for (; elementIndex < s.val.length; elementIndex++) {
+                                            s.nodes[s.nI] = elementShape;
+                                            s.vals[s.nI] = s.val[elementIndex];
+                                            s.parents[s.nI] = s.val;
+                                            s.keys[s.nI] = '' + elementIndex;
+                                            s.nI++;
+                                        }
+                                    }
                                 }
                             }
-                            for (let i = j - 1; i < s.val.length; i++) {
-                                s.nodes[s.nI] = nvs;
-                                s.vals[s.nI] = s.val[i];
-                                s.parents[s.nI] = s.val;
-                                s.keys[s.nI] = '' + i;
-                                s.nI++;
+                            // Multiple element array means match shapes at each index only.
+                            else if (1 < elementKeys.length) {
+                                if (elementKeys.length < s.val.length) {
+                                    s.ignoreVal = true;
+                                    s.err.push(makeErrImpl('closed', s, 1090, undefined, { k: elementKeys.length }));
+                                }
+                                else {
+                                    for (let elementIndex = 0; elementIndex < elementKeys.length; elementIndex++) {
+                                        let elementShape = s.node.v[elementIndex] =
+                                            norm(s.node.v[elementIndex], 1 + s.dI);
+                                        s.nodes[s.nI] = elementShape;
+                                        s.vals[s.nI] = s.val[elementIndex];
+                                        s.parents[s.nI] = s.val;
+                                        s.keys[s.nI] = '' + elementIndex;
+                                        s.nI++;
+                                    }
+                                }
                             }
-                            s.dI++;
-                            s.nodes[s.nI++] = s.sI;
-                            s.nextSibling = false;
+                            if (!s.ignoreVal) {
+                                s.dI++;
+                                s.nodes[s.nI++] = s.sI;
+                                s.nextSibling = false;
+                            }
                         }
                     }
                 }
@@ -344,6 +361,7 @@ function make(intop, inopts) {
                 // Value itself, or default.
                 else if (undefined === s.val) {
                     let parentKey = s.path[s.dI];
+                    // console.log('UNDEF')
                     if (s.node.r &&
                         ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
                         s.ignoreVal = true;
@@ -353,8 +371,12 @@ function make(intop, inopts) {
                         undefined !== s.node.v &&
                         !s.node.p ||
                         'undefined' === s.type) {
+                        // console.log('UU', s.pI, s.val, s.node)
                         s.updateVal(s.node.v);
                         s.fromDefault = true;
+                    }
+                    else {
+                        // s.ignoreVal = true
                     }
                 }
                 // Empty strings fail even if string is optional. Use Empty() to allow.
@@ -556,7 +578,7 @@ const All = function (...inshapes) {
         if (!pass) {
             update.why = 'all';
             update.err = [
-                makeErr(state, `Value "$VALUE" for path "$PATH" does not satisfy all of: ${inshapes.map(x => stringify(x))}`)
+                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy all of: ${inshapes.map(x => stringify(x))}`)
             ];
         }
         return pass;
@@ -584,7 +606,7 @@ const Some = function (...inshapes) {
         if (!pass) {
             update.why = 'some';
             update.err = [
-                makeErr(state, `Value "$VALUE" for path "$PATH" does not satisfy some of: ${inshapes.map(x => stringify(x))}`)
+                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy some of: ${inshapes.map(x => stringify(x))}`)
             ];
         }
         return pass;
@@ -613,7 +635,7 @@ const One = function (...inshapes) {
         if (1 !== passN) {
             update.why = 'one';
             update.err = [
-                makeErr(state, `Value "$VALUE" for path "$PATH" does not satisfy one of: ${inshapes.map(x => stringify(x))}`)
+                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy one of: ${inshapes.map(x => stringify(x))}`)
             ];
         }
         return true;
@@ -631,7 +653,7 @@ const Exact = function (...vals) {
             }
         }
         update.err =
-            makeErr(state, `Value "$VALUE" for path "$PATH" must be exactly one of: ${state.node.s}.`);
+            makeErr(state, `Value "$VALUE" for property "$PATH" must be exactly one of: ${state.node.s}.`);
         update.done = true;
         return false;
     });
@@ -816,7 +838,7 @@ const Min = function (min, shape) {
         }
         let errmsgpart = 'number' === typeof (val) ? '' : 'length ';
         update.err =
-            makeErr(state, `Value "$VALUE" for path "$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
+            makeErr(state, `Value "$VALUE" for property "$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
         return false;
     });
     return node;
@@ -831,7 +853,7 @@ const Max = function (max, shape) {
         }
         let errmsgpart = 'number' === typeof (val) ? '' : 'length ';
         update.err =
-            makeErr(state, `Value "$VALUE" for path "$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`);
+            makeErr(state, `Value "$VALUE" for property "$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`);
         return false;
     });
     return node;
@@ -846,7 +868,7 @@ const Above = function (above, shape) {
         }
         let errmsgpart = 'number' === typeof (val) ? 'be' : 'have length';
         update.err =
-            makeErr(state, `Value "$VALUE" for path "$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`);
+            makeErr(state, `Value "$VALUE" for property "$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`);
         return false;
     });
     return node;
@@ -861,7 +883,7 @@ const Below = function (below, shape) {
         }
         let errmsgpart = 'number' === typeof (val) ? 'be' : 'have length';
         update.err =
-            makeErr(state, `Value "$VALUE" for path "$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`);
+            makeErr(state, `Value "$VALUE" for property "$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`);
         return false;
     });
     return node;
@@ -951,12 +973,17 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     let jstr = undefined === s.val ? '' : stringify(s.val);
     let valstr = truncate(jstr.replace(/"/g, ''));
     if (null == text || '' === text) {
-        err.t = `Validation failed for path "${err.p}" ` +
-            `with value "${valstr}" because ` +
-            ('type' === why ? ('instance' === s.node.t ? `the value is not an instance of ${s.node.u.n} ` :
-                `the value is not of type ${s.node.t}`) :
-                'required' === why ? `the value is required` :
-                    'closed' === why ? `the property "${user === null || user === void 0 ? void 0 : user.k}" is not allowed` :
+        let valkind = valstr.startsWith('[') ? 'array' :
+            valstr.startsWith('{') ? 'object' : 'value';
+        let propkind = valstr.startsWith('[') ? 'index' : 'property';
+        err.t = `Validation failed for ` +
+            (0 < err.p.length ? `property "${err.p}" with ` : '') +
+            `${valkind} "${valstr}" because ` +
+            ('type' === why ? ('instance' === s.node.t ?
+                `the ${valkind} is not an instance of ${s.node.u.n} ` :
+                `the ${valkind} is not of type ${s.node.t}`) :
+                'required' === why ? `the ${valkind} is required` :
+                    'closed' === why ? `the ${propkind} "${user === null || user === void 0 ? void 0 : user.k}" is not allowed` :
                         'never' === why ? 'no value is allowed' :
                             `check "${why + (fname ? ': ' + fname : '')}" failed`) +
             (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.');
@@ -1107,7 +1134,7 @@ function Args(shapes, wrapped) {
     let restArg = undefined;
     let args = Object.keys(shapes)
         .reduce((as, name, index, keys) => {
-        if (name.startsWith('...') && index + 1 === keys.length) {
+        if (name.startsWith('...') && index === keys.length) {
             restArg = { name: name.substring(3), shape: fix(shapes[name]) };
         }
         else {
@@ -1119,10 +1146,10 @@ function Args(shapes, wrapped) {
             else {
                 claim = undefined;
             }
-            as[index + 1] = Rename({ name, claim, keep: true }, fix(shapes[fullname]));
+            as[index] = Rename({ name, claim, keep: true }, fix(shapes[fullname]));
         }
         return as;
-    }, [Never()]);
+    }, []);
     if (restArg) {
         args[0] = After((v, _u, s) => {
             s.parent[restArg.name] = (s.parent[restArg.name] || []);

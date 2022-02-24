@@ -207,7 +207,7 @@ module.exports = {
   },
 
   m1: [
-    String,
+    // String,
     { a00: [Number], b00: [Number], },
     { a01: [Number], b01: [Number], },
     { a02: [Number], b02: [Number], },
@@ -411,7 +411,7 @@ module.exports = {
     { a97: [97], b97: [97], },
     { a98: [98], b98: [98], },
     { a99: [99], b99: [99], },
-    'x',
+    // 'x',
   ],
   
 }

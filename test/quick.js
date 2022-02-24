@@ -21,6 +21,7 @@ const {
   Max,
   Above,
   Below,
+  Any,
 } = require('../gubu')
 
 
@@ -482,12 +483,31 @@ let tmp = {}
 // console.log(Gubu({a:Skip(String)})())
 
 
-let g0 = Gubu({a:Boolean})
-let o0 = {}
-try {
-  g0(o0)
-}
-catch(e) {
-  console.log(e.desc())
-  console.log(o0)
-}
+// let g0 = Gubu({a:Boolean})
+// let o0 = {}
+// try {
+//   g0(o0)
+// }
+// catch(e) {
+//   console.log(e.desc())
+//   console.log(o0)
+// }
+
+
+// // let a0 = Gubu([1,'a'])
+// let a0 = Gubu([1,{a:true}])
+// // console.log(a0([2,'b',true]))
+// // console.log(a0([2,'b']))
+// // console.log(a0([2,{a:false},'x']))
+// console.log(a0([3]))
+// console.log(a0([undefined,{a:false}]))
+
+
+
+
+let opter = Gubu({
+  j: [{ k: 7 }],
+})
+
+
+console.log(opter())
