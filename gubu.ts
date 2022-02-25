@@ -18,6 +18,8 @@ const VERSION = '1.0.0'
 const GUBU$ = Symbol.for('gubu$')
 const GUBU = { gubu$: GUBU$, v$: VERSION }
 
+const GUBU$NIL = Symbol.for('gubu$nil')
+
 
 // Options for creating a GubuShape.
 type Options = {
@@ -60,6 +62,7 @@ type Node = {
   t: ValType             // Value type name.
   d: number              // Depth.
   v: any                 // Default value.
+  c: any                 // Default child.
   r: boolean             // Value is required.
   p: boolean             // Value is skippable - can be missing or undefined.
   u: Record<string, any> // Custom user meta data
@@ -259,12 +262,9 @@ class GubuError extends TypeError {
     err: ErrDesc[],
     ctx: any,
   ) {
-    // let message = err.map((e: ErrDesc) => e.t).join('\n')
-    // super(message)
     super(err.map((e: ErrDesc) => e.t).join('\n'))
     let name = 'GubuError'
     let ge = this as unknown as any
-    // ge.gubu = true
     ge.name = name
 
     this.code = code
@@ -326,6 +326,8 @@ function norm(shape?: any, depth?: number): Node {
       node.v =
         (null != node.v && 'object' === typeof (node.v)) ? { ...node.v } : node.v
 
+      // Leave as-is: node.c
+
       node.t = node.t || typeof (node.v)
       if ('function' === node.t && IS_TYPE[node.v.name]) {
         node.t = (node.v.name.toLowerCase() as ValType)
@@ -350,6 +352,7 @@ function norm(shape?: any, depth?: number): Node {
   t = ('undefined' === t ? 'any' : t) as ValType
 
   let v = shape
+  let c = GUBU$NIL
   let r = false // Not required by default.
   let p = false // Only true when Skip builder is used.
   let b = undefined
@@ -358,6 +361,9 @@ function norm(shape?: any, depth?: number): Node {
   if ('object' === t) {
     if (Array.isArray(shape)) {
       t = 'array'
+      if (1 === shape.length) {
+        c = shape[0]
+      }
     }
     else if (
       null != v &&
@@ -410,6 +416,7 @@ function norm(shape?: any, depth?: number): Node {
     $: GUBU,
     t,
     v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
+    c,
     r,
     p,
     d: null == depth ? -1 : depth,
@@ -528,31 +535,27 @@ function make<S>(intop?: S, inopts?: Options) {
 
             let elementKeys = Object.keys(s.node.v).filter(k => !isNaN(+k))
 
-            if (0 < s.val.length || 1 < elementKeys.length) {
+            if (0 < s.val.length || 1 <= elementKeys.length) {
               s.pI = s.nI
 
               // Single element array shape means 0 or more elements of shape
-              if (1 === elementKeys.length) {
+              // if (1 === elementKeys.length) {
+              if (GUBU$NIL !== s.node.c) {
                 if (0 < s.val.length) {
-                  let elementIndex = 0
-                  let elementShape: Node =
-                    s.node.v[elementIndex] =
-                    norm(s.node.v[elementIndex], 1 + s.dI)
-
-                  if (elementShape) {
-                    for (; elementIndex < s.val.length; elementIndex++) {
-                      s.nodes[s.nI] = elementShape
-                      s.vals[s.nI] = s.val[elementIndex]
-                      s.parents[s.nI] = s.val
-                      s.keys[s.nI] = '' + elementIndex
-                      s.nI++
-                    }
+                  let elementShape: Node = s.node.c = norm(s.node.c, 1 + s.dI)
+                  for (let elementIndex = 0; elementIndex < s.val.length; elementIndex++) {
+                    s.nodes[s.nI] = elementShape
+                    s.vals[s.nI] = s.val[elementIndex]
+                    s.parents[s.nI] = s.val
+                    s.keys[s.nI] = '' + elementIndex
+                    s.nI++
                   }
                 }
               }
 
               // Multiple element array means match shapes at each index only.
-              else if (1 < elementKeys.length) {
+              // else if (1 < elementKeys.length) {
+              else if (0 < elementKeys.length) {
                 if (elementKeys.length < s.val.length) {
                   s.ignoreVal = true
                   s.err.push(makeErrImpl('closed', s, 1090, undefined,
@@ -1428,17 +1431,19 @@ function makeErrImpl(
   if (null == text || '' === text) {
     let valkind = valstr.startsWith('[') ? 'array' :
       valstr.startsWith('{') ? 'object' : 'value'
-    let propkind = valstr.startsWith('[') ? 'index' : 'property'
+    let propkind = (valstr.startsWith('[') || Array.isArray(s.parents[s.pI])) ?
+      'index' : 'property'
 
     err.t = `Validation failed for ` +
-      (0 < err.p.length ? `property "${err.p}" with ` : '') +
+      (0 < err.p.length ? `${propkind} "${err.p}" with ` : '') +
       `${valkind} "${valstr}" because ` +
 
       ('type' === why ? (
         'instance' === s.node.t ?
           `the ${valkind} is not an instance of ${s.node.u.n} ` :
           `the ${valkind} is not of type ${s.node.t}`) :
-        'required' === why ? `the ${valkind} is required` :
+        'required' === why ? ('' === s.val ? 'an empty string is not allowed' :
+          `the ${valkind} is required`) :
           'closed' === why ? `the ${propkind} "${user?.k}" is not allowed` :
             'never' === why ? 'no value is allowed' :
               `check "${why + (fname ? ': ' + fname : '')}" failed`) +

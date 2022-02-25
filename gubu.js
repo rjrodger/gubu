@@ -14,6 +14,7 @@ const util_1 = require("util");
 const VERSION = '1.0.0';
 const GUBU$ = Symbol.for('gubu$');
 const GUBU = { gubu$: GUBU$, v$: VERSION };
+const GUBU$NIL = Symbol.for('gubu$nil');
 // The current validation state.
 class State {
     constructor(root, top, ctx, match) {
@@ -87,13 +88,10 @@ class State {
 }
 class GubuError extends TypeError {
     constructor(code, err, ctx) {
-        // let message = err.map((e: ErrDesc) => e.t).join('\n')
-        // super(message)
         super(err.map((e) => e.t).join('\n'));
         this.gubu = true;
         let name = 'GubuError';
         let ge = this;
-        // ge.gubu = true
         ge.name = name;
         this.code = code;
         this.desc = () => ({ name, code, err, ctx, });
@@ -143,6 +141,7 @@ function norm(shape, depth) {
             node.$ = { v$: VERSION, ...node.$, gubu$: GUBU$ };
             node.v =
                 (null != node.v && 'object' === typeof (node.v)) ? { ...node.v } : node.v;
+            // Leave as-is: node.c
             node.t = node.t || typeof (node.v);
             if ('function' === node.t && IS_TYPE[node.v.name]) {
                 node.t = node.v.name.toLowerCase();
@@ -161,6 +160,7 @@ function norm(shape, depth) {
     let t = (null === shape ? 'null' : typeof (shape));
     t = ('undefined' === t ? 'any' : t);
     let v = shape;
+    let c = GUBU$NIL;
     let r = false; // Not required by default.
     let p = false; // Only true when Skip builder is used.
     let b = undefined;
@@ -168,6 +168,9 @@ function norm(shape, depth) {
     if ('object' === t) {
         if (Array.isArray(shape)) {
             t = 'array';
+            if (1 === shape.length) {
+                c = shape[0];
+            }
         }
         else if (null != v &&
             Function !== v.constructor &&
@@ -214,6 +217,7 @@ function norm(shape, depth) {
         $: GUBU,
         t,
         v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
+        c,
         r,
         p,
         d: null == depth ? -1 : depth,
@@ -303,27 +307,25 @@ function make(intop, inopts) {
                     else if (!s.node.p || null != s.val) {
                         s.updateVal(s.val || (s.fromDefault = true, []));
                         let elementKeys = Object.keys(s.node.v).filter(k => !isNaN(+k));
-                        if (0 < s.val.length || 1 < elementKeys.length) {
+                        if (0 < s.val.length || 1 <= elementKeys.length) {
                             s.pI = s.nI;
                             // Single element array shape means 0 or more elements of shape
-                            if (1 === elementKeys.length) {
+                            // if (1 === elementKeys.length) {
+                            if (GUBU$NIL !== s.node.c) {
                                 if (0 < s.val.length) {
-                                    let elementIndex = 0;
-                                    let elementShape = s.node.v[elementIndex] =
-                                        norm(s.node.v[elementIndex], 1 + s.dI);
-                                    if (elementShape) {
-                                        for (; elementIndex < s.val.length; elementIndex++) {
-                                            s.nodes[s.nI] = elementShape;
-                                            s.vals[s.nI] = s.val[elementIndex];
-                                            s.parents[s.nI] = s.val;
-                                            s.keys[s.nI] = '' + elementIndex;
-                                            s.nI++;
-                                        }
+                                    let elementShape = s.node.c = norm(s.node.c, 1 + s.dI);
+                                    for (let elementIndex = 0; elementIndex < s.val.length; elementIndex++) {
+                                        s.nodes[s.nI] = elementShape;
+                                        s.vals[s.nI] = s.val[elementIndex];
+                                        s.parents[s.nI] = s.val;
+                                        s.keys[s.nI] = '' + elementIndex;
+                                        s.nI++;
                                     }
                                 }
                             }
                             // Multiple element array means match shapes at each index only.
-                            else if (1 < elementKeys.length) {
+                            // else if (1 < elementKeys.length) {
+                            else if (0 < elementKeys.length) {
                                 if (elementKeys.length < s.val.length) {
                                     s.ignoreVal = true;
                                     s.err.push(makeErrImpl('closed', s, 1090, undefined, { k: elementKeys.length }));
@@ -975,14 +977,16 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     if (null == text || '' === text) {
         let valkind = valstr.startsWith('[') ? 'array' :
             valstr.startsWith('{') ? 'object' : 'value';
-        let propkind = valstr.startsWith('[') ? 'index' : 'property';
+        let propkind = (valstr.startsWith('[') || Array.isArray(s.parents[s.pI])) ?
+            'index' : 'property';
         err.t = `Validation failed for ` +
-            (0 < err.p.length ? `property "${err.p}" with ` : '') +
+            (0 < err.p.length ? `${propkind} "${err.p}" with ` : '') +
             `${valkind} "${valstr}" because ` +
             ('type' === why ? ('instance' === s.node.t ?
                 `the ${valkind} is not an instance of ${s.node.u.n} ` :
                 `the ${valkind} is not of type ${s.node.t}`) :
-                'required' === why ? `the ${valkind} is required` :
+                'required' === why ? ('' === s.val ? 'an empty string is not allowed' :
+                    `the ${valkind} is required`) :
                     'closed' === why ? `the ${propkind} "${user === null || user === void 0 ? void 0 : user.k}" is not allowed` :
                         'never' === why ? 'no value is allowed' :
                             `check "${why + (fname ? ': ' + fname : '')}" failed`) +

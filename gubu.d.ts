@@ -29,6 +29,7 @@ declare type Node = {
     t: ValType;
     d: number;
     v: any;
+    c: any;
     r: boolean;
     p: boolean;
     u: Record<string, any>;

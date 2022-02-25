@@ -505,9 +505,14 @@ let tmp = {}
 
 
 
-let opter = Gubu({
-  j: [{ k: 7 }],
-})
+// let g = Gubu([Required({x:1})])
+// console.log(g([{x:11}]))
+// console.log(g([]))
 
 
-console.log(opter())
+let g = Gubu([])
+console.log(g())
+console.log(g([]))
+console.log(g([1]))
+console.log(g([1,2]))
+console.log(g([1,2,3]))
