@@ -1,7 +1,7 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GSkip = exports.GValue = exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Skip = exports.Value = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.Args = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GCheck = exports.GSkip = exports.GValue = exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Check = exports.Skip = exports.Value = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.Args = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
@@ -529,11 +529,6 @@ const Required = function (shape) {
     return node;
 };
 exports.Required = Required;
-// const Optional: Builder = function(this: Node, shape?: any) {
-//   let node = buildize(this, shape)
-//   node.r = false
-//   return node
-// }
 const Skip = function (shape) {
     let node = buildize(this, shape);
     node.r = false;
@@ -680,6 +675,13 @@ const After = function (validate, shape) {
     return node;
 };
 exports.After = After;
+const Check = function (check, shape) {
+    let node = buildize(this, shape);
+    // TODO: if validate is a RegExp, construct Validate
+    node.b.push(check);
+    return node;
+};
+exports.Check = Check;
 const Closed = function (shape) {
     let node = buildize(this, shape);
     // console.log('CLOSED', node,
@@ -966,6 +968,7 @@ function buildize(node0, node1) {
         Required,
         Value,
         Skip,
+        Check,
     });
 }
 exports.buildize = buildize;
@@ -1003,7 +1006,8 @@ function makeErrImpl(why, s, mark, text, user, fname) {
                     `the ${valkind} is required`) :
                     'closed' === why ? `the ${propkind} "${user === null || user === void 0 ? void 0 : user.k}" is not allowed` :
                         'never' === why ? 'no value is allowed' :
-                            `check "${why + (fname ? ': ' + fname : '')}" failed`) +
+                            `check "${null == fname ? why : fname}" failed`) +
+            // `check "${why + (fname ? ': ' + fname : '')}" failed`) +
             (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.');
     }
     else {
@@ -1087,6 +1091,7 @@ if ('undefined' !== typeof (window)) {
         { b: Some, n: 'Some' },
         { b: Value, n: 'Value' },
         { b: Skip, n: 'Skip' },
+        { b: Check, n: 'Check' },
     ];
     for (let build of builds) {
         Object.defineProperty(build.b, 'name', { value: build.n });
@@ -1113,6 +1118,7 @@ Object.assign(make, {
     Some,
     Value,
     Skip,
+    Check,
     GAbove: Above,
     GAfter: After,
     GAll: All,
@@ -1133,6 +1139,7 @@ Object.assign(make, {
     GSome: Some,
     GValue: Value,
     GSkip: Skip,
+    GCheck: Check,
     G$,
     buildize,
     makeErr,
@@ -1237,4 +1244,6 @@ const GValue = Value;
 exports.GValue = GValue;
 const GSkip = Skip;
 exports.GSkip = GSkip;
+const GCheck = Check;
+exports.GCheck = GCheck;
 //# sourceMappingURL=gubu.js.map

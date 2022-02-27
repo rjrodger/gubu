@@ -54,6 +54,7 @@ const {
   Some,
   Value,
   Skip,
+  Check,
 } = Gubu
 
 
@@ -992,26 +993,26 @@ Validation failed for property "q.b" with value "x" because the value is not of 
 
     let shape_AfterB0 = Gubu(After((v: any) => v > 10, 15))
     expect(shape_AfterB0(11)).toEqual(11)
-    expect(() => shape_AfterB0(10)).toThrow('Validation failed for value "10" because check "custom: (v) => v > 10" failed.')
+    expect(() => shape_AfterB0(10)).toThrow('Validation failed for value "10" because check "(v) => v > 10" failed.')
     expect(() => shape_AfterB0('x')).toThrow(`Validation failed for value "x" because the value is not of type number.
-Validation failed for value "x" because check "custom: (v) => v > 10" failed.`)
+Validation failed for value "x" because check "(v) => v > 10" failed.`)
     expect(shape_AfterB0()).toEqual(15)
 
     let shape_AfterB1 = Gubu(Skip(Number).After((v: any) => 0 === v % 2))
     expect(shape_AfterB1(2)).toEqual(2)
-    expect(() => shape_AfterB1(3)).toThrow('Validation failed for value "3" because check "custom: (v) => 0 === v % 2" failed.')
-    expect(() => shape_AfterB1('x')).toThrow('Validation failed for value "x" because check "custom: (v) => 0 === v % 2" failed.')
+    expect(() => shape_AfterB1(3)).toThrow('Validation failed for value "3" because check "(v) => 0 === v % 2" failed.')
+    expect(() => shape_AfterB1('x')).toThrow('Validation failed for value "x" because check "(v) => 0 === v % 2" failed.')
     expect(shape_AfterB1()).toEqual(undefined)
 
     let shape_AfterB2 = Gubu(After((v: any) => 0 === v.x % 2, Required({ x: Number })))
     expect(shape_AfterB2({ x: 2 })).toEqual({ x: 2 })
-    expect(() => shape_AfterB2({ x: 3 })).toThrow('Validation failed for object "{x:3}" because check "custom: (v) => 0 === v.x % 2" failed.')
+    expect(() => shape_AfterB2({ x: 3 })).toThrow('Validation failed for object "{x:3}" because check "(v) => 0 === v.x % 2" failed.')
 
-    expect(() => shape_AfterB2({})).toThrow(`Validation failed for object "{}" because check "custom: (v) => 0 === v.x % 2" failed.
+    expect(() => shape_AfterB2({})).toThrow(`Validation failed for object "{}" because check "(v) => 0 === v.x % 2" failed.
 Validation failed for property "x" with value "" because the value is required.`)
 
     expect(() => shape_AfterB2()).toThrow(`Validation failed for value "" because the value is required.
-Validation failed for value "" because check "custom: (v) => 0 === v.x % 2" failed (threw: Cannot read prop`)
+Validation failed for value "" because check "(v) => 0 === v.x % 2" failed (threw: Cannot read prop`)
 
     // TODO: modify value
 
@@ -1044,7 +1045,7 @@ Validation failed for value "" because check "custom: (v) => 0 === v.x % 2" fail
 
     let shape_BeforeB0 = Gubu(Before((v: any) => v > 10, 10))
     expect(shape_BeforeB0(11)).toEqual(11)
-    expect(() => shape_BeforeB0(10)).toThrow('Validation failed for value "10" because check "custom: (v) => v > 10" failed.')
+    expect(() => shape_BeforeB0(10)).toThrow('Validation failed for value "10" because check "(v) => v > 10" failed.')
     // TODO: modify value
 
     let shape_BelowB0 = Gubu(Below(10))
@@ -1575,25 +1576,32 @@ Validation failed for property "b" with value "B" because the value is not of ty
   })
 
 
+  test('check-basic', () => {
+    let g0 = Gubu({ a: Check((v: any) => v > 10) })
+    expect(g0({ a: 11 })).toMatchObject({ a: 11 })
+    expect(() => g0({ a: 9 })).toThrow('Validation failed for property "a" with value "9" because check "(v) => v > 10" failed.')
+  })
+
+
   test('custom-basic', () => {
     let g0 = Gubu({ a: (v: any) => v > 10 })
     expect(g0({ a: 11 })).toMatchObject({ a: 11 })
-    expect(() => g0({ a: 9 })).toThrow(/Validation failed for property "a" with value "9" because check "custom: a" failed\./)
+    expect(() => g0({ a: 9 })).toThrow(/Validation failed for property "a" with value "9" because check "a" failed\./)
 
     let g1 = Gubu({ a: Skip((v: any) => v > 10) })
     expect(g1({ a: 11 })).toMatchObject({ a: 11 })
-    expect(() => g1({ a: 9 })).toThrow('Validation failed for property "a" with value "9" because check "custom: (v) => v > 10" failed.')
+    expect(() => g1({ a: 9 })).toThrow('Validation failed for property "a" with value "9" because check "(v) => v > 10" failed.')
     expect(g1({})).toMatchObject({})
 
     let g2 = Gubu({ a: Required((v: any) => v > 10) })
     expect(g1({ a: 11 })).toMatchObject({ a: 11 })
-    expect(() => g2({ a: 9 })).toThrow('Validation failed for property "a" with value "9" because check "custom: (v) => v > 10" failed.')
+    expect(() => g2({ a: 9 })).toThrow('Validation failed for property "a" with value "9" because check "(v) => v > 10" failed.')
     expect(() => g2({}))
-      .toThrow('Validation failed for property "a" with value "" because check "custom: (v) => v > 10" failed.')
+      .toThrow('Validation failed for property "a" with value "" because check "(v) => v > 10" failed.')
 
     let g3 = Gubu((v: any) => v > 10)
     expect(g3(11)).toEqual(11)
-    expect(() => g3(9)).toThrow('Validation failed for value "9" because check "custom: (v) => v > 10" failed.')
+    expect(() => g3(9)).toThrow('Validation failed for value "9" because check "(v) => v > 10" failed.')
   })
 
 
@@ -1833,6 +1841,11 @@ Validation failed for property "b" with value "B" because the value is not of ty
     expect(() => g7({ x: 2, y: 3 })).toThrow('Validation failed for object "{x:2,y:3}" because the property "y" is not allowed.')
     expect(() => g7()).toThrow('required')
 
+
+  })
+
+
+  test('builder-check', () => {
 
   })
 
@@ -2466,7 +2479,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
       a: (v: any, _u: Update, s: State) => v < s.ctx.max
     })
     expect(g0({ a: 2 }, c0)).toMatchObject({ a: 2 })
-    expect(() => g0({ a: 11 }, c0)).toThrow('Validation failed for property "a" with value "11" because check "custom: a" failed.')
+    expect(() => g0({ a: 11 }, c0)).toThrow('Validation failed for property "a" with value "11" because check "a" failed.')
 
 
     let g1 = Gubu({

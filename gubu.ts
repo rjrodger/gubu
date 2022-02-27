@@ -820,13 +820,6 @@ const Required: Builder = function(this: Node, shape?: any) {
 }
 
 
-// const Optional: Builder = function(this: Node, shape?: any) {
-//   let node = buildize(this, shape)
-//   node.r = false
-//   return node
-// }
-
-
 const Skip: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   node.r = false
@@ -1015,6 +1008,16 @@ const After: Builder = function(this: Node, validate: Validate, shape?: any) {
   node.a.push(validate)
   return node
 }
+
+
+const Check: Builder = function(this: Node, check: any, shape?: any) {
+  let node = buildize(this, shape)
+
+  // TODO: if validate is a RegExp, construct Validate
+  node.b.push(check)
+  return node
+}
+
 
 
 const Closed: Builder = function(this: Node, shape?: any) {
@@ -1408,6 +1411,7 @@ function buildize(node0?: any, node1?: any): Node {
     Required,
     Value,
     Skip,
+    Check,
   })
 }
 
@@ -1465,7 +1469,8 @@ function makeErrImpl(
           `the ${valkind} is required`) :
           'closed' === why ? `the ${propkind} "${user?.k}" is not allowed` :
             'never' === why ? 'no value is allowed' :
-              `check "${why + (fname ? ': ' + fname : '')}" failed`) +
+              `check "${null == fname ? why : fname}" failed`) +
+      // `check "${why + (fname ? ': ' + fname : '')}" failed`) +
       (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.')
   }
   else {
@@ -1573,6 +1578,7 @@ if ('undefined' !== typeof (window)) {
     { b: Some, n: 'Some' },
     { b: Value, n: 'Value' },
     { b: Skip, n: 'Skip' },
+    { b: Check, n: 'Check' },
   ]
   for (let build of builds) {
     Object.defineProperty(build.b, 'name', { value: build.n })
@@ -1601,6 +1607,7 @@ Object.assign(make, {
   Some,
   Value,
   Skip,
+  Check,
 
   GAbove: Above,
   GAfter: After,
@@ -1622,6 +1629,7 @@ Object.assign(make, {
   GSome: Some,
   GValue: Value,
   GSkip: Skip,
+  GCheck: Check,
 
   G$,
   buildize,
@@ -1660,6 +1668,7 @@ type Gubu = typeof make & {
   Some: typeof Some
   Value: typeof Value
   Skip: typeof Skip
+  Check: typeof Check
 
   GAbove: typeof Above
   GAfter: typeof After
@@ -1681,7 +1690,7 @@ type Gubu = typeof make & {
   GSome: typeof Some
   GValue: typeof Value
   GSkip: typeof Skip
-
+  GCheck: typeof Check
 }
 
 Object.defineProperty(make, 'name', { value: 'gubu' })
@@ -1774,6 +1783,7 @@ const GRequired = Required
 const GSome = Some
 const GValue = Value
 const GSkip = Skip
+const GCheck = Check
 
 
 export type {
@@ -1816,6 +1826,7 @@ export {
   Some,
   Value,
   Skip,
+  Check,
 
   GAbove,
   GAfter,
@@ -1837,5 +1848,6 @@ export {
   GSome,
   GValue,
   GSkip,
+  GCheck,
 }
 

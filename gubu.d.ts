@@ -120,6 +120,7 @@ declare const One: Builder;
 declare const Exact: Builder;
 declare const Before: Builder;
 declare const After: Builder;
+declare const Check: Builder;
 declare const Closed: Builder;
 declare const Define: Builder;
 declare const Refer: Builder;
@@ -167,6 +168,7 @@ declare type Gubu = typeof make & {
     Some: typeof Some;
     Value: typeof Value;
     Skip: typeof Skip;
+    Check: typeof Check;
     GAbove: typeof Above;
     GAfter: typeof After;
     GAll: typeof All;
@@ -187,6 +189,7 @@ declare type Gubu = typeof make & {
     GSome: typeof Some;
     GValue: typeof Value;
     GSkip: typeof Skip;
+    GCheck: typeof Check;
 };
 declare const Gubu: Gubu;
 declare function Args(shapes: Record<string, any>, wrapped?: any): {
@@ -220,5 +223,6 @@ declare const GRequired: Builder;
 declare const GSome: Builder;
 declare const GValue: Builder;
 declare const GSkip: Builder;
+declare const GCheck: Builder;
 export type { Validate, Update, Context, Builder, Node, State, GubuShape, };
-export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, Args, Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Refer, Rename, Required, Some, Value, Skip, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GRefer, GRename, GRequired, GSome, GValue, GSkip, };
+export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, Args, Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Refer, Rename, Required, Some, Value, Skip, Check, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GRefer, GRename, GRequired, GSome, GValue, GSkip, GCheck, };
