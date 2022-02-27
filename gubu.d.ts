@@ -29,6 +29,7 @@ declare type Node = {
     t: ValType;
     d: number;
     v: any;
+    n: number;
     c: any;
     r: boolean;
     p: boolean;
@@ -96,7 +97,7 @@ declare type ErrDesc = {
     t: string;
     u: any;
 };
-declare function norm(shape?: any, depth?: number): Node;
+declare function nodize(shape?: any, depth?: number): Node;
 declare function make<S>(intop?: S, inopts?: Options): {
     <R>(root?: R | undefined, ctx?: Context | undefined): R & S;
     valid: <D>(root?: D | undefined, ctx?: Context | undefined) => root is D & S;
@@ -220,4 +221,4 @@ declare const GSome: Builder;
 declare const GValue: Builder;
 declare const GSkip: Builder;
 export type { Validate, Update, Context, Builder, Node, State, GubuShape, };
-export { Gubu, G$, norm, buildize, makeErr, stringify, truncate, Args, Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Refer, Rename, Required, Some, Value, Skip, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GRefer, GRename, GRequired, GSome, GValue, GSkip, };
+export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, Args, Above, After, All, Any, Before, Below, Closed, Define, Empty, Exact, Max, Min, Never, One, Refer, Rename, Required, Some, Value, Skip, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GRefer, GRename, GRequired, GSome, GValue, GSkip, };

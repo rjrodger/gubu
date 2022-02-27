@@ -510,9 +510,69 @@ let tmp = {}
 // console.log(g([]))
 
 
-let g = Gubu([])
-console.log(g())
-console.log(g([]))
-console.log(g([1]))
-console.log(g([1,2]))
-console.log(g([1,2,3]))
+// let g = Gubu([])
+// console.log(g())
+// console.log(g([]))
+// console.log(g([1]))
+// console.log(g([1,2]))
+// console.log(g([1,2,3]))
+
+// let g1 = Gubu([Number])
+// console.log(g1())
+// console.log(g1([]))
+// console.log(g1([1]))
+// console.log(g1([1,2]))
+// console.log(g1([1,2,3]))
+// // console.log(g1(['a']))
+
+// let gc1 = Gubu(Value([],Number))
+// console.log(gc1())
+// console.log(gc1([]))
+// console.log(gc1([1]))
+// console.log(gc1([1,2]))
+// console.log(gc1([1,2,3]))
+// // console.log(gc1(['b']))
+// // console.log(gc1([1,'a']))
+
+
+// let gc2 = Gubu([String,Boolean])
+// // console.log(gc2())
+// // console.log(gc2([]))
+// // console.log(gc2([1]))
+// // console.log(gc2([1,2]))
+// // console.log(gc2([1,2,3]))
+// console.log(gc2(['a',true]))
+// // console.log(gc2(['a',true,1]))
+// // console.log(gc2(['a',true,1,2]))
+
+
+// let gc3 = Gubu(Value([String,Boolean],Number))
+// // console.log(gc3())
+// // console.log(gc3([]))
+// // console.log(gc3([1]))
+// // console.log(gc3([1,2]))
+// // console.log(gc3([1,2,3]))
+// console.log(gc3(['a',true]))
+// console.log(gc3(['a',true,1]))
+// console.log(gc3(['a',true,1,2]))
+// console.log(gc3(['a',true,1,2,'x']))
+
+
+
+// let c = Gubu(Closed([Number]))
+// // let c = Gubu(Closed([2]))
+// console.log(c())
+// // console.log(c([]))
+// console.log(c([1]))
+// // console.log(c([1,2]))
+// // console.log(c(['a']))
+// console.log(c([1, 'a']))
+
+
+let a = Gubu([Any()])
+console.log(a())
+console.log(a([]))
+
+let a1 = Gubu(Closed([Any()]))
+console.log(a1())
+console.log(a1([]))

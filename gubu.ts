@@ -62,6 +62,7 @@ type Node = {
   t: ValType             // Value type name.
   d: number              // Depth.
   v: any                 // Default value.
+  n: number              // Number of keys in default value
   c: any                 // Default child.
   r: boolean             // Value is required.
   p: boolean             // Value is skippable - can be missing or undefined.
@@ -307,7 +308,7 @@ const EMPTY_VAL: { [name: string]: any } = {
 
 
 // Normalize a value into a Node.
-function norm(shape?: any, depth?: number): Node {
+function nodize(shape?: any, depth?: number): Node {
 
   // Is this a (possibly incomplete) Node?
   if (null != shape && shape.$?.gubu$) {
@@ -363,6 +364,7 @@ function norm(shape?: any, depth?: number): Node {
       t = 'array'
       if (1 === shape.length) {
         c = shape[0]
+        v = []
       }
     }
     else if (
@@ -412,10 +414,13 @@ function norm(shape?: any, depth?: number): Node {
     u.empty = true
   }
 
+  let vmap = (null != v && ('object' === t || 'array' === t)) ? { ...v } : v
+
   let node: Node = {
     $: GUBU,
     t,
-    v: (null != v && ('object' === t || 'array' === t)) ? { ...v } : v,
+    v: vmap,
+    n: null != vmap && 'object' === typeof (vmap) ? Object.keys(vmap).length : 0,
     c,
     r,
     p,
@@ -438,7 +443,7 @@ function make<S>(intop?: S, inopts?: Options) {
   opts.name =
     null == opts.name ? 'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name
 
-  let top: Node = norm(intop, 0)
+  let top: Node = nodize(intop, 0)
 
   function exec(
     root: any,
@@ -505,7 +510,7 @@ function make<S>(intop?: S, inopts?: Options) {
             if (0 < vkeys.length) {
               s.pI = s.nI
               for (let k of vkeys) {
-                let nvs = s.node.v[k] = norm(s.node.v[k], 1 + s.dI)
+                let nvs = s.node.v[k] = nodize(s.node.v[k], 1 + s.dI)
                 s.nodes[s.nI] = nvs
                 s.vals[s.nI] = val[k]
                 s.parents[s.nI] = val
@@ -532,18 +537,30 @@ function make<S>(intop?: S, inopts?: Options) {
           else if (!s.node.p || null != s.val) {
             s.updateVal(s.val || (s.fromDefault = true, []))
 
-
+            let hasValueElements = 0 < s.val.length
+            let hasChildShape = GUBU$NIL !== s.node.c
             let elementKeys = Object.keys(s.node.v).filter(k => !isNaN(+k))
+            let hasFixedElements = 0 < elementKeys.length
 
-            if (0 < s.val.length || 1 <= elementKeys.length) {
+            // console.log('ARR v=', hasValueElements, 'c=', hasChildShape, 'f=', hasFixedElements)
+
+            if (hasValueElements || hasFixedElements) {
               s.pI = s.nI
 
-              // Single element array shape means 0 or more elements of shape
-              // if (1 === elementKeys.length) {
-              if (GUBU$NIL !== s.node.c) {
-                if (0 < s.val.length) {
-                  let elementShape: Node = s.node.c = norm(s.node.c, 1 + s.dI)
-                  for (let elementIndex = 0; elementIndex < s.val.length; elementIndex++) {
+              let elementIndex = 0
+
+              // Fixed element array means match shapes at each index only.
+              if (hasFixedElements) {
+                if (elementKeys.length < s.val.length && !hasChildShape) {
+                  s.ignoreVal = true
+                  s.err.push(makeErrImpl('closed', s, 1090, undefined,
+                    { k: elementKeys.length }))
+                }
+                else {
+                  for (; elementIndex < elementKeys.length; elementIndex++) {
+                    let elementShape =
+                      s.node.v[elementIndex] =
+                      nodize(s.node.v[elementIndex], 1 + s.dI)
                     s.nodes[s.nI] = elementShape
                     s.vals[s.nI] = s.val[elementIndex]
                     s.parents[s.nI] = s.val
@@ -553,27 +570,16 @@ function make<S>(intop?: S, inopts?: Options) {
                 }
               }
 
-              // Multiple element array means match shapes at each index only.
-              // else if (1 < elementKeys.length) {
-              else if (0 < elementKeys.length) {
-                if (elementKeys.length < s.val.length) {
-                  s.ignoreVal = true
-                  s.err.push(makeErrImpl('closed', s, 1090, undefined,
-                    { k: elementKeys.length }))
-                }
-                else {
-                  for (let elementIndex = 0;
-                    elementIndex < elementKeys.length;
-                    elementIndex++) {
-                    let elementShape =
-                      s.node.v[elementIndex] =
-                      norm(s.node.v[elementIndex], 1 + s.dI)
-                    s.nodes[s.nI] = elementShape
-                    s.vals[s.nI] = s.val[elementIndex]
-                    s.parents[s.nI] = s.val
-                    s.keys[s.nI] = '' + elementIndex
-                    s.nI++
-                  }
+              // Single element array shape means 0 or more elements of shape
+              // if (1 === elementKeys.length) {
+              if (hasChildShape && hasValueElements) {
+                let elementShape: Node = s.node.c = nodize(s.node.c, 1 + s.dI)
+                for (; elementIndex < s.val.length; elementIndex++) {
+                  s.nodes[s.nI] = elementShape
+                  s.vals[s.nI] = s.val[elementIndex]
+                  s.parents[s.nI] = s.val
+                  s.keys[s.nI] = '' + elementIndex
+                  s.nI++
                 }
               }
 
@@ -620,8 +626,8 @@ function make<S>(intop?: S, inopts?: Options) {
             s.updateVal(s.node.v)
             s.fromDefault = true
           }
-          else {
-            // s.ignoreVal = true
+          else if ('any' === s.type) {
+            s.ignoreVal = true
           }
         }
 
@@ -1014,6 +1020,16 @@ const After: Builder = function(this: Node, validate: Validate, shape?: any) {
 const Closed: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
 
+  // console.log('CLOSED', node,
+  //   'array' === node.t, GUBU$NIL !== node.c, 0 === node.n, node.v)
+
+  // Makes one element array fixed.
+  if ('array' === node.t && GUBU$NIL !== node.c && 0 === node.n) {
+    node.v = [node.c]
+    node.c = GUBU$NIL
+  }
+
+
   node.b.push(function Closed(val: any, update: Update, s: State) {
     if (null != val && 'object' === typeof (val) && !Array.isArray(val)) {
       let vkeys = Object.keys(val)
@@ -1138,7 +1154,7 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
 
               // Add the default to the end of the node set to ensure it
               // is properly validated.
-              s.nodes.splice(j, 0, norm(fromDefault.dval))
+              s.nodes.splice(j, 0, nodize(fromDefault.dval))
               s.vals.splice(j, 0, undefined)
               s.parents.splice(j, 0, s.parent)
               s.keys.splice(j, 0, cn)
@@ -1318,9 +1334,12 @@ const Value: Builder = function(
   shape1?: any
 ): Node {
   let node = undefined == shape1 ? buildize(this) : buildize(shape0)
-  let shape = norm(undefined == shape1 ? shape0 : shape1)
+  let shape = nodize(undefined == shape1 ? shape0 : shape1)
 
-  node.a.push(function Below(val: any, _update: Update, s: State) {
+  // Set child value to shape
+  node.c = shape
+
+  node.a.push(function Value(val: any, _update: Update, s: State) {
     if (null != val) {
 
       let namedKeys = Object.keys(s.node.v)
@@ -1347,7 +1366,7 @@ const Value: Builder = function(
         }
 
         for (let k of valKeys) {
-          s.nodes[nI] = norm(shape, 1 + s.dI)
+          s.nodes[nI] = nodize(shape, 1 + s.dI)
           s.vals[nI] = val[k]
           s.parents[nI] = val
           s.keys[nI] = k
@@ -1368,7 +1387,7 @@ const Value: Builder = function(
 
 function buildize(node0?: any, node1?: any): Node {
   let node =
-    norm(undefined === node0 ? node1 : node0.window === node0 ? node1 : node0)
+    nodize(undefined === node0 ? node1 : node0.window === node0 ? node1 : node0)
 
   // NOTE: One, Some, All not chainable.
   return Object.assign(node, {
@@ -1527,7 +1546,7 @@ type GubuShape = ReturnType<typeof make> &
 
 
 
-const G$ = (node: any): Node => norm({ ...node, $: { gubu$: true } })
+const G$ = (node: any): Node => nodize({ ...node, $: { gubu$: true } })
 
 
 // Fix builder names after terser mangles them.
@@ -1770,7 +1789,7 @@ export type {
 export {
   Gubu,
   G$,
-  norm,
+  nodize,
   buildize,
   makeErr,
   stringify,

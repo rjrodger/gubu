@@ -928,6 +928,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
           '$': { 'gubu$': true, 'v$': Pkg.version },
           t: 'number',
           v: 1,
+          n: 0,
           r: false,
           p: false,
           d: 1,
@@ -936,6 +937,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
           b: []
         }
       },
+      n: 1,
       r: true,
       p: false,
       d: 0,
@@ -1433,8 +1435,41 @@ Validation failed for property "b" with value "B" because the value is not of ty
     expect(g3()).toEqual([])
 
 
+    // Single element is the same as Value(...)
 
-    // TODO: Single element is the same as Value(...)
+    let g4 = Gubu([Number])
+    expect(g4()).toEqual([])
+    expect(g4([])).toEqual([])
+    expect(g4([1])).toEqual([1])
+    expect(g4([1, 2])).toEqual([1, 2])
+    expect(g4([1, 2, 3])).toEqual([1, 2, 3])
+    expect(() => g4(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.')
+    expect(() => g4([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.')
+    expect(() => g4([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.')
+
+    let g4v = Gubu(Value([], Number))
+    expect(g4v()).toEqual([])
+    expect(g4v([])).toEqual([])
+    expect(g4v([1])).toEqual([1])
+    expect(g4v([1, 2])).toEqual([1, 2])
+    expect(g4v([1, 2, 3])).toEqual([1, 2, 3])
+    expect(() => g4v(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.')
+    expect(() => g4v([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.')
+    expect(() => g4v([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.')
+
+    // Value overrides single element
+
+    let g4vo = Gubu(Value([String], Number))
+    expect(g4vo()).toEqual([])
+    expect(g4vo([])).toEqual([])
+    expect(g4vo([1])).toEqual([1])
+    expect(g4vo([1, 2])).toEqual([1, 2])
+    expect(g4vo([1, 2, 3])).toEqual([1, 2, 3])
+    expect(() => g4vo(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.')
+    expect(() => g4vo([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.')
+    expect(() => g4vo([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.')
+
+
     // TODO: change norm - object Value and array Value should be the same
   })
 
@@ -1504,16 +1539,26 @@ Validation failed for property "b" with value "B" because the value is not of ty
     let g8 = Gubu(Closed([Any()]))
     expect(g8([])).toEqual([])
     expect(g8([1])).toEqual([1])
-    expect(g8([1, 'x'])).toEqual([1, 'x'])
+    expect(() => g8([1, 'x'])).toThrow('not allowed')
     expect(g8(new Array(1))).toEqual([undefined])
-    expect(g8(new Array(2))).toEqual([undefined, undefined])
+    expect(() => g8(new Array(2))).toThrow('not allowed')
 
     let g9 = Gubu(Closed([1]))
-    expect(g9([])).toEqual([])
+    expect(g9([])).toEqual([1])
     expect(g9([1])).toEqual([1])
-    expect(g9([1, 2])).toEqual([1, 2])
+    expect(() => g9(['a'])).toThrow('type')
+    expect(() => g9([1, 2])).toThrow('not allowed')
     expect(g9(new Array(1))).toEqual([1])
-    expect(g9(new Array(2))).toEqual([1, 1])
+    expect(() => g9(new Array(2))).toThrow('not allowed')
+
+    let g10 = Gubu(Closed([Number]))
+    expect(() => g10([])).toThrow('required')
+    expect(g10([1])).toEqual([1])
+    expect(() => g10(['a'])).toThrow('type')
+    expect(() => g10([1, 2])).toThrow('not allowed')
+    expect(() => g10(new Array(1))).toThrow('required')
+    expect(() => g10(new Array(2))).toThrow('not allowed')
+
   })
 
 
@@ -1805,21 +1850,11 @@ Validation failed for property "b" with value "B" because the value is not of ty
     expect(g1((tmp.a2 = [new Date(), /a/], tmp.a2.x = 1, tmp.a2))).toEqual(tmp.a2)
 
     let g2 = Gubu({ a: Closed([String]) })
-    expect(g2({})).toEqual({ a: [] })
-    expect(g2({ a: undefined })).toEqual({ a: [] })
-    expect(g2({ a: [] })).toEqual({ a: [] })
-
-    let r0: any = null
-    let a0: any = [String]
-    a0.x = 1
-    let g3 = Gubu({ a: Closed(a0) })
-    expect(g3({})).toEqual({ a: [] })
-
-    expect(r0 = g3({ a: undefined })).toEqual({ a: [] })
-    expect(r0.x).toBeUndefined()
-
-    expect(r0 = g3({ a: [] })).toEqual({ a: [] })
-    expect(r0.x).toBeUndefined()
+    expect(g2({ a: ['x'] })).toEqual({ a: ['x'] })
+    expect(() => g2({})).toThrow('required')
+    expect(() => g2({ a: undefined })).toThrow('required')
+    expect(() => g2({ a: [] })).toThrow('required')
+    expect(() => g2({ a: ['x', 'y'] })).toThrow('not allowed')
 
     let g4 = Gubu(Closed({ x: 1 }))
     expect(g4({})).toEqual({ x: 1 })
@@ -2499,7 +2534,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
         ]
       })
 
-      expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","err":[{"n":{"$":{"v$":"' + Pkg.version + '"},"t":"nan","v":null,"r":false,"p":false,"d":0,"u":{},"a":[],"b":[]},"v":1,"p":"","w":"type","m":1050,"t":"Validation failed for value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for value \\"1\\" because the value is not of type nan."}')
+      expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","err":[{"n":{"$":{"v$":"' + Pkg.version + '"},"t":"nan","v":null,"n":0,"r":false,"p":false,"d":0,"u":{},"a":[],"b":[]},"v":1,"p":"","w":"type","m":1050,"t":"Validation failed for value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for value \\"1\\" because the value is not of type nan."}')
     }
   })
 
@@ -2611,6 +2646,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
       u: {},
       a: [],
       b: [],
+      n: 1,
       v: {
         a: {
           $: {
@@ -2625,6 +2661,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
           a: [],
           b: [],
           v: 1,
+          n: 0,
         },
       },
     }
@@ -2671,6 +2708,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
       u: {},
       a: [],
       b: [],
+      n: 1,
       v: {
         a: {
           $: {
@@ -2684,7 +2722,8 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
           u: {},
           a: [],
           b: [],
-          v: { '0': 1 },
+          v: {},
+          n: 0,
           c: {
             $: {
               gubu$: true,
@@ -2697,7 +2736,8 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
             u: {},
             a: [],
             b: [],
-            v: 1
+            v: 1,
+            n: 0
           },
         },
       },
