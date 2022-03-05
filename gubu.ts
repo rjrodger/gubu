@@ -42,7 +42,7 @@ type ValType =
   'array' |     // An array.
   'bigint' |    // A BigInt value.
   'boolean' |   // The values `true` or `false`.
-  'custom' |    // Custom type defined by a validation function.
+  // 'custom' |    // Custom type defined by a validation function.
   'function' |  // A function.
   'instance' |  // An instance of a constructed object.
   'list' |      // A list of types under a given logical rule.
@@ -106,13 +106,12 @@ class State {
   nextSibling: boolean = true
 
   fromDefault: boolean = false
-  ignoreVal: boolean = false
+  ignoreVal: boolean | undefined = undefined
 
   err: any[] = []
   parents: Node[] = []
   keys: string[] = []
   path: string[] = []
-
 
   node: Node
 
@@ -144,7 +143,7 @@ class State {
 
     this.stop = false
     this.fromDefault = false
-    this.ignoreVal = false
+    this.ignoreVal = undefined
     this.isRoot = 0 === this.pI
 
     // Dereference the back pointers to ancestor siblings.
@@ -192,6 +191,8 @@ class State {
     if (this.isRoot && !this.match) {
       this.root = this.val
     }
+
+    // console.log('UUU', this.val)
   }
 
 
@@ -396,9 +397,11 @@ function nodize(shape?: any, depth?: number): Node {
       (undefined === shape.prototype && Function === shape.constructor) ||
       Function === shape.prototype?.constructor
     ) {
-      t = 'custom'
-      b = v
-      v = undefined
+      // default function value
+
+      // t = 'custom'
+      // b = v
+      // v = undefined
     }
     else {
       t = 'instance'
@@ -464,6 +467,7 @@ function make<S>(intop?: S, inopts?: Options) {
       // let n = s.node
       let done = false
 
+      //  Call Befores
       if (0 < s.node.b.length) {
         for (let bI = 0; bI < s.node.b.length; bI++) {
           let update = handleValidate(s.node.b[bI], s)
@@ -473,7 +477,7 @@ function make<S>(intop?: S, inopts?: Options) {
         }
       }
 
-      // console.log('NODE', s.pI, done, s.val, s.node)
+      // console.log('NODE', s.ignoreVal, s.pI, done, s.val) // , s.node)
 
       if (!done) {
         if ('never' === s.type) {
@@ -595,7 +599,7 @@ function make<S>(intop?: S, inopts?: Options) {
         // Invalid type.
         else if (!(
           'any' === s.type ||
-          'custom' === s.type ||
+          // 'custom' === s.type ||
           'list' === s.type ||
           undefined === s.val ||
           s.type === s.valType ||
@@ -617,7 +621,7 @@ function make<S>(intop?: S, inopts?: Options) {
             s.err.push(makeErrImpl('required', s, 1060))
           }
           else if (
-            'custom' !== s.type &&
+            // 'custom' !== s.type &&
             undefined !== s.node.v &&
             !s.node.p ||
             'undefined' === s.type
@@ -627,7 +631,8 @@ function make<S>(intop?: S, inopts?: Options) {
             s.fromDefault = true
           }
           else if ('any' === s.type) {
-            s.ignoreVal = true
+            // console.log('QQQ')
+            s.ignoreVal = undefined === s.ignoreVal ? true : s.ignoreVal
           }
         }
 
@@ -637,6 +642,7 @@ function make<S>(intop?: S, inopts?: Options) {
         }
       }
 
+      // Call Afters
       if (0 < s.node.a.length) {
         for (let aI = 0; aI < s.node.a.length; aI++) {
           let update = handleValidate(s.node.a[aI], s)
@@ -646,7 +652,9 @@ function make<S>(intop?: S, inopts?: Options) {
         }
       }
 
-      if (!s.match && s.parent && !done && !s.ignoreVal && !s.node.p) {
+      let setParent = !s.match && null != s.parent && !done && !s.ignoreVal && !s.node.p
+      // console.log('PPP', setParent, 'V', !s.match, null != s.parent, !done, !s.ignoreVal, !s.node.p)
+      if (setParent) {
         s.parent[s.key] = s.val
       }
 
@@ -697,7 +705,7 @@ function make<S>(intop?: S, inopts?: Options) {
         return true
       }
       return val
-    }, true))
+    }, false, true))
   }
 
 
@@ -750,7 +758,7 @@ function handleValidate(vf: Validate, s: State): Update {
       return update
     }
 
-    let w = update.why || 'custom'
+    let w = update.why || 'check' // 'custom'
     let p = pathstr(s)
 
     if ('string' === typeof (update.err)) {
@@ -779,14 +787,16 @@ function handleValidate(vf: Validate, s: State): Update {
 
   // Use uval for undefined and NaN
   if (update.hasOwnProperty('uval')) {
-    s.updateVal(update.val)
+    // console.log('AAA')
+    s.updateVal(update.uval)
+    s.ignoreVal = false
   }
   else if (undefined !== update.val && !Number.isNaN(update.val)) {
     s.updateVal(update.val)
   }
-  else if ('custom' === s.node.t) {
-    s.ignoreVal = true
-  }
+  // else if ('custom' === s.node.t) {
+  //   s.ignoreVal = true
+  // }
 
   if (undefined !== update.node) {
     s.node = update.node
@@ -876,7 +886,6 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
       shape(val, subctx)
       if (0 < subctx.err.length) {
         pass = false
-        // err.push(...subctx.err)
       }
     }
 
@@ -884,7 +893,7 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = 'all'
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for property "$PATH" does not satisfy all of: ${inshapes.map(x => stringify(x))}`)
+          `Value "$VALUE" for property "$PATH" does not satisfy all of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
 
@@ -921,7 +930,7 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = 'some'
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for property "$PATH" does not satisfy some of: ${inshapes.map(x => stringify(x))}`)
+          `Value "$VALUE" for property "$PATH" does not satisfy some of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
 
@@ -958,7 +967,7 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = 'one'
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for property "$PATH" does not satisfy one of: ${inshapes.map(x => stringify(x))}`)
+          `Value "$VALUE" for property "$PATH" does not satisfy one of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
 
@@ -973,8 +982,6 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
 const Exact: Builder = function(this: Node, ...vals: any[]) {
   let node = buildize()
   node.b.push(function Exact(val: any, update: Update, state: State) {
-    // console.log('EXACT B', val, vals)
-
     for (let i = 0; i < vals.length; i++) {
       if (val === vals[i]) {
         return true
@@ -990,7 +997,7 @@ const Exact: Builder = function(this: Node, ...vals: any[]) {
 
     return false
   })
-  node.s = vals.map(v => stringify(v)).join(',')
+  node.s = vals.map(v => stringify(v, null, true)).join(', ')
 
   return node
 }
@@ -1013,8 +1020,12 @@ const After: Builder = function(this: Node, validate: Validate, shape?: any) {
 const Check: Builder = function(this: Node, check: any, shape?: any) {
   let node = buildize(this, shape)
 
-  // TODO: if validate is a RegExp, construct Validate
-  node.b.push(check)
+  if ('function' === typeof check) {
+    // TODO: if validate is a RegExp, construct Validate
+    node.b.push(check)
+    node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true)
+  }
+
   return node
 }
 
@@ -1022,9 +1033,6 @@ const Check: Builder = function(this: Node, check: any, shape?: any) {
 
 const Closed: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
-
-  // console.log('CLOSED', node,
-  //   'array' === node.t, GUBU$NIL !== node.c, 0 === node.n, node.v)
 
   // Makes one element array fixed.
   if ('array' === node.t && GUBU$NIL !== node.c && 0 === node.n) {
@@ -1419,7 +1427,7 @@ function buildize(node0?: any, node1?: any): Node {
 // External utility to make ErrDesc objects.
 function makeErr(state: State, text?: string, why?: string, user?: any) {
   return makeErrImpl(
-    why || 'custom',
+    why || 'check', // 'custom',
     state,
     4000,
     text,
@@ -1483,9 +1491,10 @@ function makeErrImpl(
 }
 
 
-function stringify(src: any, replacer?: any, expand?: boolean) {
+function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean) {
+  let str: string
   try {
-    let str = JSON.stringify(src, (key: any, val: any) => {
+    str = JSON.stringify(src, (key: any, val: any) => {
       if (replacer) {
         val = replacer(key, val)
       }
@@ -1525,11 +1534,17 @@ function stringify(src: any, replacer?: any, expand?: boolean) {
       return val
     })
 
-    return String(str)
+    str = String(str)
   }
   catch (e: any) {
-    return JSON.stringify(String(src))
+    str = JSON.stringify(String(src))
   }
+
+  if (true === dequote) {
+    str = str.replace(/^"/, '').replace(/"$/, '')
+  }
+
+  return str
 }
 
 

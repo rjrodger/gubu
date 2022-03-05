@@ -22,6 +22,7 @@ const {
   Above,
   Below,
   Any,
+  Check,
 } = require('../gubu')
 
 
@@ -569,10 +570,32 @@ let tmp = {}
 // console.log(c([1, 'a']))
 
 
-let a = Gubu([Any()])
-console.log(a())
-console.log(a([]))
+// let a = Gubu([Any()])
+// console.log(a())
+// console.log(a([]))
 
-let a1 = Gubu(Closed([Any()]))
-console.log(a1())
-console.log(a1([]))
+// let a1 = Gubu(Closed([Any()]))
+// console.log(a1())
+// console.log(a1([]))
+
+// console.log(stringify('"a"'))
+// console.log(stringify('"b"',null,true))
+
+
+// let a = Gubu(All(Number, Check((v) => v > 10)))
+// // let a = Gubu(All(Check((v) => v > 10)))
+// // let a = Gubu(Check((v) => v > 10))
+// console.log(a('x'))
+
+
+
+let g1 = Gubu(Check((_v, u, _s) => (u.uval = undefined, true)))
+let g2 = Gubu([Check((_v, u, _s) => (u.uval = 1, true))])
+let g3 = Gubu({
+  a: Check((_v, u, _s) => (u.uval = undefined, true))
+})
+
+console.log('1',g1('A'))
+console.log('2',g2(['A']))
+console.log('3',g3({ a: 'A' }))
+// console.log(g1({ a: 'A', b: undefined })

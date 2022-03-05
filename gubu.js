@@ -31,7 +31,7 @@ class State {
         this.stop = true;
         this.nextSibling = true;
         this.fromDefault = false;
-        this.ignoreVal = false;
+        this.ignoreVal = undefined;
         this.err = [];
         this.parents = [];
         this.keys = [];
@@ -47,7 +47,7 @@ class State {
         // this.printStacks()
         this.stop = false;
         this.fromDefault = false;
-        this.ignoreVal = false;
+        this.ignoreVal = undefined;
         this.isRoot = 0 === this.pI;
         // Dereference the back pointers to ancestor siblings.
         // Only objects|arrays can be nodes, so a number is a back pointer.
@@ -84,6 +84,7 @@ class State {
         if (this.isRoot && !this.match) {
             this.root = this.val;
         }
+        // console.log('UUU', this.val)
     }
 }
 class GubuError extends TypeError {
@@ -197,9 +198,10 @@ function nodize(shape, depth) {
         }
         else if ((undefined === shape.prototype && Function === shape.constructor) ||
             Function === ((_c = shape.prototype) === null || _c === void 0 ? void 0 : _c.constructor)) {
-            t = 'custom';
-            b = v;
-            v = undefined;
+            // default function value
+            // t = 'custom'
+            // b = v
+            // v = undefined
         }
         else {
             t = 'instance';
@@ -250,6 +252,7 @@ function make(intop, inopts) {
             }
             // let n = s.node
             let done = false;
+            //  Call Befores
             if (0 < s.node.b.length) {
                 for (let bI = 0; bI < s.node.b.length; bI++) {
                     let update = handleValidate(s.node.b[bI], s);
@@ -258,7 +261,7 @@ function make(intop, inopts) {
                     }
                 }
             }
-            // console.log('NODE', s.pI, done, s.val, s.node)
+            // console.log('NODE', s.ignoreVal, s.pI, done, s.val) // , s.node)
             if (!done) {
                 if ('never' === s.type) {
                     s.err.push(makeErrImpl('never', s, 1070));
@@ -357,7 +360,7 @@ function make(intop, inopts) {
                 }
                 // Invalid type.
                 else if (!('any' === s.type ||
-                    'custom' === s.type ||
+                    // 'custom' === s.type ||
                     'list' === s.type ||
                     undefined === s.val ||
                     s.type === s.valType ||
@@ -374,8 +377,9 @@ function make(intop, inopts) {
                         s.ignoreVal = true;
                         s.err.push(makeErrImpl('required', s, 1060));
                     }
-                    else if ('custom' !== s.type &&
-                        undefined !== s.node.v &&
+                    else if (
+                    // 'custom' !== s.type &&
+                    undefined !== s.node.v &&
                         !s.node.p ||
                         'undefined' === s.type) {
                         // console.log('UU', s.pI, s.val, s.node)
@@ -383,7 +387,8 @@ function make(intop, inopts) {
                         s.fromDefault = true;
                     }
                     else if ('any' === s.type) {
-                        s.ignoreVal = true;
+                        // console.log('QQQ')
+                        s.ignoreVal = undefined === s.ignoreVal ? true : s.ignoreVal;
                     }
                 }
                 // Empty strings fail even if string is optional. Use Empty() to allow.
@@ -391,6 +396,7 @@ function make(intop, inopts) {
                     s.err.push(makeErrImpl('required', s, 1080));
                 }
             }
+            // Call Afters
             if (0 < s.node.a.length) {
                 for (let aI = 0; aI < s.node.a.length; aI++) {
                     let update = handleValidate(s.node.a[aI], s);
@@ -399,7 +405,9 @@ function make(intop, inopts) {
                     }
                 }
             }
-            if (!s.match && s.parent && !done && !s.ignoreVal && !s.node.p) {
+            let setParent = !s.match && null != s.parent && !done && !s.ignoreVal && !s.node.p;
+            // console.log('PPP', setParent, 'V', !s.match, null != s.parent, !done, !s.ignoreVal, !s.node.p)
+            if (setParent) {
                 s.parent[s.key] = s.val;
             }
             if (s.nextSibling) {
@@ -437,7 +445,7 @@ function make(intop, inopts) {
                 return true;
             }
             return val;
-        }, true));
+        }, false, true));
     };
     let desc = '';
     gubuShape.toString = () => {
@@ -472,7 +480,7 @@ function handleValidate(vf, s) {
             delete update.err;
             return update;
         }
-        let w = update.why || 'custom';
+        let w = update.why || 'check'; // 'custom'
         let p = pathstr(s);
         if ('string' === typeof (update.err)) {
             s.err.push(makeErr(s, update.err));
@@ -497,14 +505,16 @@ function handleValidate(vf, s) {
     }
     // Use uval for undefined and NaN
     if (update.hasOwnProperty('uval')) {
-        s.updateVal(update.val);
+        // console.log('AAA')
+        s.updateVal(update.uval);
+        s.ignoreVal = false;
     }
     else if (undefined !== update.val && !Number.isNaN(update.val)) {
         s.updateVal(update.val);
     }
-    else if ('custom' === s.node.t) {
-        s.ignoreVal = true;
-    }
+    // else if ('custom' === s.node.t) {
+    //   s.ignoreVal = true
+    // }
     if (undefined !== update.node) {
         s.node = update.node;
     }
@@ -574,13 +584,12 @@ const All = function (...inshapes) {
             shape(val, subctx);
             if (0 < subctx.err.length) {
                 pass = false;
-                // err.push(...subctx.err)
             }
         }
         if (!pass) {
             update.why = 'all';
             update.err = [
-                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy all of: ${inshapes.map(x => stringify(x))}`)
+                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy all of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
         return pass;
@@ -608,7 +617,7 @@ const Some = function (...inshapes) {
         if (!pass) {
             update.why = 'some';
             update.err = [
-                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy some of: ${inshapes.map(x => stringify(x))}`)
+                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy some of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
         return pass;
@@ -637,7 +646,7 @@ const One = function (...inshapes) {
         if (1 !== passN) {
             update.why = 'one';
             update.err = [
-                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy one of: ${inshapes.map(x => stringify(x))}`)
+                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy one of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
         return true;
@@ -648,7 +657,6 @@ exports.One = One;
 const Exact = function (...vals) {
     let node = buildize();
     node.b.push(function Exact(val, update, state) {
-        // console.log('EXACT B', val, vals)
         for (let i = 0; i < vals.length; i++) {
             if (val === vals[i]) {
                 return true;
@@ -659,7 +667,7 @@ const Exact = function (...vals) {
         update.done = true;
         return false;
     });
-    node.s = vals.map(v => stringify(v)).join(',');
+    node.s = vals.map(v => stringify(v, null, true)).join(', ');
     return node;
 };
 exports.Exact = Exact;
@@ -677,15 +685,16 @@ const After = function (validate, shape) {
 exports.After = After;
 const Check = function (check, shape) {
     let node = buildize(this, shape);
-    // TODO: if validate is a RegExp, construct Validate
-    node.b.push(check);
+    if ('function' === typeof check) {
+        // TODO: if validate is a RegExp, construct Validate
+        node.b.push(check);
+        node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true);
+    }
     return node;
 };
 exports.Check = Check;
 const Closed = function (shape) {
     let node = buildize(this, shape);
-    // console.log('CLOSED', node,
-    //   'array' === node.t, GUBU$NIL !== node.c, 0 === node.n, node.v)
     // Makes one element array fixed.
     if ('array' === node.t && GUBU$NIL !== node.c && 0 === node.n) {
         node.v = [node.c];
@@ -974,7 +983,8 @@ function buildize(node0, node1) {
 exports.buildize = buildize;
 // External utility to make ErrDesc objects.
 function makeErr(state, text, why, user) {
-    return makeErrImpl(why || 'custom', state, 4000, text, user);
+    return makeErrImpl(why || 'check', // 'custom',
+    state, 4000, text, user);
 }
 exports.makeErr = makeErr;
 // Internal utility to make ErrDesc objects.
@@ -1017,9 +1027,10 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     }
     return err;
 }
-function stringify(src, replacer, expand) {
+function stringify(src, replacer, dequote, expand) {
+    let str;
     try {
-        let str = JSON.stringify(src, (key, val) => {
+        str = JSON.stringify(src, (key, val) => {
             var _a, _b;
             if (replacer) {
                 val = replacer(key, val);
@@ -1055,11 +1066,15 @@ function stringify(src, replacer, expand) {
             }
             return val;
         });
-        return String(str);
+        str = String(str);
     }
     catch (e) {
-        return JSON.stringify(String(src));
+        str = JSON.stringify(String(src));
     }
+    if (true === dequote) {
+        str = str.replace(/^"/, '').replace(/"$/, '');
+    }
+    return str;
 }
 exports.stringify = stringify;
 function clone(x) {

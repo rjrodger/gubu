@@ -12,7 +12,6 @@ declare type ValType = 'any' | // Any type.
 'array' | // An array.
 'bigint' | // A BigInt value.
 'boolean' | // The values `true` or `false`.
-'custom' | // Custom type defined by a validation function.
 'function' | // A function.
 'instance' | // An instance of a constructed object.
 'list' | // A list of types under a given logical rule.
@@ -58,7 +57,7 @@ declare class State {
     stop: boolean;
     nextSibling: boolean;
     fromDefault: boolean;
-    ignoreVal: boolean;
+    ignoreVal: boolean | undefined;
     err: any[];
     parents: Node[];
     keys: string[];
@@ -133,7 +132,7 @@ declare const Below: Builder;
 declare const Value: Builder;
 declare function buildize(node0?: any, node1?: any): Node;
 declare function makeErr(state: State, text?: string, why?: string, user?: any): ErrDesc;
-declare function stringify(src: any, replacer?: any, expand?: boolean): string;
+declare function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean): string;
 declare type GubuShape = ReturnType<typeof make> & {
     valid: <D, S>(root?: D, ctx?: any) => root is (D & S);
     match: (root?: any, ctx?: any) => boolean;
