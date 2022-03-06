@@ -5,9 +5,8 @@ exports.GCheck = exports.GSkip = exports.GValue = exports.GSome = exports.GRequi
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
-// FEATURE: !!! recognize and apply regexes
-// FEATURE: Value without chain or two vals should just be a convenience wrapper for chaining
 // FEATURE: support custom builder registration so that can chain on builtins
+// TODO: Validation of Builder parameters
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
 const util_1 = require("util");
@@ -31,6 +30,7 @@ class State {
         this.stop = true;
         this.nextSibling = true;
         this.fromDefault = false;
+        // NOTE: tri-valued; undefined = soft ignore
         this.ignoreVal = undefined;
         this.err = [];
         this.parents = [];
@@ -405,8 +405,9 @@ function make(intop, inopts) {
                     }
                 }
             }
-            let setParent = !s.match && null != s.parent && !done && !s.ignoreVal && !s.node.p;
-            // console.log('PPP', setParent, 'V', !s.match, null != s.parent, !done, !s.ignoreVal, !s.node.p)
+            // Explicit ignoreVal overrides Skip
+            let ignoreVal = s.node.p ? false === s.ignoreVal ? false : true : !!s.ignoreVal;
+            let setParent = !s.match && null != s.parent && !done && !ignoreVal;
             if (setParent) {
                 s.parent[s.key] = s.val;
             }
@@ -511,16 +512,15 @@ function handleValidate(vf, s) {
     }
     else if (undefined !== update.val && !Number.isNaN(update.val)) {
         s.updateVal(update.val);
+        s.ignoreVal = false;
     }
-    // else if ('custom' === s.node.t) {
-    //   s.ignoreVal = true
-    // }
     if (undefined !== update.node) {
         s.node = update.node;
     }
     if (undefined !== update.type) {
         s.type = update.type;
     }
+    // console.log('UPDATE', update, s)
     return update;
 }
 // function pathstr(path: string[], dI: number) {
@@ -689,6 +689,25 @@ const Check = function (check, shape) {
         // TODO: if validate is a RegExp, construct Validate
         node.b.push(check);
         node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true);
+        node.r = true;
+    }
+    else if ('object' === typeof check) {
+        let dstr = Object.prototype.toString.call(check);
+        if (dstr.includes('RegExp')) {
+            let refn = (v) => !!String(v).match(check);
+            Object.defineProperty(refn, 'name', {
+                value: String(check)
+            });
+            node.b.push(refn);
+            node.s = stringify(check);
+            node.r = true;
+        }
+    }
+    // string is type name.
+    // TODO: validate check is ValType
+    else if ('string' === typeof check) {
+        node.t = check;
+        node.r = true;
     }
     return node;
 };

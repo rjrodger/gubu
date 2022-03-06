@@ -1268,20 +1268,20 @@ Validation failed for property "b" with value "B" because the value is not of ty
     });
     test('custom-modify', () => {
         let g0 = Gubu({
-            a: Check((v, u) => (u.val = v * 2, true)),
-            b: Check((_v, u) => {
+            a: (Skip(Check((v, u) => (u.val = v * 2, true)))),
+            b: Skip(Check((_v, u) => {
                 u.err = 'BAD VALUE $VALUE AT $PATH';
                 return false;
-            }),
-            c: Check((v, u, s) => (u.val = (v ? v + ` (key=${s.key})` : undefined), true)),
-            d: Check((_v, u, _s) => (u.val = undefined, true))
+            })),
+            c: Skip(Check((v, u, s) => (u.val = (v ? v + ` (key=${s.key})` : undefined), true))),
+            d: Skip(Check((_v, u, _s) => (u.val = undefined, true)))
         });
         expect(g0({ a: 3 })).toEqual({ a: 6 });
         expect(() => g0({ b: 1 })).toThrow('BAD VALUE 1 AT b');
         expect(g0({ c: 'x' })).toEqual({ c: 'x (key=c)' });
         expect(g0({ d: 'D' })).toEqual({ d: 'D' });
         let g1 = Gubu({
-            a: Check((_v, u, _s) => (u.uval = undefined, true))
+            a: Skip(Check((_v, u, _s) => (u.uval = undefined, true)))
         });
         expect(g1({ a: 'A' })).toEqual({ a: undefined });
         expect(g1({ a: 'A', b: undefined })).toEqual({ a: undefined });
@@ -1446,6 +1446,25 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(() => g7()).toThrow('required');
     });
     test('builder-check', () => {
+        let g0 = Gubu(Check((v) => 'x' === v));
+        expect(g0('x')).toEqual('x');
+        expect(() => g0('y')).toThrow('Validation failed for value "y" because check "(v) => \'x\' === v" failed.');
+        expect(() => g0(1)).toThrow('Validation failed for value "1" because check "(v) => \'x\' === v" failed.');
+        expect(() => g0()).toThrow('Validation failed for value "" because check "(v) => \'x\' === v" failed.');
+        let g1 = Gubu(Check(/a/));
+        expect(g1('a')).toEqual('a');
+        expect(g1('qaq')).toEqual('qaq');
+        expect(() => g1('q')).toThrow('Validation failed for value "q" because check "/a/" failed.');
+        expect(() => g1()).toThrow('Validation failed for value "" because check "/a/" failed.');
+        let g3 = Gubu(Check('number'));
+        expect(g3(1)).toEqual(1);
+        expect(() => g3('a')).toThrow('number');
+        expect(() => g3()).toThrow('required');
+        let g4 = Gubu({ x: Check('number') });
+        expect(g4({ x: 1 })).toEqual({ x: 1 });
+        expect(() => g4({ x: 'a' })).toThrow('number');
+        expect(() => g4({})).toThrow('required');
+        expect(() => g4()).toThrow('required');
     });
     test('builder-closed', () => {
         let tmp = {};
@@ -2408,6 +2427,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         class C0 {
         }
         expect(stringify([1, f0, () => true, C0])).toEqual('[1,"f0","() => true","C0"]');
+        expect(stringify(/a/)).toEqual('"/a/"');
     });
     test('G-basic', () => {
         expect(G$({ v: 11 })).toMatchObject({

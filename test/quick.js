@@ -589,13 +589,24 @@ let tmp = {}
 
 
 
-let g1 = Gubu(Check((_v, u, _s) => (u.uval = undefined, true)))
-let g2 = Gubu([Check((_v, u, _s) => (u.uval = 1, true))])
-let g3 = Gubu({
-  a: Check((_v, u, _s) => (u.uval = undefined, true))
-})
+// let g1 = Gubu(Check((_v, u, _s) => (u.uval = undefined, true)))
+// let g2 = Gubu([Check((_v, u, _s) => (u.uval = 1, true))])
+// let g3 = Gubu({
+//   a: Check((_v, u, _s) => (u.uval = undefined, true))
+// })
 
-console.log('1',g1('A'))
-console.log('2',g2(['A']))
-console.log('3',g3({ a: 'A' }))
-// console.log(g1({ a: 'A', b: undefined })
+// console.log('1',g1('A'))
+// console.log('2',g2(['A']))
+// console.log('3',g3({ a: 'A' }))
+// // console.log(g1({ a: 'A', b: undefined })
+
+
+// let o = {}
+// try { Gubu({a:Boolean})(o) } catch (e) { console.log(e.message) }
+// console.log(o)
+
+// console.log(Gubu({b:Skip(Check((v, u) => (u.val = v * 2, true)))})({b:1}))
+
+
+console.log(Gubu(Check('number'))(1))
+console.log(Gubu(Check('number'))())
