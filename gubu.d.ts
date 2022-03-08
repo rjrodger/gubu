@@ -146,7 +146,6 @@ declare type Gubu = typeof make & {
     makeErr: typeof makeErr;
     stringify: typeof stringify;
     truncate: typeof truncate;
-    Args: typeof Args;
     Above: typeof Above;
     After: typeof After;
     All: typeof All;
@@ -191,17 +190,6 @@ declare type Gubu = typeof make & {
     GValue: typeof Value;
 };
 declare const Gubu: Gubu;
-declare function Args(shapes: Record<string, any>, wrapped?: any): {
-    <R>(root?: R | undefined, ctx?: Context | undefined): any;
-    valid: <D>(root?: D | undefined, ctx?: Context | undefined) => root is any;
-    match(root?: any, ctx?: Context | undefined): boolean;
-    spec(): any;
-    toString(): string;
-    gubu: {
-        gubu$: symbol;
-        v$: string;
-    };
-} | ((this: any) => any);
 declare const GAbove: Builder;
 declare const GAfter: Builder;
 declare const GAll: Builder;
@@ -224,4 +212,4 @@ declare const GSkip: Builder;
 declare const GSome: Builder;
 declare const GValue: Builder;
 export type { Validate, Update, Context, Builder, Node, State, GubuShape, };
-export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, Args, Above, After, All, Any, Before, Below, Check, Closed, Define, Empty, Exact, Max, Min, Never, One, Refer, Rename, Required, Skip, Some, Value, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GCheck, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GRefer, GRename, GRequired, GSkip, GSome, GValue, };
+export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, Above, After, All, Any, Before, Below, Check, Closed, Define, Empty, Exact, Max, Min, Never, One, Refer, Rename, Required, Skip, Some, Value, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GCheck, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GRefer, GRename, GRequired, GSkip, GSome, GValue, };

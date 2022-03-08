@@ -31,7 +31,6 @@ const buildize = Gubu.buildize
 const makeErr = Gubu.makeErr
 const stringify = Gubu.stringify
 const truncate = Gubu.truncate
-const Args = Gubu.Args
 
 const {
   Above,
@@ -73,13 +72,13 @@ class Bar {
   }
 }
 
-
 type Zed = {
   c: number
   d: {
     e: string
   }
 }
+
 
 describe('gubu', () => {
 
@@ -2814,7 +2813,6 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
   })
 
 
-
   test('compose', () => {
     let g0 = Gubu(String)
     let g1 = Gubu(g0)
@@ -2833,69 +2831,6 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
     expect(() => g3({ b: { a: 'x' } })).toThrow()
     expect(g3s({ b: { a: 1 } })).toEqual({ b: { a: 1 } })
     expect(() => g3s({ b: { a: 'x' } })).toThrow()
-  })
-
-
-  // Notes: Args is an experimental feature.
-  test('args-basic', () => {
-    let a0 = Args({ a: Number, b: String })
-    expect(a0([1, 'x'])).toMatchObject({ a: 1, b: 'x' })
-    expect(() => a0([1, 'x', true])).toThrow('not allowed')
-
-    let f0: (a: { x: number }, b: string[]) => { y: number, z: string[] } = Args(
-      { a: { x: 1 }, b: [String] },
-      (args: any) => ({
-        y: args.a.x * 2,
-        z: args.b.map((s: string) => s.toUpperCase())
-      }))
-
-    expect(f0({ x: 3 }, ['m', 'n'])).toMatchObject({ y: 6, z: ['M', 'N'] })
-
-    let a1 = Args({ a: { x: 1 } })
-    expect(a1([{ x: 2, y: 'Y' }])).toMatchObject({ a: { x: 2, y: 'Y' } })
-
-    // TODO: FIX
-    // let a2 = Args({ a: Closed({ x: 1 }), '...b': String })
-    // expect(a2([{ x: 2 }, 'A', 'B'])).toMatchObject({ a: { x: 2 }, b: ['A', 'B'] })
-    // expect(() => a2([{ x: 2, y: 3 }, 'A', 'B'])).toThrow('"y" is not allowed')
-    // expect(a2([{ x: 2 }])).toMatchObject({ a: { x: 2 }, b: [] })
-
-    // let a5 = Args({ a: 0 })
-    // expect(a5([11])).toMatchObject({ a: 11 })
-    // expect(a5([])).toMatchObject({ a: 0 })
-
-    // let a6 = Args({ a: 0, b: 'B' })
-    // expect(a6([11, 'BB'])).toMatchObject({ a: 11, b: 'BB' })
-    // expect(a6([11])).toMatchObject({ a: 11, b: 'B' })
-    // expect(a6([])).toMatchObject({ a: 0, b: 'B' })
-
-    // let a7 = Args({ a: One(Number, String), b: 'B' })
-    // expect(a7([11, 'BB'])).toMatchObject({ a: 11, b: 'BB' })
-    // expect(a7([11])).toMatchObject({ a: 11, b: 'B' })
-    // expect(a7(['AA'])).toMatchObject({ a: 'AA', b: 'B' })
-    // expect(a7(['AA', 'BB'])).toMatchObject({ a: 'AA', b: 'BB' })
-
-
-    // let a3 = Args({ a: 0, 'b:a': 1 })
-    // expect(a3([11, 22])).toMatchObject({ a: 11, b: 22 })
-    // expect(a3([11])).toMatchObject({ b: 11 })
-    // expect(a3([])).toMatchObject({ a: 0, b: 1 })
-
-    // let t0 = () => true
-    // let t1 = () => true
-
-    // let a8 = Args({ a: { x: 1 }, 'b:a': t0 })
-    // expect(a8([{ x: 2 }, t1])).toMatchObject({ a: { x: 2 }, b: t1 })
-    // expect(a8([t1])).toMatchObject({ a: { x: 1 }, b: t1 })
-    // expect(a8([])).toMatchObject({ a: { x: 1 }, b: t0 })
-
-    // // TODO: this should fail
-    // // expect(() => a8([{ x: 3 }])).toThrow('type') // b has precedence
-
-    // let n0 = function n0(args: any) { return args.a }
-    // let f2 = Args({ a: 1 }, n0)
-    // expect(f2()).toEqual(1)
-    // expect(f2(2)).toEqual(2)
   })
 
 
