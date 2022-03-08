@@ -1,11 +1,12 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GCheck = exports.GSkip = exports.GValue = exports.GSome = exports.GRequired = exports.GRename = exports.GRefer = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Check = exports.Skip = exports.Value = exports.Some = exports.Required = exports.Rename = exports.Refer = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.Args = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.Args = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
 // FEATURE: support custom builder registration so that can chain on builtins
+// TODO: Use child value for objects too
 // TODO: Validation of Builder parameters
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
@@ -984,6 +985,7 @@ function buildize(node0, node1) {
         Any,
         Before,
         Below,
+        Check,
         Closed,
         Define,
         Empty,
@@ -994,9 +996,8 @@ function buildize(node0, node1) {
         Refer,
         Rename,
         Required,
-        Value,
         Skip,
-        Check,
+        Value,
     });
 }
 exports.buildize = buildize;
@@ -1111,6 +1112,7 @@ if ('undefined' !== typeof (window)) {
         { b: Any, n: 'Any' },
         { b: Before, n: 'Before' },
         { b: Below, n: 'Below' },
+        { b: Check, n: 'Check' },
         { b: Closed, n: 'Closed' },
         { b: Define, n: 'Define' },
         { b: Empty, n: 'Empty' },
@@ -1122,10 +1124,9 @@ if ('undefined' !== typeof (window)) {
         { b: Refer, n: 'Refer' },
         { b: Rename, n: 'Rename' },
         { b: Required, n: 'Required' },
+        { b: Skip, n: 'Skip' },
         { b: Some, n: 'Some' },
         { b: Value, n: 'Value' },
-        { b: Skip, n: 'Skip' },
-        { b: Check, n: 'Check' },
     ];
     for (let build of builds) {
         Object.defineProperty(build.b, 'name', { value: build.n });
@@ -1138,6 +1139,7 @@ Object.assign(make, {
     Any,
     Before,
     Below,
+    Check,
     Closed,
     Define,
     Empty,
@@ -1149,16 +1151,16 @@ Object.assign(make, {
     Refer,
     Rename,
     Required,
+    Skip,
     Some,
     Value,
-    Skip,
-    Check,
     GAbove: Above,
     GAfter: After,
     GAll: All,
     GAny: Any,
     GBefore: Before,
     GBelow: Below,
+    GCheck: Check,
     GClosed: Closed,
     GDefine: Define,
     GEmpty: Empty,
@@ -1170,10 +1172,9 @@ Object.assign(make, {
     GRefer: Refer,
     GRename: Rename,
     GRequired: Required,
+    GSkip: Skip,
     GSome: Some,
     GValue: Value,
-    GSkip: Skip,
-    GCheck: Check,
     G$,
     buildize,
     makeErr,
@@ -1238,6 +1239,7 @@ function Args(shapes, wrapped) {
     return argsShape;
 }
 exports.Args = Args;
+// "G" Namespaced builders for convenient use in case of conflicts.
 const GAbove = Above;
 exports.GAbove = GAbove;
 const GAfter = After;
@@ -1250,6 +1252,8 @@ const GBefore = Before;
 exports.GBefore = GBefore;
 const GBelow = Below;
 exports.GBelow = GBelow;
+const GCheck = Check;
+exports.GCheck = GCheck;
 const GClosed = Closed;
 exports.GClosed = GClosed;
 const GDefine = Define;
@@ -1272,12 +1276,10 @@ const GRename = Rename;
 exports.GRename = GRename;
 const GRequired = Required;
 exports.GRequired = GRequired;
+const GSkip = Skip;
+exports.GSkip = GSkip;
 const GSome = Some;
 exports.GSome = GSome;
 const GValue = Value;
 exports.GValue = GValue;
-const GSkip = Skip;
-exports.GSkip = GSkip;
-const GCheck = Check;
-exports.GCheck = GCheck;
 //# sourceMappingURL=gubu.js.map

@@ -6,6 +6,7 @@
 // FEATURE: state should indicate if value was present, not just undefined
 // FEATURE: support custom builder registration so that can chain on builtins
 
+// TODO: Use child value for objects too
 // TODO: Validation of Builder parameters
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
@@ -1431,6 +1432,7 @@ function buildize(node0?: any, node1?: any): Node {
     Any,
     Before,
     Below,
+    Check,
     Closed,
     Define,
     Empty,
@@ -1441,9 +1443,8 @@ function buildize(node0?: any, node1?: any): Node {
     Refer,
     Rename,
     Required,
-    Value,
     Skip,
-    Check,
+    Value,
   })
 }
 
@@ -1603,6 +1604,7 @@ if ('undefined' !== typeof (window)) {
     { b: Any, n: 'Any' },
     { b: Before, n: 'Before' },
     { b: Below, n: 'Below' },
+    { b: Check, n: 'Check' },
     { b: Closed, n: 'Closed' },
     { b: Define, n: 'Define' },
     { b: Empty, n: 'Empty' },
@@ -1614,10 +1616,9 @@ if ('undefined' !== typeof (window)) {
     { b: Refer, n: 'Refer' },
     { b: Rename, n: 'Rename' },
     { b: Required, n: 'Required' },
+    { b: Skip, n: 'Skip' },
     { b: Some, n: 'Some' },
     { b: Value, n: 'Value' },
-    { b: Skip, n: 'Skip' },
-    { b: Check, n: 'Check' },
   ]
   for (let build of builds) {
     Object.defineProperty(build.b, 'name', { value: build.n })
@@ -1632,6 +1633,7 @@ Object.assign(make, {
   Any,
   Before,
   Below,
+  Check,
   Closed,
   Define,
   Empty,
@@ -1643,10 +1645,9 @@ Object.assign(make, {
   Refer,
   Rename,
   Required,
+  Skip,
   Some,
   Value,
-  Skip,
-  Check,
 
   GAbove: Above,
   GAfter: After,
@@ -1654,6 +1655,7 @@ Object.assign(make, {
   GAny: Any,
   GBefore: Before,
   GBelow: Below,
+  GCheck: Check,
   GClosed: Closed,
   GDefine: Define,
   GEmpty: Empty,
@@ -1665,10 +1667,9 @@ Object.assign(make, {
   GRefer: Refer,
   GRename: Rename,
   GRequired: Required,
+  GSkip: Skip,
   GSome: Some,
   GValue: Value,
-  GSkip: Skip,
-  GCheck: Check,
 
   G$,
   buildize,
@@ -1693,6 +1694,7 @@ type Gubu = typeof make & {
   Any: typeof Any
   Before: typeof Before
   Below: typeof Below
+  Check: typeof Check
   Closed: typeof Closed
   Define: typeof Define
   Empty: typeof Empty
@@ -1704,10 +1706,9 @@ type Gubu = typeof make & {
   Refer: typeof Refer
   Rename: typeof Rename
   Required: typeof Required
+  Skip: typeof Skip
   Some: typeof Some
   Value: typeof Value
-  Skip: typeof Skip
-  Check: typeof Check
 
   GAbove: typeof Above
   GAfter: typeof After
@@ -1715,6 +1716,7 @@ type Gubu = typeof make & {
   GAny: typeof Any
   GBefore: typeof Before
   GBelow: typeof Below
+  GCheck: typeof Check
   GClosed: typeof Closed
   GDefine: typeof Define
   GEmpty: typeof Empty
@@ -1726,10 +1728,9 @@ type Gubu = typeof make & {
   GRefer: typeof Refer
   GRename: typeof Rename
   GRequired: typeof Required
+  GSkip: typeof Skip
   GSome: typeof Some
   GValue: typeof Value
-  GSkip: typeof Skip
-  GCheck: typeof Check
 }
 
 Object.defineProperty(make, 'name', { value: 'gubu' })
@@ -1801,13 +1802,14 @@ function Args(shapes: Record<string, any>, wrapped?: any) {
 }
 
 
-
+// "G" Namespaced builders for convenient use in case of conflicts.
 const GAbove = Above
 const GAfter = After
 const GAll = All
 const GAny = Any
 const GBefore = Before
 const GBelow = Below
+const GCheck = Check
 const GClosed = Closed
 const GDefine = Define
 const GEmpty = Empty
@@ -1819,10 +1821,9 @@ const GOne = One
 const GRefer = Refer
 const GRename = Rename
 const GRequired = Required
+const GSkip = Skip
 const GSome = Some
 const GValue = Value
-const GSkip = Skip
-const GCheck = Check
 
 
 export type {
@@ -1851,6 +1852,7 @@ export {
   Any,
   Before,
   Below,
+  Check,
   Closed,
   Define,
   Empty,
@@ -1862,10 +1864,9 @@ export {
   Refer,
   Rename,
   Required,
+  Skip,
   Some,
   Value,
-  Skip,
-  Check,
 
   GAbove,
   GAfter,
@@ -1873,6 +1874,7 @@ export {
   GAny,
   GBefore,
   GBelow,
+  GCheck,
   GClosed,
   GDefine,
   GEmpty,
@@ -1884,9 +1886,8 @@ export {
   GRefer,
   GRename,
   GRequired,
+  GSkip,
   GSome,
   GValue,
-  GSkip,
-  GCheck,
 }
 
