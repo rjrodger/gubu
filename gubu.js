@@ -931,11 +931,13 @@ const Below = function (below, shape) {
     return node;
 };
 exports.Below = Below;
-const Value = function (shape0, shape1) {
-    let node = undefined == shape1 ? buildize(this) : buildize(shape0);
-    let shape = nodize(undefined == shape1 ? shape0 : shape1);
+const Value = function (value, shape) {
+    // let node = undefined == shape1 ? buildize(this) : buildize(shape0)
+    let node = undefined == shape ? buildize(this) : buildize(shape);
+    // let shape = nodize(undefined == shape1 ? shape0 : shape1)
+    let child = nodize(value);
     // Set child value to shape
-    node.c = shape;
+    node.c = child;
     node.a.push(function Value(val, _update, s) {
         if (null != val) {
             let namedKeys = Object.keys(s.node.v);
@@ -957,7 +959,7 @@ const Value = function (shape0, shape1) {
                     s.pI = nI;
                 }
                 for (let k of valKeys) {
-                    s.nodes[nI] = nodize(shape, 1 + s.dI);
+                    s.nodes[nI] = nodize(child, 1 + s.dI);
                     s.vals[nI] = val[k];
                     s.parents[nI] = val;
                     s.keys[nI] = k;

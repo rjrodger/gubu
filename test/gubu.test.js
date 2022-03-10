@@ -923,12 +923,15 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(shape_SomeB0({ x: 1, y: true })).toEqual({ x: 1, y: true });
         expect(() => shape_SomeB0({ x: true, y: true })).toThrow(`Value "{x:true,y:true}" for property "" does not satisfy some of: {"x":1}, {"y":2}`);
         // TODO: more complex objects
-        let shape_ValueB0 = Gubu(Value({}, Number));
+        let shape_ValueB0 = Gubu(Value(Number, {}));
         expect(shape_ValueB0({ x: 10 })).toEqual({ x: 10 });
         expect(shape_ValueB0({ x: 10, y: 11 })).toEqual({ x: 10, y: 11 });
         expect(() => shape_ValueB0({ x: true })).toThrow('Validation failed for property "x" with value "true" because the value is not of type number.');
         let shape_ValueB1 = Gubu({
             page: Value({
+                title: String,
+                template: 'standard'
+            }, {
                 home: {
                     title: 'Home',
                     template: 'home'
@@ -937,9 +940,6 @@ Validation failed for property "b" with value "B" because the value is not of ty
                     title: 'Site Map',
                     template: 'sitemap'
                 },
-            }, {
-                title: String,
-                template: 'standard'
             })
         });
         expect(shape_ValueB1({
@@ -1155,7 +1155,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(() => g4(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.');
         expect(() => g4([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.');
         expect(() => g4([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.');
-        let g4v = Gubu(Value([], Number));
+        let g4v = Gubu(Value(Number, []));
         expect(g4v()).toEqual([]);
         expect(g4v([])).toEqual([]);
         expect(g4v([1])).toEqual([1]);
@@ -1165,7 +1165,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(() => g4v([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.');
         expect(() => g4v([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.');
         // Value overrides single element
-        let g4vo = Gubu(Value([String], Number));
+        let g4vo = Gubu(Value(Number, [String]));
         expect(g4vo()).toEqual([]);
         expect(g4vo([])).toEqual([]);
         expect(g4vo([1])).toEqual([1]);
@@ -1929,7 +1929,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         expect(g0({ e: [] })).toMatchObject({ e: [] });
     });
     test('builder-value', () => {
-        let g0 = Gubu(Value({ a: 1 }, String));
+        let g0 = Gubu(Value(String, { a: 1 }));
         expect(g0({})).toMatchObject({});
         expect(g0({ a: 2 })).toMatchObject({ a: 2 });
         expect(() => g0({ a: 'x' })).toThrow('type');

@@ -1360,14 +1360,16 @@ const Below: Builder = function(
 
 const Value: Builder = function(
   this: Node,
-  shape0?: any,
-  shape1?: any
+  value?: any,
+  shape?: any
 ): Node {
-  let node = undefined == shape1 ? buildize(this) : buildize(shape0)
-  let shape = nodize(undefined == shape1 ? shape0 : shape1)
+  // let node = undefined == shape1 ? buildize(this) : buildize(shape0)
+  let node = undefined == shape ? buildize(this) : buildize(shape)
+  // let shape = nodize(undefined == shape1 ? shape0 : shape1)
+  let child = nodize(value)
 
   // Set child value to shape
-  node.c = shape
+  node.c = child
 
   node.a.push(function Value(val: any, _update: Update, s: State) {
     if (null != val) {
@@ -1396,7 +1398,7 @@ const Value: Builder = function(
         }
 
         for (let k of valKeys) {
-          s.nodes[nI] = nodize(shape, 1 + s.dI)
+          s.nodes[nI] = nodize(child, 1 + s.dI)
           s.vals[nI] = val[k]
           s.parents[nI] = val
           s.keys[nI] = k

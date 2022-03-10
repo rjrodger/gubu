@@ -651,7 +651,7 @@ validated. If you want an object `{foo: 123}`, then the shape is also
 value `123`.
 
 You can define plain objects to any depth. The shape `{ bar: { foo:
-123} }` defines an object that optionally contains another object as
+123 } }` defines an object that optionally contains another object as
 the value of the property `bar`.
 
 As objects and sub-objects are often referenced directly in data
@@ -714,7 +714,7 @@ let strictShape = Gubu({ a: { b: String } })
 // Passes
 strictShape({ a: { b: 'ABC' } })
 
-// Fails, even though a is not required.
+// Fails, even though a is not required, because a.b is required.
 strictShape({})
 
 
@@ -760,9 +760,9 @@ If a property must be present in an object, used the shape builder
 ##### Optional Objects
 
 Objects are optional by default, and will be created if not
-present. To prevent this, use the explicit shape builder
-[Skip](#skip-builder) to indicate that you do *not* wish an
-object to be inserted when it is missing.
+present. To prevent this, use the shape builder [Skip](#skip-builder)
+to indicate that you do *not* wish an object to be inserted when it is
+missing&mdash;it can be skipped.
 
 ```
 const { Skip } = Gubu
@@ -772,7 +772,7 @@ let shape = Gubu({
   c: Skip({ z: Skip({ k: 3 }) }),
 })
 
-// Explicitly optional properties are not inserted as defaults if missing.
+// Skippable properties are not inserted as defaults if missing.
 shape({}) // returns { a: { x: 1 } }, b and c are missing entirely
 shape({ b: {} }) // returns { a: { x: 1 }, b: { y: 2 } }, defaults for b are inserted
 shape({ c: {} }) // returns { a: { x: 1 }, c: {} }, c has no non-optional defaults
@@ -789,9 +789,9 @@ using the shape builder [Value](#value-builder):
 
 ```
 const { Value } = Gubu
-let shape = Gubu(Value({
+let shape = Gubu(Value(String, {
   a: 123,
-}, String))
+}))
 
 // All new properties must be a String
 shape({ a: 11, b: 'abc' }) // b is a string
@@ -2224,12 +2224,12 @@ shape({ z: 3 })  // FAIL: does not match { x: 1 } or { y: 2 }
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-Value( target: any, general: any )
+Value( general: any, target: any )
 ```
 
-* **Standalone:** `Value({},Number)`
-* **As Parent:** `Value({x: 1}, Number)`
-* **As Child:** `Required(Value({x: 1}, Number))`
+* **Standalone:** `Value(Number, {})`
+* **As Parent:** `Value(Number, {x: 1})`
+* **As Child:** `Required(Value(Number, {x: 1}))`
 * **Chainable:** `Skip({x: 1}).Value(Number)`
 
 Specify the general shape that each value of an object must
@@ -2240,25 +2240,28 @@ satisfy. Does not apply to any explicitly defined property values.
 const { Value } = Gubu
 let shape = Gubu(Value())
 
-let shape = Gubu(Value({}, Number))
+let shape = Gubu(Value(Number, {}))
 console.log(shape({ x: 10 })) // PASS: prints { x: 10 }
 console.log(shape({ x: 10, y: 11 })) // PASS: prints { x: 10, y: 11 }
 console.log(shape({ x: true })) // FAIL: 
 
 shape = Gubu({
-  page: Value({
-    home: {
-      title: 'Home',
-      template: 'home'
+  page: Value(
+    {
+      title: String,
+      template: 'standard'
     },
-    sitemap: {
-      title: 'Site Map',
-      template: 'sitemap'
-    },
-  }, {
-    title: String,
-    template: 'standard'
-  })
+    {
+      home: {
+        title: 'Home',
+        template: 'home'
+      },
+      sitemap: {
+        title: 'Site Map',
+        template: 'sitemap'
+      },
+    }
+  )
 })
 
 let result = shape({
