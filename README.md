@@ -2,6 +2,16 @@
 
 # Gubu: An object shape validation utility.
 
+[![npm version](https://img.shields.io/npm/v/gubu.svg)](https://npmjs.com/package/gubu)
+[![build](https://github.com/rjrodger/gubu/actions/workflows/build.yml/badge.svg)](https://github.com/rjrodger/gubu/actions/workflows/build.yml)
+[![Coverage Status](https://coveralls.io/repos/github/rjrodger/gubu/badge.svg?branch=main)](https://coveralls.io/github/rjrodger/gubu?branch=main)
+[![Known Vulnerabilities](https://snyk.io/test/github/rjrodger/gubu/badge.svg)](https://snyk.io/test/github/rjrodger/gubu)
+[![DeepScan grade](https://deepscan.io/api/teams/5016/projects/19509/branches/508695/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=5016&pid=19509&bid=508695)
+[![Maintainability](https://api.codeclimate.com/v1/badges/de19e425771fb65e98e2/maintainability)](https://codeclimate.com/github/rjrodger/gubu/maintainability)
+
+| ![Voxgig](https://www.voxgig.com/res/img/vgt01r.png) | This open source module is sponsored and supported by [Voxgig](https://www.voxgig.com). |
+|---|---|
+
 [Quick Example](#quick-example) | 
 [Common Use Cases](#common-use-cases) | 
 [Install and Usage](#install) | 
@@ -10,24 +20,113 @@
 
 
 This is a schema validator in the tradition of [Joi](https://joi.dev)
-or any JSON-Schema validator, with the key features:
+or any [JSON-Schema](https://json-schema.org/) validator, but with a
+much nicer developer experience!
 
-* Schemas are WYSIWYG - you define a schema with a template exactly matching your object structure;
+The big idea is that your schema looks (almost) exactly like your
+data. That's much easier to read and reason about. You could call it:
+
+> "Schema By Example"
+
+Let's say you want to have the some options for a module you are writing:
+
 ```
-const optionValidator = Gubu({
-  port: 8080,        // port must be a number; if not defined, it will be 8080
-  host: 'localhost'  // host must be a string; if not defined, it will be 'localhost'
+{
+  port: 8080,
+  host: 'localhost'
+}
+```
+
+This is a valid Gubu specification. It means:
+
+
+```
+{
+  port: 8080,        // Must be a number, is optional, and the default is 8080
+  host: 'localhost'  // Must be a string, is optional, and the deffault is 'localhost'
+}
+```
+
+If you user does not specify these options, then you get the defaults:
+
+```
+{} --> { port: 8080, host: 'localhost' }
+```
+
+In Gubu, the most common case for options is the easiest: everything
+is optional, and the default value defines the type you will accept.
+This also works for objects, which get "filled out" if not present:
+
+```
+const { Gubu } = require('gubu')
+
+const shape = Gubu({
+  server: {
+    port: 8080,
+    host: 'localhost'
+  }
+}
+
+let options = {}
+shape(options)
+
+// And now options is:
+{
+  server: {
+    port: 8080,
+    host: 'localhost'
+  }
+}
+```
+
+A big feature of Gubu is that you can fill out objects to any depth
+(unlike `Object.assign` or the `...` spread operator).
+
+You may have noticed that Gubu mutates the input to be validated (by
+injecting defaults as needed). This is deliberate. Cloning arbitrary
+values in JavaScript is
+[complicated](https://www.digitalocean.com/community/tutorials/copying-objects-in-javascript),
+so Gubu leaves that decision to calling code.
+
+
+To make properties required, you use the standard wrapper objects:
+
+```
+const { Gubu } = import 'gubu' // `import` also works! And in browsers too.
+
+const shape = Gubu({
+  timeout: Number,
+  message: String,
+  debug: Boolean,
+})
+
+// All good here - these are valid options!
+shape({
+  timeout: 10000,
+  message: 'Hello!',
+  debug: true,
 })
 ```
-* The most useful cases are the easiest to specify (e.g. optional defaults are just literal values);
-* The implementation is iterative (a depth-first loop over the
-  property tree) not recursive, so it's nice and fast and can handle
-  any size of data and schema.
+
+Required properties don't have defaults (how could they?), so you only
+need to specify the type.
+
+To validate arrays, you provide an example element. All elements of the
+array must match the example element:
+
+```
+const shape = Gubu([Number])
+
+// All good - we want numbers!
+shape([100, 200, 300])
+```
   
-Why write yet another validator? I've used `Joi` for a long time, but
-always found its schema definition a little verbose at the syntax
-level. I've never liked JSON-Schema - it's just too noisy to
-eyeball. What I do like is [Vue.js property
+## Motivation  
+  
+Why write yet another validator? I've used [Joi](https://joi.dev) for
+a long time, but always found its schema definition a little verbose
+at the syntax level. I've never liked JSON-Schema - it's just too
+noisy to eyeball. What I do like is [Vue.js property
 validation](https://vuejs.org/v2/guide/components-props.html#Prop-Validation),
 but that only works at the top level. I did write a prototype deep
 [Vue property validator using
@@ -39,18 +138,14 @@ framework](https://senecajs.org), and providing deep defaults for
 complex custom Vue.js components. I think it does both jobs rather
 nicely with an easy-to-read syntax.
 
-
-[![npm version](https://img.shields.io/npm/v/gubu.svg)](https://npmjs.com/package/gubu)
-[![build](https://github.com/rjrodger/gubu/actions/workflows/build.yml/badge.svg)](https://github.com/rjrodger/gubu/actions/workflows/build.yml)
-[![Coverage Status](https://coveralls.io/repos/github/rjrodger/gubu/badge.svg?branch=main)](https://coveralls.io/github/rjrodger/gubu?branch=main)
-[![Known Vulnerabilities](https://snyk.io/test/github/rjrodger/gubu/badge.svg)](https://snyk.io/test/github/rjrodger/gubu)
-[![DeepScan grade](https://deepscan.io/api/teams/5016/projects/19509/branches/508695/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=5016&pid=19509&bid=508695)
-[![Maintainability](https://api.codeclimate.com/v1/badges/de19e425771fb65e98e2/maintainability)](https://codeclimate.com/github/rjrodger/gubu/maintainability)
-
-| ![Voxgig](https://www.voxgig.com/res/img/vgt01r.png) | This open source module is sponsored and supported by [Voxgig](https://www.voxgig.com). |
-|---|---|
-
-
+On the philosophical side, this validator is motivated by the idea of
+[query-by-example](https://wiki.c2.com/?QueryByExample). This comes
+from the belief that software developers should not be subjected to
+unnecessary additional levels of abstraction. Abstraction is hard,
+takes you further from the problem you're getting paid to solve, and
+is hard to "eye-ball". I don't want to parse and run schemas "in my
+head", I just want to see the literal values and structure that I care
+about, right here, right now.
 
 
 ## Quick Example
@@ -72,16 +167,18 @@ console.log( shape({ a: 99, b: 'foo' }) )
 console.log( shape({ b: 'foo' }) )
 
 // Object shape is bad. Throws an exception with message:
-//   Validation failed for path "a" with value "BAD" because the value is not of type number.
-//   Validation failed for path "b" with value "" because the value is required.'
+//   Validation failed for property "a" with value "BAD" because the value is not of type number.
+//   Validation failed for property "b" with value "" because the value is required.'
 console.log( shape({ a: 'BAD' }) )
 
 ```
 
 As shown above, you use the exported `Gubu` function to create a
-validation checker (does the argument match the schema shape?). If
-valid, the checker returns its first argument, otherwise it throws an
-exception listing all (not just the first!) the validity errors.
+validation shape checker using an example object. Pass the value you
+want to validate to the shape checker. If the value is valid (matches
+the example object), the shape checker returns the value (with missing
+defaults injected). Otherwise the shape checker throws an exception
+listing all (not just the first!) of the validition errors.
  
 
 ## Common Use Cases
@@ -91,7 +188,7 @@ exception listing all (not just the first!) the validity errors.
 ### Option defaults and validation
 
 Let's say you have a server that needs to run on a given host and
-port, but by default should run on *localhost* on port 8080. The host should
+port, but by default should run on `localhost` on port `8080`. The host should
 be a non-empty string, and the port should be a number.
 
 ```js
@@ -164,9 +261,12 @@ result === {
 For more specific shapes, such as required objects and arrays, you can
 use shape builder functions that still respect your data structure.
 
-The [Required](#required-builder) makes a value explicitly required:
+The [Required](#required-builder) shape builder makes a value
+explicitly required:
 
 ```
+const { Gubu, Required } = require('gubu')
+
 const userShape = Gubu({
   person: Required({  // person must be an object
     name: String,
@@ -175,7 +275,7 @@ const userShape = Gubu({
 })
 
 
-// FAILS: 'Validation failed for path "person" with value "" because the value is required.')
+// FAILS: 'Validation failed for property "person" with value "" because the value is required.')
 userShape({}) 
 
 // This will pass, returning the object:
@@ -187,12 +287,30 @@ userShape({
 })
 ```
 
-For the full list of shape builders, see the [API reference](#shape-builders).
+Shape builders are exported by the Gubu module directly, and are also
+available as properties of the `Gubu` function:
+
+```
+const { Gubu, Required, Closed } = import 'gubu'
+
+Required === Gubu.Required
+Closed === Gubu.Closed
+```
+
+For the full list of shape builders, see the [API
+reference](#shape-builders).
+
+---
+
+[Quick Example](#quick-example) | 
+[Common Use Cases](#common-use-cases) | 
+[Install and Usage](#install) | 
+[Shape Rules](#shape-rules) | 
+[API](#api)
 
 
 ## Install
 <sub><sup>[top](#top)</sup></sub>
-
 
 ```sh
 $ npm install gubu
@@ -201,9 +319,11 @@ $ npm install gubu
 
 ## Usage
 
+
 The *Gubu* module has no dependencies. A single function named `Gubu`
-is exported.  Utility functions are provided as properties of `Gubu`
-or can be exported separately.
+is exported.  Shape builders (such as [Required](#required-builder))
+and utility functions are provided as properties of `Gubu` or can be
+exported separately.
 
 
 ### TypeScript
@@ -253,11 +373,13 @@ If a value is optional and `undefined`, the default value is returned:
 `Gubu('bar')()` returns `'bar'`.
 
 The values `null` and `NaN` must match exactly. The value `undefined`
-is special - it literally means no value.
+is special - it literally means no value. To allow a property to be
+absent entirely, use the [Skip](#skip-builder) shape builder.
 
-Empty strings are not considered to be valid if a string is required
-(this is usually what you want). To allow empty string, use
-`Gubu(Empty(String))` (where `Empty` is exported by the `Gubu` module).
+Empty strings are not considered to be valid (this is usually what you
+want). To allow an empty string, use `Gubu(Empty('foo'))` or
+`Gubu(Empty(String))` (where `Empty` is exported by the `Gubu`
+module).
 
 For objects, write them as you want them:
 
@@ -292,21 +414,20 @@ elements in the array must match:
 * `Gubu([{x:1}])` matches `[{x: 11}, {x: 22}, {x: 33}]`
 
 
-If you need specific elements to match specific shapes, add these
-shapes after the first element:
+If you need specific elements to match specific shapes, use the
+[Closed](#closed-builder) shape builder:
 
-* `Gubu([String,Number])` matches `[1, 'b', 'c']` - as the first element (of the shape) is a `Number`, and the general element is `String`.
+* `Gubu(Closed([String,Number]))` matches `['a', 1]`.
 
-Thus, the element `0` of a shape array defines the general element,
-and following elements define special cases (offset by 1).
+You can specify custom validation functions using the
+[Check](#check-builder):
 
-You can specify custom validation using functions:
-
-* `Gubu({a: (v) => 10<v })`: matches `{a: 11}` as `10 < 11`
+* `Gubu({a: Check((v) => 10<v) })`: matches `{a: 11}` as `10 < 11`
 
 And you can manipulate the value if you need to:
 
-* `Gubu({a: (v,u) => 10<v ? (u.val=2*v, true) : false })`: matches `{a: 11}` as `10 < 11` and returns `{a: 22}`.
+* `Gubu({a: Check((v,u) => 10<v ? (u.val=2*v, true) : false )})`:
+  matches `{a: 11}` as `10 < 11` and returns `{a: 22}`.
 
 
 You can also compose validations together:
@@ -318,17 +439,16 @@ const shape = Gubu({ a: Gubu({ x: Number }) })
 shape({ a: { x: 1 } })
 ```
 
-
 *Gubu* exports shape "builder" utility functions that let you further
-refine the shape (You've already seen the `Empty` builder above that
-allows strings to be empty). You wrap your value with the builder
-function to apply the desired effect.
+refine the shape (For example, you've already seen the `Empty` builder
+above that allows strings to be empty). You wrap your value with the
+builder function to apply the desired effect.
 
 
 The `Required` builder makes a value required:
 
 ```
-const { Gubu, Required } = require(`gubu`)
+const { Gubu, Required } = require('gubu')
 
 const shape = Gubu({
   a: Required({x: 1})  // Property `a` is required and must match `{x: 1}`.
@@ -336,10 +456,11 @@ const shape = Gubu({
 ```
 
 
-The `Closed` builder prohibits an object from having additional unspecified properties:
+The `Closed` builder prohibits an object from having additional
+unspecified properties:
 
 ```
-const { Gubu, Closed } = require(`gubu`)
+const { Gubu, Closed } = require('gubu')
 
 // Only properties `a` and `b` are allowed.
 const shape = Gubu(Closed({
@@ -349,11 +470,11 @@ const shape = Gubu(Closed({
 ```
 
 You can also access builders as properties of the main `Gubu`
-function, and you can also chain most builders. Thus a `Required` and
+function, and you can chain most builders. Thus a `Required` and
 `Closed` object can be specified with:
 
 ```
-const { Gubu } = require(`gubu`)
+const { Gubu } = require('gubu')
 
 const shape = Gubu({
   a: Gubu.Closed({ x: 1 }).Required(),
@@ -372,12 +493,12 @@ comprehensive and provide many usage examples.
 
 The built-in shape builders help you match the following shapes:
 
-* Required or optional:
+* Existence:
   * [Required](#required-builder): Make a value required.
-  * [Optional](#optional-builder): Make a value explicitly optional (no default created).
+  * [Skip](#skip-builder): Make a value skippable (no default value injected if missing).
 * Value constraints:
   * [Empty](#empty-builder): Allow string values to be empty.
-  * [Exact](#exact-builder): The value must match one of an exact list of values.
+  * [Exact](#exact-builder): The value must match one of an exact list of *literal* values.
   * [All](#all-builder): All shapes must match value.
   * [Some](#some-builder): Some shapes (at least one) must match value.
   * [One](#one-builder): Exactly one shape (and no more) must match value.
@@ -396,8 +517,25 @@ The built-in shape builders help you match the following shapes:
   * [Define](#define-builder): Define a name for a value.
   * [Refer](#refer-builder): Refer to a defined value by name.
 * Customizations:
-  * [Before](#before-builder): Define a custom validation function called before a value is processed.
-  * [After](#after-builder): Define a custom validation function called after a value is processed.
+  * [Check](#check-builder): Define a general custom validation function for the value (recommended).
+  * [Before](#before-builder): Define a custom validation function called before a value is processed (advanced use).
+  * [After](#after-builder): Define a custom validation function called after a value is processed (advanced use).
+
+
+### Regular Expressions
+
+The [Check](#check-builder) will also accept a regular expression
+(instead of a function). The value will be converted to a string
+(using `String(...)`), and will be valid if it matches the regular
+expression. The values `null`, `undefined` and `NaN` are not converted
+to strings and will always fail this check
+
+```
+let shape = Gubu({ countryCode: Check(/^[A-Z][A-Z]$/) })
+
+shape({ countryCode: 'IE' })) // Passes.
+shape({ countryCode: 'BAD' })) // FAILS: 'Validation failed for property "countryCode" with value "BAD" because check "/^[A-Z][A-Z]$/" failed.'
+```
 
 
 ### Recursive Shapes
@@ -438,7 +576,7 @@ tree({
 })
 
 // This fails with error:
-// "Validation failed for path "root.left.left.left.value" with value "123" because the value is not of type string."
+// "Validation failed for property "root.left.left.left.value" with value "123" because the value is not of type string."
 
 tree({
   root: {
@@ -568,7 +706,7 @@ shape({ foo: 1, bar: {} }) // bar.zed is required
 Object properties that are required must always be provided, even if
 they are children of optional objects&mdash;they wouldn't be required
 otherwise! To allow such deep required properties to be missing, use
-an explicit [Optional](#optional-builder) shape builder:
+an explicit [Skip](#skip-builder) shape builder:
 
 ```
 let strictShape = Gubu({ a: { b: String } })
@@ -580,7 +718,7 @@ strictShape({ a: { b: 'ABC' } })
 strictShape({})
 
 
-let easyShape = Gubu({ a: Optional({ b: String }) })
+let easyShape = Gubu({ a: Skip({ b: String }) })
 
 // Now both pass
 easyShape({ a: { b: 'ABC' } })
@@ -623,15 +761,15 @@ If a property must be present in an object, used the shape builder
 
 Objects are optional by default, and will be created if not
 present. To prevent this, use the explicit shape builder
-[Optional](#optional-builder) to indicate that you do *not* wish an
+[Skip](#skip-builder) to indicate that you do *not* wish an
 object to be inserted when it is missing.
 
 ```
-const { Optional } = Gubu
+const { Skip } = Gubu
 let shape = Gubu({
   a: { x: 1 },
-  b: Optional({ y: 2 }),
-  c: Optional({ z: Optional({ k: 3 }) }),
+  b: Skip({ y: 2 }),
+  c: Skip({ z: Skip({ k: 3 }) }),
 })
 
 // Explicitly optional properties are not inserted as defaults if missing.
@@ -894,7 +1032,7 @@ To construct a shape use the `Gubu` function exported by this module:
 
 ```
 // Using require
-const { Gubu } = require(`gubu`)
+const { Gubu } = require('gubu')
 
 // Using import
 import { Gubu } from 'gubu'
@@ -1080,12 +1218,12 @@ specific custom errors can also be defined (see below).
 
 ```
 Gubu(Number)('abc') // throws an Error with message:
-'Validation failed for path "" with value "x" because the value is not of type number.'
+'Validation failed for property "" with value "x" because the value is not of type number.'
 
 Gubu({ top: { foo: String, bar: Number }})({ top: { foo: 123, bar: 'abc'}}) // throws an Error with message:
 `
-Validation failed for path "top.foo" with value "123" because the value is not of type string.
-Validation failed for path "top.bar" with value "abc" because the value is not of type number.
+Validation failed for property "top.foo" with value "123" because the value is not of type string.
+Validation failed for property "top.bar" with value "abc" because the value is not of type number.
 `
 ```
 
@@ -1132,7 +1270,7 @@ catch(gubuError) {
         p: '',
         w: 'type',
         m: 1050,
-        t: 'Validation failed for path "" with value "x" because the value is not of type number.',
+        t: 'Validation failed for property "" with value "x" because the value is not of type number.',
         u: {},
       }
     ],
@@ -1362,7 +1500,7 @@ The built-in shape builders are:
 * [Min](#min-builder): Match a value (or length of value) greater than or equal to the given amount.
 * [Never](#never-builder): This shape will never match anything.
 * [One](#one-builder): Exactly one shape (and no more) must match value.
-* [Optional](#optional-builder): Make a value explicitly optional (no default created).
+* [Skip](#skip-builder): Make a value explicitly optional (no default created).
 * [Refer](#refer-builder): Refer to a defined value by name.
 * [Rename](#rename-builder): Rename the key of a property.
 * [Required](#required-builder): Make a value required.
@@ -1381,7 +1519,7 @@ Above( value: number|string, child?: any )
 
 * **Standalone:** `Above(2)`
 * **As Parent:** `Above(2, Number)`
-* **As Child:** `Optional(Above(2))`
+* **As Child:** `Skip(Above(2))`
 * **Chainable:** `Required(Number).Above(2)`
 
 Only allow values that are above the given value in length. "Length" means:
@@ -1401,13 +1539,13 @@ const { Above } = Gubu
 let shape = Gubu(Above(2))
 
 shape(3) // PASS: 3 > 2; returns 3
-shape(2) // FAIL: throws 'Value "2" for path "" must be above 2 (was 2).'
+shape(2) // FAIL: throws 'Value "2" for property "" must be above 2 (was 2).'
 
 shape('abc') // PASS: 'abc'.length 3 > 2; returns 'abc'
-shape('ab')  // FAIL: 'Value "ab" for path "" must have length above 2 (was 2).'
+shape('ab')  // FAIL: 'Value "ab" for property "" must have length above 2 (was 2).'
 
 shape([1, 2, 3]) // PASS: array length 3 > 2; returns [1, 2, 3]
-shape([1, 2])    // FAIL: throws: 'Value "[1,2]" for path "" must have length above 2 (was 2).'
+shape([1, 2])    // FAIL: throws: 'Value "[1,2]" for property "" must have length above 2 (was 2).'
 ```
 
 
@@ -1422,7 +1560,7 @@ After( validate: Validate, child?: any )
 * **Standalone:** `After(() => true)`
 * **As Parent:** `After({() => true, {x: 1})`
 * **As Child:** `Required(After(() => true))`
-* **Chainable:** `Optional({x: 1}).After(() => true)`
+* **Chainable:** `Skip({x: 1}).After(() => true)`
 
 Provide a validation function that will run after the value has been
 processed normally. The validation function has the form:
@@ -1464,7 +1602,7 @@ All( ...children: any[] )
 
 * **Standalone:** `All(Number, v => v>10)`
 * **As Parent:** INVALID
-* **As Child:** `Optional(All({x: 1}, Min(2)))`
+* **As Child:** `Skip(All({x: 1}, Min(2)))`
 * **Chainable:** INVALID
 
 To be valid, the source value must match all of the shapes given as
@@ -1472,7 +1610,7 @@ arguments. All shapes are always evaluated, even if some fail, to
 ensure all errors are collected.
 
 This shape builder implicitly creates a [Required](#required-builder)
-value. Use the shape builder [Optional](#optional-builder) to make the
+value. Use the shape builder [Skip](#skip-builder) to make the
 value explicitly optional.
 
 
@@ -1484,7 +1622,7 @@ shape(11) // PASS: 11 is a number, and 11 > 10
 shape(9)  // FAIL: 9 is a number, but 9 < 10 
 shape()   // FAIL: a value is required (implicitly)
 
-shape = Gubu({ a: Optional(All({ b: String }, Min(2))) })
+shape = Gubu({ a: Skip(All({ b: String }, Min(2))) })
 shape({ a: { b: 'X', c: 1 } }) // PASS: returns same object
 shape({}) // PASS: `a` is optional, returns {}
 ```
@@ -1501,7 +1639,7 @@ Any( child?: any )
 * **Standalone:** `Any()`
 * **As Parent:** `Any({x: 1})`
 * **As Child:** `Required(Any())`
-* **Chainable:** `Optional({x: 1}).Any()`
+* **Chainable:** `Skip({x: 1}).Any()`
 
 Accept any value. If a child value is provided, it will be used as a
 default (when the source value is `undefined`).
@@ -1537,7 +1675,7 @@ Before( validate: Validate, child?: any )
 * **Standalone:** `Before(() => true)`
 * **As Parent:** `Before({() => true, {x: 1})`
 * **As Child:** `Required(Before(() => true))`
-* **Chainable:** `Optional({x: 1}).Before(() => true)`
+* **Chainable:** `Skip({x: 1}).Before(() => true)`
 
 Provide a validation function that will run before the value has been
 processed normally. The validation function has the form:
@@ -1584,7 +1722,7 @@ Below( value: number|string, child?: any )
 
 * **Standalone:** `Below(2)`
 * **As Parent:** `Below(2, Number)`
-* **As Child:** `Optional(Below(2))`
+* **As Child:** `Skip(Below(2))`
 * **Chainable:** `Required(Number).Below(2)`
 
 Only allow values that are below the given value in length. "Length" means:
@@ -1604,13 +1742,13 @@ const { Below } = Gubu
 let shape = Gubu(Below(2))
 
 shape(1) // PASS: 1 < 2; returns 1
-shape(2) // FAIL: throws 'Value "2" for path "" must be below 2 (was 2).'
+shape(2) // FAIL: throws 'Value "2" for property "" must be below 2 (was 2).'
 
 shape('abc') // PASS: 'abc'.length 1 < 2; returns 'abc' 
-shape('ab')  // FAIL: 'Value "ab" for path "" must have length below 2 (was 2).'
+shape('ab')  // FAIL: 'Value "ab" for property "" must have length below 2 (was 2).'
 
 shape([1])    // PASS: array length 1 < 2; returns [1]
-shape([1, 2]) // FAIL: throws: 'Value "[1, 2]" for path "" must have length below 2 (was 2).'
+shape([1, 2]) // FAIL: throws: 'Value "[1, 2]" for property "" must have length below 2 (was 2).'
 ```
 
 
@@ -1625,7 +1763,7 @@ Closed( child?: any )
 * **Standalone:** `Closed({x: 1})`
 * **As Parent:** INVALID
 * **As Child:** `Required(Closed({x: 1}))`
-* **Chainable:** `Optional({x: 1}).Closed()`
+* **Chainable:** `Skip({x: 1}).Closed()`
 
 Prevents an object from accepting unspecified properties. The object
 is "closed" and can only have the properties defined in the shape.
@@ -1649,7 +1787,7 @@ Define( options: string | { name: string }, child?: any )
 * **Standalone:** `Define('FOO',{x: 1})`
 * **As Parent:** `Define('FOO", {x: 1})`
 * **As Child:** `Required(Define('FOO', {x: 1}))`
-* **Chainable:** `Optional({x: 1}).Define('FOO')`
+* **Chainable:** `Skip({x: 1}).Define('FOO')`
 
 Define a name for a sub value that can be referenced by the
 [Refer](#refer-builder) shape builder. Definitions must precede usage
@@ -1689,8 +1827,8 @@ Empty( child?: any )
 
 * **Standalone:** `Empty(String)`
 * **As Parent:** INVALID
-* **As Child:** `Optional(Empty(String))`
-* **Chainable:** `Optional(String).Empty()`
+* **As Child:** `Skip(Empty(String))`
+* **Chainable:** `Skip(String).Empty()`
 
 Allow the [empty string](#empty-strings) to satisfy a string value.
 
@@ -1707,12 +1845,12 @@ shape('def') // PASS: returns 'def'
 shape('') // PASS: returns ''
 shape() // PASS: returns 'abc' as default
 
-shape = Gubu(Optional(Empty(String)))
+shape = Gubu(Skip(Empty(String)))
 shape('abc') // PASS: returns 'abc'
 shape('') // PASS: returns ''
 shape() // PASS: returns undefined
 
-shape = Gubu(Optional(String).Empty())
+shape = Gubu(Skip(String).Empty())
 shape('abc') // PASS: returns 'abc'
 shape('') // PASS: returns ''
 shape() // PASS: returns undefined
@@ -1731,7 +1869,7 @@ Exact( value: any )
 * **Standalone:** `Exact(123)`
 * **As Parent:** INVALID
 * **As Child:** `Required(Exact('abc'))`
-* **Chainable:** `Optional(String).Exact('A')`
+* **Chainable:** `Skip(String).Exact('A')`
 
 Specific an exact list of one or more values that the shape can be
 exactly equal to. Use this to restrict the allowed literal values of
@@ -1763,7 +1901,7 @@ Max( value: number|string, child?: any )
 
 * **Standalone:** `Max(2)`
 * **As Parent:** `Max(2, Number)`
-* **As Child:** `Optional(Max(2))`
+* **As Child:** `Skip(Max(2))`
 * **Chainable:** `Required(Number).Max(2)`
 
 Only allow values that have length greater than or equal to the given
@@ -1785,15 +1923,15 @@ let shape = Gubu(Max(2))
 
 shape(1) // PASS: 1 <= 1; returns 1
 shape(2) // PASS: 1 <= 2; returns 2
-shape(3) // FAIL: throws 'Value "3" for path "" must be a maximum of 2 (was 3).'
+shape(3) // FAIL: throws 'Value "3" for property "" must be a maximum of 2 (was 3).'
 
 shape('a')   // PASS: 'a'.length 1 <= 2; returns 'a'
 shape('ab')  // PASS: 'ab'.length 2 <= 2 ; returns 'ab'
-shape('abc') // FAIL: 'Value "abc" for path "" must be a maximum length of 2 (was 3).'
+shape('abc') // FAIL: 'Value "abc" for property "" must be a maximum length of 2 (was 3).'
 
 shape([1])       // PASS: array length 1 <= 2; returns [1]
 shape([1, 2])    // PASS: array length 2 <= 2; returns [1, 2]
-shape([1, 2, 3]) // FAIL: throws: 'Value "[1, 2, 3]" for path "" must be a maximum length of 2 (was 3).'
+shape([1, 2, 3]) // FAIL: throws: 'Value "[1, 2, 3]" for property "" must be a maximum length of 2 (was 3).'
 
 
 ---
@@ -1806,7 +1944,7 @@ Min( value: number|string, child?: any )
 
 * **Standalone:** `Min(2)`
 * **As Parent:** `Min(2, Number)`
-* **As Child:** `Optional(Min(2))`
+* **As Child:** `Skip(Min(2))`
 * **Chainable:** `Required(Number).Min(2)`
 
 Only allow values that have length greater than or equal to the given
@@ -1828,15 +1966,15 @@ let shape = Gubu(Min(2))
 
 shape(3) // PASS: 3 >= 2; returns 3
 shape(2) // PASS: 2 >= 2; returns 2
-shape(1) // FAIL: throws 'Value "1" for path "" must be a minimum of 2 (was 1).'
+shape(1) // FAIL: throws 'Value "1" for property "" must be a minimum of 2 (was 1).'
 
 shape('abc') // PASS: 'abc'.length 3 >= 2; returns 'abc'
 shape('ab')  // PASS: 'ab'.length 2 >= 2 ; returns 'ab'
-shape('a')   // FAIL: 'Value "a" for path "" must be a minimum length of 2 (was 1).'
+shape('a')   // FAIL: 'Value "a" for property "" must be a minimum length of 2 (was 1).'
 
 shape([1, 2, 3]) // PASS: array length 3 >= 2; returns [1, 2, 3]
 shape([1, 2])    // PASS: array length 2 >= 2; returns [1, 2]
-shape([1])       // FAIL: throws: 'Value "[1]" for path "" must be a minimum length of 2 (was 1).'
+shape([1])       // FAIL: throws: 'Value "[1]" for property "" must be a minimum length of 2 (was 1).'
 ```
 
 
@@ -1851,7 +1989,7 @@ Never( child?: any )
 * **Standalone:** `Never()`
 * **As Parent:** `Never({x: 1})`
 * **As Child:** `Required(Never())`
-* **Chainable:** `Optional({x: 1}).Never()`
+* **Chainable:** `Skip({x: 1}).Never()`
 
 Never match a value. This builder causes the shape to always fail. It
 supports parent, child, and chainable forms to make temporary
@@ -1877,7 +2015,7 @@ One( ...children: any[] )
 
 * **Standalone:** `One(Number, String)`
 * **As Parent:** INVALID
-* **As Child:** `Optional(One({x: 1}, {x: 2}))`
+* **As Child:** `Skip(One({x: 1}, {x: 2}))`
 * **Chainable:** INVALID
 
 To be valid, the source value must match exactly one of the shapes
@@ -1885,7 +2023,7 @@ given as arguments. All shapes are always evaluated, to ensure all
 errors are collected.
 
 This shape builder implicitly creates a [Required](#required-builder)
-value. Use the shape builder [Optional](#optional-builder) to make the
+value. Use the shape builder [Skip](#skip-builder) to make the
 value explicitly optional.
 
 To match exact values, use the shape builder [Exact](#exact-builder)
@@ -1911,17 +2049,17 @@ shape()      // FAIL: a value is required
 
 
 ---
-#### Optional Builder
+#### Skip Builder
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-Optional( child?: any )
+Skip( child?: any )
 ```
 
-* **Standalone:** `Optional(Number)`
-* **As Parent:** `Optional({x: 1})`
-* **As Child:** `Closed(Optional({x: 1}))`
-* **Chainable:** `Optional({x: 1}).Closed()`
+* **Standalone:** `Skip(Number)`
+* **As Parent:** `Skip({x: 1})`
+* **As Child:** `Closed(Skip({x: 1}))`
+* **Chainable:** `Skip({x: 1}).Closed()`
 
 Make the value explicitly optional. If the value was implicitly
 required ([One](#one-builder), [All](#all-builder), etc.) then the
@@ -1930,8 +2068,8 @@ value will no longer cause validation to fail. If the value is absent,
 no default will be inserted.
 
 ```js
-const { Optional } = Gubu
-let shape = Gubu({a: Optional(123)})
+const { Skip } = Gubu
+let shape = Gubu({a: Skip(123)})
 console.log(shape({ a: 456 })) // prints { a: 456 }
 console.log(shape({}))  // prints {} - no default inserted
 console.log(shape({ a: undefined })) // prints { a: undefined }
@@ -1950,7 +2088,7 @@ Refer( options: string | { name: string, fill?: boolean }, child?: any )
 * **Standalone:** `Refer('FOO',{x: 1})`
 * **As Parent:** `Refer('FOO", {x: 1})`
 * **As Child:** `Required(Refer('FOO', {x: 1}))`
-* **Chainable:** `Optional({x: 1}).Refer('FOO')`
+* **Chainable:** `Skip({x: 1}).Refer('FOO')`
 
 Reference a previously defined sub-shape by name (using
 [Define](#define-builder)). Definitions with `Define` must precede
@@ -1991,7 +2129,7 @@ Rename( options?: string | { name: string, keep: boolean }, value: any )
 * **Standalone:** `Rename('bar', Number)`
 * **As Parent:** `Rename('bar', {x: 1})`
 * **As Child:** `Required({foo: Rename('bar', Number)})`
-* **Chainable:** `{foo: Optional(Number).Rename('bar')}`
+* **Chainable:** `{foo: Skip(Number).Rename('bar')}`
 
 Rename the key of a value. The first argument to the `Rename` builder
 is the new string value of the key, or an options object with properties:
@@ -2058,7 +2196,7 @@ Some( ...children: any[] )
 
 * **Standalone:** `Some({x: 1}, {y: 2})`
 * **As Parent:** INVALID
-* **As Child:** `Optional(Some({x: 1}, {y: 2}))`
+* **As Child:** `Skip(Some({x: 1}, {y: 2}))`
 * **Chainable:** INVALID
 
 To be valid, the source value must match some of the shapes given as
@@ -2066,7 +2204,7 @@ arguments (at least one). All shapes are always evaluated, even if
 some fail, to ensure all errors are collected.
 
 This shape builder implicitly creates a [Required](#required-builder)
-value. Use the shape builder [Optional](#optional-builder) to make the
+value. Use the shape builder [Skip](#skip-builder) to make the
 value explicitly optional.
 
 
@@ -2092,7 +2230,7 @@ Value( target: any, general: any )
 * **Standalone:** `Value({},Number)`
 * **As Parent:** `Value({x: 1}, Number)`
 * **As Child:** `Required(Value({x: 1}, Number))`
-* **Chainable:** `Optional({x: 1}).Value(Number)`
+* **Chainable:** `Skip({x: 1}).Value(Number)`
 
 Specify the general shape that each value of an object must
 satisfy. Does not apply to any explicitly defined property values.
@@ -2164,14 +2302,14 @@ You can write your shape builders. A shape builder is a function that
 generates the internal [Shape Node](#shape-nodes) data structure,
 possibly using parameters.
 
-Here is the actual source code for the [Optional](#optional-builder) shape builder:
+Here is the actual source code for the [Skip](#skip-builder) shape builder:
 
 ```ts
-const Optional: Builder = function(this: Node, shape?: any) {
+const Skip: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   node.r = false
 
-  // Mark Optional as explicit => do not insert empty arrays and objects.
+  // Mark Skip as explicit => do not insert empty arrays and objects.
   node.o = true
 
   return node
@@ -2191,7 +2329,7 @@ please do so anyway to future proof!). To accept a child shape, pass
 in the first shape value provided to your `Builder`:
 
 ```
-const Optional: Builder = function(this: Node, shape?: any) {
+const Skip: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   ...
 ```
@@ -2244,7 +2382,7 @@ shape('a') // PASS: returns 'A!'
 shape(1)   // FAIL: 'foo' defines an optional string shape
 shape()    // PASS: optional string; returns 'foo!' as before is called before standard processing
 
-shape = Gubu(Optional(Hyperbole(One(String, Number))))
+shape = Gubu(Skip(Hyperbole(One(String, Number))))
 shape('a') // PASS; returns 'A!'
 shape(1)   // PASS: a number is allowed; ignore by Hyperbole; returns 1
 shape()    // PASS: optional; returns undefined
@@ -2352,4 +2490,9 @@ Licensed under [MIT][].
       allow empty strings (as an optional value), use
       `Empty('some-default')` or just `''`. See [Empty
       Strings](#empty-strings).
+
+
+## TODO
+
+* Note that gubu input is mutated by design - user must clone as needed
 

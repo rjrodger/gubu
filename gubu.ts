@@ -10,6 +10,7 @@
 // TODO: Validation of Builder parameters
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
+// TODO: Error messages should state property is missing, not `value ""`
 
 
 import { inspect } from 'util'
@@ -1027,7 +1028,8 @@ const Check: Builder = function(this: Node, check: any, shape?: any) {
   else if ('object' === typeof check) {
     let dstr = Object.prototype.toString.call(check)
     if (dstr.includes('RegExp')) {
-      let refn = (v: any) => !!String(v).match(check)
+      let refn = (v: any) =>
+        (null == v || Number.isNaN(v)) ? false : !!String(v).match(check)
       Object.defineProperty(refn, 'name', {
         value: String(check)
       })

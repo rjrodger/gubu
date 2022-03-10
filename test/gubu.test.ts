@@ -3,6 +3,9 @@
 import Pkg from '../package.json'
 
 
+// TODO: test circular input
+// TODO: test circular schema
+
 import type {
   Builder,
   Node,
@@ -281,6 +284,13 @@ describe('gubu', () => {
     })
   })
 
+  test('readme-regexp', () => {
+    let shape = Gubu({ countryCode: Check(/^[A-Z][A-Z]$/) })
+    expect(shape({ countryCode: 'IE' })).toEqual({ countryCode: 'IE' })
+    expect(() => shape({ countryCode: 'BAD' })).toThrow('Validation failed for property "countryCode" with value "BAD" because check "/^[A-Z][A-Z]$/" failed.')
+    expect(() => shape({})).toThrow('Validation failed for property "countryCode" with value "" because check "/^[A-Z][A-Z]$/" failed.')
+    expect(() => shape({ countryCode: 123 })).toThrow('Validation failed for property "countryCode" with value "123" because check "/^[A-Z][A-Z]$/" failed.')
+  })
 
   test('readme-recursive', () => {
     let tree = Gubu({
@@ -792,6 +802,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
     expect(rs0e('x')).toEqual('x')
     expect(rs0e('')).toEqual('')
     expect(() => rs0e()).toThrow('required')
+    expect(() => rs0e(undefined)).toThrow('required')
 
     const os0 = Gubu('x')
     expect(() => os0('')).toThrow('empty string is not allowed')
@@ -1887,6 +1898,12 @@ Validation failed for property "b" with value "B" because the value is not of ty
     expect(() => g4({})).toThrow('required')
     expect(() => g4()).toThrow('required')
 
+    let g5 = Gubu(Check(/ul/i))
+    expect(g5('*UL*')).toEqual('*UL*')
+    expect(() => g5()).toThrow('check')
+    expect(() => g5(undefined)).toThrow('check')
+    expect(() => g5(NaN)).toThrow('check')
+    expect(() => g5(null)).toThrow('check')
   })
 
 

@@ -10,6 +10,7 @@ exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRe
 // TODO: Validation of Builder parameters
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
+// TODO: Error messages should state property is missing, not `value ""`
 const util_1 = require("util");
 // Package version.
 const VERSION = '1.0.0';
@@ -691,7 +692,7 @@ const Check = function (check, shape) {
     else if ('object' === typeof check) {
         let dstr = Object.prototype.toString.call(check);
         if (dstr.includes('RegExp')) {
-            let refn = (v) => !!String(v).match(check);
+            let refn = (v) => (null == v || Number.isNaN(v)) ? false : !!String(v).match(check);
             Object.defineProperty(refn, 'name', {
                 value: String(check)
             });

@@ -608,5 +608,10 @@ let tmp = {}
 // console.log(Gubu({b:Skip(Check((v, u) => (u.val = v * 2, true)))})({b:1}))
 
 
-console.log(Gubu(Check('number'))(1))
-console.log(Gubu(Check('number'))())
+// console.log(Gubu(Check('number'))(1))
+// console.log(Gubu(Check('number'))())
+
+
+let a = {}
+let b = Gubu({x:1})(a)
+console.log('a',a,'b',b)
