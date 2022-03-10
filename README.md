@@ -275,7 +275,7 @@ const userShape = Gubu({
 })
 
 
-// FAILS: 'Validation failed for property "person" with value "" because the value is required.')
+// FAIL: 'Validation failed for property "person" with value "" because the value is required.')
 userShape({}) 
 
 // This will pass, returning the object:
@@ -533,8 +533,8 @@ to strings and will always fail this check
 ```
 let shape = Gubu({ countryCode: Check(/^[A-Z][A-Z]$/) })
 
-shape({ countryCode: 'IE' })) // Passes.
-shape({ countryCode: 'BAD' })) // FAILS: 'Validation failed for property "countryCode" with value "BAD" because check "/^[A-Z][A-Z]$/" failed.'
+shape({ countryCode: 'IE' })) // PASS.
+shape({ countryCode: 'BAD' })) // FAIL: 'Validation failed for property "countryCode" with value "BAD" because check "/^[A-Z][A-Z]$/" failed.'
 ```
 
 
@@ -833,6 +833,23 @@ Arrays can be specified directly using the first element as the shape
 that each element of the value array must match. If you want an array
 of numbers (`[ 1, 2, 3 ]`, say), then the shape is `[Number]`.
 
+```
+let shape = Gubu([Number])
+shape() // PASS: returns [] (the array itself is optional)
+shape([]) // PASS: returns [] (empty arrays pass)
+shape([1]) // PASS: element matches Number shape
+shape([1, 2]) // PASS: all elements matche Number shape
+
+shape([1, 2, 'bad']) // FAILS; element 2 is not a number
+
+
+shape = Gubu([{x: 1}])
+shape([{ x: 123 }, { x: 456 }]) // PASS: elements match {x: 1}
+shape([{}]) // PASS:  returns [{x: 1}]
+
+shape([{x: 123}, {x: 'a'}]) // FAILS; element 1 does not match {x: 1}
+```
+
 You can also define special shapes for individual elements at specific
 indexes, as shown below.
 
@@ -845,32 +862,44 @@ The general form of an array shape is:
 ```
 [
   <SHAPE>,
+]
+
+OR
+
+Closed([
   <SPECIAL-SHAPE-0>,
   <SPECIAL-SHAPE-1>,
   ...
   <SPECIAL-SHAPE-N>,
-]
+])
 ```
 
 where `<SHAPE>` is any valid *Gubu* shape definition. All elements
-must match `<SHAPE>`, unless they are special cases.
+must match `<SHAPE>`, and the empty array is allowed. This is the
+standard case and usually what you want.
 
-For the special cases, they correspond to the first, second, etc
-elements of the value array (and are thus offset by +1 in the array
-shape):
+For special cases, where elements at specific indexes must match
+specific shapes, you can define these arrays using the
+[Closed](#closed-builder) shape builder.
 
 ```
-let shape = Gubu([Number,String,Boolean])
+let shape = Gubu(Closed([Number, String, Boolean]))
 
-// These pass, returning the array as is.
-shape([ 'abc', true ])
-shape([ 'abc', true, 123 ])
-shape([ 'abc', true, 123, 456 ])
+// This passes, returning the array as is.
+shape([ 123, 'abc', true ])
 
 // These fail.
-shape([ 123 ]) // Index 0 must be a string
-shape([ 'abc', 123 ]) // Index 1 must be a boolean
+shape([ 'bad' ]) // Index 0 must be a number
+shape([ 123 ]) // Index 1 and 2 are missing
+shape([ 123, 'abc', true, 'extra' ]) // Too many elements
 ```
+
+As a shortcut, a shape array with *two or more* elements is considered
+closed, and all elements are considered special. Thus `Closed([String,
+Number])` is the same as simply `[String, Number]`. For a single
+element closed array, you *must* use the [Closed](#closed-builder)
+shape builder to close the array. Thus `Closed([Number])` means the
+array can only ever have one element, a number.
 
 
 ##### Required Properties (Array)
@@ -879,49 +908,27 @@ To mark an array element as required, use the [required
 scalar](#required-scalars) shapes (such as `String`), or use the shape
 builder [Required](#required-builder). 
 
-Only required special elements must be present. Empty arrays with a
-required general element shape (such as `[Number]`), can still be empty
-(`[]` with match). Element constraints apply to elements, not the
-array itself.
-
-
 ```
-let shape = Gubu([ { x: 1 }, Required({ y: Boolean }) ])
+let shape = Gubu([{ x: 1 }, Required({ y: true })])
 
-// These pass:
-shape([ { y: true } ]) // Index 0 is special
-shape([ { y: false }, { x: 123 } ]) // Index >= 1 must match general element shape
+// These pass
+shape([{ x: 2 }, { y: false }])
+shape([undefined, { y: false }]) // returns [{ x: 1 }, { y: false }]
+shape([{ x: 2 }, {}]) // returns [{ x: 2 }, { y: true }]
 
-// These fail:
-shape([]) // Index 0 is required
-shape([ { x: 123 } ]) // Index 0 is special
+// These fail
+shape([{ x: 2 }, undefined]) // Element 1 is required
+shape([{ x: 2 }]) // Element 1 is required
 ```
 
 
 ##### Length Constraints
 
-You can control the allowed length of an array using the shape builder
-[Never](#never-builder) to make all elements special, and also by
-using [Min](#min-builder), [Max](#max-builder),
+You can control the allowed length of an array using the shape
+builders [Min](#min-builder), [Max](#max-builder),
 [Above](#above-builder), and [Below](#below-builder) to restrict the
 length of the array.
 
-Use the shape builder [Never](#never-builder) as the first element to
-prevent additional elements in the array:
-
-```
-const { Never } = Gubu
-Gubu([Never()]) // Only accepts the empty array []
-Gubu([Never(),String]) // Only accepts an array with a string first element ['abc']
-```
-
-
-The length constraining shape builders ([Min](#min-builder),
-[Max](#max-builder), [Above](#above-builder), and
-[Below](#below-builder)) work in a sensible way depending on the data
-type. For strings they control character length, for numbers they
-control magnitude, for object they control key count, and for arrays,
-they control length:
 
 ```
 let { Min } = Gubu
@@ -937,12 +944,37 @@ shape([]) // length is 0, not >= minimum 2
 ```
 
 
+The length constraining shape builders ([Min](#min-builder),
+[Max](#max-builder), [Above](#above-builder), and
+[Below](#below-builder)) work in a sensible way depending on the data
+type. For strings they control character length, for numbers they
+control magnitude, for objects they control property count, and for
+arrays, they control length:
+
+```
+let { Max } = Gubu
+
+// Maximum string length
+shape = Gubu(Max(2, String))
+shape('a') // PASS
+shape('ab') // PASS
+shape('abc') // FAIL: string longer than 2 characters
+
+// Maximum object size
+shape = Gubu(Max(2, {}))
+shape({ a: 1 }) // PASS
+shape({ a: 1, b: 2 }) // PASS
+shape({ a: 1, b: 2, c: 3 }) // FAIL: more than 2 properties in object
+
+```
+
+
 ##### Array Properties
 
 JavaScript allows arrays to have properties: `let a = []; a.foo = 1`.
-Matching against array properties is not supported in the current
-version. The workaround is write a [custom
-validator](#custom-validation).
+Matching against array properties in the current version must be done
+by writing a [custom validator](#custom-validation) using the
+[Check](#check-builder) shape builder.
 
 
 
@@ -1771,7 +1803,7 @@ is "closed" and can only have the properties defined in the shape.
 ```js
 const { Closed } = Gubu
 let shape = Gubu(Closed({ a: 11 }))
-shape({ a: 10 }) // PASS; returns { a: 10 }
+shape({ a: 10 }) // PASS: returns { a: 10 }
 shape({ a: 10, b: 11 }) // FAIL: property "b" is not allowed
 ```
 
@@ -1806,14 +1838,14 @@ console.log(shape({ a: 10, b: 12 })) // prints { a: 10, b: 12 })
 console.log(shape({ a: 10 })) // prints { a: 10, b: undefined }) - b is not filled!
 console.log(shape({})) // prints { a: 11, b: undefined }) - b is not filled!
 console.log(shape({ b: 12 })) // prints { a: 11, b: 12 })
-shape({ a: 'A', b: 'B' }) // FAILS: b is not a number
+shape({ a: 'A', b: 'B' }) // FAIL: b is not a number
 
 shape = Gubu({ a: Define('foo', 11), b: Refer({ name: 'foo', fill: true }) })
 console.log(shape({ a: 10, b: 12 })) // prints { a: 10, b: 12 })
 console.log(shape({ a: 10 })) // prints { a: 10, b: 11 }) - b is filled with the default, not a copy
 console.log(shape({})) // prints { a: 11, b: 11 }) - b is filled with the default, not a copy
 console.log(shape({ b: 12 })) // prints { a: 11, b: 12 })
-shape({ a: 'A', b: 'B' }) // FAILS: b is not a number
+shape({ a: 'A', b: 'B' }) // FAIL: b is not a number
 ```
 
 
@@ -1886,8 +1918,8 @@ let shape = Gubu(Exact(11, 12, true))
 console.log(shape(11)) // prints 11
 console.log(shape(12)) // prints 12
 console.log(shape(true)) // prints true
-console.log(shape(10)) // FAILS: 10 is not one of 11, 12, true
-console.log(shape(false)) // FAILS: undefined is not one of 11, 12, true
+console.log(shape(10)) // FAIL: 10 is not one of 11, 12, true
+console.log(shape(false)) // FAIL: undefined is not one of 11, 12, true
 ```
 
 
@@ -2073,7 +2105,7 @@ let shape = Gubu({a: Skip(123)})
 console.log(shape({ a: 456 })) // prints { a: 456 }
 console.log(shape({}))  // prints {} - no default inserted
 console.log(shape({ a: undefined })) // prints { a: undefined }
-console.log(shape({ a: true })) // FAILS: true is not a number
+console.log(shape({ a: true })) // FAIL: true is not a number
 ```
 
 
@@ -2107,14 +2139,14 @@ console.log(shape({ a: 10, b: 12 })) // prints { a: 10, b: 12 })
 console.log(shape({ a: 10 })) // prints { a: 10, b: undefined }) - b is not filled!
 console.log(shape({})) // prints { a: 11, b: undefined }) - b is not filled!
 console.log(shape({ b: 12 })) // prints { a: 11, b: 12 })
-shape({ a: 'A', b: 'B' }) // FAILS: b is not a number
+shape({ a: 'A', b: 'B' }) // FAIL: b is not a number
 
 shape = Gubu({ a: Define('foo', 11), b: Refer({ name: 'foo', fill: true }) })
 console.log(shape({ a: 10, b: 12 })) // prints { a: 10, b: 12 })
 console.log(shape({ a: 10 })) // prints { a: 10, b: 11 }) - b is filled with the default, not a copy
 console.log(shape({})) // prints { a: 11, b: 11 }) - b is filled with the default, not a copy
 console.log(shape({ b: 12 })) // prints { a: 11, b: 12 })
-shape({ a: 'A', b: 'B' }) // FAILS: b is not a number
+shape({ a: 'A', b: 'B' }) // FAIL: b is not a number
 ```
 
 
@@ -2386,7 +2418,7 @@ shape(1)   // FAIL: 'foo' defines an optional string shape
 shape()    // PASS: optional string; returns 'foo!' as before is called before standard processing
 
 shape = Gubu(Skip(Hyperbole(One(String, Number))))
-shape('a') // PASS; returns 'A!'
+shape('a') // PASS: returns 'A!'
 shape(1)   // PASS: a number is allowed; ignore by Hyperbole; returns 1
 shape()    // PASS: optional; returns undefined
 ```

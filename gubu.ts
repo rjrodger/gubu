@@ -1,5 +1,7 @@
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 
+// CRITICAL: Object CLOSED by default, Provide Open builder, Keep Closed for arrays
+
 
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape

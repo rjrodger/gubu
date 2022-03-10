@@ -597,6 +597,10 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(g3({ a: r0 })).toEqual({ a: r0 });
         expect(g3({})).toEqual({});
     });
+    test('object-basic', () => {
+        expect(() => Gubu({ x: 1 })('q')).toThrow(/type object/);
+        expect(() => Gubu({ y: { x: 1 } })({ y: 'q' })).toThrow(/type object/);
+    });
     test('required-cover', () => {
         const v0 = Gubu(Required(Any()));
         expect(v0(1)).toEqual(1);
@@ -725,6 +729,66 @@ Validation failed for property "q.b" with value "x" because the value is not of 
             }
         })).toThrow('Validation failed for property "people.bob.age" with value "" because the value is required.');
         expect(() => obj11({})).toThrow('Validation failed for property "people" with value "" because the value is required.');
+    });
+    test('api-array', () => {
+        let g1 = Gubu([Number]);
+        expect(g1()).toEqual([]);
+        expect(g1([])).toEqual([]);
+        expect(g1([1])).toEqual([1]);
+        expect(g1([1, 2])).toEqual([1, 2]);
+        expect(g1([1, 2, 3])).toEqual([1, 2, 3]);
+        expect(g1([1, 2, 3, 4])).toEqual([1, 2, 3, 4]);
+        expect(() => g1([1, 2, 'x'])).toThrow('type');
+        let g2 = Gubu([{ x: 1 }]);
+        expect(g2()).toEqual([]);
+        expect(g2([])).toEqual([]);
+        expect(g2([{ x: 123 }])).toEqual([{ x: 123 }]);
+        expect(g2([{ x: 123 }, { x: 456 }])).toEqual([{ x: 123 }, { x: 456 }]);
+        expect(g2([{}])).toEqual([{ x: 1 }]);
+        expect(g2([{ x: 123 }, {}])).toEqual([{ x: 123 }, { x: 1 }]);
+        expect(g2([{ x: 123, y: 'a' }, { y: 'b' }]))
+            .toEqual([{ x: 123, y: 'a' }, { x: 1, y: 'b' }]);
+        expect(() => g2([{ x: 'a' }])).toThrow('type');
+        expect(() => g2([{ x: 1 }, { x: 'a' }])).toThrow('type');
+        let gc1 = Gubu(Closed([Number, String, Boolean]));
+        expect(gc1([123, 'abc', true])).toEqual([123, 'abc', true]);
+        expect(() => gc1(['bad'])).toThrow('type');
+        expect(() => gc1([123])).toThrow('required');
+        expect(() => gc1([123, 'abc', true, 'extra'])).toThrow('not allowed');
+        let gc2 = Gubu(Closed([1, 'a', true]));
+        expect(gc2()).toEqual([1, 'a', true]);
+        expect(gc2([])).toEqual([1, 'a', true]);
+        expect(gc2([2])).toEqual([2, 'a', true]);
+        expect(gc2([2, 'b'])).toEqual([2, 'b', true]);
+        expect(gc2([2, 'b', false])).toEqual([2, 'b', false]);
+        expect(gc2([2, undefined, false])).toEqual([2, 'a', false]);
+        expect(gc2([2, , false])).toEqual([2, 'a', false]);
+        expect(() => gc2([2, 'b', false, 'bad'])).toThrow('not allowed');
+        let gc3 = Gubu([{ x: 1 }, Required({ y: true })]);
+        expect(gc3([{ x: 2 }, { y: false }])).toEqual([{ x: 2 }, { y: false }]);
+        expect(gc3([undefined, { y: false }])).toEqual([{ x: 1 }, { y: false }]);
+        expect(gc3([{ x: 2 }, {}])).toEqual([{ x: 2 }, { y: true }]);
+        expect(() => gc3([{ x: 2 }, undefined])).toThrow('required');
+        expect(() => gc3([{ x: 2 }])).toThrow('required');
+    });
+    test('api-length', () => {
+        let g1 = Gubu(Max(2, []));
+        expect(g1([1])).toEqual([1]);
+        expect(g1(['a', true])).toEqual(['a', true]);
+        expect(() => g1([1, 2, 3])).toThrow('maximum length of 2');
+        let g2 = Gubu(Min(2, [Number]));
+        expect(g2([11, 22])).toEqual([11, 22]);
+        expect(g2([11, 22, 33])).toEqual([11, 22, 33]);
+        expect(() => g2([11])).toThrow('minimum');
+        expect(() => g2([])).toThrow('minimum');
+        let g3 = Gubu(Max(2, String));
+        expect(g3('a')).toEqual('a');
+        expect(g3('ab')).toEqual('ab');
+        expect(() => g3('abc')).toThrow('maximum');
+        let g4 = Gubu(Max(2, {}));
+        expect(g4({ a: 1 })).toEqual({ a: 1 });
+        expect(g4({ a: 1, b: 2 })).toEqual({ a: 1, b: 2 });
+        expect(() => g4({ a: 1, b: 2, c: 3 })).toThrow('maximum');
     });
     test('api-functions', () => {
         let f0 = () => true;
@@ -1174,9 +1238,39 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(() => g4vo(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.');
         expect(() => g4vo([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.');
         expect(() => g4vo([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.');
+        // NOTE: array without spec can hold anything.
+        let g6 = Gubu([]);
+        expect(g6([null, 1, 'x', true])).toEqual([null, 1, 'x', true]);
+        let g7 = Gubu([Never()]);
+        expect(g7([])).toEqual([]);
+        expect(() => g7([1])).toThrow('Validation failed for index "0" with value "1" because no value is allowed.');
+        expect(() => g7(new Array(1))).toThrow('Validation failed for index "0" with value "" because no value is allowed.');
+        let g8 = Gubu([1]);
+        expect(g8(new Array(3))).toEqual([1, 1, 1]);
+        let a0 = [11, 22, 33];
+        delete a0[1];
+        expect(g8(a0)).toEqual([11, 1, 33]);
+        let g9 = Gubu([null]);
+        expect(g9([null, null])).toEqual([null, null]);
+        let g10 = Gubu([{ x: 1 }]);
+        expect(g10([])).toEqual([]);
+        expect(g10([{ x: 11 }])).toEqual([{ x: 11 }]);
+        expect(g10([{ x: 11 }, { x: 22 }])).toEqual([{ x: 11 }, { x: 22 }]);
+        expect(g10([{ x: 11 }, { x: 22 }, { x: 33 }]))
+            .toEqual([{ x: 11 }, { x: 22 }, { x: 33 }]);
+        expect(() => g10(['q'])).toThrow(/"0".*"q".*type object/);
+        expect(() => g10([{ x: 11 }, 'q'])).toThrow(/"1".*"q".*type object/);
+        expect(() => g10([{ x: 11 }, { y: 22 }, 'q'])).toThrow(/"2".*"q".*type object/);
+        expect(() => g10([{ x: 11 }, { y: 22 }, { z: 33 }, 'q'])).toThrow(/"3".*"q".*type object/);
+        expect(() => g10(['q', { k: 99 }])).toThrow(/"0".*"q".*type object/);
+        expect(() => g10([{ x: 11 }, 'q', { k: 99 }])).toThrow(/"1".*"q".*type object/);
+        expect(() => g10([{ x: 11 }, { y: 22 }, 'q', { k: 99 }]))
+            .toThrow(/"2".*"q".*type object/);
+        expect(() => g10([{ x: 11 }, { y: 22 }, { z: 33 }, 'q', { k: 99 }]))
+            .toThrow(/"3".*"q".*type object/);
         // TODO: change norm - object Value and array Value should be the same
     });
-    test('array-fixed-elements', () => {
+    test('array-closed', () => {
         // Exact set of elements.
         let g2 = Gubu([{ x: 1 }, { y: true }]);
         expect(g2([{ x: 2 }, { y: false }])).toEqual([{ x: 2 }, { y: false }]);
@@ -1187,60 +1281,40 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(g2([{ x: 2 }, undefined])).toEqual([{ x: 2 }, { y: true }]);
         expect(g2([undefined, { y: false }])).toEqual([{ x: 1 }, { y: false }]);
         expect(g2([, { y: false }])).toEqual([{ x: 1 }, { y: false }]);
-        // TODO: test
-        // let g2r = Gubu([{ x: 1 }, Required({ y: true })])
-        let g3 = Gubu([null]);
-        expect(g3([null, null])).toEqual([null, null]);
-        // NOTE: array without spec can hold anything.
-        let g4 = Gubu([]);
-        expect(g4([null, 1, 'x', true])).toEqual([null, 1, 'x', true]);
-        expect(() => Gubu({ x: 1 })('q')).toThrow(/type object/);
-        expect(() => Gubu({ y: { x: 1 } })({ y: 'q' })).toThrow(/type object/);
-        let g5 = Gubu([{ x: 1 }]);
-        expect(g5([])).toEqual([]);
-        expect(g5([{ x: 11 }])).toEqual([{ x: 11 }]);
-        expect(g5([{ x: 11 }, { x: 22 }])).toEqual([{ x: 11 }, { x: 22 }]);
-        expect(g5([{ x: 11 }, { x: 22 }, { x: 33 }]))
-            .toEqual([{ x: 11 }, { x: 22 }, { x: 33 }]);
-        expect(() => g5(['q'])).toThrow(/"0".*"q".*type object/);
-        expect(() => g5([{ x: 11 }, 'q'])).toThrow(/"1".*"q".*type object/);
-        expect(() => g5([{ x: 11 }, { y: 22 }, 'q'])).toThrow(/"2".*"q".*type object/);
-        expect(() => g5([{ x: 11 }, { y: 22 }, { z: 33 }, 'q'])).toThrow(/"3".*"q".*type object/);
-        expect(() => g5(['q', { k: 99 }])).toThrow(/"0".*"q".*type object/);
-        expect(() => g5([{ x: 11 }, 'q', { k: 99 }])).toThrow(/"1".*"q".*type object/);
-        expect(() => g5([{ x: 11 }, { y: 22 }, 'q', { k: 99 }]))
-            .toThrow(/"2".*"q".*type object/);
-        expect(() => g5([{ x: 11 }, { y: 22 }, { z: 33 }, 'q', { k: 99 }]))
-            .toThrow(/"3".*"q".*type object/);
-        let g6 = Gubu([1]);
-        expect(g6(new Array(3))).toEqual([1, 1, 1]);
-        let a0 = [11, 22, 33];
-        delete a0[1];
-        expect(g6(a0)).toEqual([11, 1, 33]);
-        let g7 = Gubu([Never()]);
-        expect(g7([])).toEqual([]);
-        expect(() => g7([1])).toThrow('Validation failed for index "0" with value "1" because no value is allowed.');
-        expect(() => g7(new Array(1))).toThrow('Validation failed for index "0" with value "" because no value is allowed.');
-        let g8 = Gubu(Closed([Any()]));
-        expect(g8([])).toEqual([]);
-        expect(g8([1])).toEqual([1]);
-        expect(() => g8([1, 'x'])).toThrow('not allowed');
-        expect(g8(new Array(1))).toEqual([undefined]);
-        expect(() => g8(new Array(2))).toThrow('not allowed');
-        let g9 = Gubu(Closed([1]));
-        expect(g9([])).toEqual([1]);
-        expect(g9([1])).toEqual([1]);
-        expect(() => g9(['a'])).toThrow('type');
-        expect(() => g9([1, 2])).toThrow('not allowed');
-        expect(g9(new Array(1))).toEqual([1]);
-        expect(() => g9(new Array(2))).toThrow('not allowed');
-        let g10 = Gubu(Closed([Number]));
-        expect(() => g10([])).toThrow('required');
-        expect(g10([1])).toEqual([1]);
-        expect(() => g10(['a'])).toThrow('type');
-        expect(() => g10([1, 2])).toThrow('not allowed');
-        expect(() => g10(new Array(1))).toThrow('required');
-        expect(() => g10(new Array(2))).toThrow('not allowed');
+        let g3 = Gubu(Closed([Any()]));
+        expect(g3([])).toEqual([]);
+        expect(g3([1])).toEqual([1]);
+        expect(() => g3([1, 'x'])).toThrow('not allowed');
+        expect(g3(new Array(1))).toEqual([undefined]);
+        expect(() => g3(new Array(2))).toThrow('not allowed');
+        let g4 = Gubu(Closed([1]));
+        expect(g4([])).toEqual([1]);
+        expect(g4([1])).toEqual([1]);
+        expect(() => g4(['a'])).toThrow('type');
+        expect(() => g4([1, 2])).toThrow('not allowed');
+        expect(g4(new Array(1))).toEqual([1]);
+        expect(() => g4(new Array(2))).toThrow('not allowed');
+        let g5 = Gubu(Closed([Number]));
+        expect(() => g5([])).toThrow('required');
+        expect(g5([1])).toEqual([1]);
+        expect(() => g5(['a'])).toThrow('type');
+        expect(() => g5([1, 2])).toThrow('not allowed');
+        expect(() => g5(new Array(1))).toThrow('required');
+        expect(() => g5(new Array(2))).toThrow('not allowed');
+        let g6 = Gubu(Closed([Number, String, Boolean]));
+        expect(g6([1, 'a', true])).toEqual([1, 'a', true]);
+        expect(g6([0, 'b', false])).toEqual([0, 'b', false]);
+        expect(() => g6([0, 'b', false, 1])).toThrow('not allowed');
+        expect(() => g6(['a'])).toThrow('type');
+        expect(() => g6([1, 2])).toThrow('required');
+        expect(() => g6(new Array(0))).toThrow('required');
+        expect(() => g6(new Array(1))).toThrow('required');
+        expect(() => g6(new Array(2))).toThrow('required');
+        expect(() => g6(new Array(3))).toThrow('required');
+        expect(() => g6(new Array(4))).toThrow('not allowed');
+        let g7 = Gubu(Closed([1, 'a']));
+        expect(g7([])).toEqual([1, 'a']);
+        expect(g7([, 'b'])).toEqual([1, 'b']);
     });
     test('object-properties', () => {
         // NOTE: unclosed object without props can hold anything
