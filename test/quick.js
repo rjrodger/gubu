@@ -23,6 +23,7 @@ const {
   Below,
   Any,
   Check,
+  Open,
 } = require('../gubu')
 
 
@@ -612,6 +613,23 @@ let tmp = {}
 // console.log(Gubu(Check('number'))())
 
 
-let a = {}
-let b = Gubu({x:1})(a)
-console.log('a',a,'b',b)
+console.log(Gubu({a:1})({a:1}))
+// console.log(Gubu({a:1})({a:1,b:2}))
+// console.log(Gubu({a:1})({a:1,b:2,c:3}))
+
+
+console.log(Gubu({x:{a:1},y:1})({x:{a:1},y:1}))
+// console.log(Gubu({x:{a:1},y:1})({x:{a:1,b:2},y:1}))
+// console.log(Gubu({x:{a:1},y:1})({x:{a:1},y:1,z:2}))
+console.log(Gubu({x:{a:1},y:1})({x:{a:1,b:3},y:1,z:2}))
+
+
+console.log(Gubu(Open({a:1}))({a:1}))
+console.log(Gubu(Open({a:1}))({a:1,b:2}))
+console.log(Gubu(Open({a:1}))({a:1,b:2,c:3}))
+
+console.log(Gubu(Value(Number,{a:1}))({a:1}))
+console.log(Gubu(Value(Number,{a:1}))({a:1,b:2}))
+console.log(Gubu(Value(Number,{a:1}))({a:1,b:2,c:3}))
+console.log(Gubu(Value(Number,{a:1}))({a:1,b:2,c:3,d:true}))
+

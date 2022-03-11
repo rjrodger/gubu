@@ -1,7 +1,8 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GOpen = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Open = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GValue = void 0;
 // CRITICAL: Object CLOSED by default, Provide Open builder, Keep Closed for arrays
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
@@ -192,6 +193,9 @@ function nodize(shape, depth) {
             u.n = v.constructor.name;
             u.i = v.constructor;
         }
+        else {
+            c = GUBU$NIL;
+        }
     }
     else if ('function' === t) {
         if (IS_TYPE[shape.name]) {
@@ -289,8 +293,10 @@ function make(intop, inopts) {
                     }
                     val = null == val && false === s.ctx.err ? {} : val;
                     if (null != val) {
+                        let hasKeys = false;
                         let vkeys = Object.keys(n.v);
                         if (0 < vkeys.length) {
+                            hasKeys = true;
                             s.pI = s.nI;
                             for (let k of vkeys) {
                                 let nvs = n.v[k] = nodize(n.v[k], 1 + s.dI);
@@ -300,6 +306,27 @@ function make(intop, inopts) {
                                 s.keys[s.nI] = k;
                                 s.nI++;
                             }
+                        }
+                        let okeys = Object.keys(val);
+                        if (vkeys.length < okeys.length) {
+                            let extra = okeys.filter(k => undefined === n.v[k]);
+                            if (GUBU$NIL === n.c) {
+                                s.ignoreVal = true;
+                                s.err.push(makeErrImpl('closed', s, 1100, undefined, { k: extra }));
+                            }
+                            else {
+                                hasKeys = true;
+                                for (let k of extra) {
+                                    let nvs = n.c = nodize(n.c, 1 + s.dI);
+                                    s.nodes[s.nI] = nvs;
+                                    s.vals[s.nI] = val[k];
+                                    s.parents[s.nI] = val;
+                                    s.keys[s.nI] = k;
+                                    s.nI++;
+                                }
+                            }
+                        }
+                        if (hasKeys) {
                             s.dI++;
                             s.nodes[s.nI++] = s.sI;
                             s.nextSibling = false;
@@ -711,6 +738,12 @@ const Check = function (check, shape) {
     return node;
 };
 exports.Check = Check;
+const Open = function (shape) {
+    let node = buildize(this, shape);
+    node.c = Any();
+    return node;
+};
+exports.Open = Open;
 const Closed = function (shape) {
     let node = buildize(this, shape);
     // Makes one element array fixed.
@@ -718,20 +751,30 @@ const Closed = function (shape) {
         node.v = [node.c];
         node.c = GUBU$NIL;
     }
-    node.b.push(function Closed(val, update, s) {
+    else {
+        node.c = GUBU$NIL;
+    }
+    /*
+      node.b.push(function Closed(val: any, update: Update, s: State) {
         if (null != val && 'object' === typeof (val) && !Array.isArray(val)) {
-            let vkeys = Object.keys(val);
-            let allowed = node.v;
-            update.err = [];
-            for (let k of vkeys) {
-                if (undefined === allowed[k]) {
-                    update.err.push(makeErrImpl('closed', s, 3010, '', { k }));
-                }
+          let vkeys = Object.keys(val)
+          let allowed = node.v
+    
+          update.err = []
+          for (let k of vkeys) {
+            if (undefined === allowed[k]) {
+              update.err.push(
+                makeErrImpl('closed', s, 3010, '', { k })
+              )
             }
-            return 0 === update.err.length;
+          }
+    
+          return 0 === update.err.length
         }
-        return true;
-    });
+    
+        return true
+      })
+    */
     return node;
 };
 exports.Closed = Closed;
@@ -939,40 +982,49 @@ const Value = function (value, shape) {
     let child = nodize(value);
     // Set child value to shape
     node.c = child;
-    node.a.push(function Value(val, _update, s) {
-        if (null != val) {
-            let namedKeys = Object.keys(s.node.v);
-            let valKeys = Object.keys(val)
-                .reduce((a, k) => ((namedKeys.includes(k) || a.push(k)), a), []);
-            if (0 < valKeys.length) {
-                let endI = s.nI + valKeys.length - 1;
-                let nI = s.nI;
-                if (0 < namedKeys.length) {
-                    nI--;
-                    s.nodes[endI] = s.nodes[nI];
-                    s.vals[endI] = s.vals[nI];
-                    s.parents[endI] = s.parents[nI];
-                    s.keys[endI] = s.keys[nI];
-                }
-                else {
-                    endI++;
-                    s.nodes[endI] = s.sI;
-                    s.pI = nI;
-                }
-                for (let k of valKeys) {
-                    s.nodes[nI] = nodize(child, 1 + s.dI);
-                    s.vals[nI] = val[k];
-                    s.parents[nI] = val;
-                    s.keys[nI] = k;
-                    nI++;
-                }
-                s.nI = endI + 1;
-                s.nextSibling = false;
-                s.dI++;
-            }
+    /*
+    node.a.push(function Value(val: any, _update: Update, s: State) {
+      if (null != val) {
+  
+        let namedKeys = Object.keys(s.node.v)
+        let valKeys = Object.keys(val)
+          .reduce((a: string[], k: string) =>
+            ((namedKeys.includes(k) || a.push(k)), a), [])
+  
+        if (0 < valKeys.length) {
+          let endI = s.nI + valKeys.length - 1
+  
+          let nI = s.nI
+  
+          if (0 < namedKeys.length) {
+            nI--
+            s.nodes[endI] = s.nodes[nI]
+            s.vals[endI] = s.vals[nI]
+            s.parents[endI] = s.parents[nI]
+            s.keys[endI] = s.keys[nI]
+          }
+          else {
+            endI++
+            s.nodes[endI] = s.sI
+            s.pI = nI
+          }
+  
+          for (let k of valKeys) {
+            s.nodes[nI] = nodize(child, 1 + s.dI)
+            s.vals[nI] = val[k]
+            s.parents[nI] = val
+            s.keys[nI] = k
+            nI++
+          }
+  
+          s.nI = endI + 1
+          s.nextSibling = false
+          s.dI++
         }
-        return true;
-    });
+      }
+      return true
+    })
+    */
     return node;
 };
 exports.Value = Value;
@@ -987,6 +1039,7 @@ function buildize(node0, node1) {
         Below,
         Check,
         Closed,
+        Open,
         Define,
         Empty,
         Exact,
@@ -1026,6 +1079,13 @@ function makeErrImpl(why, s, mark, text, user, fname) {
             valstr.startsWith('{') ? 'object' : 'value';
         let propkind = (valstr.startsWith('[') || Array.isArray(s.parents[s.pI])) ?
             'index' : 'property';
+        let propkindverb = 'is';
+        let propkey = user === null || user === void 0 ? void 0 : user.k;
+        propkey = Array.isArray(propkey) ?
+            (propkind = (1 < propkey.length ?
+                (propkindverb = 'are', 'properties') : propkind),
+                propkey.join(', ')) :
+            propkey;
         err.t = `Validation failed for ` +
             (0 < err.p.length ? `${propkind} "${err.p}" with ` : '') +
             `${valkind} "${valstr}" because ` +
@@ -1034,10 +1094,10 @@ function makeErrImpl(why, s, mark, text, user, fname) {
                 `the ${valkind} is not of type ${s.node.t}`) :
                 'required' === why ? ('' === s.val ? 'an empty string is not allowed' :
                     `the ${valkind} is required`) :
-                    'closed' === why ? `the ${propkind} "${user === null || user === void 0 ? void 0 : user.k}" is not allowed` :
+                    'closed' === why ?
+                        `the ${propkind} "${propkey}" ${propkindverb} not allowed` :
                         'never' === why ? 'no value is allowed' :
                             `check "${null == fname ? why : fname}" failed`) +
-            // `check "${why + (fname ? ': ' + fname : '')}" failed`) +
             (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.');
     }
     else {
@@ -1114,6 +1174,7 @@ if ('undefined' !== typeof (window)) {
         { b: Below, n: 'Below' },
         { b: Check, n: 'Check' },
         { b: Closed, n: 'Closed' },
+        { b: Open, n: 'Open' },
         { b: Define, n: 'Define' },
         { b: Empty, n: 'Empty' },
         { b: Exact, n: 'Exact' },
@@ -1141,6 +1202,7 @@ Object.assign(make, {
     Below,
     Check,
     Closed,
+    Open,
     Define,
     Empty,
     Exact,
@@ -1162,6 +1224,7 @@ Object.assign(make, {
     GBelow: Below,
     GCheck: Check,
     GClosed: Closed,
+    GOpen: Open,
     GDefine: Define,
     GEmpty: Empty,
     GExact: Exact,
@@ -1202,6 +1265,8 @@ const GCheck = Check;
 exports.GCheck = GCheck;
 const GClosed = Closed;
 exports.GClosed = GClosed;
+const GOpen = Open;
+exports.GOpen = GOpen;
 const GDefine = Define;
 exports.GDefine = GDefine;
 const GEmpty = Empty;

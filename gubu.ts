@@ -391,6 +391,9 @@ function nodize(shape?: any, depth?: number): Node {
       u.n = v.constructor.name
       u.i = v.constructor
     }
+    else {
+      c = GUBU$NIL
+    }
   }
 
   else if ('function' === t) {
@@ -506,7 +509,6 @@ function make<S>(intop?: S, inopts?: Options) {
             s.err.push(makeErrImpl('type', s, 1020))
             val = Array.isArray(s.val) ? s.val : {}
           }
-
           else if (!n.p || null != s.val) {
             s.updateVal(s.val || (s.fromDefault = true, {}))
             val = s.val
@@ -515,8 +517,10 @@ function make<S>(intop?: S, inopts?: Options) {
           val = null == val && false === s.ctx.err ? {} : val
 
           if (null != val) {
+            let hasKeys = false
             let vkeys = Object.keys(n.v)
             if (0 < vkeys.length) {
+              hasKeys = true
               s.pI = s.nI
               for (let k of vkeys) {
                 let nvs = n.v[k] = nodize(n.v[k], 1 + s.dI)
@@ -526,10 +530,33 @@ function make<S>(intop?: S, inopts?: Options) {
                 s.keys[s.nI] = k
                 s.nI++
               }
+            }
 
+            let okeys = Object.keys(val)
+            if (vkeys.length < okeys.length) {
+              let extra = okeys.filter(k => undefined === n.v[k])
+
+              if (GUBU$NIL === n.c) {
+                s.ignoreVal = true
+                s.err.push(makeErrImpl(
+                  'closed', s, 1100, undefined, { k: extra }))
+              }
+              else {
+                hasKeys = true
+                for (let k of extra) {
+                  let nvs = n.c = nodize(n.c, 1 + s.dI)
+                  s.nodes[s.nI] = nvs
+                  s.vals[s.nI] = val[k]
+                  s.parents[s.nI] = val
+                  s.keys[s.nI] = k
+                  s.nI++
+                }
+              }
+            }
+
+            if (hasKeys) {
               s.dI++
               s.nodes[s.nI++] = s.sI
-
               s.nextSibling = false
             }
           }
@@ -1051,6 +1078,12 @@ const Check: Builder = function(this: Node, check: any, shape?: any) {
 }
 
 
+const Open: Builder = function(this: Node, shape?: any) {
+  let node = buildize(this, shape)
+  node.c = Any()
+  return node
+}
+
 
 const Closed: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
@@ -1060,27 +1093,31 @@ const Closed: Builder = function(this: Node, shape?: any) {
     node.v = [node.c]
     node.c = GUBU$NIL
   }
+  else {
+    node.c = GUBU$NIL
+  }
 
-
-  node.b.push(function Closed(val: any, update: Update, s: State) {
-    if (null != val && 'object' === typeof (val) && !Array.isArray(val)) {
-      let vkeys = Object.keys(val)
-      let allowed = node.v
-
-      update.err = []
-      for (let k of vkeys) {
-        if (undefined === allowed[k]) {
-          update.err.push(
-            makeErrImpl('closed', s, 3010, '', { k })
-          )
+  /*
+    node.b.push(function Closed(val: any, update: Update, s: State) {
+      if (null != val && 'object' === typeof (val) && !Array.isArray(val)) {
+        let vkeys = Object.keys(val)
+        let allowed = node.v
+  
+        update.err = []
+        for (let k of vkeys) {
+          if (undefined === allowed[k]) {
+            update.err.push(
+              makeErrImpl('closed', s, 3010, '', { k })
+            )
+          }
         }
+  
+        return 0 === update.err.length
       }
-
-      return 0 === update.err.length
-    }
-
-    return true
-  })
+  
+      return true
+    })
+  */
 
   return node
 }
@@ -1373,6 +1410,7 @@ const Value: Builder = function(
   // Set child value to shape
   node.c = child
 
+  /*
   node.a.push(function Value(val: any, _update: Update, s: State) {
     if (null != val) {
 
@@ -1414,6 +1452,7 @@ const Value: Builder = function(
     }
     return true
   })
+  */
 
   return node
 }
@@ -1432,6 +1471,7 @@ function buildize(node0?: any, node1?: any): Node {
     Below,
     Check,
     Closed,
+    Open,
     Define,
     Empty,
     Exact,
@@ -1487,6 +1527,14 @@ function makeErrImpl(
       valstr.startsWith('{') ? 'object' : 'value'
     let propkind = (valstr.startsWith('[') || Array.isArray(s.parents[s.pI])) ?
       'index' : 'property'
+    let propkindverb = 'is'
+    let propkey = user?.k
+
+    propkey = Array.isArray(propkey) ?
+      (propkind = (1 < propkey.length ?
+        (propkindverb = 'are', 'properties') : propkind),
+        propkey.join(', ')) :
+      propkey
 
     err.t = `Validation failed for ` +
       (0 < err.p.length ? `${propkind} "${err.p}" with ` : '') +
@@ -1498,10 +1546,10 @@ function makeErrImpl(
           `the ${valkind} is not of type ${s.node.t}`) :
         'required' === why ? ('' === s.val ? 'an empty string is not allowed' :
           `the ${valkind} is required`) :
-          'closed' === why ? `the ${propkind} "${user?.k}" is not allowed` :
+          'closed' === why ?
+            `the ${propkind} "${propkey}" ${propkindverb} not allowed` :
             'never' === why ? 'no value is allowed' :
               `check "${null == fname ? why : fname}" failed`) +
-      // `check "${why + (fname ? ': ' + fname : '')}" failed`) +
       (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.')
   }
   else {
@@ -1604,6 +1652,7 @@ if ('undefined' !== typeof (window)) {
     { b: Below, n: 'Below' },
     { b: Check, n: 'Check' },
     { b: Closed, n: 'Closed' },
+    { b: Open, n: 'Open' },
     { b: Define, n: 'Define' },
     { b: Empty, n: 'Empty' },
     { b: Exact, n: 'Exact' },
@@ -1633,6 +1682,7 @@ Object.assign(make, {
   Below,
   Check,
   Closed,
+  Open,
   Define,
   Empty,
   Exact,
@@ -1655,6 +1705,7 @@ Object.assign(make, {
   GBelow: Below,
   GCheck: Check,
   GClosed: Closed,
+  GOpen: Open,
   GDefine: Define,
   GEmpty: Empty,
   GExact: Exact,
@@ -1692,6 +1743,7 @@ type Gubu = typeof make & {
   Below: typeof Below
   Check: typeof Check
   Closed: typeof Closed
+  Open: typeof Open
   Define: typeof Define
   Empty: typeof Empty
   Exact: typeof Exact
@@ -1714,6 +1766,7 @@ type Gubu = typeof make & {
   GBelow: typeof Below
   GCheck: typeof Check
   GClosed: typeof Closed
+  GOpen: typeof Open
   GDefine: typeof Define
   GEmpty: typeof Empty
   GExact: typeof Exact
@@ -1745,6 +1798,7 @@ const GBefore = Before
 const GBelow = Below
 const GCheck = Check
 const GClosed = Closed
+const GOpen = Open
 const GDefine = Define
 const GEmpty = Empty
 const GExact = Exact
@@ -1787,6 +1841,7 @@ export {
   Below,
   Check,
   Closed,
+  Open,
   Define,
   Empty,
   Exact,
@@ -1809,6 +1864,7 @@ export {
   GBelow,
   GCheck,
   GClosed,
+  GOpen,
   GDefine,
   GEmpty,
   GExact,
