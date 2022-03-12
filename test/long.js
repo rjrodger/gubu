@@ -207,7 +207,6 @@ module.exports = {
   },
 
   m1: [
-    // String,
     { a00: [Number], b00: [Number], },
     { a01: [Number], b01: [Number], },
     { a02: [Number], b02: [Number], },
@@ -238,7 +237,7 @@ module.exports = {
     { a27: [Number], b27: [Number], },
     { a28: [Number], b28: [Number], },
     { a29: [Number], b29: [Number], },
-    { a20: [Number], b20: [Number], },
+    { a30: [Number], b30: [Number], },
     { a31: [Number], b31: [Number], },
     { a32: [Number], b32: [Number], },
     { a33: [Number], b33: [Number], },
@@ -351,7 +350,7 @@ module.exports = {
     { a37: [37], b37: [37], },
     { a38: [38], b38: [38], },
     { a39: [39], b39: [39], },
-    { a30: [30], b30: [30], },
+    { a40: [40], b40: [40], },
     { a41: [41], b41: [41], },
     { a42: [42], b42: [42], },
     { a43: [43], b43: [43], },
@@ -411,7 +410,6 @@ module.exports = {
     { a97: [97], b97: [97], },
     { a98: [98], b98: [98], },
     { a99: [99], b99: [99], },
-    // 'x',
   ],
   
 }

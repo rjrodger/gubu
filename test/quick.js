@@ -3,6 +3,7 @@ const {
   Gubu,
   Args,
   G$,
+  nodize,
   stringify,
   One,
   Some,
@@ -613,23 +614,68 @@ let tmp = {}
 // console.log(Gubu(Check('number'))())
 
 
-console.log(Gubu({a:1})({a:1}))
-// console.log(Gubu({a:1})({a:1,b:2}))
-// console.log(Gubu({a:1})({a:1,b:2,c:3}))
+// console.log(Gubu({a:1})({a:1}))
+// // console.log(Gubu({a:1})({a:1,b:2}))
+// // console.log(Gubu({a:1})({a:1,b:2,c:3}))
 
 
-console.log(Gubu({x:{a:1},y:1})({x:{a:1},y:1}))
-// console.log(Gubu({x:{a:1},y:1})({x:{a:1,b:2},y:1}))
-// console.log(Gubu({x:{a:1},y:1})({x:{a:1},y:1,z:2}))
-console.log(Gubu({x:{a:1},y:1})({x:{a:1,b:3},y:1,z:2}))
+// console.log(Gubu({x:{a:1},y:1})({x:{a:1},y:1}))
+// // console.log(Gubu({x:{a:1},y:1})({x:{a:1,b:2},y:1}))
+// // console.log(Gubu({x:{a:1},y:1})({x:{a:1},y:1,z:2}))
+// console.log(Gubu({x:{a:1},y:1})({x:{a:1,b:3},y:1,z:2}))
 
 
-console.log(Gubu(Open({a:1}))({a:1}))
-console.log(Gubu(Open({a:1}))({a:1,b:2}))
-console.log(Gubu(Open({a:1}))({a:1,b:2,c:3}))
+// console.log(Gubu(Open({a:1}))({a:1}))
+// console.log(Gubu(Open({a:1}))({a:1,b:2}))
+// console.log(Gubu(Open({a:1}))({a:1,b:2,c:3}))
 
-console.log(Gubu(Value(Number,{a:1}))({a:1}))
-console.log(Gubu(Value(Number,{a:1}))({a:1,b:2}))
-console.log(Gubu(Value(Number,{a:1}))({a:1,b:2,c:3}))
-console.log(Gubu(Value(Number,{a:1}))({a:1,b:2,c:3,d:true}))
+// console.log(Gubu(Value(Number,{a:1}))({a:1}))
+// console.log(Gubu(Value(Number,{a:1}))({a:1,b:2}))
+// console.log(Gubu(Value(Number,{a:1}))({a:1,b:2,c:3}))
+// console.log(Gubu(Value(Number,{a:1}))({a:1,b:2,c:3,d:true}))
 
+
+// console.log(Gubu({}))
+// console.log(Gubu({k:{}})({x:99,y:88}))
+// console.log(Gubu({k:{}})({y:88}))
+
+
+// let g = Gubu({x:1,y:{z:2}})
+// console.log(g)
+// console.log(g.toString())
+// g()
+// console.log(g)
+// console.log(g.toString())
+
+// let n0 = nodize(Check(x=>true))
+// console.log(n0)
+// console.log(stringify(n0))
+
+// let n1 = nodize({a:Check(x=>true)})
+// console.log(n1)
+// console.log(stringify(n1))
+
+// let n1 = nodize({x:nodize(22)})
+// console.log(n1)
+// console.log(stringify(n1))
+
+// let n2 = nodize({x:nodize({y:nodize(33)})})
+// console.log(n2)
+// console.log(stringify(n2))
+
+// let n3 = nodize({x:nodize({y:nodize({z:nodize(44)})})})
+// console.log(n3)
+// console.log(stringify(n3))
+
+// let n0 = nodize(Required())
+// console.log(n0)
+// console.log(stringify(n0))
+// // console.log(Gubu({a:Required()})())
+
+// let n1 = nodize({a:Required()})
+// console.log(n1)
+// console.log(stringify(n1))
+
+
+
+console.dir(Gubu(Skip(Required(1))).spec())

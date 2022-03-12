@@ -1655,7 +1655,7 @@ shape(9)  // FAIL: 9 is a number, but 9 < 10
 shape()   // FAIL: a value is required (implicitly)
 
 shape = Gubu({ a: Skip(All({ b: String }, Min(2))) })
-shape({ a: { b: 'X', c: 1 } }) // PASS: returns same object
+shape({ a: { b: 'X' } }) // PASS: returns same object
 shape({}) // PASS: `a` is optional, returns {}
 ```
 

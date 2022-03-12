@@ -13,6 +13,7 @@ exports.GValue = void 0;
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
 // TODO: Error messages should state property is missing, not `value ""`
+// TODO: node.s can be a lazy function to avoid unnecessary string building
 const util_1 = require("util");
 // Package version.
 const VERSION = '1.0.0';
@@ -178,6 +179,7 @@ function nodize(shape, depth) {
     let b = undefined;
     let u = {};
     if ('object' === t) {
+        // TODO: use v here (not shape) to be consistent
         if (Array.isArray(shape)) {
             t = 'array';
             if (1 === shape.length) {
@@ -194,7 +196,11 @@ function nodize(shape, depth) {
             u.i = v.constructor;
         }
         else {
-            c = GUBU$NIL;
+            // c = GUBU$NIL
+            // Empty object "{}" is considered Open
+            if (0 === Object.keys(v).length) {
+                c = Any();
+            }
         }
     }
     else if ('function' === t) {
@@ -202,6 +208,10 @@ function nodize(shape, depth) {
             t = shape.name.toLowerCase();
             r = true;
             v = clone(EMPTY_VAL[t]);
+            // Required "Object" is considered Open
+            if ('Object' === shape.name) {
+                c = Any();
+            }
         }
         else if (shape.gubu === GUBU || true === ((_b = shape.$) === null || _b === void 0 ? void 0 : _b.gubu)) {
             let gs = shape.spec ? shape.spec() : shape;
@@ -295,9 +305,11 @@ function make(intop, inopts) {
                     if (null != val) {
                         let hasKeys = false;
                         let vkeys = Object.keys(n.v);
+                        let start = s.nI;
+                        // console.log('OBJ vkeys', vkeys)
                         if (0 < vkeys.length) {
                             hasKeys = true;
-                            s.pI = s.nI;
+                            s.pI = start;
                             for (let k of vkeys) {
                                 let nvs = n.v[k] = nodize(n.v[k], 1 + s.dI);
                                 s.nodes[s.nI] = nvs;
@@ -307,15 +319,19 @@ function make(intop, inopts) {
                                 s.nI++;
                             }
                         }
-                        let okeys = Object.keys(val);
-                        if (vkeys.length < okeys.length) {
-                            let extra = okeys.filter(k => undefined === n.v[k]);
+                        // let okeys = Object.keys(val)
+                        // console.log('OBJ okeys', okeys)
+                        let extra = Object.keys(val).filter(k => undefined === n.v[k]);
+                        // console.log('OBJ extra', extra)
+                        if (0 < extra.length) {
+                            // let extra = okeys.filter(k => undefined === n.v[k])
                             if (GUBU$NIL === n.c) {
                                 s.ignoreVal = true;
                                 s.err.push(makeErrImpl('closed', s, 1100, undefined, { k: extra }));
                             }
                             else {
                                 hasKeys = true;
+                                s.pI = start;
                                 for (let k of extra) {
                                     let nvs = n.c = nodize(n.c, 1 + s.dI);
                                     s.nodes[s.nI] = nvs;
@@ -331,6 +347,9 @@ function make(intop, inopts) {
                             s.nodes[s.nI++] = s.sI;
                             s.nextSibling = false;
                         }
+                        // console.log('OBJ hasKeys', hasKeys)
+                        // console.log(s)
+                        // process.exit()
                     }
                 }
                 else if ('array' === s.type) {
@@ -467,6 +486,7 @@ function make(intop, inopts) {
         return exec(root, ctx, true);
     };
     gubuShape.spec = () => {
+        // TODO: when c is GUBU$NIL it is not present, should have some indicator value
         // Normalize spec, discard errors.
         gubuShape(undefined, { err: false });
         return JSON.parse(stringify(top, (_key, val) => {
@@ -483,7 +503,6 @@ function make(intop, inopts) {
                 top.$ &&
                 (GUBU$ === top.$.gubu$ || true === top.$.gubu$)) ? top.v : top) :
             desc);
-        // desc = desc.substring(0, 33) + (33 < desc.length ? '...' : '')
         return `[Gubu ${opts.name} ${desc}]`;
     };
     if (util_1.inspect && util_1.inspect.custom) {
@@ -613,6 +632,7 @@ const All = function (...inshapes) {
             }
         }
         if (!pass) {
+            // console.log('ALL', inshapes)
             update.why = 'all';
             update.err = [
                 makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy all of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
@@ -927,6 +947,7 @@ const Min = function (min, shape) {
             makeErr(state, `Value "$VALUE" for property "$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
         return false;
     });
+    node.s = 'Min(' + min + (null == shape ? '' : (',' + stringify(shape))) + ')';
     return node;
 };
 exports.Min = Min;
@@ -942,6 +963,7 @@ const Max = function (max, shape) {
             makeErr(state, `Value "$VALUE" for property "$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`);
         return false;
     });
+    node.s = 'Max(' + max + (null == shape ? '' : (',' + stringify(shape))) + ')';
     return node;
 };
 exports.Max = Max;
@@ -957,6 +979,7 @@ const Above = function (above, shape) {
             makeErr(state, `Value "$VALUE" for property "$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`);
         return false;
     });
+    node.s = 'Above(' + above + (null == shape ? '' : (',' + stringify(shape))) + ')';
     return node;
 };
 exports.Above = Above;
@@ -972,6 +995,7 @@ const Below = function (below, shape) {
             makeErr(state, `Value "$VALUE" for property "$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`);
         return false;
     });
+    node.s = 'Below(' + below + (null == shape ? '' : (',' + stringify(shape))) + ')';
     return node;
 };
 exports.Below = Below;
@@ -1109,6 +1133,10 @@ function makeErrImpl(why, s, mark, text, user, fname) {
 }
 function stringify(src, replacer, dequote, expand) {
     let str;
+    if (src && src.$ && (GUBU$ === src.$.gubu$ || true === src.$.gubu$)) {
+        src = (null != src.s && '' !== src.s) ? src.s :
+            undefined === src.v ? src.t : src.v;
+    }
     try {
         str = JSON.stringify(src, (key, val) => {
             var _a, _b;
@@ -1142,7 +1170,8 @@ function stringify(src, replacer, dequote, expand) {
             }
             else if (true !== expand &&
                 (true === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$) || GUBU$ === ((_b = val === null || val === void 0 ? void 0 : val.$) === null || _b === void 0 ? void 0 : _b.gubu$))) {
-                val = (null == val.s || '' === val.s) ? val.t : val.s;
+                val = (null != val.s && '' !== val.s) ? val.s :
+                    (undefined !== val.v ? val.v : val.t);
             }
             return val;
         });

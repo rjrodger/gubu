@@ -101,23 +101,25 @@ describe('gubu', () => {
     expect(g0({ a: 'bar' })).toEqual({ a: 'bar', b: 100 })
     expect(g0({ b: 999 })).toEqual({ a: 'foo', b: 999 })
     expect(g0({ a: 'bar', b: 999 })).toEqual({ a: 'bar', b: 999 })
-    expect(g0({ a: 'bar', b: 999, c: true })).toEqual({ a: 'bar', b: 999, c: true })
+    expect(() => g0({ a: 'bar', b: 999, c: true })).toThrow('not allowed')
   })
 
 
   test('valid-basic', () => {
     let g0 = Gubu({ x: 1, y: 'Y' })
-    let d0 = { x: 2, z: true }
+    // let d0 = { x: 2, z: true }
+    let d0 = { x: 2 }
 
     if (g0.valid(d0)) {
-      expect(d0).toEqual({ x: 2, y: 'Y', z: true })
+      // expect(d0).toEqual({ x: 2, y: 'Y', z: true })
+      expect(d0).toEqual({ x: 2, y: 'Y' })
       expect(d0.x).toEqual(2)
       expect(d0.y).toEqual('Y')
-      expect(d0.z).toEqual(true)
+      // expect(d0.z).toEqual(true)
     }
 
 
-    let g0d = Gubu({ x: 1, y: 'Y' })
+    let g0d = Gubu(Open({ x: 1, y: 'Y' }))
     let d0d = { x: 2, z: true }
     let d0do = g0d(d0d)
     expect(d0do).toEqual({ x: 2, y: 'Y', z: true })
@@ -126,7 +128,7 @@ describe('gubu', () => {
     expect(d0do.z).toEqual(true)
 
 
-    let g1 = Gubu({ x: Number, y: 'Y' })
+    let g1 = Gubu(Open({ x: Number, y: 'Y' }))
     let d1 = { x: 2, z: true }
 
     if (g1.valid(d1)) {
@@ -137,7 +139,7 @@ describe('gubu', () => {
     }
 
 
-    let g2 = Gubu({ x: { k: 1 }, y: 'Y' })
+    let g2 = Gubu(Open({ x: { k: 1 }, y: 'Y' }))
     let d2 = { x: { k: 2 }, z: true }
 
     if (g2.valid(d2)) {
@@ -149,15 +151,17 @@ describe('gubu', () => {
 
 
     let g3 = Gubu({ ...new Foo(1) })
-    let d3 = { a: 11, x: true }
+    // let d3 = { a: 11, x: true }
+    let d3 = { a: 11 }
     if (g3.valid(d3)) {
-      expect(d3).toEqual({ a: 11, x: true })
+      // expect(d3).toEqual({ a: 11, x: true })
+      expect(d3).toEqual({ a: 11 })
       expect(d3.a).toEqual(11)
-      expect(d3.x).toEqual(true)
+      // expect(d3.x).toEqual(true)
     }
 
 
-    let g4 = Gubu({ x: (Closed({ k: 1 }) as unknown as { k: number }), y: 'Y' })
+    let g4 = Gubu(Open({ x: (Closed({ k: 1 }) as unknown as { k: number }), y: 'Y' }))
     let d4 = { z: true }
 
     if (g4.valid(d4)) {
@@ -368,7 +372,7 @@ describe('gubu', () => {
   })
 
   test('object-optional-basic', () => {
-    let g0 = Gubu({ x: 1 })
+    let g0 = Gubu(Open({ x: 1 }))
     expect(g0({ x: 2, y: true, z: 's' })).toEqual({ x: 2, y: true, z: 's' })
     expect(g0({ x: 2 })).toEqual({ x: 2 })
     expect(g0({})).toEqual({ x: 1 })
@@ -377,7 +381,8 @@ describe('gubu', () => {
     expect(() => g0({ x: 't' })).toThrow('Validation failed for property "x" with value "t" because the value is not of type number.')
   })
 
-  test('array-optional-basic', () => {
+
+  test('array-basic-optional', () => {
     let g0 = Gubu([1])
     expect(g0([11, 22, 33])).toEqual([11, 22, 33])
     expect(g0([11, 22])).toEqual([11, 22])
@@ -390,9 +395,49 @@ describe('gubu', () => {
     expect(() => g0(['t', 33])).toThrow('Validation failed for index "0" with value "t" because the value is not of type number.')
     expect(() => g0([11, 't'])).toThrow('Validation failed for index "1" with value "t" because the value is not of type number.')
     expect(() => g0([11, 22, 't'])).toThrow('Validation failed for index "2" with value "t" because the value is not of type number.')
+
+    let g1 = Gubu([])
+    expect(g1([11, 22, 33])).toEqual([11, 22, 33])
+    expect(g1([11, 22])).toEqual([11, 22])
+    expect(g1([11])).toEqual([11])
+    expect(g1([])).toEqual([])
+    expect(g1()).toEqual([])
+    expect(() => g1('s')).toThrow('Validation failed for value "s" because the value is not of type array.')
+    expect(g1(['t'])).toEqual(['t'])
+    expect(g1(['t', 22])).toEqual(['t', 22])
+    expect(g1(['t', 33])).toEqual(['t', 33])
+    expect(g1([11, 't'])).toEqual([11, 't'])
+    expect(g1([11, 22, 't'])).toEqual([11, 22, 't'])
   })
 
 
+  test('array-basic-required', () => {
+    let g1 = Gubu(Array)
+    expect(g1([11, 22, 33])).toEqual([11, 22, 33])
+    expect(g1([11, 22])).toEqual([11, 22])
+    expect(g1([11])).toEqual([11])
+    expect(g1([])).toEqual([])
+    expect(() => g1()).toThrow('required')
+    expect(() => g1('s')).toThrow('Validation failed for value "s" because the value is not of type array.')
+    expect(g1(['t'])).toEqual(['t'])
+    expect(g1(['t', 22])).toEqual(['t', 22])
+    expect(g1(['t', 33])).toEqual(['t', 33])
+    expect(g1([11, 't'])).toEqual([11, 't'])
+    expect(g1([11, 22, 't'])).toEqual([11, 22, 't'])
+
+    let g2 = Gubu(Required([]))
+    expect(g2([11, 22, 33])).toEqual([11, 22, 33])
+    expect(g2([11, 22])).toEqual([11, 22])
+    expect(g2([11])).toEqual([11])
+    expect(g2([])).toEqual([])
+    expect(() => g2()).toThrow('required')
+    expect(() => g2('s')).toThrow('Validation failed for value "s" because the value is not of type array.')
+    expect(g2(['t'])).toEqual(['t'])
+    expect(g2(['t', 22])).toEqual(['t', 22])
+    expect(g2(['t', 33])).toEqual(['t', 33])
+    expect(g2([11, 't'])).toEqual([11, 't'])
+    expect(g2([11, 22, 't'])).toEqual([11, 22, 't'])
+  })
 
   test('spec-revert-skip-required', () => {
     let or = Gubu(Skip(Required(1)))
@@ -835,6 +880,22 @@ Validation failed for property "q.b" with value "x" because the value is not of 
       .toEqual({ x: 11, y: 22, z: 33, k: 44 })
     expect(() => g3v({ x: 11, y: 22, z: 33, k: true })).toThrow('Validation failed for property "k" with value "true" because the value is not of type number.')
 
+
+    // Empty object is Open
+    let g4 = Gubu({})
+    expect(g4()).toEqual({})
+    expect(g4({})).toEqual({})
+    expect(g4({ x: 1 })).toEqual({ x: 1 })
+    expect(g4({ x: 1, y: 'a' })).toEqual({ x: 1, y: 'a' })
+
+    let g5 = Gubu({ k: {} })
+    expect(g5()).toEqual({ k: {} })
+    expect(g5({})).toEqual({ k: {} })
+    expect(g5({ k: {} })).toEqual({ k: {} })
+    expect(g5({ k: { n: true } })).toEqual({ k: { n: true } })
+    expect(g5({ k: { n: true, m: NaN } })).toEqual({ k: { n: true, m: NaN } })
+    expect(() => g5({ x: 1 })).toThrow('not allowed')
+
     expect(() => Gubu({ x: 1 })('q')).toThrow(/type object/)
     expect(() => Gubu({ y: { x: 1 } })({ y: 'q' })).toThrow(/type object/)
   })
@@ -1028,8 +1089,10 @@ Validation failed for property "q.b" with value "x" because the value is not of 
     expect(g2([{ x: 123 }, { x: 456 }])).toEqual([{ x: 123 }, { x: 456 }])
     expect(g2([{}])).toEqual([{ x: 1 }])
     expect(g2([{ x: 123 }, {}])).toEqual([{ x: 123 }, { x: 1 }])
-    expect(g2([{ x: 123, y: 'a' }, { y: 'b' }]))
-      .toEqual([{ x: 123, y: 'a' }, { x: 1, y: 'b' }])
+    expect(() => g2([{ x: 123, y: 'a' }, { x: 456 }]))
+      .toThrow('not allowed')
+    expect(() => g2([{ x: 123 }, { x: 456, y: 'a' }]))
+      .toThrow('not allowed')
     expect(() => g2([{ x: 'a' }])).toThrow('type')
     expect(() => g2([{ x: 1 }, { x: 'a' }])).toThrow('type')
 
@@ -1129,7 +1192,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
       d: 0,
       u: {},
       a: [],
-      b: ['Closed']
+      b: [],
     }
 
     expect(cr0s.spec()).toEqual(s0)
@@ -1210,8 +1273,8 @@ Validation failed for value "" because check "(v) => 0 === v.x % 2" failed (thre
     expect(shape_AllB1(123)).toEqual(123)
     expect(() => shape_AllB1()).toThrow('required')
 
-    let shape_AllB2 = Gubu({ a: Skip(All({ b: String }, Min(2))) })
-    expect(shape_AllB2({ a: { b: 'X', c: 1 } })).toEqual({ a: { b: 'X', c: 1 } })
+    let shape_AllB2 = Gubu({ a: Skip(All({ b: String }, Max(2))) })
+    expect(shape_AllB2({ a: { b: 'X' } })).toEqual({ a: { b: 'X' } })
     expect(shape_AllB2({})).toEqual({})
 
 
@@ -1768,7 +1831,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
 
     let g1 = Gubu(Closed({}))
     expect(g1({})).toEqual({})
-    expect(() => g1({ a: null, b: 1, c: 'x', d: true })).toThrow('Validation failed for object "{a:null,b:1,c:x,d:true}" because the property "a" is not allowed.\nValidation failed for object "{a:null,b:1,c:x,d:true}" because the property "b" is not allowed.\nValidation failed for object "{a:null,b:1,c:x,d:true}" because the property "c" is not allowed.\nValidation failed for object "{a:null,b:1,c:x,d:true}" because the property "d" is not allowed.')
+    expect(() => g1({ a: null, b: 1, c: 'x', d: true })).toThrow('Validation failed for object "{a:null,b:1,c:x,d:true}" because the properties "a, b, c, d" are not allowed.')
   })
 
 
@@ -1818,9 +1881,9 @@ Validation failed for property "b" with value "B" because the value is not of ty
     expect(g0({ c: 'x' })).toEqual({ c: 'x (key=c)' })
     expect(g0({ d: 'D' })).toEqual({ d: 'D' })
 
-    let g1 = Gubu({
+    let g1 = Gubu(Open({
       a: Skip(Check((_v: any, u: Update, _s: State) => (u.uval = undefined, true)))
-    })
+    }))
 
     expect(g1({ a: 'A' })).toEqual({ a: undefined })
     expect(g1({ a: 'A', b: undefined })).toEqual({ a: undefined })
@@ -1845,7 +1908,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
       Before((val: any, _update: Update) => {
         val.b = 1 + val.a
         return true
-      }, { a: 1 })
+      }, Open({ a: 1 }))
         .After((val: any, _update: Update) => {
           val.c = 10 * val.a
           return true
@@ -1859,7 +1922,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
         After((val: any, _update: Update) => {
           val.c = 10 * val.a
           return true
-        }, { a: 1 })
+        }, Open({ a: 1 }))
           .Before((val: any, _update: Update) => {
             val.b = 1 + val.a
             return true
@@ -2023,8 +2086,9 @@ Validation failed for property "b" with value "B" because the value is not of ty
 
     let g5 = Gubu(Required({ x: 1 }))
     expect(g5({ x: 2 })).toEqual({ x: 2 })
-    expect(g5({ x: 2, y: 3 })).toEqual({ x: 2, y: 3 })
+    expect(() => g5({ x: 2, y: 3 })).toThrow('not allowed')
     expect(() => g5()).toThrow('required')
+    expect(() => g5({ y: 3 })).toThrow('not allowed')
 
     let g6 = Gubu(Closed(Required({ x: 1 })))
     expect(g6({ x: 2 })).toEqual({ x: 2 })
@@ -2126,14 +2190,15 @@ Value "{x:false}" for property "3" does not satisfy one of: {"x":"Number"}, {"x"
     expect(g2([
       { x: 'red', y: 'Y' },
       { x: 'green', z: 1 },
-      { x: 'green', z: 2, y: 22 },
-      { x: 'red', y: 'Y', z: 'YY' }
     ])).toMatchObject([
       { x: 'red', y: 'Y' },
       { x: 'green', z: 1 },
+    ])
+    expect(() => g2([
       { x: 'green', z: 2, y: 22 },
       { x: 'red', y: 'Y', z: 'YY' }
-    ])
+    ])).toThrow(`Value "{x:green,z:2,y:22}" for property "0" does not satisfy one of: {"x":"red","y":"String"}, {"x":"green","z":"Number"}
+Value "{x:red,y:Y,z:YY}" for property "1" does not satisfy one of: {"x":"red","y":"String"}, {"x":"green","z":"Number"}`)
 
     expect(() => g2([
       { x: 'red', y: 3 },
@@ -2172,7 +2237,7 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
     expect(g3({ a: ['x', 1, 'y', 2] })).toEqual({ a: ['x', 1, 'y', 2] })
     expect(() => g3({ a: [1, 2, true] })).toThrow(`Value "true" for property "a.2" does not satisfy some of: Number, String`)
 
-    let g4 = Gubu({ a: [Some({ x: 1 }, { x: 'X' })] })
+    let g4 = Gubu({ a: [Some(Open({ x: 1 }), Open({ x: 'X' }))] })
     expect(g4({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] }))
       .toEqual({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] })
 
@@ -2183,10 +2248,10 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
 
 
   test('builder-all', () => {
-    let g0 = Gubu(All({ x: 1 }, { y: 'a' }))
+    let g0 = Gubu(All(Open({ x: 1 }), Open({ y: 'a' })))
     expect(g0({ x: 1, y: 'a' })).toEqual({ x: 1, y: 'a' })
     expect(() => g0({ x: 'b', y: 'a' })).toThrow(
-      `Value "{x:b,y:a}" for property "" does not satisfy all of: {\"x\":1}, {\"y\":\"a\"}`)
+      `Value "{x:b,y:a}" for property "" does not satisfy all of: {"x":1}, {"y":"a"}`)
     expect(() => g0()).toThrow('Validation failed for value "" because the value is required.')
 
     let g1 = Gubu({
@@ -2196,13 +2261,17 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
     expect(() => g1({ a: 0 })).toThrow(
       'Value "0" for property "a" does not satisfy all of: (v) => v > 10, (v) => v < 20')
 
-    let g2 = Gubu(All({ x: 1 }, { y: { z: 'a' } }))
-    expect(g2({ x: 11, y: { z: 'AA' } })).toEqual({ x: 11, y: { z: 'AA' } })
-    expect(() => g2({ x: 11, y: { z: true } })).toThrow('Value "{x:11,y:{z:true}}" for property "" does not satisfy all of: {"x":1}, {"y":{"z":"a"}}')
+    let g2 = Gubu(All({ x: 1, y: Any() }, { x: Any(), y: 'a' }))
+    expect(g2({ x: 11, y: 'AA' })).toEqual({ x: 11, y: 'AA' })
+    expect(() => g2({ x: 11, y: true })).toThrow('Value "{x:11,y:true}" for property "" does not satisfy all of: {"x":1,"y":"any"}, {"x":"any","y":"a"}')
 
-    let g3 = Gubu(All({ x: 1 }, { y: 2 }))
-    expect(g3({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 })
-    expect(() => g3({ x: 'X', y: 'Y' })).toThrow(
+    let g3 = Gubu(All({ x: 1, y: Any() }, { x: Any(), y: { z: 'a' } }))
+    expect(g3({ x: 11, y: { z: 'AA' } })).toEqual({ x: 11, y: { z: 'AA' } })
+    expect(() => g3({ x: 11, y: { z: true } })).toThrow('Value "{x:11,y:{z:true}}" for property "" does not satisfy all of: {"x":1,"y":"any"}, {"x":"any","y":{"z":"a"}}')
+
+    let g4 = Gubu(All(Open({ x: 1 }), Open({ y: 2 })))
+    expect(g4({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 })
+    expect(() => g4({ x: 'X', y: 'Y' })).toThrow(
       'Value "{x:X,y:Y}" for property "" does not satisfy all of: {"x":1}, {"y":2}'
     )
   })
@@ -3149,6 +3218,9 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
     expect(stringify([1, f0, () => true, C0])).toEqual('[1,"f0","() => true","C0"]')
 
     expect(stringify(/a/)).toEqual('"/a/"')
+
+
+
   })
 
 
@@ -3403,9 +3475,9 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
 
 
     // 'ignore'
-    let optioner_ignore = Gubu({
+    let optioner_ignore = Gubu(Open({
       a: 1,
-    })
+    }))
 
     expect(optioner_ignore({})).toEqual({ a: 1 })
     expect(optioner_ignore({ b: 2 })).toEqual({ a: 1, b: 2 })
@@ -3426,10 +3498,10 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
       expect(e.name).toMatch(/GubuError/)
     }
 
-    let optioner_ignore_deep = Gubu({
+    let optioner_ignore_deep = Gubu(Open({
       a: 1,
-      b: { c: 2 },
-    })
+      b: Open({ c: 2 }),
+    }))
 
     expect(optioner_ignore_deep({})).toEqual({ a: 1, b: { c: 2 } })
     expect(optioner_ignore_deep({ b: { d: 3 } })).toEqual({
@@ -3465,7 +3537,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
     )
 
     expect(g0({ a: 1 })).toEqual({ a: 1 })
-    expect(g0({ a: 1, b: 2 })).toMatchObject({ a: 1 })
+    expect(() => g0({ a: 1, b: 2 })).toThrow('not allowed')
 
     expect(() => g0({})).toThrow('exactly')
     expect(() => g0({ a: 2 })).toThrow('exactly')
@@ -3473,13 +3545,14 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
 
 
     let g1 = Gubu(
-      {
+      Open({
         a: Exact(1),
-        b: { c: Exact(2) },
-      },
+        b: Open({ c: Exact(2) }),
+      }),
     )
 
     expect(g1({ a: 1, b: { c: 2 } })).toEqual({ a: 1, b: { c: 2 } })
+
     expect(g1({ a: 1, b: { c: 2, z: 3 }, y: 4 })).toEqual({
       a: 1,
       b: { c: 2, z: 3 },
