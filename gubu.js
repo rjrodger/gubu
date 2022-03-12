@@ -1133,7 +1133,8 @@ function makeErrImpl(why, s, mark, text, user, fname) {
 }
 function stringify(src, replacer, dequote, expand) {
     let str;
-    if (src && src.$ && (GUBU$ === src.$.gubu$ || true === src.$.gubu$)) {
+    if (!expand &&
+        src && src.$ && (GUBU$ === src.$.gubu$ || true === src.$.gubu$)) {
         src = (null != src.s && '' !== src.s) ? src.s :
             undefined === src.v ? src.t : src.v;
     }

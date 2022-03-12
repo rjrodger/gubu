@@ -1602,7 +1602,8 @@ function makeErrImpl(
 function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean) {
   let str: string
 
-  if (src && src.$ && (GUBU$ === src.$.gubu$ || true === (src.$ as any).gubu$)) {
+  if (!expand &&
+    src && src.$ && (GUBU$ === src.$.gubu$ || true === (src.$ as any).gubu$)) {
     src = (null != src.s && '' !== src.s) ? src.s :
       undefined === src.v ? src.t : src.v
   }
