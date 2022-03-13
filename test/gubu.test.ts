@@ -1402,13 +1402,13 @@ Validation failed for property "b" with value "B" because the value is not of ty
 
     // TODO: update docs - need better example where one prop differentiates
     let shape_SomeB0 = Gubu(Some({ x: 1 }, { y: 2 }))
-    expect(shape_SomeB0({ x: 1 })).toEqual({ x: 1, y: 2 })
-    expect(shape_SomeB0({ y: 2 })).toEqual({ x: 1, y: 2 })
 
-    expect(shape_SomeB0({ x: 1, y: 2 })).toEqual({ x: 1, y: 2 })
-    expect(shape_SomeB0({ x: true, y: 2 })).toEqual({ x: true, y: 2 })
-    expect(shape_SomeB0({ x: 1, y: true })).toEqual({ x: 1, y: true })
-    expect(() => shape_SomeB0({ x: true, y: true })).toThrow(`Value "{x:true,y:true}" for property "" does not satisfy some of: {"x":1}, {"y":2}`)
+    expect(shape_SomeB0({ x: 1 })).toEqual({ x: 1 })
+    expect(shape_SomeB0({ y: 2 })).toEqual({ y: 2 })
+    expect(() => shape_SomeB0({ x: 11, y: 22 })).toThrow('Value "{x:11,y:22}" for property "" does not satisfy any of: {"x":1}, {"y":2}')
+    expect(() => shape_SomeB0({ x: true, y: 2 })).toThrow('any of')
+    expect(() => shape_SomeB0({ x: 1, y: true })).toThrow('any of')
+    expect(() => shape_SomeB0({ x: true, y: true })).toThrow(`Value "{x:true,y:true}" for property "" does not satisfy any of: {"x":1}, {"y":2}`)
     // TODO: more complex objects
 
 
@@ -2212,14 +2212,14 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
     let g0 = Gubu({ a: Some(Number, String) })
     expect(g0({ a: 1 })).toEqual({ a: 1 })
     expect(g0({ a: 'x' })).toEqual({ a: 'x' })
-    expect(() => g0({ a: true })).toThrow(`Value "true" for property "a" does not satisfy some of: Number, String`)
+    expect(() => g0({ a: true })).toThrow(`Value "true" for property "a" does not satisfy any of: Number, String`)
 
-    expect(() => g0({})).toThrow('Value "" for property "a" does not satisfy some of: Number, String')
+    expect(() => g0({})).toThrow('Value "" for property "a" does not satisfy any of: Number, String')
 
     let g1 = Gubu(Some(Number, String))
     expect(g1(1)).toEqual(1)
     expect(g1('x')).toEqual('x')
-    expect(() => g1(true)).toThrow(`Value "true" for property "" does not satisfy some of: Number, String`)
+    expect(() => g1(true)).toThrow(`Value "true" for property "" does not satisfy any of: Number, String`)
 
     let g2 = Gubu([Some(Number, String)])
     expect(g2([1])).toEqual([1])
@@ -2229,13 +2229,13 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
     expect(g2(['x', 1])).toEqual(['x', 1])
     expect(g2(['x', 'y'])).toEqual(['x', 'y'])
     expect(g2(['x', 1, 'y', 2])).toEqual(['x', 1, 'y', 2])
-    expect(() => g2([true])).toThrow(`Value "true" for property "0" does not satisfy some of: Number, String`)
+    expect(() => g2([true])).toThrow(`Value "true" for property "0" does not satisfy any of: Number, String`)
 
     let g3 = Gubu({ a: [Some(Number, String)] })
     expect(g3({ a: [1] })).toEqual({ a: [1] })
     expect(g3({ a: ['x'] })).toEqual({ a: ['x'] })
     expect(g3({ a: ['x', 1, 'y', 2] })).toEqual({ a: ['x', 1, 'y', 2] })
-    expect(() => g3({ a: [1, 2, true] })).toThrow(`Value "true" for property "a.2" does not satisfy some of: Number, String`)
+    expect(() => g3({ a: [1, 2, true] })).toThrow(`Value "true" for property "a.2" does not satisfy any of: Number, String`)
 
     let g4 = Gubu({ a: [Some(Open({ x: 1 }), Open({ x: 'X' }))] })
     expect(g4({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] }))

@@ -655,15 +655,18 @@ const Some = function (...inshapes) {
         let pass = false;
         for (let shape of shapes) {
             let subctx = { ...state.ctx, err: [] };
-            pass || (pass = shape.match(val, subctx));
-            if (pass) {
+            let match = shape.match(val, subctx);
+            // console.log('S0', pass, shape, val, update.val)
+            if (match) {
                 update.val = shape(val, subctx);
+                // console.log('S1', pass, shape, val, update.val)
             }
+            pass || (pass = match);
         }
         if (!pass) {
             update.why = 'some';
             update.err = [
-                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy some of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy any of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
         return pass;

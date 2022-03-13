@@ -678,4 +678,15 @@ let tmp = {}
 
 
 
-console.dir(Gubu(Skip(Required(1))).spec())
+// console.dir(Gubu(Skip(Required(1))).spec())
+
+let x0 = Gubu({x:1})
+console.log(x0.match({x:1}))
+console.log(x0.match({y:2}))
+
+
+let g = Gubu(Some({ x: 1 }, { y: 2 }))
+console.log(g({ x: 1 }))
+console.log(g({ y: 2 }))
+
+

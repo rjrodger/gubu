@@ -976,18 +976,23 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
 
     for (let shape of shapes) {
       let subctx = { ...state.ctx, err: [] }
-      pass ||= shape.match(val, subctx)
+      let match = shape.match(val, subctx)
 
-      if (pass) {
+      // console.log('S0', pass, shape, val, update.val)
+
+      if (match) {
         update.val = shape(val, subctx)
+        // console.log('S1', pass, shape, val, update.val)
       }
+
+      pass ||= match
     }
 
     if (!pass) {
       update.why = 'some'
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for property "$PATH" does not satisfy some of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+          `Value "$VALUE" for property "$PATH" does not satisfy any of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
 
