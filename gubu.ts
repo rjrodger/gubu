@@ -404,6 +404,7 @@ function nodize(shape?: any, depth?: number): Node {
   }
 
   else if ('function' === t) {
+    console.log('AAA')
     if (IS_TYPE[shape.name]) {
       t = (shape.name.toLowerCase() as ValType)
       r = true
@@ -413,6 +414,8 @@ function nodize(shape?: any, depth?: number): Node {
       if ('Object' === shape.name) {
         c = Any()
       }
+
+      console.log('BBB')
     }
     else if (shape.gubu === GUBU || true === shape.$?.gubu) {
       let gs = shape.spec ? shape.spec() : shape
@@ -420,6 +423,8 @@ function nodize(shape?: any, depth?: number): Node {
       v = gs.v
       r = gs.r
       u = gs.u
+
+      console.log('CCC')
     }
 
     // Instance of a class.
@@ -431,6 +436,8 @@ function nodize(shape?: any, depth?: number): Node {
       r = true
       u.n = v.prototype?.constructor?.name
       u.i = v
+
+      console.log('DDD')
     }
   }
   else if ('number' === t && isNaN(v)) {

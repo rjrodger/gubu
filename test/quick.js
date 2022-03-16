@@ -680,13 +680,32 @@ let tmp = {}
 
 // console.dir(Gubu(Skip(Required(1))).spec())
 
-let x0 = Gubu({x:1})
-console.log(x0.match({x:1}))
-console.log(x0.match({y:2}))
+// let x0 = Gubu({x:1})
+// console.log(x0.match({x:1}))
+// console.log(x0.match({y:2}))
 
 
-let g = Gubu(Some({ x: 1 }, { y: 2 }))
-console.log(g({ x: 1 }))
-console.log(g({ y: 2 }))
+// let g = Gubu(Some({ x: 1 }, { y: 2 }))
+// console.log(g({ x: 1 }))
+// console.log(g({ y: 2 }))
 
 
+// console.log(Gubu(Skip(String))('a'))
+// // console.log(Gubu(Skip(String))(''))
+// console.log(Gubu(Skip(String))())
+// console.log(Gubu(Skip(String))(undefined))
+// // console.log(Gubu(Skip(String))(null))
+
+
+function a() {}
+let b = ()=>false
+
+console.log(Gubu(()=>true).spec())
+console.log(Gubu(a).spec())
+console.log(Gubu(b).spec())
+console.log(Gubu(Function).spec())
+console.log(Gubu(new Function()).spec())
+
+console.log(new a())
+// console.log(new b())
+console.log(''===((()=>true).name))

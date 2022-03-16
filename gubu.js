@@ -204,6 +204,7 @@ function nodize(shape, depth) {
         }
     }
     else if ('function' === t) {
+        console.log('AAA');
         if (IS_TYPE[shape.name]) {
             t = shape.name.toLowerCase();
             r = true;
@@ -212,6 +213,7 @@ function nodize(shape, depth) {
             if ('Object' === shape.name) {
                 c = Any();
             }
+            console.log('BBB');
         }
         else if (shape.gubu === GUBU || true === ((_b = shape.$) === null || _b === void 0 ? void 0 : _b.gubu)) {
             let gs = shape.spec ? shape.spec() : shape;
@@ -219,6 +221,7 @@ function nodize(shape, depth) {
             v = gs.v;
             r = gs.r;
             u = gs.u;
+            console.log('CCC');
         }
         // Instance of a class.
         else if (!((undefined === shape.prototype && Function === shape.constructor) ||
@@ -227,6 +230,7 @@ function nodize(shape, depth) {
             r = true;
             u.n = (_e = (_d = v.prototype) === null || _d === void 0 ? void 0 : _d.constructor) === null || _e === void 0 ? void 0 : _e.name;
             u.i = v;
+            console.log('DDD');
         }
     }
     else if ('number' === t && isNaN(v)) {

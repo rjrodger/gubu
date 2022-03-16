@@ -112,8 +112,9 @@ describe('gubu', () => {
         // Object shape is also good. Prints `{ a: 1, b: 'foo' }`
         expect(shape({ b: 'foo' })).toEqual({ a: 1, b: 'foo' });
         // Object shape is bad. Throws an exception:
-        // "TODO: msg"
         expect(() => shape({ a: 'BAD' })).toThrow('Validation failed for property "a" with value "BAD" because the value is not of type number.\nValidation failed for property "b" with value "" because the value is required.');
+        // Object shape is bad. Throws an exception:
+        expect(() => shape({ b: 'foo', c: true })).toThrow('Validation failed for object "{b:foo,c:true}" because the property "c" is not allowed.');
     });
     test('readme-options', () => {
         const optionShape = Gubu({
@@ -190,6 +191,33 @@ describe('gubu', () => {
                 age: 99
             }
         });
+    });
+    test('readme-object', () => {
+        let shape = Gubu({
+            foo: {
+                bar: {
+                    zed: String,
+                    qaz: Number,
+                }
+            }
+        });
+        expect(shape({
+            foo: {
+                bar: {
+                    zed: 'x',
+                    qaz: 1
+                }
+            }
+        })).toEqual({
+            foo: {
+                bar: {
+                    zed: 'x',
+                    qaz: 1
+                }
+            }
+        });
+        let openObject = Gubu(Open({ a: 1 }));
+        expect(openObject({ a: 11, b: 22 })).toEqual({ a: 11, b: 22 });
     });
     test('readme-regexp', () => {
         let shape = Gubu({ countryCode: Check(/^[A-Z][A-Z]$/) });
@@ -478,6 +506,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(Gubu(Array)([1])).toEqual([1]);
         expect(Gubu(Function)(tmp.f0 = () => true)).toEqual(tmp.f0);
         expect(Gubu(Symbol)(tmp.s0 = Symbol('foo'))).toEqual(tmp.s0);
+        expect(Gubu(Error)(tmp.e0 = new Error())).toEqual(tmp.e0);
         expect(Gubu(Date)(tmp.d0 = new Date())).toEqual(tmp.d0);
         expect(Gubu(RegExp)(tmp.r0 = /a/)).toEqual(tmp.r0);
         expect(Gubu(Foo)(tmp.c0 = new Foo(2))).toEqual(tmp.c0);
@@ -489,7 +518,12 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(Gubu({})({ x: 1 })).toEqual({ x: 1 });
         expect(Gubu([])([1])).toEqual([1]);
         expect(Gubu(() => null)(tmp.f0 = () => false)).toEqual(tmp.f0);
+        expect(Gubu(new Object())({ x: 1 })).toEqual({ x: 1 });
+        expect(Gubu(new Array())([1])).toEqual([1]);
+        // FIX: no way to tell this apart from `function anonymous() {}` ?
+        // expect(Gubu(new Function())(tmp.nf0 = () => false)).toEqual(tmp.nf0)
         expect(Gubu(Symbol('bar'))(tmp.s0)).toEqual(tmp.s0);
+        expect(Gubu(new Error('a'))(tmp.e1 = new Error('b'))).toEqual(tmp.e1);
         expect(Gubu(new Date())(tmp.d1 = new Date(Date.now() - 1111))).toEqual(tmp.d1);
         expect(Gubu(new RegExp('a'))(tmp.r1 = /b/)).toEqual(tmp.r1);
         expect(Gubu(new Foo(4))(tmp.c1 = new Foo(5))).toEqual(tmp.c1);
@@ -506,6 +540,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(() => Gubu(Array)('x')).toThrow(/not of type array/);
         expect(() => Gubu(Function)('x')).toThrow(/not of type function/);
         expect(() => Gubu(Symbol)('x')).toThrow(/not of type symbol/);
+        expect(() => Gubu(Error)('x')).toThrow(/not an instance of Error/);
         expect(() => Gubu(Date)(/a/)).toThrow(/not an instance of Date/);
         expect(() => Gubu(RegExp)(new Date()))
             .toThrow(/not an instance of RegExp/);
@@ -522,6 +557,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(() => Gubu(() => null)('x'))
             .toThrow(/not of type function/);
         expect(() => Gubu(Symbol('bar'))('x')).toThrow(/not of type symbol/);
+        expect(() => Gubu(new Error('x'))('x')).toThrow(/not an instance of Error/);
         expect(() => Gubu(new Date())('x')).toThrow(/not an instance of Date/);
         expect(() => Gubu(new RegExp('a'))('x'))
             .toThrow(/not an instance of RegExp/);
@@ -1817,6 +1853,134 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
         expect(g0({})).toMatchObject({});
         expect(() => g0({ a: 1 })).toThrow(/string/);
     });
+    test('builder-skip', () => {
+        let g0 = Gubu(Skip(String));
+        expect(g0('a')).toEqual('a');
+        expect(g0(undefined)).toEqual(undefined);
+        expect(g0()).toEqual(undefined);
+        expect(() => g0('')).toThrow('not allowed');
+        expect(() => g0(null)).toThrow('type');
+        expect(() => g0(NaN)).toThrow('type');
+        let g1 = Gubu(Skip('x'));
+        expect(g1('a')).toEqual('a');
+        expect(g1(undefined)).toEqual(undefined);
+        expect(g1()).toEqual(undefined);
+        expect(() => g1('')).toThrow('not allowed');
+        expect(() => g1(null)).toThrow('type');
+        expect(() => g1(NaN)).toThrow('type');
+        let g2 = Gubu(Skip(''));
+        expect(g2('a')).toEqual('a');
+        expect(g2(undefined)).toEqual(undefined);
+        expect(g2()).toEqual(undefined);
+        expect(g2('')).toEqual('');
+        expect(() => g2(null)).toThrow('type');
+        expect(() => g2(NaN)).toThrow('type');
+        let g3 = Gubu(Skip(Empty(String)));
+        expect(g3('a')).toEqual('a');
+        expect(g3(undefined)).toEqual(undefined);
+        expect(g3()).toEqual(undefined);
+        expect(g3('')).toEqual('');
+        expect(() => g3(null)).toThrow('type');
+        expect(() => g3(NaN)).toThrow('type');
+        let g4 = Gubu(Skip(Empty('x')));
+        expect(g4('a')).toEqual('a');
+        expect(g4(undefined)).toEqual(undefined);
+        expect(g4()).toEqual(undefined);
+        expect(g4('')).toEqual('');
+        expect(() => g4(null)).toThrow('type');
+        expect(() => g4(NaN)).toThrow('type');
+        let g5 = Gubu(Skip(Empty('')));
+        expect(g5('a')).toEqual('a');
+        expect(g5(undefined)).toEqual(undefined);
+        expect(g5()).toEqual(undefined);
+        expect(g5('')).toEqual('');
+        expect(() => g5(null)).toThrow('type');
+        expect(() => g5(NaN)).toThrow('type');
+        let o0 = Gubu({ p: Skip(String) });
+        expect(o0({ p: 'a' })).toEqual({ p: 'a' });
+        expect(o0({ p: undefined })).toEqual({ p: undefined });
+        expect(o0({})).toEqual({});
+        expect(() => o0({ p: '' })).toThrow('not allowed');
+        expect(() => o0({ p: null })).toThrow('type');
+        expect(() => o0({ p: NaN })).toThrow('type');
+        let o1 = Gubu({ p: Skip('x') });
+        expect(o1({ p: 'a' })).toEqual({ p: 'a' });
+        expect(o1({ p: undefined })).toEqual({ p: undefined });
+        expect(o1({})).toEqual({});
+        expect(() => o1({ p: '' })).toThrow('not allowed');
+        expect(() => o1({ p: null })).toThrow('type');
+        expect(() => o1({ p: NaN })).toThrow('type');
+        let o2 = Gubu({ p: Skip('') });
+        expect(o2({ p: 'a' })).toEqual({ p: 'a' });
+        expect(o2({ p: undefined })).toEqual({ p: undefined });
+        expect(o2({})).toEqual({});
+        expect(o2({ p: '' })).toEqual({ p: '' });
+        expect(() => o2({ p: null })).toThrow('type');
+        expect(() => o2({ p: NaN })).toThrow('type');
+        let o3 = Gubu({ p: Skip(Empty(String)) });
+        expect(o3({ p: 'a' })).toEqual({ p: 'a' });
+        expect(o3({ p: undefined })).toEqual({ p: undefined });
+        expect(o3({})).toEqual({});
+        expect(o3({ p: '' })).toEqual({ p: '' });
+        expect(() => o3({ p: null })).toThrow('type');
+        expect(() => o3({ p: NaN })).toThrow('type');
+        let o4 = Gubu({ p: Skip(Empty('x')) });
+        expect(o4({ p: 'a' })).toEqual({ p: 'a' });
+        expect(o4({ p: undefined })).toEqual({ p: undefined });
+        expect(o4({})).toEqual({});
+        expect(o4({ p: '' })).toEqual({ p: '' });
+        expect(() => o4({ p: null })).toThrow('type');
+        expect(() => o4({ p: NaN })).toThrow('type');
+        let o5 = Gubu({ p: Skip(Empty('')) });
+        expect(o5({ p: 'a' })).toEqual({ p: 'a' });
+        expect(o5({ p: undefined })).toEqual({ p: undefined });
+        expect(o5({})).toEqual({});
+        expect(o5({ p: '' })).toEqual({ p: '' });
+        expect(() => o5({ p: null })).toThrow('type');
+        expect(() => o5({ p: NaN })).toThrow('type');
+        let a0 = Gubu([Skip(String)]);
+        expect(a0(['a'])).toEqual(['a']);
+        expect(a0([undefined])).toEqual([undefined]);
+        expect(a0([])).toEqual([]);
+        expect(() => a0([''])).toThrow('not allowed');
+        expect(() => a0([null])).toThrow('type');
+        expect(() => a0([NaN])).toThrow('type');
+        let a1 = Gubu([Skip('x')]);
+        expect(a1(['a'])).toEqual(['a']);
+        expect(a1([undefined])).toEqual([undefined]);
+        expect(a1([])).toEqual([]);
+        expect(() => a1([''])).toThrow('not allowed');
+        expect(() => a1([null])).toThrow('type');
+        expect(() => a1([NaN])).toThrow('type');
+        let a2 = Gubu([Skip('')]);
+        expect(a2(['a'])).toEqual(['a']);
+        expect(a2([undefined])).toEqual([undefined]);
+        expect(a2([])).toEqual([]);
+        expect(a2([''])).toEqual(['']);
+        expect(() => a2([null])).toThrow('type');
+        expect(() => a2([NaN])).toThrow('type');
+        let a3 = Gubu([Skip(Empty(String))]);
+        expect(a3(['a'])).toEqual(['a']);
+        expect(a3([undefined])).toEqual([undefined]);
+        expect(a3([])).toEqual([]);
+        expect(a3([''])).toEqual(['']);
+        expect(() => a3([null])).toThrow('type');
+        expect(() => a3([NaN])).toThrow('type');
+        let a4 = Gubu([Skip(Empty('x'))]);
+        expect(a4(['a'])).toEqual(['a']);
+        expect(a4([undefined])).toEqual([undefined]);
+        expect(a4([])).toEqual([]);
+        expect(a4([''])).toEqual(['']);
+        expect(() => a4([null])).toThrow('type');
+        expect(() => a4([NaN])).toThrow('type');
+        let a5 = Gubu([Skip(Empty(''))]);
+        expect(a5(['a'])).toEqual(['a']);
+        expect(a5([undefined])).toEqual([undefined]);
+        expect(a5([])).toEqual([]);
+        expect(a5([''])).toEqual(['']);
+        expect(() => a5([null])).toThrow('type');
+        expect(() => a5([NaN])).toThrow('type');
+    });
     test('builder-any', () => {
         let g0 = Gubu({ a: Any(), b: Any('B') });
         expect(g0({ a: 2, b: 1 })).toMatchObject({ a: 2, b: 1 });
@@ -2474,6 +2638,8 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         expect(() => g3({ b: { a: 'x' } })).toThrow();
         expect(g3s({ b: { a: 1 } })).toEqual({ b: { a: 1 } });
         expect(() => g3s({ b: { a: 'x' } })).toThrow();
+        const shape = Gubu({ a: Gubu({ x: Number }) });
+        expect(shape({ a: { x: 1 } })).toEqual({ a: { x: 1 } });
     });
     test('truncate', () => {
         expect(truncate('')).toEqual('');

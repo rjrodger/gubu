@@ -21,10 +21,11 @@
 
 This is a schema validator in the tradition of [Joi](https://joi.dev)
 or any [JSON-Schema](https://json-schema.org/) validator, but with a
-much nicer developer experience!
+much nicer developer experience.
 
 The big idea is that your schema looks (almost) exactly like your
-data. That's much easier to read and reason about. You could call it:
+data. That makes your schema much easier to read and reason about. You
+could call it:
 
 > "Schema By Example"
 
@@ -79,8 +80,8 @@ shape(options)
 }
 ```
 
-A big feature of Gubu is that you can fill out objects to any depth
-(unlike `Object.assign` or the `...` spread operator).
+Another big feature of Gubu is that you can fill out objects to any
+depth (unlike `Object.assign` or the `...` spread operator).
 
 You may have noticed that Gubu mutates the input to be validated (by
 injecting defaults as needed). This is deliberate. Cloning arbitrary
@@ -89,7 +90,8 @@ values in JavaScript is
 so Gubu leaves that decision to calling code.
 
 
-To make properties required, you use the standard wrapper objects:
+To make properties required, you use the standard JavaScript wrapper
+objects (*Number*, *String*, *Boolean*, ...):
 
 ```
 const { Gubu } = import 'gubu' // `import` also works! And in browsers too.
@@ -120,7 +122,8 @@ const shape = Gubu([Number])
 // All good - we want numbers!
 shape([100, 200, 300])
 ```
-  
+
+
 ## Motivation  
   
 Why write yet another validator? I've used [Joi](https://joi.dev) for
@@ -144,8 +147,8 @@ from the belief that software developers should not be subjected to
 unnecessary additional levels of abstraction. Abstraction is hard,
 takes you further from the problem you're getting paid to solve, and
 is hard to "eye-ball". I don't want to parse and run schemas "in my
-head", I just want to see the literal values and structure that I care
-about, right here, right now.
+head", **I just want to see the literal values and structure that I care
+about, right here, right now**.
 
 
 ## Quick Example
@@ -168,9 +171,12 @@ console.log( shape({ b: 'foo' }) )
 
 // Object shape is bad. Throws an exception with message:
 //   Validation failed for property "a" with value "BAD" because the value is not of type number.
-//   Validation failed for property "b" with value "" because the value is required.'
+//   Validation failed for property "b" with value "" because the value is required.
 console.log( shape({ a: 'BAD' }) )
 
+// Object shape is bad. Throws an exception with message:
+//    Validation failed for object "{b:foo,c:true}" because the property "c" is not allowed.
+console.log( shape({ b: 'foo', c: true }) )
 ```
 
 As shown above, you use the exported `Gubu` function to create a
@@ -178,7 +184,7 @@ validation shape checker using an example object. Pass the value you
 want to validate to the shape checker. If the value is valid (matches
 the example object), the shape checker returns the value (with missing
 defaults injected). Otherwise the shape checker throws an exception
-listing all (not just the first!) of the validition errors.
+listing all (not just the first!) of the validation errors.
  
 
 ## Common Use Cases
@@ -207,7 +213,8 @@ console.log(optionShape({ port: 9090 }))
 // All of these throw an error.
 console.log(optionShape({ host: 9090 }))   // Not a string.
 console.log(optionShape({ port: '9090' })) // Not a number.
-console.log(optionShape({ host: '' }))     // Not really a usable string!
+console.log(optionShape({ host: '' }))     // The empty string is a host name!
+console.log(optionShape({ hpst: 'foo' }))  // 'hpst' is not a valid property name.
 
 ```
 
@@ -268,14 +275,14 @@ explicitly required:
 const { Gubu, Required } = require('gubu')
 
 const userShape = Gubu({
-  person: Required({  // person must be an object
+  person: Required({  // person must be a defined object
     name: String,
     age: Number,
   })
 })
 
-
-// FAIL: 'Validation failed for property "person" with value "" because the value is required.')
+// This will fail, with message:
+//   Validation failed for property "person" with value "" because the value is required.
 userShape({}) 
 
 // This will pass, returning the object:
@@ -372,9 +379,10 @@ Or defaults to make the value optional:
 If a value is optional and `undefined`, the default value is returned:
 `Gubu('bar')()` returns `'bar'`.
 
-The values `null` and `NaN` must match exactly. The value `undefined`
-is special - it literally means no value. To allow a property to be
-absent entirely, use the [Skip](#skip-builder) shape builder.
+The values `null` and `NaN` must match exactly. They are *not* the
+same as `undefined`. The value `undefined` is special - it literally
+means no value. To allow a property to be absent entirely, use the
+[Skip](#skip-builder) shape builder.
 
 Empty strings are not considered to be valid (this is usually what you
 want). To allow an empty string, use `Gubu(Empty('foo'))` or
@@ -407,26 +415,37 @@ The above shape will match:
 }
 ```
 
+If you want to allow arbitrary properties in an object, you can use the 
+[Open](#open-builder) shape builder:
+
+```
+let openObject = Gubu(Open({ a: 1 }))
+
+// This now passes (normally property `b` would not be allowed).
+openObject({ a: 11, b: 22 }))
+```
+
+
 For arrays, the first element is treated as the shape that all
 elements in the array must match:
 
 * `Gubu([String])` matches `['a', 'b', 'c']`
-* `Gubu([{x:1}])` matches `[{x: 11}, {x: 22}, {x: 33}]`
+* `Gubu([{x: 1}])` matches `[{x: 11}, {x: 22}, {x: 33}]`
 
 
 If you need specific elements to match specific shapes, use the
 [Closed](#closed-builder) shape builder:
 
-* `Gubu(Closed([String,Number]))` matches `['a', 1]`.
+* `Gubu(Closed([String, Number]))` matches `['a', 1]`.
 
 You can specify custom validation functions using the
-[Check](#check-builder):
+[Check](#check-builder) shape builder:
 
-* `Gubu({a: Check((v) => 10<v) })`: matches `{a: 11}` as `10 < 11`
+* `Gubu({a: Check((v) => 10 < v) })`: matches `{a: 11}` as `10 < 11`
 
 And you can manipulate the value if you need to:
 
-* `Gubu({a: Check((v,u) => 10<v ? (u.val=2*v, true) : false )})`:
+* `Gubu({a: Check((v, u) => 10 < v ? (u.val = 2 * v, true) : false )})`:
   matches `{a: 11}` as `10 < 11` and returns `{a: 22}`.
 
 
@@ -439,38 +458,13 @@ const shape = Gubu({ a: Gubu({ x: Number }) })
 shape({ a: { x: 1 } })
 ```
 
-*Gubu* exports shape "builder" utility functions that let you further
-refine the shape (For example, you've already seen the `Empty` builder
-above that allows strings to be empty). You wrap your value with the
-builder function to apply the desired effect.
 
+The shape builder functions ([Required](#required-builder),
+[Closed](#closed-builder), etc.) are also available as properties of
+the main `Gubu` function, so you don't have to introduce them into
+your top level variable namespace.
 
-The `Required` builder makes a value required:
-
-```
-const { Gubu, Required } = require('gubu')
-
-const shape = Gubu({
-  a: Required({x: 1})  // Property `a` is required and must match `{x: 1}`.
-})
-```
-
-
-The `Closed` builder prohibits an object from having additional
-unspecified properties:
-
-```
-const { Gubu, Closed } = require('gubu')
-
-// Only properties `a` and `b` are allowed.
-const shape = Gubu(Closed({
-  a: 1,
-  b: true
-}))
-```
-
-You can also access builders as properties of the main `Gubu`
-function, and you can chain most builders. Thus a `Required` and
+As a convenience, you can chain most builders. Thus a `Required` and
 `Closed` object can be specified with:
 
 ```
@@ -478,12 +472,11 @@ const { Gubu } = require('gubu')
 
 const shape = Gubu({
   a: Gubu.Closed({ x: 1 }).Required(),
-  b: Gubu.Required({ x: 1 }).Closed(),  // Also works.
+  b: Gubu.Required({ x: 1 }).Closed(), // Same as line above
 })
 ```
 
-You can also write your own builders - see the [Shape
-Builders](#shape-builders) section.
+You can write your own builders&mdash;see the next section.
 
 In addition to this README, the [unit tests](lib/gubu.test.ts) are
 comprehensive and provide many usage examples.
@@ -495,7 +488,7 @@ The built-in shape builders help you match the following shapes:
 
 * Existence:
   * [Required](#required-builder): Make a value required.
-  * [Skip](#skip-builder): Make a value skippable (no default value injected if missing).
+  * [Skip](#skip-builder): Make a value skippable (no default value is injected if missing).
 * Value constraints:
   * [Empty](#empty-builder): Allow string values to be empty.
   * [Exact](#exact-builder): The value must match one of an exact list of *literal* values.
@@ -510,7 +503,8 @@ The built-in shape builders help you match the following shapes:
   * [Min](#min-builder): Match a value (or length of value) greater than or equal to the given amount.
   * [Above](#above-builder): Match a value (or length of value) greater than the given amount.
 * General constraints:
-  * [Closed](#closed-builder): Allow only explicitly defined properties in an object.
+  * [Closed](#closed-builder): Allow only explicitly defined elements in an array.
+  * [Open](#open-builder): Allow arbitrary properties in an object (no constraint on their value).
   * [Value](#value-builder): All non-explicit values of an object must match this shape.
 * Mutations:
   * [Rename](#rename-builder): Rename the key of a property.
@@ -524,11 +518,11 @@ The built-in shape builders help you match the following shapes:
 
 ### Regular Expressions
 
-The [Check](#check-builder) will also accept a regular expression
-(instead of a function). The value will be converted to a string
-(using `String(...)`), and will be valid if it matches the regular
-expression. The values `null`, `undefined` and `NaN` are not converted
-to strings and will always fail this check
+The [Check](#check-builder) shape builder will also accept a regular
+expression (instead of a function). The value will be converted to a
+string (using `String(...)`), and will be valid if it matches the
+regular expression. The values `null`, `undefined` and `NaN` are not
+converted to strings and will always fail this check.
 
 ```
 let shape = Gubu({ countryCode: Check(/^[A-Z][A-Z]$/) })
@@ -615,20 +609,27 @@ these must also match, and are validated recursively in a depth-first
 manner [^1].
 
 
-#### Required Scalars
+#### Required Values
 
 The value must be of the indicated type, and must exist.
 
 * `String`: match any string, but not the empty string [^2].
 * `Number`: match any number, but not `BigInt` values.
 * `Boolean`: match any boolean.
+* `Function`: match any function.
+* `Object`: match any object.
+* `Array`: match any array.
 * `Symbol`: match any symbol.
 * `BigInt`: match any `BigInt` (including the `1n` syntax form).
+* `Error`: match an object created with `new Error(...)`
 * `Date`: match an object created with `new Date(...)`
 * `RegExp`: match an object created with `/.../` or `new RegExp(...)`
 
+You can require an instance of any class (that is, an object created
+with `new`) by using the class name as the shape.
 
-#### Optional Scalars with Defaults
+
+#### Optional Values with Defaults
 
 The value must be of the indicated type, and is derived from the given
 default. If the value does not exist, the default value is inserted.
@@ -636,10 +637,19 @@ default. If the value does not exist, the default value is inserted.
 * `foo`: match any string, but replace an empty string [^3].
 * `123`: match any number, but not `BigInt` values.
 * `true`: match any boolean.
+* `new Object()`: match any object.
+* `new Array()`: match any array.
 * `new Symbol('bar')`: match any symbol.
 * `new BigInt(456)`: match any `BigInt` (including the `1n` syntax form).
+* `new Error()`: match an object created with `new Error(...)`
 * `new Date()`: match an object created with `new Date(...)`
 * `/x/`: match an object created with `/.../` or `new RegExp(...)`
+
+You can provide an instance of any class as a default. The value, if
+present, must be an instance of the same class.
+
+Note that `new Function()` does not match anonymous functions, and
+should not be used [^4].
 
 
 #### Objects
@@ -2526,8 +2536,6 @@ Licensed under [MIT][].
       `Empty('some-default')` or just `''`. See [Empty
       Strings](#empty-strings).
 
-
-## TODO
-
-* Note that gubu input is mutated by design - user must clone as needed
-
+[^4]: Unfortunately `new Function()` generates a function value with
+      the name `anonymous` that cannot be differentiated from a simpe
+      function declaration of a function also called `anonymous`.
