@@ -656,17 +656,19 @@ should not be used [^4].
 
 Plain objects can be specified directly as they appear in values to be
 validated. If you want an object `{foo: 123}`, then the shape is also
-`{foo: 123}`, meaning any object with a `foo` property that is a
-`number`. The `foo` property is optional, and will default to the
-value `123`.
+`{foo: 123}`, meaning any object with a `foo` property (and no other
+properties) that is a `number`. The `foo` property is optional, and
+will default to the value `123`.
 
 You can define plain objects to any depth. The shape `{ bar: { foo:
 123 } }` defines an object that optionally contains another object as
 the value of the property `bar`.
 
 As objects and sub-objects are often referenced directly in data
-structures, *Gubu* will construct missing objects by default, and fill
-in the missing child values (which may themselves be objects).
+structures (using dot notation), *Gubu* will construct missing objects
+by default, and fill in the missing child values (which may themselves
+be objects). These protect your code from `undefined` value errors
+in default cases.
 
 The general form of an object shape is:
 
@@ -689,7 +691,7 @@ The `<SHAPE>` can be any valid *Gubu* shape definition.
 ##### Required Properties (Object)
 
 To mark an object property as required, use the [required
-scalar](#required-scalars) shapes (such as `String`), or use the shape
+value](#required-values) shapes (such as `String`), or use the shape
 builder [Required](#required-builder):
 
 ```
@@ -702,15 +704,15 @@ let shape = Gubu({
   })
 })
 
-// These pass, returning the value unchanged.
+// This passes, returning the value unchanged.
 shape({ foo: 1, bar: { zed: false } })
-shape({ foo: 1, bar: { zed: false, baz: 2 }, qaz: 3 }) // new properties are allowed
 
 // These fail, throwing an Error.
 shape({ bar: { zed: false } }) // foo is required
 shape({ foo: 'abc', bar: { zed: false } }) // foo is not a number
 shape({ foo: 1 }) // bar is required
 shape({ foo: 1, bar: {} }) // bar.zed is required
+shape({ foo: 1, bar: { zed: false, baz: 2 }, qaz: 3 }) // new properties are not allowed
 ```
 
 Object properties that are required must always be provided, even if
@@ -740,31 +742,43 @@ easyShape({ a: {} })
 ```
  
 
-##### Closed Objects
+##### Open Objects
 
-To restrict the set of allowed properties, use the shape builder
-[Closed](#closed-builder):
+Normally, objects can only contain explicitly defined properties. To
+allow an object to have an unrestricted set of properties, use the
+[Open](#open-builder) shape builder:
 
 ```
-const { Closed } = Gubu
+const { Open } = Gubu
 
-let shape = Gubu(Closed({
-  a: Closed({ x: 1 }),
-  b: { y: 2 }
+let shape = Gubu(Open({
+  a: 1
 }))
 
-// These pass, returning the value with defaults inserted
-shape({ a: { x: 11 }, b: { y: 22 } })
-shape({ a: { x: 11 } }) // b is optional, returns { a: { x: 11 }, b: { y: 2 } }
-shape({}) // a is optional, returns { a: { x: 1 }, b: { y: 2 } }
+shape({ a: 11, b: 22 }) // PASS: returns { a: 11, b: 22 }
+shape({ b: 22, c: 'foo' }) // PASS: returns { a: 1, b: 22, c: 'foo' }
 
-// These fail, throwing an Error.
-shape({ a: { x: 11 }, b: { y: 22 }, c: { z: 33 } }) // c is not allowed
-shape({ a: { x: 11, k: 44 } }) // k is not allowed inside { x: 11 }
+shape({ a: 'foo' }) // FAIL: property `a` must still be a number
+
 ```
 
-If a property must be present in an object, used the shape builder
-[Required](#required-properties-object).
+The [Open](#open-builder) shape builder applies only to the object it
+wraps, and does not apply to child objects. You need to use `Open`
+explicitly for each object that can have arbitrary properties.
+
+
+```
+shape = Gubu(Open({
+  a: Open({
+    b: 1
+  })
+}))
+
+
+shape({ a: { b: 11, c: 22 }, d: 33 }) // PASS, returns object
+
+```
+
 
 
 ##### Optional Objects
@@ -795,15 +809,16 @@ If the object value is present but empty, any default values will be inserted.
 ##### Object Values
 
 You can define a general shape for all non-explicit object values
-using the shape builder [Value](#value-builder):
+using the [Value](#value-builder) shape builder:
 
 ```
 const { Value } = Gubu
+
 let shape = Gubu(Value(String, {
   a: 123,
 }))
 
-// All new properties must be a String
+// All non-explicit properties must be a String
 shape({ a: 11, b: 'abc' }) // b is a string
 shape({ c: 'foo', d: 'bar' }) // c and d are strings
 
@@ -812,11 +827,16 @@ shape({ a: 'abc' }) // a must be a number
 shape({ b: { x: 1 } }) // b must be a string
 ```
 
+Using the [Value](#value-builder) shape builder in this automatically
+makes the object open, but constrains the values that can be used for
+non-explicit properties.
+
 The general shape can be any valid shape:
 
 
 ```
 const { Required, Value } = Gubu
+
 let shape = Gubu({
   people: Required({}).Value({ name: String, age: Number })
 })

@@ -179,11 +179,10 @@ function nodize(shape, depth) {
     let b = undefined;
     let u = {};
     if ('object' === t) {
-        // TODO: use v here (not shape) to be consistent
-        if (Array.isArray(shape)) {
+        if (Array.isArray(v)) {
             t = 'array';
-            if (1 === shape.length) {
-                c = shape[0];
+            if (1 === v.length) {
+                c = v[0];
                 v = [];
             }
         }
@@ -204,7 +203,6 @@ function nodize(shape, depth) {
         }
     }
     else if ('function' === t) {
-        console.log('AAA');
         if (IS_TYPE[shape.name]) {
             t = shape.name.toLowerCase();
             r = true;
@@ -213,24 +211,21 @@ function nodize(shape, depth) {
             if ('Object' === shape.name) {
                 c = Any();
             }
-            console.log('BBB');
         }
-        else if (shape.gubu === GUBU || true === ((_b = shape.$) === null || _b === void 0 ? void 0 : _b.gubu)) {
-            let gs = shape.spec ? shape.spec() : shape;
+        else if (v.gubu === GUBU || true === ((_b = v.$) === null || _b === void 0 ? void 0 : _b.gubu)) {
+            let gs = v.spec ? v.spec() : v;
             t = gs.t;
             v = gs.v;
             r = gs.r;
             u = gs.u;
-            console.log('CCC');
         }
         // Instance of a class.
-        else if (!((undefined === shape.prototype && Function === shape.constructor) ||
-            Function === ((_c = shape.prototype) === null || _c === void 0 ? void 0 : _c.constructor))) {
+        else if (!((undefined === v.prototype && Function === v.constructor) ||
+            Function === ((_c = v.prototype) === null || _c === void 0 ? void 0 : _c.constructor))) {
             t = 'instance';
             r = true;
             u.n = (_e = (_d = v.prototype) === null || _d === void 0 ? void 0 : _d.constructor) === null || _e === void 0 ? void 0 : _e.name;
             u.i = v;
-            console.log('DDD');
         }
     }
     else if ('number' === t && isNaN(v)) {
@@ -310,7 +305,6 @@ function make(intop, inopts) {
                         let hasKeys = false;
                         let vkeys = Object.keys(n.v);
                         let start = s.nI;
-                        // console.log('OBJ vkeys', vkeys)
                         if (0 < vkeys.length) {
                             hasKeys = true;
                             s.pI = start;
@@ -323,10 +317,7 @@ function make(intop, inopts) {
                                 s.nI++;
                             }
                         }
-                        // let okeys = Object.keys(val)
-                        // console.log('OBJ okeys', okeys)
                         let extra = Object.keys(val).filter(k => undefined === n.v[k]);
-                        // console.log('OBJ extra', extra)
                         if (0 < extra.length) {
                             // let extra = okeys.filter(k => undefined === n.v[k])
                             if (GUBU$NIL === n.c) {
@@ -351,9 +342,6 @@ function make(intop, inopts) {
                             s.nodes[s.nI++] = s.sI;
                             s.nextSibling = false;
                         }
-                        // console.log('OBJ hasKeys', hasKeys)
-                        // console.log(s)
-                        // process.exit()
                     }
                 }
                 else if ('array' === s.type) {
@@ -636,7 +624,6 @@ const All = function (...inshapes) {
             }
         }
         if (!pass) {
-            // console.log('ALL', inshapes)
             update.why = 'all';
             update.err = [
                 makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy all of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
@@ -660,10 +647,8 @@ const Some = function (...inshapes) {
         for (let shape of shapes) {
             let subctx = { ...state.ctx, err: [] };
             let match = shape.match(val, subctx);
-            // console.log('S0', pass, shape, val, update.val)
             if (match) {
                 update.val = shape(val, subctx);
-                // console.log('S1', pass, shape, val, update.val)
             }
             pass || (pass = match);
         }
@@ -1007,55 +992,9 @@ const Below = function (below, shape) {
 };
 exports.Below = Below;
 const Value = function (value, shape) {
-    // let node = undefined == shape1 ? buildize(this) : buildize(shape0)
     let node = undefined == shape ? buildize(this) : buildize(shape);
-    // let shape = nodize(undefined == shape1 ? shape0 : shape1)
     let child = nodize(value);
-    // Set child value to shape
     node.c = child;
-    /*
-    node.a.push(function Value(val: any, _update: Update, s: State) {
-      if (null != val) {
-  
-        let namedKeys = Object.keys(s.node.v)
-        let valKeys = Object.keys(val)
-          .reduce((a: string[], k: string) =>
-            ((namedKeys.includes(k) || a.push(k)), a), [])
-  
-        if (0 < valKeys.length) {
-          let endI = s.nI + valKeys.length - 1
-  
-          let nI = s.nI
-  
-          if (0 < namedKeys.length) {
-            nI--
-            s.nodes[endI] = s.nodes[nI]
-            s.vals[endI] = s.vals[nI]
-            s.parents[endI] = s.parents[nI]
-            s.keys[endI] = s.keys[nI]
-          }
-          else {
-            endI++
-            s.nodes[endI] = s.sI
-            s.pI = nI
-          }
-  
-          for (let k of valKeys) {
-            s.nodes[nI] = nodize(child, 1 + s.dI)
-            s.vals[nI] = val[k]
-            s.parents[nI] = val
-            s.keys[nI] = k
-            nI++
-          }
-  
-          s.nI = endI + 1
-          s.nextSibling = false
-          s.dI++
-        }
-      }
-      return true
-    })
-    */
     return node;
 };
 exports.Value = Value;

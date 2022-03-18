@@ -374,11 +374,10 @@ function nodize(shape?: any, depth?: number): Node {
   let u: any = {}
 
   if ('object' === t) {
-    // TODO: use v here (not shape) to be consistent
-    if (Array.isArray(shape)) {
+    if (Array.isArray(v)) {
       t = 'array'
-      if (1 === shape.length) {
-        c = shape[0]
+      if (1 === v.length) {
+        c = v[0]
         v = []
       }
     }
@@ -404,7 +403,6 @@ function nodize(shape?: any, depth?: number): Node {
   }
 
   else if ('function' === t) {
-    console.log('AAA')
     if (IS_TYPE[shape.name]) {
       t = (shape.name.toLowerCase() as ValType)
       r = true
@@ -414,30 +412,24 @@ function nodize(shape?: any, depth?: number): Node {
       if ('Object' === shape.name) {
         c = Any()
       }
-
-      console.log('BBB')
     }
-    else if (shape.gubu === GUBU || true === shape.$?.gubu) {
-      let gs = shape.spec ? shape.spec() : shape
+    else if (v.gubu === GUBU || true === v.$?.gubu) {
+      let gs = v.spec ? v.spec() : v
       t = (gs as Node).t
       v = gs.v
       r = gs.r
       u = gs.u
-
-      console.log('CCC')
     }
 
     // Instance of a class.
     else if (!(
-      (undefined === shape.prototype && Function === shape.constructor) ||
-      Function === shape.prototype?.constructor
+      (undefined === v.prototype && Function === v.constructor) ||
+      Function === v.prototype?.constructor
     )) {
       t = 'instance'
       r = true
       u.n = v.prototype?.constructor?.name
       u.i = v
-
-      console.log('DDD')
     }
   }
   else if ('number' === t && isNaN(v)) {
@@ -540,7 +532,6 @@ function make<S>(intop?: S, inopts?: Options) {
             let vkeys = Object.keys(n.v)
             let start = s.nI
 
-            // console.log('OBJ vkeys', vkeys)
             if (0 < vkeys.length) {
               hasKeys = true
               s.pI = start
@@ -554,12 +545,7 @@ function make<S>(intop?: S, inopts?: Options) {
               }
             }
 
-            // let okeys = Object.keys(val)
-            // console.log('OBJ okeys', okeys)
-
             let extra = Object.keys(val).filter(k => undefined === n.v[k])
-
-            // console.log('OBJ extra', extra)
 
             if (0 < extra.length) {
               // let extra = okeys.filter(k => undefined === n.v[k])
@@ -588,10 +574,6 @@ function make<S>(intop?: S, inopts?: Options) {
               s.nodes[s.nI++] = s.sI
               s.nextSibling = false
             }
-
-            // console.log('OBJ hasKeys', hasKeys)
-            // console.log(s)
-            // process.exit()
           }
         }
 
@@ -952,8 +934,6 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
     }
 
     if (!pass) {
-      // console.log('ALL', inshapes)
-
       update.why = 'all'
       update.err = [
         makeErr(state,
@@ -985,11 +965,8 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
       let subctx = { ...state.ctx, err: [] }
       let match = shape.match(val, subctx)
 
-      // console.log('S0', pass, shape, val, update.val)
-
       if (match) {
         update.val = shape(val, subctx)
-        // console.log('S1', pass, shape, val, update.val)
       }
 
       pass ||= match
@@ -1451,58 +1428,9 @@ const Value: Builder = function(
   value?: any,
   shape?: any
 ): Node {
-  // let node = undefined == shape1 ? buildize(this) : buildize(shape0)
   let node = undefined == shape ? buildize(this) : buildize(shape)
-  // let shape = nodize(undefined == shape1 ? shape0 : shape1)
   let child = nodize(value)
-
-  // Set child value to shape
   node.c = child
-
-  /*
-  node.a.push(function Value(val: any, _update: Update, s: State) {
-    if (null != val) {
-
-      let namedKeys = Object.keys(s.node.v)
-      let valKeys = Object.keys(val)
-        .reduce((a: string[], k: string) =>
-          ((namedKeys.includes(k) || a.push(k)), a), [])
-
-      if (0 < valKeys.length) {
-        let endI = s.nI + valKeys.length - 1
-
-        let nI = s.nI
-
-        if (0 < namedKeys.length) {
-          nI--
-          s.nodes[endI] = s.nodes[nI]
-          s.vals[endI] = s.vals[nI]
-          s.parents[endI] = s.parents[nI]
-          s.keys[endI] = s.keys[nI]
-        }
-        else {
-          endI++
-          s.nodes[endI] = s.sI
-          s.pI = nI
-        }
-
-        for (let k of valKeys) {
-          s.nodes[nI] = nodize(child, 1 + s.dI)
-          s.vals[nI] = val[k]
-          s.parents[nI] = val
-          s.keys[nI] = k
-          nI++
-        }
-
-        s.nI = endI + 1
-        s.nextSibling = false
-        s.dI++
-      }
-    }
-    return true
-  })
-  */
-
   return node
 }
 
