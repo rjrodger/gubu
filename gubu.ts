@@ -380,6 +380,7 @@ function nodize(shape?: any, depth?: number): Node {
         c = v[0]
         v = []
       }
+      // Else no child, thus closed.
     }
     else if (
       null != v &&
@@ -620,7 +621,6 @@ function make<S>(intop?: S, inopts?: Options) {
               }
 
               // Single element array shape means 0 or more elements of shape
-              // if (1 === elementKeys.length) {
               if (hasChildShape && hasValueElements) {
                 let elementShape: Node = n.c = nodize(n.c, 1 + s.dI)
                 for (; elementIndex < s.val.length; elementIndex++) {
@@ -644,7 +644,6 @@ function make<S>(intop?: S, inopts?: Options) {
         // Invalid type.
         else if (!(
           'any' === s.type ||
-          // 'custom' === s.type ||
           'list' === s.type ||
           undefined === s.val ||
           s.type === s.valType ||
@@ -822,7 +821,6 @@ function handleValidate(vf: Validate, s: State): Update {
       let fname = vf.name
       if (null == fname || '' == fname) {
         fname = truncate(vf.toString().replace(/[ \t\r\n]+/g, ' '))
-        // fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname
       }
       s.err.push(makeErrImpl(
         w, s, 1045, undefined, { thrown }, fname))
@@ -853,7 +851,7 @@ function handleValidate(vf: Validate, s: State): Update {
 }
 
 
-// function pathstr(path: string[], dI: number) {
+// Create string description of property path, using "dot notation".
 function pathstr(s: State) {
   return s.path.slice(1, s.dI + 1).filter(p => null != p).join('.')
 }

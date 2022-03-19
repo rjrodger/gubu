@@ -1234,13 +1234,21 @@ Validation failed for property "q.b" with value "x" because the value is not of 
     expect(gc2([2, , false])).toEqual([2, 'a', false])
     expect(() => gc2([2, 'b', false, 'bad'])).toThrow('not allowed')
 
-
+    // 2 or more elements, so considered Closed
     let gc3 = Gubu([{ x: 1 }, Required({ y: true })])
     expect(gc3([{ x: 2 }, { y: false }])).toEqual([{ x: 2 }, { y: false }])
     expect(gc3([undefined, { y: false }])).toEqual([{ x: 1 }, { y: false }])
     expect(gc3([{ x: 2 }, {}])).toEqual([{ x: 2 }, { y: true }])
     expect(() => gc3([{ x: 2 }, undefined])).toThrow('required')
     expect(() => gc3([{ x: 2 }])).toThrow('required')
+
+    let gc4 = Gubu({ a: Closed([{ x: 1 }, { y: { z: /a/ } }]) })
+    expect(gc4()).toEqual({ 'a': [{ 'x': 1 }, { 'y': { 'z': /a/ } }] })
+    expect(gc4({})).toEqual({ 'a': [{ 'x': 1 }, { 'y': { 'z': /a/ } }] })
+    expect(gc4({ a: undefined }))
+      .toEqual({ 'a': [{ 'x': 1 }, { 'y': { 'z': /a/ } }] })
+    expect(gc4({ a: [] })).toEqual({ 'a': [{ 'x': 1 }, { 'y': { 'z': /a/ } }] })
+    expect(() => gc4({ a: {} })).toThrow('Validation failed for property "a" with object "{}" because the object is not of type array.')
   })
 
 

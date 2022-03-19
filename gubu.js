@@ -185,6 +185,7 @@ function nodize(shape, depth) {
                 c = v[0];
                 v = [];
             }
+            // Else no child, thus closed.
         }
         else if (null != v &&
             Function !== v.constructor &&
@@ -380,7 +381,6 @@ function make(intop, inopts) {
                                 }
                             }
                             // Single element array shape means 0 or more elements of shape
-                            // if (1 === elementKeys.length) {
                             if (hasChildShape && hasValueElements) {
                                 let elementShape = n.c = nodize(n.c, 1 + s.dI);
                                 for (; elementIndex < s.val.length; elementIndex++) {
@@ -401,7 +401,6 @@ function make(intop, inopts) {
                 }
                 // Invalid type.
                 else if (!('any' === s.type ||
-                    // 'custom' === s.type ||
                     'list' === s.type ||
                     undefined === s.val ||
                     s.type === s.valType ||
@@ -537,7 +536,6 @@ function handleValidate(vf, s) {
             let fname = vf.name;
             if (null == fname || '' == fname) {
                 fname = truncate(vf.toString().replace(/[ \t\r\n]+/g, ' '));
-                // fname = 33 < fname.length ? fname.substring(0, 30) + '...' : fname
             }
             s.err.push(makeErrImpl(w, s, 1045, undefined, { thrown }, fname));
         }
@@ -560,7 +558,7 @@ function handleValidate(vf, s) {
     }
     return update;
 }
-// function pathstr(path: string[], dI: number) {
+// Create string description of property path, using "dot notation".
 function pathstr(s) {
     return s.path.slice(1, s.dI + 1).filter(p => null != p).join('.');
 }

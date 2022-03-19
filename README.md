@@ -868,11 +868,12 @@ let shape = Gubu([Number])
 shape() // PASS: returns [] (the array itself is optional)
 shape([]) // PASS: returns [] (empty arrays pass)
 shape([1]) // PASS: element matches Number shape
-shape([1, 2]) // PASS: all elements matche Number shape
+shape([1, 2]) // PASS: all elements match Number shape
 
 shape([1, 2, 'bad']) // FAILS; element 2 is not a number
 
 
+// Array elements can be any complex shape.
 shape = Gubu([{x: 1}])
 shape([{ x: 123 }, { x: 456 }]) // PASS: elements match {x: 1}
 shape([{}]) // PASS:  returns [{x: 1}]
@@ -881,11 +882,8 @@ shape([{x: 123}, {x: 'a'}]) // FAILS; element 1 does not match {x: 1}
 ```
 
 You can also define special shapes for individual elements at specific
-indexes, as shown below.
-
-As arrays are often referenced directly in data structures, *Gubu*
-will construct missing arrays by default, and fill in the missing
-element values if there are empty array entries.
+indexes, using the [Closed](#closed-builder) shape builder, as shown
+below.
 
 The general form of an array shape is:
 
@@ -893,15 +891,6 @@ The general form of an array shape is:
 [
   <SHAPE>,
 ]
-
-OR
-
-Closed([
-  <SPECIAL-SHAPE-0>,
-  <SPECIAL-SHAPE-1>,
-  ...
-  <SPECIAL-SHAPE-N>,
-])
 ```
 
 where `<SHAPE>` is any valid *Gubu* shape definition. All elements
@@ -926,17 +915,22 @@ shape([ 123, 'abc', true, 'extra' ]) // Too many elements
 
 As a shortcut, a shape array with *two or more* elements is considered
 closed, and all elements are considered special. Thus `Closed([String,
-Number])` is the same as simply `[String, Number]`. For a single
-element closed array, you *must* use the [Closed](#closed-builder)
-shape builder to close the array. Thus `Closed([Number])` means the
-array can only ever have one element, a number.
+Number])` is the same as `[String, Number]`. For a single element
+closed array, you *must* use the [Closed](#closed-builder) shape
+builder to close the array. Thus `Closed([Number])` means the array
+can only ever have one element, a number.
+
+As arrays are often referenced directly in data structures, *Gubu*
+will construct missing arrays by default, and for closed arrays, fill
+in the missing element values if there are empty or `undefined` array
+entries.
 
 
 ##### Required Properties (Array)
 
 To mark an array element as required, use the [required
-scalar](#required-scalars) shapes (such as `String`), or use the shape
-builder [Required](#required-builder). 
+value](#required-values) shapes (such as `String`), or use the shape
+builder [Required](#required-builder).
 
 ```
 let shape = Gubu([{ x: 1 }, Required({ y: true })])
