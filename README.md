@@ -776,8 +776,10 @@ shape = Gubu(Open({
 
 
 shape({ a: { b: 11, c: 22 }, d: 33 }) // PASS, returns object
-
 ```
+
+An empty object shape (`{}`) is automatically open and will allow any
+properties.
 
 
 
@@ -946,13 +948,20 @@ shape([{ x: 2 }]) // Element 1 is required
 ```
 
 
+##### Array Properties
+
+JavaScript allows arrays to have properties: `let a = []; a.foo = 1`.
+Matching against array properties in the current version must be done
+by writing a [custom validator](#custom-validation) using the
+[Check](#check-builder) shape builder.
+
+
 ##### Length Constraints
 
 You can control the allowed length of an array using the shape
 builders [Min](#min-builder), [Max](#max-builder),
 [Above](#above-builder), and [Below](#below-builder) to restrict the
 length of the array.
-
 
 ```
 let { Min } = Gubu
@@ -985,7 +994,7 @@ shape('ab') // PASS
 shape('abc') // FAIL: string longer than 2 characters
 
 // Maximum object size
-shape = Gubu(Max(2, {}))
+shape = Gubu(Max(2, {})) // An empty object is open, so can accept any properties
 shape({ a: 1 }) // PASS
 shape({ a: 1, b: 2 }) // PASS
 shape({ a: 1, b: 2, c: 3 }) // FAIL: more than 2 properties in object
@@ -993,31 +1002,32 @@ shape({ a: 1, b: 2, c: 3 }) // FAIL: more than 2 properties in object
 ```
 
 
-##### Array Properties
-
-JavaScript allows arrays to have properties: `let a = []; a.foo = 1`.
-Matching against array properties in the current version must be done
-by writing a [custom validator](#custom-validation) using the
-[Check](#check-builder) shape builder.
-
-
-
 #### Functions
 
-To require a function, use the shape `Function`:
-`Gubu(Function)(()=>true)` will pass.
-
-To provide a default function, you'll need to create a shape manually,
-using the special `G$` utility. Literal functions are used as [custom
-validators](#custom-validation), as this is the most common use case.
+Literal function value operate in the same way as any other literal
+values, defining an optional value shape with a default. This allows
+you to provide default functions for your module options, if you are
+using *Gubu* as an option validator.
 
 ```
-let { G$ } = Gubu
-let shape = Gubu({ fn: G$({ v: ()=>true }) })
+let shape = Gubu({
+  fn: () => true
+})
 
-shape({}) // returns { fn: ()=>true }
-shape({ fn: ()=>false }) // returns { fn: ()=>false }
+// This passes
+shape({ 
+  fn: () => false 
+})
+
+// This injects the default function
+shape({)) === {
+  fn: () => true 
+})
 ```
+
+
+To require a function, use the shape `Function`,
+(`Gubu(Function)(()=>true)` will pass).
 
 
 #### Custom Validation
@@ -1029,25 +1039,31 @@ shape({ fn: ()=>false }) // returns { fn: ()=>false }
 [Builders](#shape-builder-reference)
 
 
-You can define custom validators by providing a function as the
-shape. The first argument to this function will the value to
-validate. Return `true` if the value is valid, and `false` if not.
+You can define custom validators by providing a function to the
+[Check](#check-builder) shape builder. The first argument to this
+function will provide the value to validate. Return `true` if the
+value is valid, and `false` if not.
 
 ```
-let shape = Gubu({ a: (v) => 10 < v })
+import { Gubu, Check } from 'gubu'
+
+let shape = Gubu({ a: Check((v) => 10 < v) })
 shape({ a: 11 }) // passes, as 10 < 11 is true
 shape({ a: 9 })  // fails, as 10 < 9 is false
 ```
 
-<a name="update-type"></a>
-You modify the value using the second argument (`Update`) to the custom
-validation function:
+<a name="update-type"></a> 
+You can modify the value using the second argument to the custom
+validation function, by assigning a new value to the `val` property:
 
 ```
-let shape = Gubu({ a: (value, update) => {
-  update.val = value * 2 
-  return true
+let shape = Gubu({ 
+  a: Check((value, update) => {
+    update.val = value * 2 
+    return true // Remember to return true to indicate value is valid!
+  })
 })
+
 shape({ a: 3 }) // returns { a: 6 }
 ```
 
@@ -1057,26 +1073,31 @@ As a special case, if you want to explicitly set the value to
 You can also provide a custom error message using the `update` argument:
 
 ```
-let shape = Gubu({ a: (value, update) => {
-  update.err = 'BAD VALUE $VALUE AT $PATH'
-  return false // always fails
+let shape = Gubu({ 
+  a: Check((value, update) => {
+    update.err = 'BAD VALUE $VALUE AT $PATH'
+    return false // always fails
+  })
 })
 shape({ a: 3 }) // throws "BAD VALUE 3 AT a"
 ```
 
 The special replacement tags `$VALUE` and `$PATH` are replaced with
-the value, and the path to the value, respectively.
+the value, and the property path to the value, respectively.
 
-<a name="state-type"></a>
-The third argument (`State`) to a custom validator is the internal state of the
-validation process. This provided for special cases and workarounds,
-and the internal set of properties is not stable. Review the [source
-code](https://github.com/rjrodger/gubu/blob/main/gubu.ts#L80) to see
+<a name="state-type"></a> The third argument to a custom validator is
+the internal state of the validation process. This is provided for
+special cases and workarounds, and the internal set of properties
+should not be considered stable. Review the [source
+code](https://github.com/rjrodger/gubu/blob/main/gubu.ts#L98) to see
 what is available.
 
 ```
-let shape = Gubu({ a: (value, update, state) => {
-  update.val = value + ` KEY=${state.key}`
+shape = Gubu({
+  a: Check((value: any, update: any, state: any) => {
+    update.val = value + ` KEY=${state.key}`
+    return true
+  })
 })
 shape({ a: 3 }) // returns { a: '3 KEY=a'}
 ```

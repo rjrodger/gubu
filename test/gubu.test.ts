@@ -1286,6 +1286,51 @@ Validation failed for property "q.b" with value "x" because the value is not of 
 
     expect(shape({})).toEqual({ fn: f0 })
     expect(shape({ fn: f1 })).toEqual({ fn: f1 })
+
+
+    let tmp: any = {}
+
+    shape = Gubu({
+      fn: tmp.d0 = () => true
+    })
+
+    expect(shape({ fn: tmp.f0 = () => false })).toEqual({ fn: tmp.f0 })
+    expect(shape({})).toEqual({ fn: tmp.d0 })
+  })
+
+
+  test('api-custom', () => {
+    let shape = Gubu({ a: Check((v: any) => 10 < v) })
+    expect(shape({ a: 11 })).toEqual({ a: 11 }) // passes, as 10 < 11 is true
+    expect(() => shape({ a: 9 })).toThrow('Validation failed for property "a" with value "9" because check "(v) => 10 < v" failed.')  // fails, as 10 < 9 is false
+
+    shape = Gubu({
+      a: Check((value: any, update: any) => {
+        update.val = value * 2
+        return true // Remember to return true to indicate value is valid!
+      })
+    })
+
+    expect(shape({ a: 3 })).toEqual({ a: 6 })
+
+
+    shape = Gubu({
+      a: Check((value: any, update: any) => {
+        update.err = 'BAD VALUE $VALUE AT $PATH'
+        return false // always fails
+      })
+    })
+    expect(() => shape({ a: 3 })).toThrow("BAD VALUE 3 AT a")
+
+
+    shape = Gubu({
+      a: Check((value: any, update: any, state: any) => {
+        update.val = value + ` KEY=${state.key}`
+        return true
+      })
+    })
+    expect(shape({ a: 3 })).toEqual({ a: '3 KEY=a' }) // returns { a: '3 KEY=a'}
+
   })
 
 
