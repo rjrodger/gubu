@@ -71,10 +71,10 @@ type Node = {
   t: ValType             // Value type name.
   d: number              // Depth.
   v: any                 // Default value.
-  n: number              // Number of keys in default value
-  c: any                 // Default child.
   r: boolean             // Value is required.
   p: boolean             // Value is skippable - can be missing or undefined.
+  n: number              // Number of keys in default value
+  c: any                 // Default child.
   u: Record<string, any> // Custom user meta data
   b: Validate[]          // Custom before validation functions.
   a: Validate[]          // Custom after vaidation functions.
@@ -727,11 +727,10 @@ function make<S>(intop?: S, inopts?: Options) {
 
   function valid<D>(root?: D, ctx?: Context): root is (D & S) {
     let actx: any = ctx || {}
+    actx.err = actx.err || []
     exec(root, actx, false)
-    return null == actx.err || 0 === actx.err.length
+    return 0 === actx.err.length
   }
-
-
   gubuShape.valid = valid
 
 

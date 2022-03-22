@@ -59,6 +59,20 @@ describe('gubu', () => {
             expect(d0.y).toEqual('Y');
             // expect(d0.z).toEqual(true)
         }
+        let v0 = { z: true };
+        expect(g0.valid(v0)).toEqual(false);
+        expect(v0).toEqual({ z: true, x: 1, y: 'Y' });
+        v0 = { z: true };
+        let ctx0 = { err: [] };
+        expect(g0.valid(v0, ctx0)).toEqual(false);
+        expect(v0).toEqual({ z: true, x: 1, y: 'Y' });
+        expect(ctx0.err[0].w).toEqual('closed');
+        let v1 = {};
+        expect(g0.match(v1)).toEqual(true);
+        expect(v1).toEqual({});
+        let v1e = { z: true };
+        expect(g0.match(v1e)).toEqual(false);
+        expect(v1e).toEqual({ z: true });
         let g0d = Gubu(Open({ x: 1, y: 'Y' }));
         let d0d = { x: 2, z: true };
         let d0do = g0d(d0d);
@@ -82,6 +96,13 @@ describe('gubu', () => {
             expect(d2.y).toEqual('Y');
             expect(d2.z).toEqual(true);
         }
+        const shape = Gubu({ x: 1, y: 'Y' });
+        let data = { x: 2 };
+        expect(shape.valid(data)).toEqual(true);
+        expect(shape(data)).toEqual({ x: 2, y: 'Y' });
+        expect(shape(data).x).toEqual(2);
+        expect(shape(data).y).toEqual('Y');
+        // CONSOLE-LOG(data.q) // UNCOMMENT TO VERIFY COMPILE FAILS
         let g3 = Gubu({ ...new Foo(1) });
         // let d3 = { a: 11, x: true }
         let d3 = { a: 11 };
@@ -91,14 +112,12 @@ describe('gubu', () => {
             expect(d3.a).toEqual(11);
             // expect(d3.x).toEqual(true)
         }
-        let g4 = Gubu(Open({ x: Closed({ k: 1 }), y: 'Y' }));
+        let g4 = Gubu(Open({ x: 1 }));
         let d4 = { z: true };
         if (g4.valid(d4)) {
-            expect(d4).toEqual({ x: { k: 1 }, y: 'Y', z: true });
-            expect(d4.x).toEqual({ k: 1 });
-            expect(d4.x.k).toEqual(1);
-            expect(d4.y).toEqual('Y');
+            expect(d4.x).toEqual(1);
             expect(d4.z).toEqual(true);
+            // CONSOLE-LOG(d4.q) // UNCOMMENT TO VERIFY COMPILE FAILS
         }
     });
     test('readme-quick', () => {

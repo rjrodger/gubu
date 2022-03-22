@@ -28,10 +28,10 @@ declare type Node = {
     t: ValType;
     d: number;
     v: any;
-    n: number;
-    c: any;
     r: boolean;
     p: boolean;
+    n: number;
+    c: any;
     u: Record<string, any>;
     b: Validate[];
     a: Validate[];

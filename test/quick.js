@@ -697,15 +697,18 @@ let tmp = {}
 // // console.log(Gubu(Skip(String))(null))
 
 
-function a() {}
-let b = ()=>false
+// function a() {}
+// let b = ()=>false
 
-console.log(Gubu(()=>true).spec())
-console.log(Gubu(a).spec())
-console.log(Gubu(b).spec())
-console.log(Gubu(Function).spec())
-console.log(Gubu(new Function()).spec())
+// console.log(Gubu(()=>true).spec())
+// console.log(Gubu(a).spec())
+// console.log(Gubu(b).spec())
+// console.log(Gubu(Function).spec())
+// console.log(Gubu(new Function()).spec())
 
-console.log(new a())
-// console.log(new b())
-console.log(''===((()=>true).name))
+// console.log(new a())
+// // console.log(new b())
+// console.log(''===((()=>true).name))
+
+
+Gubu(Number)('abc')

@@ -1118,11 +1118,12 @@ let shape = Gubu({ x: 1 })
 ```
 
 In the browser, *Gubu* adds itself directly to the `window` object for
-immediate use, if you directly load this module using a `script`
-tag. However you'll probably just want to import *Gubu* in the usual
-way and let your package builder look after things.
+immediate use (if you directly load this module using a `script`
+tag). However you'll probably just want to import *Gubu* in the usual
+way into your own source code and let your package builder look after
+things.
 
-The `Gubu` function has arguments:
+The `Gubu` function has two arguments:
 * `shape` (optional): any valid shape definition (`'abc'`, `String`, `{ x: 123 }`, etc.).
 * `options` (optional): an options object.
 
@@ -1147,12 +1148,12 @@ const { Require } = Gubu
 ```
 
 If you are concerned about namespacing the builders (if the names
-clash with your own names), use a 'G' prefix as an alias:
+clash with your own names), the shape builders are also available with
+a 'G' prefix as an alias:
 
 ```
-Gubu.GRequired = Gubu.Required
+Gubu.GRequired === Gubu.Required
 ```
-
 
 
 ### GubuShape function
@@ -1165,23 +1166,26 @@ function is returned:
 import { Gubu, GubuShape } from 'gubu'
 
 // GubuShape is inferred:
-const shape = Gubu(123) // shape is a generic GubuShape
+const shape = Gubu(123) // `shape` is a validator function
 ```
 
-The shape validator function has arguments:
+The shape validator function has two arguments:
 * `value`: the value to validate (and modify with defaults).
 * `context`: (optional) a context object containing your own data.
 
 The value can be anything. It is not duplicated and **will be
 mutated** if defaults are inserted.
 
+> **If you do not wish the value to be mutated, you must clone it yourself
+first [^5]**.
+
 The context is a general purpose store for anything you might want to
 use in custom validation builders. It may also be used by builders to
 hold state information (the name of the builder is used for
 namespacing).
 
-The context does have reserved names:
-* `err`: an array of validation errors
+The context has one reserved name:
+* `err`: an array of validation errors.
 
 If you provide a context with the property `err` as an empty array,
 any validation errors will be added to this array, and an Error will
@@ -1193,74 +1197,35 @@ Gubu(Number)('abc', ctx)  // does not throw
 console.log(err[0]) // prints error description (number was expected)
 ```
 
-The [error descriptions](#errors) are plain objects, not Errors.
+The [error descriptions](#errors) are plain objects, not `Error` objects.
 
 The `GubuShape` function has the following methods:
-* `valid(value: any, context?: any): boolean`: `true` if the shape matches (can be used as type guard in TypeScript),
-* `match(value: any, context?: any): any`: Same as `GubuShape`, but does not mutate the value, and can be used as type guard in TypeScript
-* `toString()`: returns a short string describing this `GubuShape` instance
-* `[Util.inspect.custom]()`: same as `toString`
-* `spec()`: returns a declarative description of the shape
+* `valid(value: any, context?: any): boolean`
+  * returns `true` if the value matches the shape
+  * **injects defaults into value**
+  * does not throw Errors, use context = { err: [] } to get any errors
+  * can be used as type guard in TypeScript
+* `match(value: any, context?: any): boolean`
+  * returns `true` if the value matches the shape
+  * **does not inject defaults**, 
+  * does not throw Errors, use context = { err: [] } to get any errors
+  * can be used as type guard in TypeScript
+* `toString()`
+  * returns a short string describing this `GubuShape` instance
+* `[Util.inspect.custom]()`
+  * same as `toString`
+* `spec()`
+  * returns a declarative description of the shape
 
 The shape description provided by `spec` can be passed to `Gubu` to
-generate a new separate shape instance.
+generate a new separate shape instance (see the 
+[Shape Nodes](#shape-nodes) section).
 
 Many shapes can be fully serialized to JSON, but those with custom
-validator function are not serializable in the current version.
+validator functions are not serializable in the current version.
 
 A `GubuShape` can be used be used as part of new shape
 definition. They are intended to be composable.
-
-
-### Shape Nodes
-
-The data structure returned by `GubuShape.spec` is the internal
-representation of the validation shape. This is a hierarchical data
-structure where the validation for each key-value pair is defined by a
-shape `Node`, which has the following structure:
-
-* `$`: typeof GUBU         : Special marker to indicate normalized.
-* `t`: ValType             : Value type name.
-* `d`: number              : Depth.
-* `v`: any                 : Default value.
-* `r`: boolean             : Value is required.
-* `o`: boolean             : Value is explicitly optional.
-* `u`: Record<string, any> : Custom user meta data
-* `b`: Validate[]          : Custom before validation functions.
-* `a`: Validate[]          : Custom after validation functions.
-
-The `ValType` is string with exactly one of these values: 
-* `'any'` :       Any type.
-* `'array'` :     An array.
-* `'bigint'` :    A BigInt value.
-* `'boolean'` :   The values `true` or `false`.
-* `'custom'` :    Custom type defined by a validation function.
-* `'function'` :  A function.
-* `'instance'` :  An instance of a constructed object.
-* `'list'` :      A list of types under a given logical rule.
-* `'nan'` :       The `NaN` value.
-* `'never'` :     No type.
-* `'null'` :      The `null` value.
-* `'number'` :    A number.
-* `'object'` :    A plain object.
-* `'string'` :    A string (but *not* the empty string).
-* `'symbol'` :    A symbol reference.
-* `'undefined'` : The `undefined` value.
-
-
-This structure is deliberately terse to make eye-balling deep
-structure print-outs easier.
-
-As noted above, in the current version this structure is only fully
-serializable to JSON if there are no custom validations, and the
-custom user meta data is serializable.
-
-This structure can be accessed in [custom
-validators](#custom-validators) via the `state` parameter, and in
-[shape builders](#shape-builders) via the [before](#custom-builders) and
-[after](#custom-builders) hook functions. It is also provided in error
-messages under the `n` property.
-
 
 
 ### Errors
@@ -1295,9 +1260,18 @@ specific custom errors can also be defined (see below).
 
 ```
 Gubu(Number)('abc') // throws an Error with message:
-'Validation failed for property "" with value "x" because the value is not of type number.'
+`
+Validation failed for value "abc" because the value is not of type number.'
+`
 
-Gubu({ top: { foo: String, bar: Number }})({ top: { foo: 123, bar: 'abc'}}) // throws an Error with message:
+let shape = Gubu({ 
+  top: { 
+    foo: String, 
+    bar: Number 
+  }
+})
+
+shape({ top: { foo: 123, bar: 'abc' }}) // throws an Error with message:
 `
 Validation failed for property "top.foo" with value "123" because the value is not of type string.
 Validation failed for property "top.bar" with value "abc" because the value is not of type number.
@@ -1310,12 +1284,12 @@ The `ErrDesc` object is the internal representation of an error,
 containing the full details of the error, which you can use for
 customization. The properties are:
 
-* `k: string`  : Key of failing value.
+* `k: string`  : Key of failing value (or empty string at top level).
 * `n: Node`    : Failing shape node.
 * `v: any`     : Failing value.
 * `p: string`  : Key path to value.
 * `w: string`  : Error code ("why").
-* `m: number`  : Error mark for debugging.
+* `m: number`  : Unique error mark for debugging (search in source code of gubu.ts).
 * `t: string`  : Error message text.
 * `u: any`     : User custom info.
 
@@ -1375,9 +1349,11 @@ Values are converted to strings for the error message by using
 `JSON.stringify`. Circular values are handled safely. Long values are
 truncated to 30 characters.
 
-The *mark* value (property `m`) is a numeric code uniquely identifies
-the generation point of the error, and should be quoted in bug
-reports (or indeed you can use it yourself to inspect the source code). 
+The *mark* value (property `m`) is a numeric code that uniquely
+identifies the generation point of the error in the source code of
+[gubu.ts](https://github.com/rjrodger/gubu/blob/main/gubu.ts), and
+should be quoted in bug reports (or indeed you can use it yourself to
+inspect the source code).
 
 
 #### Error Collection
@@ -1393,18 +1369,19 @@ Gubu(Number)('abc', ctx)  // does not throw
 
 The return value from `Gubu` in this case (and the value passed in!)
 should be considered corrupted (defaults may only be partially
-applied).
+applied). If you want to retain the original value, you must clone it
+yourself before passing it to *Gubu* [^5].
 
 You can also set the context `err` property to `false`. In this case
 errors are not collected at all, and they are ignored, so that the
-full shape depth is always validated. The `GubuShape.spec` method used
+full shape depth is always validated. The `GubuShape.spec` method uses
 this feature to generate a normalized validation `Node` hierarchy
 against the `undefined` value.
 
 
 #### Custom Errors
 
-When using a (custom validator)[#custom-validation] you can provide a custom
+When using a [custom validator](#custom-validation) you can provide a custom
 error message using the `Update.err` property.
 
 ```
@@ -1422,7 +1399,7 @@ value, respectively.
 ### TypeScript Types
 
 Gubu makes a best-effort to support TypeScript types. The intersection
-of the type of the schema and the type of the value is used as the
+of the type of the shape and the type of the value is used as the
 return type. This almost always does what you want, especially with
 optional default values (from which types will be inferred).
 
@@ -1430,37 +1407,51 @@ The [GubuShape](#gubushape-function) function also contains a property
 function `valid` with form:
 
 ```
-valid(value: any, context?: any): boolean: true
+valid(value: any, context?: any): boolean
 ```
 
 This can be used as a [type guard](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates):
 
 ```
 const shape = Gubu({ x: 1, y: 'Y' })
-let data = { x: 2, z: true }
+let data = { x: 2 }
 
 if (shape.valid(data)) {
   console.log(data) // prints { x: 2, y: 'Y', z: true }
   console.log(data.x) // no type errors; prints 2
   console.log(data.y) // no type errors; prints 'Y'
-  console.log(data.z) // no type errors; prints true
   console.log(data.q) // type error! does not compile
 }
 ```
+
+The `valid` function does not throw, but you can optionally collect
+[errors](#Errors) in the usual way with:
+```
+...
+context = { err: [] }
+if (shape.valid(data, context)) {
+  ...
+}
+
+// failed
+else {
+  // context.err has the errors!
+}
+```
+
 
 Where TypeScript cannot infer your types properly, you'll need to
 manually define them:
 
 ```
-let shape = Gubu({ x: (Closed({ k: 1 }) as unknown as { k: number }), y: 'Y' })
+let shape = Gubu(Open({ x: 1}) as unknown as { x: number })
 let data = { z: true }
 
 if (shape.valid(data)) {
-  console.log(data) // prints{ x: { k: 1 }, y: 'Y', z: true })
-  console.log(data.x) // no type errors due to manual definition; prints { k: 1 }
-  console.log(data.x.k) // no type errors; prints 1
-  console.log(data.y) // no type errors; prints 'Y'
+  console.log(data) // prints{ x: 1, z: true })
+  console.log(data.x) // no type errors; prints 1
   console.log(data.z) // no type errors; prints true 
+  console.log(data.q) // type error! does not compile
 }
 ```
 
@@ -1474,14 +1465,14 @@ interface User {
 }
 
 // DOES NOT WORK!
-let shape = Gubu(...User...)
+let shape = Gubu(User)
 ```
 
 Sadly TypeScript does not provide runtime type information at
 present&mdash;[it should](https://www.typescriptneedstypes.com/)!
 
 If you're really keen on being ultra-DRY, and really want to avoid
-duplicating type definition into almost, but not quite, the same shape
+duplicating type definitions into almost, but not quite, the same shape
 definitions, here are your options:
 
 1. Create an instance of your type, and use that as the shape definition:
@@ -1502,8 +1493,8 @@ const shape = Gubu({ ...new Car() })
    dynamically define your shapes.
    
 None of these options are that great. For moment, I recommend that you
-use the instance trick above if you can, and live with some manual fix
-up.
+use the instance trick above if you can (option 1), and live with some
+manual fix up.
 
 One more thing: at the moment I don't plan to support definitions in
 the other direction, going from shapes to TypeScript types. That would
@@ -1512,14 +1503,69 @@ different syntax. That said, never say never, and if TypeScript
 inference can support it, I may look at it again.
 
 
+### Shape Nodes
+
+The data structure returned by `GubuShape.spec()` is the internal
+representation of the validation shape. This is a hierarchical data
+structure where the validation for each key-value pair is defined by a
+shape `Node`, which has the following structure:
+
+* `$`: typeof GUBU         : Special marker to indicate a *Gubu* `Node` object.
+* `t`: `ValType`           : Value type name (see below).
+* `d`: number              : Depth of the object tree.
+* `v`: any                 : Default value.
+* `r`: boolean             : Value is required.
+* `p`: boolean             : Value is skippable (if key is absent, no default is injected).
+* `n`: number              : Number of keys in default value.
+* `c`: any                 : Default child shape (for array elements and open objects).
+* `u`: Record<string, any> : Custom user meta data.
+* `b`: Validate[]          : Custom before-validation functions.
+* `a`: Validate[]          : Custom after-validation functions.
+* `s?`: string             : Custom stringification of the value (mostly for error messages).
+
+The `ValType` is string with exactly one of these values: 
+* `'any'` :       Any type.
+* `'array'` :     An array.
+* `'bigint'` :    A BigInt value.
+* `'boolean'` :   The values `true` or `false`.
+* `'custom'` :    Custom type defined by a validation function.
+* `'function'` :  A function.
+* `'instance'` :  An instance of a constructed object.
+* `'list'` :      A list of types under a given logical rule.
+* `'nan'` :       The `NaN` value.
+* `'never'` :     No type.
+* `'null'` :      The `null` value.
+* `'number'` :    A number.
+* `'object'` :    A plain object.
+* `'string'` :    A string (but *not* the empty string).
+* `'symbol'` :    A symbol reference.
+* `'undefined'` : The `undefined` value.
+
+
+This structure is deliberately terse (hence the one character property
+names) to make eye-balling deep structure debugging print-outs easier.
+
+As noted above, in the current version this structure is only fully
+serializable to JSON if there are no custom validations, and the
+custom user meta data is serializable.
+
+This structure can be accessed in [custom
+validators](#custom-validators) via the `state.node` parameter, and in
+[shape builders](#shape-builders) via the [before](#custom-builders) and
+[after](#custom-builders) hook functions. It is also provided in error
+messages under the `n` property.
+
+
+
 ### Shape Builder Usage
 
 The validation rules for each value shape can be modified using shape
 builders. These are wrapping functions that add additional constraints
 to the value shape.
 
-The [Required](#required-builder) marks a value as required. This is
-most useful for objects and array, which are by default optional:
+For example, the [Required](#required-builder) shape builder marks a
+value as required. This is most useful for objects and array, which
+are by default optional:
 
 ```
 const { Gubu, Required } = require('gubu') // shaper builders are exported
@@ -1532,26 +1578,27 @@ stricter() // fails
 stricter({}) // returns { x: 1 } (x itself is an optional default)
 ```
 
-Most shape builders can also be chained. The [Closed](#closed-builder)
-prevents additional properties from being added to an object. To also
-make the object required you can use either of these expressions:
+Most shape builders can also be chained. For example, the
+[Open](#open-builder) shape builder allows additional properties to be
+added to an object. To also make the object required you can use
+either of these expressions:
 
 ```
-const { Required, Closed } = Gubu // shape builders are also properties of Gubu
-Gubu(Closed({ a: 1, b: 2 }).Required())
-Gubu(Required({ a: 1, b: 2 }).Closed())
+const { Required, Open } = Gubu // shape builders are also properties of Gubu
+Gubu(Open({ a: 1, b: 2 }).Required())
+Gubu(Required({ a: 1, b: 2 }).Open())
 ```
 
 Most shape builders can be composed (check their expected arguments!),
 so the following are also equivalent:
 
 ```
-Gubu(Closed(Required({ a: 1, b: 2 })))
-Gubu(Required(Closed({ a: 1, b: 2 })))
+Gubu(Open(Required({ a: 1, b: 2 })))
+Gubu(Required(Open({ a: 1, b: 2 })))
 ```
 
 This flexibility allows you to adjust shapes without too much
-refactoring.
+refactoring or "schema noise".
 
 
 ### Shape Builder Reference
@@ -2574,3 +2621,10 @@ Licensed under [MIT][].
 [^4]: Unfortunately `new Function()` generates a function value with
       the name `anonymous` that cannot be differentiated from a simpe
       function declaration of a function also called `anonymous`.
+
+[^5]: Correctly cloning a value in JavaScript is quite tricky, at
+      least in the general case. Recursively copying values will only
+      work in simple cases, circular references are trouble, and you
+      don't even want to think about calling constructors.
+
+

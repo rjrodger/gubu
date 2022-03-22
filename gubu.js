@@ -468,8 +468,9 @@ function make(intop, inopts) {
     }
     function valid(root, ctx) {
         let actx = ctx || {};
+        actx.err = actx.err || [];
         exec(root, actx, false);
-        return null == actx.err || 0 === actx.err.length;
+        return 0 === actx.err.length;
     }
     gubuShape.valid = valid;
     gubuShape.match = (root, ctx) => {
