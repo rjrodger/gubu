@@ -1102,6 +1102,16 @@ shape = Gubu({
 shape({ a: 3 }) // returns { a: '3 KEY=a'}
 ```
 
+The shape builders [Before](#before-builder) and
+[After](#after-builder) operate in a similar manner to the
+[Check](#check-builder). They allow you to perform your custom
+validation before, or after, normal validation, respectively. They do
+not support regular expressions as an argument.
+
+In general, you should use the `Check` shape builder for custom
+validation. The `Before` and `After` builders are provided for
+advanced usage.
+
 
 ### Gubu function
 
@@ -1610,27 +1620,72 @@ refactoring or "schema noise".
 [Builders](#shape-builder-reference)
 
 The built-in shape builders are:
-* [Above](#above-builder): Match a value (or length of value) greater than the given amount.
-* [After](#after-builder): Define a custom validation function called after a value is processed.
-* [All](#all-builder): All shapes must match value.
-* [Any](#any-builder): This shape will match any value.
-* [Before](#before-builder): Define a custom validation function called before a value is processed.
-* [Below](#below-builder): Match a value (or length of value) less than the given amount.
-* [Closed](#closed-builder): Allow only explicitly defined properties in an object.
-* [Define](#define-builder): Define a name for a value.
-* [Empty](#empty-builder): Allow string values to be empty.
-* [Exact](#exact-builder): The value must one of an exact list of values.
-* [Max](#max-builder): Match a value (or length of value) less than or equal to the given amount.
-* [Min](#min-builder): Match a value (or length of value) greater than or equal to the given amount.
-* [Never](#never-builder): This shape will never match anything.
-* [One](#one-builder): Exactly one shape (and no more) must match value.
-* [Skip](#skip-builder): Make a value explicitly optional (no default created).
-* [Refer](#refer-builder): Refer to a defined value by name.
-* [Rename](#rename-builder): Rename the key of a property.
-* [Required](#required-builder): Make a value required.
-* [Some](#some-builder): Some shapes (at least one) must match value.
-* [Value](#value-builder): all non-explicit values of an object must match this shape.
 
+* [Above](#above-builder): 
+  Match a value (or length of value) greater than the given amount.
+
+* [After](#after-builder): 
+  Define a custom validation function called after a value is processed.
+
+* [All](#all-builder): 
+  All shapes must match value.
+
+* [Any](#any-builder): 
+  This shape will match any value.
+
+* [Before](#before-builder): 
+  Define a custom validation function called before a value is processed.
+
+* [Below](#below-builder): 
+  Match a value (or length of value) less than the given amount.
+
+* [Check](#check-builder): 
+  Check value with a custom validation function or regular expression.
+
+* [Closed](#closed-builder): 
+  Allow only explicitly defined elements in an array.
+
+* [Define](#define-builder): 
+  Define a name for a value.
+
+* [Empty](#empty-builder): 
+  Allow string values to be empty.
+
+* [Exact](#exact-builder): 
+  The value must one of an exact list of values.
+
+* [Max](#max-builder): 
+  Match a value (or length of value) less than or equal to the given amount.
+
+* [Min](#min-builder): 
+  Match a value (or length of value) greater than or equal to the given amount.
+
+* [Never](#never-builder): 
+  This shape will never match anything.
+
+* [One](#one-builder): 
+  Exactly one shape (and no more) must match value.
+
+* [Open](#open-builder): 
+  Allow arbitrary properties in an object.
+
+* [Skip](#skip-builder): 
+  Make a value explicitly optional (no default created).
+
+* [Refer](#refer-builder): 
+  Refer to a defined value by name.
+
+* [Rename](#rename-builder): 
+  Rename the key of a property.
+
+* [Required](#required-builder): 
+  Make a value required.
+
+* [Some](#some-builder): 
+  Some shapes (at least one) must match value.
+
+* [Value](#value-builder): 
+  All non-explicit values of an object must match this shape.
 
 
 ---
@@ -1638,7 +1693,7 @@ The built-in shape builders are:
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-Above( value: number|string, child?: any )
+Above( value: number|string|array|object, child?: any )
 ```
 
 * **Standalone:** `Above(2)`
@@ -1654,8 +1709,8 @@ Only allow values that are above the given value in length. "Length" means:
 * Object with property `length`: numeric value of `length`;
 * Anything else fails.
 
-If the given value is a `string`, then a lexical comparison is made
-(thus, `'b'` is above `'a'` as `'b' > 'a'`)
+For more complex validation, use the [Check](#check-builder) shape builder to write
+a custom validation function.
 
 
 ```js
@@ -1670,7 +1725,16 @@ shape('ab')  // FAIL: 'Value "ab" for property "" must have length above 2 (was 
 
 shape([1, 2, 3]) // PASS: array length 3 > 2; returns [1, 2, 3]
 shape([1, 2])    // FAIL: throws: 'Value "[1,2]" for property "" must have length above 2 (was 2).'
+
+shape({ a: 1, b: 2, c: 3 }) // PASS: number of keys 3 > 2; returns { a: 1, b: 2, c: 3 }
+shape({ a: 1, b: 2 })       // FAIL: throws: 'Value "{a:1,b:2}" for property "" must have length above 2 (was 2).'
 ```
+
+See also: 
+[Below](#below-builder), 
+[Min](#min-builder), 
+[Max](#max-builder), 
+[Check](#check-builder).
 
 
 ---
@@ -1682,11 +1746,11 @@ After( validate: Validate, child?: any )
 ```
 
 * **Standalone:** `After(() => true)`
-* **As Parent:** `After({() => true, {x: 1})`
+* **As Parent:** `After(() => true, {x: 1})`
 * **As Child:** `Required(After(() => true))`
 * **Chainable:** `Skip({x: 1}).After(() => true)`
 
-Provide a validation function that will run after the value has been
+Provide a validation function that will run **after** the value has been
 processed normally. The validation function has the form:
 
 ```
@@ -1697,23 +1761,33 @@ Return `true` if the value is valid, `false` otherwise. See the
 [Custom Validations](#custom-validation) section.
 
 
+> NOTE: In general you should use the [Check](#check-builder) shape
+> builder for custom validation. This builder is intended for advanced
+> usage.
+
 ```js
 const { After } = Gubu
-let shape = Gubu(After(v => 0 === v%2)) // Pass if value is even
+let shape = Gubu(After(v => 0 === v % 2)) // Pass if value is even
 
-shape(1) // FAIL: 1 is not even
 shape(2) // PASS: 2 is even; returns 2
-shape()  // PASS: returns undefined
+shape()  // PASS: returns undefined (value was not required)
+shape(1) // FAIL: 1 is not even
 
-shape = Gubu(After(v => 0 === v.x%2, Required({x: Number})))
-shape({x: 1}) // FAIL: 1 is not even
-shape({x: 2)) // PASS: 2 is even; returns 2
+
+shape = Gubu(After(v => 0 === v.x % 2, Required({x: Number})))
+
+shape({x: 2))   // PASS: 2 is even; returns 2
+shape({x: 1})   // FAIL: 1 is not even
 shape({x: 'X'}) // FAIL: 'X' is not a number
-shape({}) // FAIL: x is required
-shape() // FAIL: {x: Number} is required
+shape({})       // FAIL: x is required
+shape()         // FAIL: {x: Number} is required
 ```
 
-See also: [Update](#update-type), [State](#state-type).
+See also: 
+[Check](#check-builder), 
+[Before](#before-builder), 
+[Update](#update-type), 
+[State](#state-type).
 
 
 ---
@@ -1730,12 +1804,14 @@ All( ...children: any[] )
 * **Chainable:** INVALID
 
 To be valid, the source value must match all of the shapes given as
-arguments. All shapes are always evaluated, even if some fail, to
+arguments. All shapes are **always evaluated**, even if some fail, to
 ensure all errors are collected.
 
 This shape builder implicitly creates a [Required](#required-builder)
-value. Use the shape builder [Skip](#skip-builder) to make the
-value explicitly optional.
+value. Use the [Skip](#skip-builder) shape builder to make the value
+explicitly optional.
+
+TODO: Default
 
 
 ```js
@@ -1797,11 +1873,11 @@ Before( validate: Validate, child?: any )
 ```
 
 * **Standalone:** `Before(() => true)`
-* **As Parent:** `Before({() => true, {x: 1})`
+* **As Parent:** `Before(() => true, {x: 1})`
 * **As Child:** `Required(Before(() => true))`
 * **Chainable:** `Skip({x: 1}).Before(() => true)`
 
-Provide a validation function that will run before the value has been
+Provide a validation function that will run **before** the value has been
 processed normally. The validation function has the form:
 
 ```
@@ -1816,24 +1892,33 @@ normally. This ensures that all errors, particularly those in child
 values, are also captured. To prevent further processing, set
 `Update.done = true`.
 
+> NOTE: In general you should use the [Check](#check-builder) shape
+> builder for custom validation. This builder is intended for advanced
+> usage.
 
 ```js
 const { Before } = Gubu
-let shape = Gubu(Before(v => 0 === v%2)) // Pass if value is even
+let shape = Gubu(Before(v => 0 === v % 2)) // Pass if value is even
 
 shape(1) // FAIL: 1 is not even
 shape(2) // PASS: 2 is even; returns 2
 shape()  // PASS: returns undefined
 
-shape = Gubu(Before(v => 0 === v.x%2, Required({x: Number})))
-shape({x: 1}) // FAIL: 1 is not even
-shape({x: 2)) // PASS: 2 is even; returns 2
+
+shape = Gubu(Before(v => 0 === v.x % 2, Required({x: Number})))
+
+shape({x: 1})   // FAIL: 1 is not even
+shape({x: 2))   // PASS: 2 is even; returns 2
 shape({x: 'X'}) // FAIL: 'X' is not a number
-shape({}) // FAIL: x is required
-shape() // FAIL: {x: Number} is required
+shape({})       // FAIL: x is required
+shape()         // FAIL: {x: Number} is required
 ```
 
-See also: [Update](#update-type), [State](#state-type).
+See also: 
+[Check](#check-builder), 
+[Afgter](#after-builder), 
+[Update](#update-type), 
+[State](#state-type).
 
 
 ---
@@ -1857,8 +1942,8 @@ Only allow values that are below the given value in length. "Length" means:
 * Object with property `length`: numeric value of `length`;
 * Anything else fails.
 
-If the given value is a `string`, then a lexical comparison is made
-(thus, `'b'` is below `'a'` as `'b' > 'a'`)
+For more complex validation, use the [Check](#check-builder) shape builder to write
+a custom validation function.
 
 
 ```js
@@ -1874,6 +1959,13 @@ shape('ab')  // FAIL: 'Value "ab" for property "" must have length below 2 (was 
 shape([1])    // PASS: array length 1 < 2; returns [1]
 shape([1, 2]) // FAIL: throws: 'Value "[1, 2]" for property "" must have length below 2 (was 2).'
 ```
+
+See also: 
+[Above](#above-builder), 
+[Min](#min-builder), 
+[Max](#max-builder), 
+[Check](#check-builder).
+
 
 
 ---
@@ -2037,8 +2129,8 @@ maximum value. "Length" means:
 * Object with property `length`: numeric value of `length`;
 * Anything else fails.
 
-If the given value is a `string`, then a lexical comparison is made
-(thus, `'b'` is greater than `'a'` as `'b' > 'a'`)
+For more complex validation, use the [Check](#check-builder) shape builder to write
+a custom validation function.
 
 
 ```js
@@ -2056,6 +2148,13 @@ shape('abc') // FAIL: 'Value "abc" for property "" must be a maximum length of 2
 shape([1])       // PASS: array length 1 <= 2; returns [1]
 shape([1, 2])    // PASS: array length 2 <= 2; returns [1, 2]
 shape([1, 2, 3]) // FAIL: throws: 'Value "[1, 2, 3]" for property "" must be a maximum length of 2 (was 3).'
+```
+
+See also:
+[Above](#above-builder), 
+[Below](#below-builder), 
+[Min](#min-builder), 
+[Check](#check-builder).
 
 
 ---
@@ -2080,9 +2179,8 @@ minimum value. "Length" means:
 * Object with property `length`: numeric value of `length`;
 * Anything else fails.
 
-If the given value is a `string`, then a lexical comparison is made
-(thus, `'b'` is greater than `'a'` as `'b' > 'a'`)
-
+For more complex validation, use the [Check](#check-builder) shape builder to write
+a custom validation function.
 
 ```js
 const { Min } = Gubu
@@ -2100,6 +2198,12 @@ shape([1, 2, 3]) // PASS: array length 3 >= 2; returns [1, 2, 3]
 shape([1, 2])    // PASS: array length 2 >= 2; returns [1, 2]
 shape([1])       // FAIL: throws: 'Value "[1]" for property "" must be a minimum length of 2 (was 1).'
 ```
+
+See also: 
+[Above](#above-builder), 
+[Below](#below-builder), 
+[Max](#max-builder), 
+[Check](#check-builder).
 
 
 ---

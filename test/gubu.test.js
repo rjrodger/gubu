@@ -1108,7 +1108,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(cr2s({})).toEqual({ x: 1 });
         expect(cr3s({})).toEqual({ x: 1 });
     });
-    test('api-builders-index', () => {
+    test('api-builders-examples', () => {
         let shape_AboveB0 = Gubu(Above(10));
         expect(shape_AboveB0(11)).toEqual(11);
         expect(() => shape_AboveB0(10)).toThrow('Value "10" for property "" must be above 10 (was 10).');
@@ -1118,6 +1118,8 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(() => shape_AboveB1('ab')).toThrow('Value "ab" for property "" must have length above 2 (was 2).');
         expect(shape_AboveB1([1, 2, 3])).toEqual([1, 2, 3]);
         expect(() => shape_AboveB1([1, 2])).toThrow('Value "[1,2]" for property "" must have length above 2 (was 2).');
+        expect(shape_AboveB1({ a: 1, b: 2, c: 3 })).toEqual({ a: 1, b: 2, c: 3 });
+        expect(() => shape_AboveB1({ a: 1, b: 2 })).toThrow('Value "{a:1,b:2}" for property "" must have length above 2 (was 2).');
         let shape_AboveB2 = Gubu(Above(2, Number));
         expect(shape_AboveB2(3)).toEqual(3);
         expect(() => shape_AboveB2([1, 2, 3])).toThrow('Validation failed for array "[1,2,3]" because the array is not of type number.');

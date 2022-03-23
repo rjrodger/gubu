@@ -1414,7 +1414,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
   })
 
 
-  test('api-builders-index', () => {
+  test('api-builders-examples', () => {
 
     let shape_AboveB0 = Gubu(Above(10))
     expect(shape_AboveB0(11)).toEqual(11)
@@ -1426,6 +1426,8 @@ Validation failed for property "q.b" with value "x" because the value is not of 
     expect(() => shape_AboveB1('ab')).toThrow('Value "ab" for property "" must have length above 2 (was 2).')
     expect(shape_AboveB1([1, 2, 3])).toEqual([1, 2, 3])
     expect(() => shape_AboveB1([1, 2])).toThrow('Value "[1,2]" for property "" must have length above 2 (was 2).')
+    expect(shape_AboveB1({ a: 1, b: 2, c: 3 })).toEqual({ a: 1, b: 2, c: 3 })
+    expect(() => shape_AboveB1({ a: 1, b: 2 })).toThrow('Value "{a:1,b:2}" for property "" must have length above 2 (was 2).')
 
     let shape_AboveB2 = Gubu(Above(2, Number))
     expect(shape_AboveB2(3)).toEqual(3)

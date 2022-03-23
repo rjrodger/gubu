@@ -711,4 +711,4 @@ let tmp = {}
 // console.log(''===((()=>true).name))
 
 
-Gubu(Number)('abc')
+// Gubu(Number)('abc')

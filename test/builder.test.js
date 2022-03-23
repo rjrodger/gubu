@@ -181,9 +181,17 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
     });
     test('builder-all', () => {
         let g0 = Gubu(All(Open({ x: 1 }), Open({ y: 'a' })));
-        expect(g0({ x: 1, y: 'a' })).toEqual({ x: 1, y: 'a' });
+        expect(g0({ x: 11, y: 'aa' })).toEqual({ x: 11, y: 'aa' });
+        expect(g0({})).toEqual({ x: 1, y: 'a' });
         expect(() => g0({ x: 'b', y: 'a' })).toThrow(`Value "{x:b,y:a}" for property "" does not satisfy all of: {"x":1}, {"y":"a"}`);
         expect(() => g0()).toThrow('Validation failed for value "" because the value is required.');
+        let g0s = Gubu(All(Open({ x: 1 }), Open({ y: 'a' })).Skip());
+        expect(g0s({ x: 11, y: 'aa' })).toEqual({ x: 11, y: 'aa' });
+        expect(g0s({})).toEqual({ x: 1, y: 'a' });
+        expect(() => g0s({ x: 'b', y: 'a' })).toThrow(`Value "{x:b,y:a}" for property "" does not satisfy all of: {"x":1}, {"y":"a"}`);
+        expect(g0s()).toEqual(undefined);
+        // TODO: Optional
+        // expect(g0s()).toEqual({ x: 1, y: 'a' })
         let g1 = Gubu({
             a: All(Check((v) => v > 10), Check((v) => v < 20))
         });
