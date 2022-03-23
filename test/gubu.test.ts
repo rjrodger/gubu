@@ -54,6 +54,7 @@ const {
   Skip,
   Some,
   Value,
+  Default,
 } = Gubu
 
 
@@ -1472,9 +1473,16 @@ Validation failed for value "" because check "(v) => 0 === v.x % 2" failed (thre
     expect(shape_AllB1(123)).toEqual(123)
     expect(() => shape_AllB1()).toThrow('required')
 
-    let shape_AllB2 = Gubu({ a: Skip(All({ b: String }, Max(2))) })
+    let shape_AllB2 =
+      Gubu({ a: Default({ b: 'B' }, All(Open({ b: String }), Max(2))) })
     expect(shape_AllB2({ a: { b: 'X' } })).toEqual({ a: { b: 'X' } })
-    expect(shape_AllB2({})).toEqual({})
+    expect(shape_AllB2({ a: { b: 'X', c: 'Y' } })).toEqual({ a: { b: 'X', c: 'Y' } })
+    expect(() => shape_AllB2({ a: { b: 'X', c: 'Y', d: 'Z' } })).toThrow('Value "{b:X,c:Y,d:Z}" for property "a" does not satisfy all of: {"b":"string"}, Max(2)')
+    expect(shape_AllB2({})).toEqual({ a: { b: 'B' } })
+
+    let shape_AllB3 = Gubu({ a: Skip(All(Open({ b: String }), Max(2))) })
+    expect(shape_AllB3({ a: { b: 'X' } })).toEqual({ a: { b: 'X' } })
+    expect(shape_AllB3({})).toEqual({})
 
 
     let shape_AnyB0 = Gubu(Any())
@@ -1500,9 +1508,9 @@ Validation failed for value "" because check "(v) => 0 === v.x % 2" failed (thre
     expect(() => shape_BelowB0(10)).toThrow('Value "10" for property "" must be below 10 (was 10).')
 
 
-    let shape_ClosedB0 = Gubu(Closed({ a: 11 }))
-    expect(shape_ClosedB0({ a: 10 })).toEqual({ a: 10 })
-    expect(() => shape_ClosedB0({ a: 10, b: 11 })).toThrow('Validation failed for object "{a:10,b:11}" because the property "b" is not allowed.')
+    let shape_ClosedB0 = Gubu(Closed([Number]))
+    expect(shape_ClosedB0([1])).toEqual([1])
+    expect(() => shape_ClosedB0([1, 2])).toThrow('Validation failed for array "[1,2]" because the index "1" is not allowed.')
 
 
     let shape_DefineB0 = Gubu({ a: Define('foo', 11), b: Refer('foo') })
@@ -1598,6 +1606,19 @@ Validation failed for property "b" with value "B" because the value is not of ty
     let shape_RequiredB0 = Gubu(Required(11))
     expect(shape_RequiredB0(11)).toEqual(11)
     expect(() => shape_RequiredB0()).toThrow('Validation failed for value "" because the value is required.')
+
+
+    let shape_RequiredB1 = Gubu(Open(Required({ x: 1 })))
+    expect(shape_RequiredB1({ x: 2 })).toEqual({ x: 2 })
+    expect(shape_RequiredB1({ x: 2, y: 3 })).toEqual({ x: 2, y: 3 })
+    expect(() => shape_RequiredB1()).toThrow('Validation failed for value "" because the value is required.')
+
+    let shape_RequiredB2 = Gubu(Open({ x: 1 }).Required())
+    expect(shape_RequiredB2({ x: 2 })).toEqual({ x: 2 })
+    expect(shape_RequiredB2({ x: 2, y: 3 })).toEqual({ x: 2, y: 3 })
+    expect(() => shape_RequiredB2()).toThrow('Validation failed for value "" because the value is required.')
+
+
 
     // TODO: update docs - need better example where one prop differentiates
     let shape_SomeB0 = Gubu(Some({ x: 1 }, { y: 2 }))
@@ -2561,6 +2582,14 @@ Validation failed for property "b" with value "B" because the value is not of ty
   test('stringify', () => {
     expect(stringify({ a: 1 })).toEqual('{"a":1}')
 
+    expect(stringify({ a: Number })).toEqual('{"a":"Number"}')
+    expect(stringify({ a: String })).toEqual('{"a":"String"}')
+    expect(stringify({ a: Boolean })).toEqual('{"a":"Boolean"}')
+
+    expect(stringify(Gubu({ a: Number }).spec())).toEqual('{"a":"number"}')
+    expect(stringify(Gubu({ a: String }).spec())).toEqual('{"a":"string"}')
+    expect(stringify(Gubu({ a: Boolean }).spec())).toEqual('{"a":"boolean"}')
+
     expect(stringify(Required())).toEqual(`"any"`)
 
     let c0: any = {}
@@ -2572,9 +2601,6 @@ Validation failed for property "b" with value "B" because the value is not of ty
     expect(stringify([1, f0, () => true, C0])).toEqual('[1,"f0","() => true","C0"]')
 
     expect(stringify(/a/)).toEqual('"/a/"')
-
-
-
   })
 
 

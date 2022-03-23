@@ -882,6 +882,29 @@ const Skip: Builder = function(this: Node, shape?: any) {
 }
 
 
+const Default: Builder = function(this: Node, dval?: any, shape?: any) {
+  let hasDefaultValue = 2 === arguments.length
+  shape = hasDefaultValue ? shape : dval
+
+  let node = buildize(this, shape)
+  node.r = false
+
+  if (hasDefaultValue) {
+    node.v = dval
+  }
+  // else {
+  //   // node.v = undefined
+  // }
+
+  // Always insert default.
+  node.p = false
+
+  // console.log(node)
+
+  return node
+}
+
+
 
 const Empty: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
@@ -1446,6 +1469,7 @@ function buildize(node0?: any, node1?: any): Node {
     Check,
     Closed,
     Open,
+    Default,
     Define,
     Empty,
     Exact,
@@ -1536,13 +1560,20 @@ function makeErrImpl(
 }
 
 
+function node2str(n: Node): string {
+  return (null != n.s && '' !== n.s) ? n.s :
+    (!n.r && undefined !== n.v) ? n.v : n.t
+}
+
+
 function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean) {
   let str: string
 
   if (!expand &&
     src && src.$ && (GUBU$ === src.$.gubu$ || true === (src.$ as any).gubu$)) {
-    src = (null != src.s && '' !== src.s) ? src.s :
-      undefined === src.v ? src.t : src.v
+    // src = (null != src.s && '' !== src.s) ? src.s :
+    //   undefined === src.v ? src.t : src.v
+    src = node2str(src)
   }
 
   try {
@@ -1580,8 +1611,9 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
       }
       else if (true !== expand &&
         (true === val?.$?.gubu$ || GUBU$ === val?.$?.gubu$)) {
-        val = (null != val.s && '' !== val.s) ? val.s :
-          (undefined !== val.v ? val.v : val.t)
+        // val = (null != val.s && '' !== val.s) ? val.s :
+        //   (undefined !== val.v ? val.v : val.t)
+        val = node2str(val)
       }
 
       return val
@@ -1635,6 +1667,7 @@ if ('undefined' !== typeof (window)) {
     { b: Check, n: 'Check' },
     { b: Closed, n: 'Closed' },
     { b: Open, n: 'Open' },
+    { b: Default, n: 'Default' },
     { b: Define, n: 'Define' },
     { b: Empty, n: 'Empty' },
     { b: Exact, n: 'Exact' },
@@ -1665,6 +1698,7 @@ Object.assign(make, {
   Check,
   Closed,
   Open,
+  Default,
   Define,
   Empty,
   Exact,
@@ -1688,6 +1722,7 @@ Object.assign(make, {
   GCheck: Check,
   GClosed: Closed,
   GOpen: Open,
+  GDefault: Default,
   GDefine: Define,
   GEmpty: Empty,
   GExact: Exact,
@@ -1726,6 +1761,7 @@ type Gubu = typeof make & {
   Check: typeof Check
   Closed: typeof Closed
   Open: typeof Open
+  Default: typeof Default
   Define: typeof Define
   Empty: typeof Empty
   Exact: typeof Exact
@@ -1749,6 +1785,7 @@ type Gubu = typeof make & {
   GCheck: typeof Check
   GClosed: typeof Closed
   GOpen: typeof Open
+  GDefault: typeof Default
   GDefine: typeof Define
   GEmpty: typeof Empty
   GExact: typeof Exact
@@ -1781,6 +1818,7 @@ const GBelow = Below
 const GCheck = Check
 const GClosed = Closed
 const GOpen = Open
+const GDefault = Default
 const GDefine = Define
 const GEmpty = Empty
 const GExact = Exact
@@ -1824,6 +1862,7 @@ export {
   Check,
   Closed,
   Open,
+  Default,
   Define,
   Empty,
   Exact,
@@ -1847,6 +1886,7 @@ export {
   GCheck,
   GClosed,
   GOpen,
+  GDefault,
   GDefine,
   GEmpty,
   GExact,

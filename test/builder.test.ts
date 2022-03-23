@@ -33,6 +33,7 @@ const {
   Below,
   Check,
   Closed,
+  Default,
   Define,
   Empty,
   Exact,
@@ -1166,6 +1167,59 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
     expect(() => d1({ a: '' })).toThrow('type')
     expect(() => d1({ a: {} })).toThrow('type')
     expect(() => d1({ a: [] })).toThrow('type')
+  })
+
+
+  test('builder-default', () => {
+
+    let d0 = Gubu(Default(Number))
+    expect(d0(11)).toEqual(11)
+    expect(d0(undefined)).toEqual(0)
+    expect(d0()).toEqual(0)
+
+    let d1 = Gubu({ a: Default(Number) })
+    expect(d1({ a: 11 })).toEqual({ a: 11 })
+    expect(d1({ a: undefined })).toEqual({ a: 0 })
+    expect(d1()).toEqual({ a: 0 })
+
+    let d2 = Gubu(Default(Object))
+    expect(d2({ x: 1 })).toEqual({ x: 1 })
+    expect(d2({})).toEqual({})
+    expect(d2()).toEqual({})
+
+    let d3 = Gubu({ a: Default(Object) })
+    expect(d3({ a: { x: 2 } })).toEqual({ a: { x: 2 } })
+    expect(d3({ a: {} })).toEqual({ a: {} })
+    expect(d3({ a: undefined })).toEqual({ a: {} })
+    expect(d3({})).toEqual({ a: {} })
+    expect(d3()).toEqual({ a: {} })
+
+    let d4 = Gubu(Default(All(Open({ a: 1 }), Open({ b: 'B' }))))
+    expect(d4()).toEqual(undefined)
+    expect(d4({})).toEqual({ a: 1, b: 'B' })
+    expect(d4({ a: 11 })).toEqual({ a: 11, b: 'B' })
+    expect(d4({ b: 'B' })).toEqual({ b: 'B', a: 1 })
+    expect(d4({ a: 11, b: 'B' })).toEqual({ a: 11, b: 'B' })
+
+    let d5 = Gubu({ x: Default(All(Open({ a: 1 }), Open({ b: 'B' }))) })
+    expect(d5()).toEqual({})
+    expect(d5({})).toEqual({})
+    expect(d5({ x: undefined })).toEqual({ x: undefined })
+    expect(d5({ x: {} })).toEqual({ x: { a: 1, b: 'B' } })
+    expect(d5({ x: { a: 11 } })).toEqual({ x: { a: 11, b: 'B' } })
+    expect(d5({ x: { b: 'B' } })).toEqual({ x: { b: 'B', a: 1 } })
+    expect(d5({ x: { a: 11, b: 'B' } })).toEqual({ x: { a: 11, b: 'B' } })
+
+    let d6 = Gubu(Default({}, All(Open({ a: 1 }), Open({ b: 'B' }))))
+    expect(d6()).toEqual({})
+    expect(d6(undefined)).toEqual({})
+    expect(d6({})).toEqual({ a: 1, b: 'B' })
+
+    let d7 = Gubu(Default('x', All(Open({ a: 1 }), Open({ b: 'B' }))))
+    expect(d7()).toEqual('x')
+    expect(d7(undefined)).toEqual('x')
+    expect(d7({})).toEqual({ a: 1, b: 'B' })
+
 
   })
 

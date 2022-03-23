@@ -25,6 +25,7 @@ const {
   Any,
   Check,
   Open,
+  Default,
 } = require('../gubu')
 
 
@@ -711,4 +712,37 @@ let tmp = {}
 // console.log(''===((()=>true).name))
 
 
-// Gubu(Number)('abc')
+// console.log(Gubu(Default(Number))(11))
+// console.log(Gubu(Default(Number))(undefined))
+// console.log(Gubu(Default(Number))())
+
+// console.log(Gubu({a:Default(Number)})({a:11}))
+// console.log(Gubu({a:Default(Number)})({a:undefined}))
+// console.log(Gubu({a:Default(Number)})())
+
+// console.log('---')
+
+// console.log(Gubu(Default(Object))({x:1}))
+// console.log(Gubu(Default(Object))({}))
+// console.log(Gubu(Default(Object))())
+
+// console.log(Gubu({a:Default(Object)})({a:{x:2}}))
+// console.log(Gubu({a:Default(Object)})({a:{}}))
+// console.log(Gubu({a:Default(Object)})({a:undefined}))
+// console.log(Gubu({a:Default(Object)})({}))
+// console.log(Gubu({a:Default(Object)})())
+
+
+// console.log('---')
+
+// console.log(Gubu(Default(All(Open({a:1}),Open({b:'B'}))))())
+// console.log(Gubu(Default(All(Open({a:1}),Open({b:'B'}))))({a:11}))
+// console.log(Gubu(Default(All(Open({a:1}),Open({b:'B'}))))({b:'B'}))
+// console.log(Gubu(Default(All(Open({a:1}),Open({b:'B'}))))({a:11,b:'B'}))
+
+// console.log(Gubu(Default({},All(Open({a:1}),Open({b:'B'}))))())
+// console.log(Gubu(Default('x',All(Open({a:1}),Open({b:'B'}))))())
+
+
+console.log(stringify(Gubu(Number).spec()))
+console.log(stringify(Gubu({a:Number}).spec()))

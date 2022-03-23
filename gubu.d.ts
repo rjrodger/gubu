@@ -110,6 +110,7 @@ declare function make<S>(intop?: S, inopts?: Options): {
 };
 declare const Required: Builder;
 declare const Skip: Builder;
+declare const Default: Builder;
 declare const Empty: Builder;
 declare const Any: Builder;
 declare const Never: Builder;
@@ -156,6 +157,7 @@ declare type Gubu = typeof make & {
     Check: typeof Check;
     Closed: typeof Closed;
     Open: typeof Open;
+    Default: typeof Default;
     Define: typeof Define;
     Empty: typeof Empty;
     Exact: typeof Exact;
@@ -178,6 +180,7 @@ declare type Gubu = typeof make & {
     GCheck: typeof Check;
     GClosed: typeof Closed;
     GOpen: typeof Open;
+    GDefault: typeof Default;
     GDefine: typeof Define;
     GEmpty: typeof Empty;
     GExact: typeof Exact;
@@ -202,6 +205,7 @@ declare const GBelow: Builder;
 declare const GCheck: Builder;
 declare const GClosed: Builder;
 declare const GOpen: Builder;
+declare const GDefault: Builder;
 declare const GDefine: Builder;
 declare const GEmpty: Builder;
 declare const GExact: Builder;
@@ -216,4 +220,4 @@ declare const GSkip: Builder;
 declare const GSome: Builder;
 declare const GValue: Builder;
 export type { Validate, Update, Context, Builder, Node, State, GubuShape, };
-export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, Above, After, All, Any, Before, Below, Check, Closed, Open, Define, Empty, Exact, Max, Min, Never, One, Refer, Rename, Required, Skip, Some, Value, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GCheck, GClosed, GOpen, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GRefer, GRename, GRequired, GSkip, GSome, GValue, };
+export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, Above, After, All, Any, Before, Below, Check, Closed, Open, Default, Define, Empty, Exact, Max, Min, Never, One, Refer, Rename, Required, Skip, Some, Value, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GCheck, GClosed, GOpen, GDefault, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GRefer, GRename, GRequired, GSkip, GSome, GValue, };

@@ -508,6 +508,7 @@ The built-in shape builders help you match the following shapes:
   * [Value](#value-builder): All non-explicit values of an object must match this shape.
 * Mutations:
   * [Rename](#rename-builder): Rename the key of a property.
+  * [Default](#default-builder): Provide a default and make the value optional.
   * [Define](#define-builder): Define a name for a value.
   * [Refer](#refer-builder): Refer to a defined value by name.
 * Customizations:
@@ -1645,6 +1646,9 @@ The built-in shape builders are:
 * [Closed](#closed-builder): 
   Allow only explicitly defined elements in an array.
 
+* [Default](#default-builder): 
+  Provide a default and make the value optional.
+
 * [Define](#define-builder): 
   Define a name for a value.
 
@@ -1808,24 +1812,41 @@ arguments. All shapes are **always evaluated**, even if some fail, to
 ensure all errors are collected.
 
 This shape builder implicitly creates a [Required](#required-builder)
-value. Use the [Skip](#skip-builder) shape builder to make the value
-explicitly optional.
+value. Use the [Default](#default-builder) shape builder to make the value optional
+and provide a default. Use the [Skip](#skip-builder) shape builder to
+make the value skippable (if absent, no default is injected).
 
-TODO: Default
-
+To match exact values, use the [Exact](#exact-builder) shape builder
+(literal values alone will just create optional defaults).
 
 ```js
 const { All } = Gubu
-let shape = Gubu(All(Number, v => v>10))
+
+let shape = Gubu(All(Number, Check(v => v > 10)))
 
 shape(11) // PASS: 11 is a number, and 11 > 10 
 shape(9)  // FAIL: 9 is a number, but 9 < 10 
 shape()   // FAIL: a value is required (implicitly)
 
-shape = Gubu({ a: Skip(All({ b: String }, Min(2))) })
+// Make the All optional with a default
+shape = Gubu({ a: Default({ b: 'B' }, All(Open({ b: String }), Max(2))) })
+shape({ a: { b: 'X' } }) // PASS: returns same object
+shape({ a: { b: 'X', c: 'Y' } }) // PASS: returns same object
+shape({ a: { b: 'X', c: 'Y', d: 'Z' } }) // FAIL: too many properties (3 > 2)
+shape({}) // PASS: `a` is optional, returns { b: 'B' }, the default
+
+// Make the All skippable
+shape = Gubu({ a: Skip(All(Open({ b: String }), Max(2))) })
 shape({ a: { b: 'X' } }) // PASS: returns same object
 shape({}) // PASS: `a` is optional, returns {}
 ```
+
+See also: 
+[One](#one-builder), 
+[Some](#some-builder), 
+[Exact](#exact-builder), 
+
+
 
 
 ---
@@ -1976,19 +1997,31 @@ See also:
 Closed( child?: any )
 ```
 
-* **Standalone:** `Closed({x: 1})`
+* **Standalone:** `Closed([String])`
 * **As Parent:** INVALID
-* **As Child:** `Required(Closed({x: 1}))`
-* **Chainable:** `Skip({x: 1}).Closed()`
+* **As Child:** `Required(Closed([Number]))`
+* **Chainable:** `Skip([{x: 1}]).Closed()`
 
-Prevents an object from accepting unspecified properties. The object
-is "closed" and can only have the properties defined in the shape.
+Restricts an array to an explicit set of elements. The array
+is "closed" and can only have the elements defined in the shape.
+
+> NOTE: Arrays with two or more elements are already considered
+> closed. The `Closed` shape builder makes it possible to close single
+> element arrays, which would normally be open with the single element
+> defining the general shape of all elements.
 
 ```js
 const { Closed } = Gubu
-let shape = Gubu(Closed({ a: 11 }))
-shape({ a: 10 }) // PASS: returns { a: 10 }
-shape({ a: 10, b: 11 }) // FAIL: property "b" is not allowed
+
+// Closed array.
+let shape = Gubu(Closed([Number]))
+shape([1]) // PASS: returns [1]
+shape([1, 2]) // FAIL: element "2" is not allowed
+
+// Open array.
+shape = Gubu([Number])
+shape([1]) // PASS: returns [1]
+shape([1, 2]) // PASS: returns [1, 2], all elements are numbers
 ```
 
 
@@ -2005,14 +2038,18 @@ Define( options: string | { name: string }, child?: any )
 * **As Child:** `Required(Define('FOO', {x: 1}))`
 * **Chainable:** `Skip({x: 1}).Define('FOO')`
 
-Define a name for a sub value that can be referenced by the
+Define a name for a value that can be referenced by the
 [Refer](#refer-builder) shape builder. Definitions must precede usage
 by `Refer`, in depth-first order.
 
-Note that in order to prevent infinite loops, by default `Refer` does
-*not* insert default values. To do so, use the `fill` option. Note
-also that `Refer` does not copy the referred value, it copies the
-referred shape, thus `fill` only inserts the default value. 
+In order to prevent infinite loops caused by self-reference in
+children, `Refer` does *not* inject default values. This is normally
+what you want for [recursive shapes](#recursive-shapes).
+
+To force injection of default values, use the `fill` option (of
+`Refer`). Use this option only when there is no self-reference. Note
+also that `Refer` does not copy the referred value. Instead it uses
+the referred shape, thus `fill` only inserts the default value.
 
 ```js
 const { Define, Refer } = Gubu
@@ -2087,11 +2124,11 @@ Exact( value: any )
 * **As Child:** `Required(Exact('abc'))`
 * **Chainable:** `Skip(String).Exact('A')`
 
-Specific an exact list of one or more values that the shape can be
+Specific an exact list of one or more **values** that the shape can be
 exactly equal to. Use this to restrict the allowed literal values of
 the shape. Use this for enumeration-like values.
 
-Only literal values are accepted. Child shapes are not supported.
+> Only literal values are accepted. Child shapes are not supported.
 
 
 ```js
@@ -2120,7 +2157,7 @@ Max( value: number|string, child?: any )
 * **As Child:** `Skip(Max(2))`
 * **Chainable:** `Required(Number).Max(2)`
 
-Only allow values that have length greater than or equal to the given
+Only allow values that have length less than or equal to the given
 maximum value. "Length" means:
 * Arrays: array length; 
 * Strings: string length; 
@@ -2247,14 +2284,14 @@ One( ...children: any[] )
 * **Chainable:** INVALID
 
 To be valid, the source value must match exactly one of the shapes
-given as arguments. All shapes are always evaluated, to ensure all
-errors are collected.
+given as arguments. Shape matching halts at the first matching shape.
 
 This shape builder implicitly creates a [Required](#required-builder)
-value. Use the shape builder [Skip](#skip-builder) to make the
-value explicitly optional.
+value. Use the [Default](#default-builder) shape builder to make the value optional
+and provide a default. Use the [Skip](#skip-builder) shape builder to
+make the value skippable (if absent, no default is injected).
 
-To match exact values, use the shape builder [Exact](#exact-builder)
+To match exact values, use the [Exact](#exact-builder) shape builder
 (literal values alone will just create optional defaults).
 
 ```js
@@ -2275,6 +2312,13 @@ shape(false) // FAIL: no exact match
 shape()      // FAIL: a value is required
 ```
 
+See also: 
+[All](#all-builder), 
+[Some](#some-builder), 
+[Exact](#exact-builder), 
+
+
+
 
 ---
 #### Skip Builder
@@ -2286,14 +2330,15 @@ Skip( child?: any )
 
 * **Standalone:** `Skip(Number)`
 * **As Parent:** `Skip({x: 1})`
-* **As Child:** `Closed(Skip({x: 1}))`
-* **Chainable:** `Skip({x: 1}).Closed()`
+* **As Child:** `Open(Skip({x: 1}))`
+* **Chainable:** `Skip({x: 1}).Open()`
 
-Make the value explicitly optional. If the value was implicitly
-required ([One](#one-builder), [All](#all-builder), etc.) then the
-value becomes optional. If the value is undefined, a required child
-value will no longer cause validation to fail. If the value is absent,
-no default will be inserted.
+Make the value skippable&mdash;if it is missing (no property key), no
+default is injected. If the value was implicitly required
+([One](#one-builder), [All](#all-builder), etc.) then the value
+becomes optional. If the value is undefined, a required child value
+will no longer cause validation to fail. If the value is absent, no
+default will be inserted.
 
 ```js
 const { Skip } = Gubu
@@ -2318,14 +2363,18 @@ Refer( options: string | { name: string, fill?: boolean }, child?: any )
 * **As Child:** `Required(Refer('FOO', {x: 1}))`
 * **Chainable:** `Skip({x: 1}).Refer('FOO')`
 
-Reference a previously defined sub-shape by name (using
+Reference a previously defined shape by name (using
 [Define](#define-builder)). Definitions with `Define` must precede
 usage by `Refer`, in depth-first order.
 
-Note that in order to prevent infinite loops, by default `Refer` does
-*not* insert default values. To do so, use the `fill` option. Note
-also that `Refer` does not copy the referred value, it copies the
-referred shape, thus `fill` only inserts the default value. 
+In order to prevent infinite loops caused by self-reference in
+children, `Refer` does *not* inject default values. This is normally
+what you want for [recursive shapes](#recursive-shapes).
+
+To force injection of default values, use the `fill` option (of
+`Refer`). Use this option only when there is no self-reference. Note
+also that `Refer` does not copy the referred value. Instead it uses
+the referred shape, thus `fill` only inserts the default value.
 
 ```js
 const { Define, Refer } = Gubu
@@ -2351,7 +2400,7 @@ shape({ a: 'A', b: 'B' }) // FAIL: b is not a number
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
 ```ts
-Rename( options?: string | { name: string, keep: boolean }, value: any )
+Rename( options: string | { name: string, keep: boolean }, value: any )
 ```
 
 * **Standalone:** `Rename('bar', Number)`
@@ -2390,7 +2439,7 @@ Required( child?: any )
 * **Chainable:** `Closed({x: 1}).Required()`
 
 Make the value explicitly required. Undefined values will fail. This
-is most useful for objects and arrays, as these are optional be
+is most useful for objects and arrays, as these are optional by
 default.
 
 ```js
@@ -2398,19 +2447,19 @@ const { Required } = Gubu
 let shape = Gubu(Required({x: 1}))
 
 console.log(shape({ x: 2 })) // PASS: prints { x: 2 })
-console.log(shapey({ x: 2, y: 3 })) // PASS: prints { x: 2, y: 3 })
-console.log(() => shape()) // FAIL: object is required
+console.log(shapey({ x: 2, y: 3 })) // PASS: prints { x: 2, y: 3 }
+console.log(shape()) // FAIL: object is required
 
-shape = Gubu(Closed(Required({ x: 1 })))
+shape = Gubu(Open(Required({ x: 1 })))
 console.log(shape({ x: 2 })) // PASS: prints { x: 2 })
-console.log(() => shape({ x: 2, y: 3 })) // FAIL: property "y" is not allowed
-console.log(() => shape()) // FAIL: object is required
+console.log(shape({ x: 2, y: 3 })) // PASS: prints { x: 2, y: 3 )
+console.log(shape()) // FAIL: object is required
 
-shape = Gubu(Closed({ x: 1 }).Required())
-console.log(shape({ x: 2 })) // prints { x: 2 })
-console.log(() => shape({ x: 2, y: 3 })) // FAIL: property "y" is not allowed.
-console.log(() => shape()) // FAIL: object is required
-
+// Same as above, but chained
+shape = Gubu(Open({ x: 1 }).Required())
+console.log(shape({ x: 2 })) // PASS: prints { x: 2 })
+console.log(shape({ x: 2, y: 3 })) // PASS: prints { x: 2, y: 3 }
+console.log(shape()) // FAIL: object is required
 ```
 
 
@@ -2432,8 +2481,12 @@ arguments (at least one). All shapes are always evaluated, even if
 some fail, to ensure all errors are collected.
 
 This shape builder implicitly creates a [Required](#required-builder)
-value. Use the shape builder [Skip](#skip-builder) to make the
-value explicitly optional.
+value. Use the [Default](#default-builder) shape builder to make the value optional
+and provide a default. Use the [Skip](#skip-builder) shape builder to
+make the value skippable (if absent, no default is injected).
+
+To match exact values, use the [Exact](#exact-builder) shape builder
+(literal values alone will just create optional defaults).
 
 
 ```js
@@ -2445,6 +2498,13 @@ shape({ y: 2 }) // PASS: { y: 2 } matches; returns { y: 2 }
 shape({ x: 1, y: 2 }) // PASS: { x: 1, y: 2 } matches; returns { x: 1, y: 2 }
 shape({ z: 3 })  // FAIL: does not match { x: 1 } or { y: 2 }
 ```
+
+See also: 
+[All](#all-builder), 
+[One](#one-builder), 
+[Exact](#exact-builder), 
+
+
 
 
 ---
@@ -2524,6 +2584,8 @@ result === {
   }
 }
 ```
+
+//  TODO: Check, Default
 
 
 

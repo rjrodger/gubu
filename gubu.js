@@ -1,8 +1,8 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GOpen = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Open = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
-exports.GValue = void 0;
+exports.GRequired = exports.GRename = exports.GRefer = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GDefault = exports.GOpen = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Default = exports.Open = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GValue = exports.GSome = exports.GSkip = void 0;
 // CRITICAL: Object CLOSED by default, Provide Open builder, Keep Closed for arrays
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
@@ -583,6 +583,23 @@ const Skip = function (shape) {
     return node;
 };
 exports.Skip = Skip;
+const Default = function (dval, shape) {
+    let hasDefaultValue = 2 === arguments.length;
+    shape = hasDefaultValue ? shape : dval;
+    let node = buildize(this, shape);
+    node.r = false;
+    if (hasDefaultValue) {
+        node.v = dval;
+    }
+    // else {
+    //   // node.v = undefined
+    // }
+    // Always insert default.
+    node.p = false;
+    // console.log(node)
+    return node;
+};
+exports.Default = Default;
 const Empty = function (shape) {
     let node = buildize(this, shape);
     node.u.empty = true;
@@ -1009,6 +1026,7 @@ function buildize(node0, node1) {
         Check,
         Closed,
         Open,
+        Default,
         Define,
         Empty,
         Exact,
@@ -1076,12 +1094,17 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     }
     return err;
 }
+function node2str(n) {
+    return (null != n.s && '' !== n.s) ? n.s :
+        (!n.r && undefined !== n.v) ? n.v : n.t;
+}
 function stringify(src, replacer, dequote, expand) {
     let str;
     if (!expand &&
         src && src.$ && (GUBU$ === src.$.gubu$ || true === src.$.gubu$)) {
-        src = (null != src.s && '' !== src.s) ? src.s :
-            undefined === src.v ? src.t : src.v;
+        // src = (null != src.s && '' !== src.s) ? src.s :
+        //   undefined === src.v ? src.t : src.v
+        src = node2str(src);
     }
     try {
         str = JSON.stringify(src, (key, val) => {
@@ -1116,8 +1139,9 @@ function stringify(src, replacer, dequote, expand) {
             }
             else if (true !== expand &&
                 (true === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$) || GUBU$ === ((_b = val === null || val === void 0 ? void 0 : val.$) === null || _b === void 0 ? void 0 : _b.gubu$))) {
-                val = (null != val.s && '' !== val.s) ? val.s :
-                    (undefined !== val.v ? val.v : val.t);
+                // val = (null != val.s && '' !== val.s) ? val.s :
+                //   (undefined !== val.v ? val.v : val.t)
+                val = node2str(val);
             }
             return val;
         });
@@ -1150,6 +1174,7 @@ if ('undefined' !== typeof (window)) {
         { b: Check, n: 'Check' },
         { b: Closed, n: 'Closed' },
         { b: Open, n: 'Open' },
+        { b: Default, n: 'Default' },
         { b: Define, n: 'Define' },
         { b: Empty, n: 'Empty' },
         { b: Exact, n: 'Exact' },
@@ -1178,6 +1203,7 @@ Object.assign(make, {
     Check,
     Closed,
     Open,
+    Default,
     Define,
     Empty,
     Exact,
@@ -1200,6 +1226,7 @@ Object.assign(make, {
     GCheck: Check,
     GClosed: Closed,
     GOpen: Open,
+    GDefault: Default,
     GDefine: Define,
     GEmpty: Empty,
     GExact: Exact,
@@ -1242,6 +1269,8 @@ const GClosed = Closed;
 exports.GClosed = GClosed;
 const GOpen = Open;
 exports.GOpen = GOpen;
+const GDefault = Default;
+exports.GDefault = GDefault;
 const GDefine = Define;
 exports.GDefine = GDefine;
 const GEmpty = Empty;
