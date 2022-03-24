@@ -96,11 +96,28 @@ declare type ErrDesc = {
     t: string;
     u: any;
 };
+declare class GubuError extends TypeError {
+    gubu: boolean;
+    code: string;
+    desc: () => ({
+        name: string;
+        code: string;
+        err: ErrDesc[];
+        ctx: any;
+    });
+    constructor(code: string, err: ErrDesc[], ctx: any);
+    toJSON(): this & {
+        err: any;
+        name: string;
+        message: string;
+    };
+}
 declare function nodize(shape?: any, depth?: number): Node;
 declare function make<S>(intop?: S, inopts?: Options): {
     <R>(root?: R | undefined, ctx?: Context | undefined): R & S;
     valid: <D>(root?: D | undefined, ctx?: Context | undefined) => root is D & S;
     match(root?: any, ctx?: Context | undefined): boolean;
+    error(root?: any, ctx?: Context | undefined): GubuError[];
     spec(): any;
     toString(): string;
     gubu: {
@@ -138,6 +155,7 @@ declare function stringify(src: any, replacer?: any, dequote?: boolean, expand?:
 declare type GubuShape = ReturnType<typeof make> & {
     valid: <D, S>(root?: D, ctx?: any) => root is (D & S);
     match: (root?: any, ctx?: any) => boolean;
+    error: (root?: any, ctx?: Context) => GubuError[];
     spec: () => any;
     gubu: typeof GUBU;
 };
@@ -148,6 +166,7 @@ declare type Gubu = typeof make & {
     makeErr: typeof makeErr;
     stringify: typeof stringify;
     truncate: typeof truncate;
+    nodize: typeof nodize;
     Above: typeof Above;
     After: typeof After;
     All: typeof All;

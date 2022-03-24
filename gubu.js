@@ -218,7 +218,9 @@ function nodize(shape, depth) {
             t = gs.t;
             v = gs.v;
             r = gs.r;
-            u = gs.u;
+            u = { ...gs.u };
+            // a = [...gs.a]
+            // b = [...gs.b]
         }
         // Instance of a class.
         else if (!((undefined === v.prototype && Function === v.constructor) ||
@@ -477,6 +479,12 @@ function make(intop, inopts) {
         ctx = ctx || {};
         return exec(root, ctx, true);
     };
+    gubuShape.error = (root, ctx) => {
+        let actx = ctx || {};
+        actx.err = actx.err || [];
+        exec(root, actx, false);
+        return actx.err;
+    };
     gubuShape.spec = () => {
         // TODO: when c is GUBU$NIL it is not present, should have some indicator value
         // Normalize spec, discard errors.
@@ -591,12 +599,8 @@ const Default = function (dval, shape) {
     if (hasDefaultValue) {
         node.v = dval;
     }
-    // else {
-    //   // node.v = undefined
-    // }
     // Always insert default.
     node.p = false;
-    // console.log(node)
     return node;
 };
 exports.Default = Default;
@@ -1015,7 +1019,10 @@ const Value = function (value, shape) {
 };
 exports.Value = Value;
 function buildize(node0, node1) {
-    let node = nodize(undefined === node0 ? node1 : node0.window === node0 ? node1 : node0);
+    // Detect chaining. If not chained, ignore `this` if it is the global context.
+    let node = nodize(undefined === node0 ? node1 :
+        node0.window === node0 || node0.global === node0 ? node1 :
+            node0);
     // NOTE: One, Some, All not chainable.
     return Object.assign(node, {
         Above,
@@ -1245,6 +1252,7 @@ Object.assign(make, {
     makeErr,
     stringify,
     truncate,
+    nodize,
 });
 Object.defineProperty(make, 'name', { value: 'gubu' });
 // The primary export.

@@ -30,6 +30,7 @@ const Gubu: GubuX = GubuModule
 const G$ = Gubu.G$
 const stringify = Gubu.stringify
 const truncate = Gubu.truncate
+const nodize = Gubu.nodize
 
 const {
   Above,
@@ -1446,21 +1447,21 @@ Validation failed for property "q.b" with value "x" because the value is not of 
 Validation failed for value "x" because check "(v) => v > 10" failed.`)
     expect(shape_AfterB0()).toEqual(15)
 
-    let shape_AfterB1 = Gubu(Skip(Number).After((v: any) => 0 === v % 2))
+    let shape_AfterB1 = Gubu(Skip(Number).After((v: any) => v % 2 === 0))
     expect(shape_AfterB1(2)).toEqual(2)
-    expect(() => shape_AfterB1(3)).toThrow('Validation failed for value "3" because check "(v) => 0 === v % 2" failed.')
-    expect(() => shape_AfterB1('x')).toThrow('Validation failed for value "x" because check "(v) => 0 === v % 2" failed.')
+    expect(() => shape_AfterB1(3)).toThrow('Validation failed for value "3" because check "(v) => v % 2 === 0" failed.')
+    expect(() => shape_AfterB1('x')).toThrow('Validation failed for value "x" because check "(v) => v % 2 === 0" failed.')
     expect(shape_AfterB1()).toEqual(undefined)
 
-    let shape_AfterB2 = Gubu(After((v: any) => 0 === v.x % 2, Required({ x: Number })))
+    let shape_AfterB2 = Gubu(After((v: any) => v.x % 2 === 0, Required({ x: Number })))
     expect(shape_AfterB2({ x: 2 })).toEqual({ x: 2 })
-    expect(() => shape_AfterB2({ x: 3 })).toThrow('Validation failed for object "{x:3}" because check "(v) => 0 === v.x % 2" failed.')
+    expect(() => shape_AfterB2({ x: 3 })).toThrow('Validation failed for object "{x:3}" because check "(v) => v.x % 2 === 0" failed.')
 
-    expect(() => shape_AfterB2({})).toThrow(`Validation failed for object "{}" because check "(v) => 0 === v.x % 2" failed.
+    expect(() => shape_AfterB2({})).toThrow(`Validation failed for object "{}" because check "(v) => v.x % 2 === 0" failed.
 Validation failed for property "x" with value "" because the value is required.`)
 
     expect(() => shape_AfterB2()).toThrow(`Validation failed for value "" because the value is required.
-Validation failed for value "" because check "(v) => 0 === v.x % 2" failed (threw: Cannot read prop`)
+Validation failed for value "" because check "(v) => v.x % 2 === 0" failed (threw: Cannot read prop`)
 
     // TODO: modify value
 
@@ -1902,8 +1903,6 @@ Validation failed for property "b" with value "B" because the value is not of ty
       .toThrow(/"2".*"q".*type object/)
     expect(() => g10([{ x: 11 }, { y: 22 }, { z: 33 }, 'q', { k: 99 }]))
       .toThrow(/"3".*"q".*type object/)
-
-    // TODO: change norm - object Value and array Value should be the same
   })
 
 
@@ -2296,8 +2295,54 @@ Validation failed for property "b" with value "B" because the value is not of ty
         }
       }
     })
+  })
 
 
+  test('spec-compose', () => {
+    let f0 = (v: any) => 1 === v
+    let c0 = Gubu(Check(f0))
+    let c1 = Gubu(Skip(Check(f0)))
+
+    // TODO
+    // let c2 = Gubu(Skip(c0))
+
+    expect(c0.spec()).toMatchObject({
+      t: 'any',
+      n: 0,
+      r: true,
+      p: false,
+      d: 0,
+      u: {},
+      a: [],
+      b: ['f0'],
+      s: 'f0'
+    })
+
+    expect(c1.spec()).toMatchObject({
+      t: 'any',
+      n: 0,
+      r: false,
+      p: true,
+      d: 0,
+      u: {},
+      a: [],
+      b: ['f0'],
+      s: 'f0'
+    })
+
+    /*
+    expect(c2.spec()).toMatchObject({
+      t: 'any',
+      n: 0,
+      r: false,
+      p: true,
+      d: 0,
+      u: {},
+      a: [],
+      b: ['f0'],
+      s: 'f0'
+    })
+    */
   })
 
 
@@ -2455,9 +2500,15 @@ Validation failed for property "b" with value "B" because the value is not of ty
     expect(g3s({ b: { a: 1 } })).toEqual({ b: { a: 1 } })
     expect(() => g3s({ b: { a: 'x' } })).toThrow()
 
-
     const shape = Gubu({ a: Gubu({ x: Number }) })
     expect(shape({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
+
+
+    let c0 = Gubu(String)
+    let c1 = Gubu(Skip(String))
+    let c2 = Gubu(Skip(c0))
+
+    expect(c1.spec()).toMatchObject(c2.spec())
   })
 
 
@@ -2601,6 +2652,22 @@ Validation failed for property "b" with value "B" because the value is not of ty
     expect(stringify([1, f0, () => true, C0])).toEqual('[1,"f0","() => true","C0"]')
 
     expect(stringify(/a/)).toEqual('"/a/"')
+  })
+
+
+  test('nodize', () => {
+    expect(nodize(1)).toMatchObject({
+      a: [],
+      b: [],
+      d: -1,
+      n: 0,
+      p: false,
+      r: false,
+      t: "number",
+      u: {},
+      v: 1,
+    })
+
   })
 
 

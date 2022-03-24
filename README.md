@@ -1848,7 +1848,6 @@ See also:
 
 
 
-
 ---
 #### Any Builder
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
@@ -1883,6 +1882,7 @@ console.log(shape(11)) // prints 11
 console.log(shape(10)) // prints 10
 console.log(shape()) // prints {x: 1}
 ```
+
 
 
 ---
@@ -1942,6 +1942,7 @@ See also:
 [State](#state-type).
 
 
+
 ---
 #### Below Builder
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
@@ -1990,6 +1991,45 @@ See also:
 
 
 ---
+#### Check Builder
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
+
+TODO
+
+```ts
+Check( validate: Validate | RegExp | string , child?: any )
+```
+
+* **Standalone:** `Check([String])`
+* **As Parent:** INVALID
+* **As Child:** `Required(Check([Number]))`
+* **Chainable:** `Skip([{x: 1}]).Check()`
+
+Restricts an array to an explicit set of elements. The array
+is "closed" and can only have the elements defined in the shape.
+
+> NOTE: Arrays with two or more elements are already considered
+> closed. The `Check` shape builder makes it possible to close single
+> element arrays, which would normally be open with the single element
+> defining the general shape of all elements.
+
+```js
+const { Check } = Gubu
+
+// Check array.
+let shape = Gubu(Check([Number]))
+shape([1]) // PASS: returns [1]
+shape([1, 2]) // FAIL: element "2" is not allowed
+
+// Open array.
+shape = Gubu([Number])
+shape([1]) // PASS: returns [1]
+shape([1, 2]) // PASS: returns [1, 2], all elements are numbers
+```
+
+
+
+---
 #### Closed Builder
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
@@ -2023,6 +2063,46 @@ shape = Gubu([Number])
 shape([1]) // PASS: returns [1]
 shape([1, 2]) // PASS: returns [1, 2], all elements are numbers
 ```
+
+
+
+---
+#### Default Builder
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
+
+TODO
+
+```ts
+Default( child?: any )
+```
+
+* **Standalone:** `Default([String])`
+* **As Parent:** INVALID
+* **As Child:** `Required(Default([Number]))`
+* **Chainable:** `Skip([{x: 1}]).Default()`
+
+Restricts an array to an explicit set of elements. The array
+is "closed" and can only have the elements defined in the shape.
+
+> NOTE: Arrays with two or more elements are already considered
+> closed. The `Default` shape builder makes it possible to close single
+> element arrays, which would normally be open with the single element
+> defining the general shape of all elements.
+
+```js
+const { Default } = Gubu
+
+// Default array.
+let shape = Gubu(Default([Number]))
+shape([1]) // PASS: returns [1]
+shape([1, 2]) // FAIL: element "2" is not allowed
+
+// Open array.
+shape = Gubu([Number])
+shape([1]) // PASS: returns [1]
+shape([1, 2]) // PASS: returns [1, 2], all elements are numbers
+```
+
 
 
 ---
@@ -2068,6 +2148,7 @@ console.log(shape({})) // prints { a: 11, b: 11 }) - b is filled with the defaul
 console.log(shape({ b: 12 })) // prints { a: 11, b: 12 })
 shape({ a: 'A', b: 'B' }) // FAIL: b is not a number
 ```
+
 
 
 ---
@@ -2144,6 +2225,7 @@ console.log(shape(false)) // FAIL: undefined is not one of 11, 12, true
 ```
 
 
+
 ---
 #### Max Builder
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
@@ -2192,6 +2274,7 @@ See also:
 [Below](#below-builder), 
 [Min](#min-builder), 
 [Check](#check-builder).
+
 
 
 ---
@@ -2243,6 +2326,7 @@ See also:
 [Check](#check-builder).
 
 
+
 ---
 #### Never Builder
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
@@ -2268,6 +2352,7 @@ let shape = Gubu(Never())
 shape(123) // FAIL: always fails
 shape()    // FAIL: always fails, even on undefined
 ```
+
 
 
 ---
@@ -2319,7 +2404,6 @@ See also:
 
 
 
-
 ---
 #### Skip Builder
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
@@ -2348,6 +2432,7 @@ console.log(shape({}))  // prints {} - no default inserted
 console.log(shape({ a: undefined })) // prints { a: undefined }
 console.log(shape({ a: true })) // FAIL: true is not a number
 ```
+
 
 
 ---
@@ -2395,6 +2480,7 @@ shape({ a: 'A', b: 'B' }) // FAIL: b is not a number
 ```
 
 
+
 ---
 #### Rename Builder
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
@@ -2423,6 +2509,7 @@ shape = Gubu({ a: Rename({ name: 'b', keep: true }, 123) })
 console.log(shape({ a: 10 })) // prints { a: 10, b: 10 })
 console.log(shape({})) // prints { a: 123, b: 123 })
 ```
+
 
 
 ---
@@ -2461,6 +2548,7 @@ console.log(shape({ x: 2 })) // PASS: prints { x: 2 })
 console.log(shape({ x: 2, y: 3 })) // PASS: prints { x: 2, y: 3 }
 console.log(shape()) // FAIL: object is required
 ```
+
 
 
 ---
@@ -2503,7 +2591,6 @@ See also:
 [All](#all-builder), 
 [One](#one-builder), 
 [Exact](#exact-builder), 
-
 
 
 
@@ -2584,8 +2671,6 @@ result === {
   }
 }
 ```
-
-//  TODO: Check, Default
 
 
 

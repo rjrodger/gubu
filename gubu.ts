@@ -416,10 +416,12 @@ function nodize(shape?: any, depth?: number): Node {
     }
     else if (v.gubu === GUBU || true === v.$?.gubu) {
       let gs = v.spec ? v.spec() : v
-      t = (gs as Node).t
+      t = gs.t
       v = gs.v
       r = gs.r
-      u = gs.u
+      u = { ...gs.u }
+      // a = [...gs.a]
+      // b = [...gs.b]
     }
 
     // Instance of a class.
@@ -739,6 +741,13 @@ function make<S>(intop?: S, inopts?: Options) {
     return (exec(root, ctx, true) as boolean)
   }
 
+  gubuShape.error = (root?: any, ctx?: Context): GubuError[] => {
+    let actx: any = ctx || {}
+    actx.err = actx.err || []
+    exec(root, actx, false)
+    return actx.err
+  }
+
 
   gubuShape.spec = () => {
     // TODO: when c is GUBU$NIL it is not present, should have some indicator value
@@ -892,14 +901,9 @@ const Default: Builder = function(this: Node, dval?: any, shape?: any) {
   if (hasDefaultValue) {
     node.v = dval
   }
-  // else {
-  //   // node.v = undefined
-  // }
 
   // Always insert default.
   node.p = false
-
-  // console.log(node)
 
   return node
 }
@@ -1083,7 +1087,11 @@ const After: Builder = function(this: Node, validate: Validate, shape?: any) {
 }
 
 
-const Check: Builder = function(this: Node, check: any, shape?: any) {
+const Check: Builder = function(
+  this: Node,
+  check: Validate | RegExp | string,
+  shape?: any
+) {
   let node = buildize(this, shape)
 
   if ('function' === typeof check) {
@@ -1456,8 +1464,11 @@ const Value: Builder = function(
 
 
 function buildize(node0?: any, node1?: any): Node {
+  // Detect chaining. If not chained, ignore `this` if it is the global context.
   let node =
-    nodize(undefined === node0 ? node1 : node0.window === node0 ? node1 : node0)
+    nodize(undefined === node0 ? node1 :
+      node0.window === node0 || node0.global === node0 ? node1 :
+        node0)
 
   // NOTE: One, Some, All not chainable.
   return Object.assign(node, {
@@ -1645,6 +1656,7 @@ type GubuShape = ReturnType<typeof make> &
 {
   valid: <D, S>(root?: D, ctx?: any) => root is (D & S),
   match: (root?: any, ctx?: any) => boolean,
+  error: (root?: any, ctx?: Context) => GubuError[],
   spec: () => any,
   gubu: typeof GUBU
 }
@@ -1742,6 +1754,7 @@ Object.assign(make, {
   makeErr,
   stringify,
   truncate,
+  nodize,
 })
 
 
@@ -1751,6 +1764,7 @@ type Gubu = typeof make & {
   makeErr: typeof makeErr,
   stringify: typeof stringify,
   truncate: typeof truncate,
+  nodize: typeof nodize,
 
   Above: typeof Above
   After: typeof After

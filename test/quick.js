@@ -744,5 +744,37 @@ let tmp = {}
 // console.log(Gubu(Default('x',All(Open({a:1}),Open({b:'B'}))))())
 
 
-console.log(stringify(Gubu(Number).spec()))
-console.log(stringify(Gubu({a:Number}).spec()))
+// console.log(stringify(Gubu(Number).spec()))
+// console.log(stringify(Gubu({a:Number}).spec()))
+
+
+
+
+let c0 = Gubu(Check(v => 1 === v))
+// let c1 = Gubu(Skip(Check(v => 1 === v)))
+let c2 = Gubu(Skip(c0))
+
+console.log(c0.spec())
+// console.log(c1.spec())
+console.log(c2.spec())
+
+
+// console.log(c0)
+// console.log(c0(1))
+// console.log(c0.error(1))
+// console.log(c0.error())
+
+
+// console.log(c1)
+// console.log(c1.spec())
+// console.log(c1(1))
+// console.log(c1(2))
+// console.log(c1.error(1))
+// console.log(c1.error())
+
+// let c2 = Gubu(Default(c0))
+// console.log(c2)
+// console.log(c2(1))
+// console.log(c2())
+// console.log(c2.error(1))
+// console.log(c2.error())

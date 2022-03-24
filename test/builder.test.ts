@@ -126,11 +126,11 @@ describe('builder', () => {
 
 
   test('builder-check', () => {
-    let g0 = Gubu(Check((v: any) => 'x' === v))
+    let g0 = Gubu(Check((v: any) => v === "x"))
     expect(g0('x')).toEqual('x')
-    expect(() => g0('y')).toThrow('Validation failed for value "y" because check "(v) => \'x\' === v" failed.')
-    expect(() => g0(1)).toThrow('Validation failed for value "1" because check "(v) => \'x\' === v" failed.')
-    expect(() => g0()).toThrow('Validation failed for value "" because check "(v) => \'x\' === v" failed.')
+    expect(() => g0('y')).toThrow('Validation failed for value "y" because check "(v) => v === "x"" failed.')
+    expect(() => g0(1)).toThrow('Validation failed for value "1" because check "(v) => v === "x"" failed.')
+    expect(() => g0()).toThrow('Validation failed for value "" because check "(v) => v === "x"" failed.')
 
     let g1 = Gubu(Check(/a/))
     expect(g1('a')).toEqual('a')
@@ -155,6 +155,37 @@ describe('builder', () => {
     expect(() => g5(undefined)).toThrow('check')
     expect(() => g5(NaN)).toThrow('check')
     expect(() => g5(null)).toThrow('check')
+
+    let c0 = Gubu(Check((v: any) => v === 1))
+    expect(c0(1)).toEqual(1)
+    expect(() => c0(2)).toThrow('Validation failed for value "2" because check "(v) => v === 1" failed.')
+    expect(() => c0('x')).toThrow('check')
+    expect(() => c0()).toThrow('check')
+    expect(c0.error(1)).toEqual([])
+    expect(c0.error('x')).toMatchObject([{ w: 'check' }])
+    expect(c0.error()).toMatchObject([{ w: 'check' }])
+
+    /* TODO
+    let c0s = Gubu(Skip(c0))
+    expect(c0s(1)).toEqual(1)
+    expect(() => c0s(2)).toThrow('Validation failed for value "2" because check "(v) => 1 === v" failed.')
+    expect(() => c0s('x')).toThrow('check')
+    expect(c0s()).toEqual(undefined)
+    expect(c0s.error(1)).toEqual([])
+    expect(c0s.error('x')).toMatchObject([{ w: 'check' }])
+    expect(c0s.error()).toMatchObject([])
+    */
+
+
+    let c1 = Gubu(Check(/a/))
+    expect(c1('qaq')).toEqual('qaq')
+    expect(() => c1('qbq')).toThrow('Validation failed for value "qbq" because check "/a/" failed.')
+    expect(() => c1(1)).toThrow('check')
+    expect(() => c1()).toThrow('check')
+
+
+
+
   })
 
 
@@ -657,8 +688,6 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
     expect(g1('a')).toEqual('A!')
     expect(g1(1)).toEqual(1)
     expect(g1()).toEqual(undefined)
-
-
   })
 
 
@@ -1219,9 +1248,8 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
     expect(d7()).toEqual('x')
     expect(d7(undefined)).toEqual('x')
     expect(d7({})).toEqual({ a: 1, b: 'B' })
-
-
   })
+
 
 })
 
