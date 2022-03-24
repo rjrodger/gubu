@@ -1,8 +1,8 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GRequired = exports.GRename = exports.GRefer = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GDefault = exports.GOpen = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Default = exports.Open = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
-exports.GValue = exports.GSome = exports.GSkip = void 0;
+exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GOpen = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Open = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GValue = void 0;
 // CRITICAL: Object CLOSED by default, Provide Open builder, Keep Closed for arrays
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
@@ -174,7 +174,6 @@ function nodize(shape, depth) {
     let t = (null === shape ? 'null' : typeof (shape));
     t = ('undefined' === t ? 'any' : t);
     let v = shape;
-    let f = shape; // undefined
     let c = GUBU$NIL;
     let r = false; // Not required by default.
     let p = false; // Only true when Skip builder is used.
@@ -211,7 +210,6 @@ function nodize(shape, depth) {
             t = shape.name.toLowerCase();
             r = true;
             v = clone(EMPTY_VAL[t]);
-            f = v;
             // Required "Object" is considered Open
             if ('Object' === shape.name) {
                 c = Any();
@@ -221,7 +219,6 @@ function nodize(shape, depth) {
             let gs = v.node ? v.node() : v;
             t = gs.t;
             v = gs.v;
-            f = gs.f;
             r = gs.r;
             u = { ...gs.u };
             a = [...gs.a];
@@ -247,7 +244,6 @@ function nodize(shape, depth) {
         $: GUBU,
         t,
         v: vmap,
-        f,
         n: null != vmap && 'object' === typeof (vmap) ? Object.keys(vmap).length : 0,
         c,
         r,
@@ -291,7 +287,6 @@ function make(intop, inopts) {
                     s.err.push(makeErrImpl('never', s, 1070));
                 }
                 else if ('object' === s.type) {
-                    let descend = true;
                     let val;
                     if (n.r && undefined === s.val) {
                         s.ignoreVal = true;
@@ -305,28 +300,37 @@ function make(intop, inopts) {
                     }
                     else if (!n.p || null != s.val) {
                         // Descend into object, constructing child defaults
-                        // if (undefined === n.f) {
                         s.updateVal(s.val || (s.fromDefault = true, {}));
                         val = s.val;
-                        // }
-                        // Explicit default
-                        // else {
-                        //   s.fromDefault = true
-                        //   s.updateVal(clone(n.f))
-                        //   descend = false
-                        // }
                     }
-                    if (descend) {
-                        val = null == val && false === s.ctx.err ? {} : val;
-                        if (null != val) {
-                            let hasKeys = false;
-                            let vkeys = Object.keys(n.v);
-                            let start = s.nI;
-                            if (0 < vkeys.length) {
+                    val = null == val && false === s.ctx.err ? {} : val;
+                    if (null != val) {
+                        let hasKeys = false;
+                        let vkeys = Object.keys(n.v);
+                        let start = s.nI;
+                        if (0 < vkeys.length) {
+                            hasKeys = true;
+                            s.pI = start;
+                            for (let k of vkeys) {
+                                let nvs = n.v[k] = nodize(n.v[k], 1 + s.dI);
+                                s.nodes[s.nI] = nvs;
+                                s.vals[s.nI] = val[k];
+                                s.parents[s.nI] = val;
+                                s.keys[s.nI] = k;
+                                s.nI++;
+                            }
+                        }
+                        let extra = Object.keys(val).filter(k => undefined === n.v[k]);
+                        if (0 < extra.length) {
+                            if (GUBU$NIL === n.c) {
+                                s.ignoreVal = true;
+                                s.err.push(makeErrImpl('closed', s, 1100, undefined, { k: extra }));
+                            }
+                            else {
                                 hasKeys = true;
                                 s.pI = start;
-                                for (let k of vkeys) {
-                                    let nvs = n.v[k] = nodize(n.v[k], 1 + s.dI);
+                                for (let k of extra) {
+                                    let nvs = n.c = nodize(n.c, 1 + s.dI);
                                     s.nodes[s.nI] = nvs;
                                     s.vals[s.nI] = val[k];
                                     s.parents[s.nI] = val;
@@ -334,31 +338,11 @@ function make(intop, inopts) {
                                     s.nI++;
                                 }
                             }
-                            let extra = Object.keys(val).filter(k => undefined === n.v[k]);
-                            if (0 < extra.length) {
-                                // let extra = okeys.filter(k => undefined === n.v[k])
-                                if (GUBU$NIL === n.c) {
-                                    s.ignoreVal = true;
-                                    s.err.push(makeErrImpl('closed', s, 1100, undefined, { k: extra }));
-                                }
-                                else {
-                                    hasKeys = true;
-                                    s.pI = start;
-                                    for (let k of extra) {
-                                        let nvs = n.c = nodize(n.c, 1 + s.dI);
-                                        s.nodes[s.nI] = nvs;
-                                        s.vals[s.nI] = val[k];
-                                        s.parents[s.nI] = val;
-                                        s.keys[s.nI] = k;
-                                        s.nI++;
-                                    }
-                                }
-                            }
-                            if (hasKeys) {
-                                s.dI++;
-                                s.nodes[s.nI++] = s.sI;
-                                s.nextSibling = false;
-                            }
+                        }
+                        if (hasKeys) {
+                            s.dI++;
+                            s.nodes[s.nI++] = s.sI;
+                            s.nextSibling = false;
                         }
                     }
                 }
@@ -434,12 +418,9 @@ function make(intop, inopts) {
                         s.err.push(makeErrImpl('required', s, 1060));
                     }
                     else if (undefined !== n.v &&
-                        // undefined !== n.f &&
                         !n.p ||
                         'undefined' === s.type) {
-                        // console.log('DEF AAA', n.f)
                         s.updateVal(n.v);
-                        // s.updateVal(n.f)
                         s.fromDefault = true;
                     }
                     else if ('any' === s.type) {
@@ -614,20 +595,19 @@ const Skip = function (shape) {
     return node;
 };
 exports.Skip = Skip;
-const Default = function (dval, shape) {
-    let hasDefaultValue = 2 === arguments.length;
-    shape = hasDefaultValue ? shape : dval;
-    let node = buildize(this, shape);
-    node.r = false;
-    if (hasDefaultValue) {
-        // node.v = dval
-        node.f = dval;
-    }
-    // Always insert default.
-    node.p = false;
-    return node;
-};
-exports.Default = Default;
+// FINISH
+// const Default: Builder = function(this: Node, dval?: any, shape?: any) {
+//   let hasDefaultValue = 2 === arguments.length
+//   shape = hasDefaultValue ? shape : dval
+//   let node = buildize(this, shape)
+//   node.r = false
+//   if (hasDefaultValue) {
+//     node.f = dval
+//   }
+//   // Always insert default.
+//   node.p = false
+//   return node
+// }
 const Empty = function (shape) {
     let node = buildize(this, shape);
     node.u.empty = true;
@@ -1059,7 +1039,6 @@ function buildize(node0, node1) {
         Check,
         Closed,
         Open,
-        Default,
         Define,
         Empty,
         Exact,
@@ -1076,8 +1055,7 @@ function buildize(node0, node1) {
 exports.buildize = buildize;
 // External utility to make ErrDesc objects.
 function makeErr(state, text, why, user) {
-    return makeErrImpl(why || 'check', // 'custom',
-    state, 4000, text, user);
+    return makeErrImpl(why || 'check', state, 4000, text, user);
 }
 exports.makeErr = makeErr;
 // Internal utility to make ErrDesc objects.
@@ -1203,7 +1181,6 @@ if ('undefined' !== typeof (window)) {
         { b: Check, n: 'Check' },
         { b: Closed, n: 'Closed' },
         { b: Open, n: 'Open' },
-        { b: Default, n: 'Default' },
         { b: Define, n: 'Define' },
         { b: Empty, n: 'Empty' },
         { b: Exact, n: 'Exact' },
@@ -1232,7 +1209,6 @@ Object.assign(make, {
     Check,
     Closed,
     Open,
-    Default,
     Define,
     Empty,
     Exact,
@@ -1255,7 +1231,6 @@ Object.assign(make, {
     GCheck: Check,
     GClosed: Closed,
     GOpen: Open,
-    GDefault: Default,
     GDefine: Define,
     GEmpty: Empty,
     GExact: Exact,
@@ -1299,8 +1274,6 @@ const GClosed = Closed;
 exports.GClosed = GClosed;
 const GOpen = Open;
 exports.GOpen = GOpen;
-const GDefault = Default;
-exports.GDefault = GDefault;
 const GDefine = Define;
 exports.GDefine = GDefine;
 const GEmpty = Empty;

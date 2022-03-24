@@ -508,7 +508,6 @@ The built-in shape builders help you match the following shapes:
   * [Value](#value-builder): All non-explicit values of an object must match this shape.
 * Mutations:
   * [Rename](#rename-builder): Rename the key of a property.
-  * [Default](#default-builder): Provide a default and make the value optional.
   * [Define](#define-builder): Define a name for a value.
   * [Refer](#refer-builder): Refer to a defined value by name.
 * Customizations:
@@ -1646,9 +1645,6 @@ The built-in shape builders are:
 * [Closed](#closed-builder): 
   Allow only explicitly defined elements in an array.
 
-* [Default](#default-builder): 
-  Provide a default and make the value optional.
-
 * [Define](#define-builder): 
   Define a name for a value.
 
@@ -1812,8 +1808,7 @@ arguments. All shapes are **always evaluated**, even if some fail, to
 ensure all errors are collected.
 
 This shape builder implicitly creates a [Required](#required-builder)
-value. Use the [Default](#default-builder) shape builder to make the value optional
-and provide a default. Use the [Skip](#skip-builder) shape builder to
+value. Use the [Skip](#skip-builder) shape builder to
 make the value skippable (if absent, no default is injected).
 
 To match exact values, use the [Exact](#exact-builder) shape builder
@@ -1827,13 +1822,6 @@ let shape = Gubu(All(Number, Check(v => v > 10)))
 shape(11) // PASS: 11 is a number, and 11 > 10 
 shape(9)  // FAIL: 9 is a number, but 9 < 10 
 shape()   // FAIL: a value is required (implicitly)
-
-// Make the All optional with a default
-shape = Gubu({ a: Default({ b: 'B' }, All(Open({ b: String }), Max(2))) })
-shape({ a: { b: 'X' } }) // PASS: returns same object
-shape({ a: { b: 'X', c: 'Y' } }) // PASS: returns same object
-shape({ a: { b: 'X', c: 'Y', d: 'Z' } }) // FAIL: too many properties (3 > 2)
-shape({}) // PASS: `a` is optional, returns { b: 'B' }, the default
 
 // Make the All skippable
 shape = Gubu({ a: Skip(All(Open({ b: String }), Max(2))) })
@@ -2000,7 +1988,7 @@ Check( validate: Validate | RegExp, child?: any )
 
 * **Standalone:** `Check(v => v > 10)`
 * **As Parent:** `Check(v => !(v.foo % 2), { foo: 2 })`
-* **As Child:** `Default('a', (Check(/a/))`
+* **As Child:** `Skip('a', (Check(/a/))`
 * **Chainable:** `Skip(String).Check(/a/)`
 
 Define a custom validation function. Return `true` if the value is
@@ -2020,10 +2008,8 @@ values, are also captured. To prevent further processing, set
 `Update.done = true`.
 
 This shape builder implicitly creates a [Required](#required-builder)
-value. Use the [Default](#default-builder) shape builder to make the
-value optional and provide a default. Use the [Skip](#skip-builder)
-shape builder to make the value skippable (if absent, no default is
-injected).
+value. Use the [Skip](#skip-builder) shape builder to make the value
+skippable (if absent, no default is injected).
 
 The validation function will never be passed an `undefined` value, so
 validation functions do not need to check for this case. If you do
@@ -2358,8 +2344,7 @@ To be valid, the source value must match exactly one of the shapes
 given as arguments. Shape matching halts at the first matching shape.
 
 This shape builder implicitly creates a [Required](#required-builder)
-value. Use the [Default](#default-builder) shape builder to make the value optional
-and provide a default. Use the [Skip](#skip-builder) shape builder to
+value. Use the [Skip](#skip-builder) shape builder to
 make the value skippable (if absent, no default is injected).
 
 To match exact values, use the [Exact](#exact-builder) shape builder
@@ -2555,8 +2540,7 @@ arguments (at least one). All shapes are always evaluated, even if
 some fail, to ensure all errors are collected.
 
 This shape builder implicitly creates a [Required](#required-builder)
-value. Use the [Default](#default-builder) shape builder to make the value optional
-and provide a default. Use the [Skip](#skip-builder) shape builder to
+value. Use the [Skip](#skip-builder) shape builder to
 make the value skippable (if absent, no default is injected).
 
 To match exact values, use the [Exact](#exact-builder) shape builder
@@ -2659,11 +2643,10 @@ result === {
 ```
 
 
-
 ### Custom Builders
 
-You can write your shape builders. A shape builder is a function that
-generates the internal [Shape Node](#shape-nodes) data structure,
+You can write your own shape builders. A shape builder is a function
+that generates the internal [Shape Node](#shape-nodes) data structure,
 possibly using parameters.
 
 Here is the actual source code for the [Skip](#skip-builder) shape builder:
@@ -2673,8 +2656,8 @@ const Skip: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   node.r = false
 
-  // Mark Skip as explicit => do not insert empty arrays and objects.
-  node.o = true
+  // Do not insert empty arrays and objects.
+  node.p = true
 
   return node
 }
@@ -2687,9 +2670,7 @@ Builder( options?: any, ...values?: any[] ): Node
 ```
 
 You can use the utility function `buildize` to create an initial
-[Shape Node](#shape-nodes) instance. To make your builder chainable,
-pass in the `this` variable (NOTE: not supported in this version, but
-please do so anyway to future proof!). To accept a child shape, pass
+[Shape Node](#shape-nodes) instance. To accept a child shape, pass
 in the first shape value provided to your `Builder`:
 
 ```
@@ -2703,14 +2684,14 @@ Once you have a `Node`, you can manipulate it directly:
 ```
   node.r = false
 
-  // Mark Optional as explicit => do not insert empty arrays and objects.
-  node.o = true
+  // Do not insert empty arrays and objects.
+  node.p = true
 ```
 
-The `Node` structure is deliberately kept small. Most custom behavior
-is implemented using the [Before](#custom-builders) and
-[After](#custom-builders) extension hook [Validate](#custom-validation)
-functions.
+The `Node` structure is deliberately kept small. Most validation
+behavior is implemented using the [Before](#custom-builders) and
+[After](#custom-builders) shape builders to define
+[Validate](#custom-validation) functions.
 
 To add your own extension hooks, append `Validate` functions to the
 `a` and `b` array properties of the `Node` structure, to add *before*
@@ -2723,7 +2704,7 @@ const Hyperbole: Builder = function(this: Node, shape0?: any) {
   let node = buildize(this, shape0)
 
   // Append a before hook  
-  node.b.push((v: any, u: Update) => {
+  node.b.push((v, u) => {
     if ('string' === typeof (v)) {
       u.val = v.toUpperCase()
     }
@@ -2731,7 +2712,7 @@ const Hyperbole: Builder = function(this: Node, shape0?: any) {
   })
 
   // Append an after hook  
-  node.a.push((v: any, u: Update) => {
+  node.a.push((v, u) => {
     if ('string' === typeof (v)) {
       u.val = v + '!'
     }
@@ -2792,7 +2773,7 @@ elements are references to values, so do not consume much memory.
 *Gubu* traverses over the shape definition, not the input value, which
 further protects you from unexpectedly deep inputs.
 
-If you're looking for a depth-first tree iterative traversal algorithm
+If you're looking for a depth-first iterative tree-traversal algorithm
 you've got one right here!
 
 *Gubu* compiles the schema shape on a just-in-time basis. Each value

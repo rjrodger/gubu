@@ -1094,11 +1094,10 @@ Validation failed for property "q.b" with value "x" because the value is not of 
             a: [],
             b: [],
         };
-        // TODO: FIX
-        // expect(cr0s.spec()).toEqual(s0)
-        // expect(cr1s.spec()).toEqual(s0)
-        // expect(cr2s.spec()).toEqual(s0)
-        // expect(cr3s.spec()).toEqual(s0)
+        expect(cr0s.spec()).toEqual(s0);
+        expect(cr1s.spec()).toEqual(s0);
+        expect(cr2s.spec()).toEqual(s0);
+        expect(cr3s.spec()).toEqual(s0);
         expect(cr0s({ x: 11 })).toEqual({ x: 11 });
         expect(cr1s({ x: 11 })).toEqual({ x: 11 });
         expect(cr2s({ x: 11 })).toEqual({ x: 11 });
@@ -1734,8 +1733,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
                     }
                 ]
             });
-            // TODO: FIX
-            // expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","err":[{"n":{"$":{"v$":"' + Pkg.version + '"},"t":"nan","v":null,"n":0,"r":false,"p":false,"d":0,"u":{},"a":[],"b":[]},"v":1,"p":"","w":"type","m":1050,"t":"Validation failed for value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for value \\"1\\" because the value is not of type nan."}')
+            expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","err":[{"n":{"$":{"v$":"' + package_json_1.default.version + '"},"t":"nan","v":null,"n":0,"r":false,"p":false,"d":0,"u":{},"a":[],"b":[]},"v":1,"p":"","w":"type","m":1050,"t":"Validation failed for value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for value \\"1\\" because the value is not of type nan."}');
         }
     });
     test('spec-basic', () => {
@@ -1886,8 +1884,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
                 },
             },
         };
-        // TODO: FIX
-        // expect(s0).toEqual(s0s)
+        expect(s0).toEqual(s0s);
         expect(g0({ a: 2 })).toEqual({ a: 2 });
         let g0r = Gubu(s0);
         expect(m0).toEqual({ a: 1 });
@@ -1957,8 +1954,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
                 },
             },
         };
-        // TODO: FIX
-        // expect(s1).toEqual(s1s)
+        expect(s1).toEqual(s1s);
         let g1r = Gubu(s1);
         expect(g1r({ a: [2] })).toEqual({ a: [2] });
         expect(g1({ a: [2] })).toEqual({ a: [2] });
@@ -1991,8 +1987,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
         let c0 = Gubu(String);
         let c1 = Gubu(Skip(String));
         let c2 = Gubu(Skip(c0));
-        // TODO: FIX
-        // expect(c1.spec()).toMatchObject(c2.spec())
+        expect(c1.spec()).toMatchObject(c2.spec());
     });
     test('truncate', () => {
         expect(truncate('')).toEqual('');
@@ -2255,8 +2250,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
             g: null,
             h: 4,
             i: [5, 6],
-            // FIX: implement Closed([single-element])
-            // j: [{ k: 7 }],
+            j: Closed([{ k: 7 }]),
         });
         expect(opter()).toEqual({
             a: 1,
@@ -2265,7 +2259,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
             g: null,
             h: 4,
             i: [5, 6],
-            // j: [{ k: 7 }],
+            j: [{ k: 7 }],
         });
         // 'empty'
         opter = Gubu({ a: 1 });
