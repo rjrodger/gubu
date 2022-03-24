@@ -1466,9 +1466,8 @@ const Value: Builder = function(
 function buildize(node0?: any, node1?: any): Node {
   // Detect chaining. If not chained, ignore `this` if it is the global context.
   let node =
-    nodize(undefined === node0 ? node1 :
-      node0.window === node0 || node0.global === node0 ? node1 :
-        node0)
+    nodize(null == node0 || node0.window === node0 || node0.global === node0
+      ? node1 : node0)
 
   // NOTE: One, Some, All not chainable.
   return Object.assign(node, {
@@ -1582,8 +1581,6 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
 
   if (!expand &&
     src && src.$ && (GUBU$ === src.$.gubu$ || true === (src.$ as any).gubu$)) {
-    // src = (null != src.s && '' !== src.s) ? src.s :
-    //   undefined === src.v ? src.t : src.v
     src = node2str(src)
   }
 
@@ -1622,8 +1619,6 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
       }
       else if (true !== expand &&
         (true === val?.$?.gubu$ || GUBU$ === val?.$?.gubu$)) {
-        // val = (null != val.s && '' !== val.s) ? val.s :
-        //   (undefined !== val.v ? val.v : val.t)
         val = node2str(val)
       }
 

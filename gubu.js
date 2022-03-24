@@ -1020,9 +1020,8 @@ const Value = function (value, shape) {
 exports.Value = Value;
 function buildize(node0, node1) {
     // Detect chaining. If not chained, ignore `this` if it is the global context.
-    let node = nodize(undefined === node0 ? node1 :
-        node0.window === node0 || node0.global === node0 ? node1 :
-            node0);
+    let node = nodize(null == node0 || node0.window === node0 || node0.global === node0
+        ? node1 : node0);
     // NOTE: One, Some, All not chainable.
     return Object.assign(node, {
         Above,
@@ -1109,8 +1108,6 @@ function stringify(src, replacer, dequote, expand) {
     let str;
     if (!expand &&
         src && src.$ && (GUBU$ === src.$.gubu$ || true === src.$.gubu$)) {
-        // src = (null != src.s && '' !== src.s) ? src.s :
-        //   undefined === src.v ? src.t : src.v
         src = node2str(src);
     }
     try {
@@ -1146,8 +1143,6 @@ function stringify(src, replacer, dequote, expand) {
             }
             else if (true !== expand &&
                 (true === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$) || GUBU$ === ((_b = val === null || val === void 0 ? void 0 : val.$) === null || _b === void 0 ? void 0 : _b.gubu$))) {
-                // val = (null != val.s && '' !== val.s) ? val.s :
-                //   (undefined !== val.v ? val.v : val.t)
                 val = node2str(val);
             }
             return val;

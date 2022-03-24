@@ -30,6 +30,7 @@ jobs:
     - run: npm install
     - run: npm run build --if-present
     - run: npm test
+    - run: npm run test-pure
 
     - name: Coveralls
       uses: coverallsapp/github-action@master

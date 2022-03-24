@@ -17,6 +17,7 @@
   },
   "scripts": {
     "test": "npm run version && jest --coverage",
+    "test-pure": "npm run version && jest --coverage --config jest.config.pure.js",
     "test-some": "npm run version && jest -t",
     "test-watch": "npm run version && jest --coverage --watchAll",
     "test-web": "npm run build && npm run build-web && browserify -i util -o test/web.js -e test/entry.js -im && open test/web.html",
