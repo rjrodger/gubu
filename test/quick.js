@@ -749,36 +749,52 @@ let tmp = {}
 
 
 
-console.log(Gubu({a:{b:1}}).node())
+// console.log(Gubu({a:{b:1}}).node())
 
 
 
-let c0 = Gubu(Check(v => 1 === v))
-// let c1 = Gubu(Skip(Check(v => 1 === v)))
-let c2 = Gubu(Skip(c0))
+// let c0 = Gubu(Check(v => 1 === v))
+// // let c1 = Gubu(Skip(Check(v => 1 === v)))
+// let c2 = Gubu(Skip(c0))
 
-console.log(c0.spec())
-// console.log(c1.spec())
-console.log(c2.spec())
-
-
-// console.log(c0)
-// console.log(c0(1))
-// console.log(c0.error(1))
-// console.log(c0.error())
+// console.log(c0.spec())
+// // console.log(c1.spec())
+// console.log(c2.spec())
 
 
-// console.log(c1)
-// console.log(c1.spec())
-// console.log(c1(1))
-// console.log(c1(2))
-// console.log(c1.error(1))
-// console.log(c1.error())
+// // console.log(c0)
+// // console.log(c0(1))
+// // console.log(c0.error(1))
+// // console.log(c0.error())
 
-let c3 = Gubu(Default(c0))
-console.log(c3)
-console.log(c3(1))
-console.log(c3(2))
-console.log(c3())
-console.log(c3.error(1))
-console.log(c3.error())
+
+// // console.log(c1)
+// // console.log(c1.spec())
+// // console.log(c1(1))
+// // console.log(c1(2))
+// // console.log(c1.error(1))
+// // console.log(c1.error())
+
+// let c3 = Gubu(Default(c0))
+// console.log(c3)
+// console.log(c3(1))
+// console.log(c3(2))
+// console.log(c3())
+// console.log(c3.error(1))
+// console.log(c3.error())
+
+
+// let d0 = Gubu(Default(Number))
+// console.log(d0.node())
+
+console.log(Gubu({a:Number}).node())
+
+
+// let d8 = Gubu(Default({ a: Number }))
+// let d8 = Gubu(Default({ a: Number }, {a:null}))
+let d8 = Gubu(Default({ a: null }, { a: Number }))
+// console.log(d8.node())
+// console.log(d8({ a: 1 }))
+console.log(d8())
+// (d8()).toEqual({ a: null })
+//(d8({ a: 'x' })).toThrow('type')

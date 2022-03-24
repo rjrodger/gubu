@@ -2091,46 +2091,6 @@ shape([1, 2]) // PASS: returns [1, 2], all elements are numbers
 ```
 
 
-
----
-#### Default Builder
-<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
-
-TODO
-
-```ts
-Default( child?: any )
-```
-
-* **Standalone:** `Default([String])`
-* **As Parent:** INVALID
-* **As Child:** `Required(Default([Number]))`
-* **Chainable:** `Skip([{x: 1}]).Default()`
-
-Restricts an array to an explicit set of elements. The array
-is "closed" and can only have the elements defined in the shape.
-
-> NOTE: Arrays with two or more elements are already considered
-> closed. The `Default` shape builder makes it possible to close single
-> element arrays, which would normally be open with the single element
-> defining the general shape of all elements.
-
-```js
-const { Default } = Gubu
-
-// Default array.
-let shape = Gubu(Default([Number]))
-shape([1]) // PASS: returns [1]
-shape([1, 2]) // FAIL: element "2" is not allowed
-
-// Open array.
-shape = Gubu([Number])
-shape([1]) // PASS: returns [1]
-shape([1, 2]) // PASS: returns [1, 2], all elements are numbers
-```
-
-
-
 ---
 #### Define Builder
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>

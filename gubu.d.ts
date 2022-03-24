@@ -28,6 +28,7 @@ declare type Node = {
     t: ValType;
     d: number;
     v: any;
+    f: any;
     r: boolean;
     p: boolean;
     n: number;

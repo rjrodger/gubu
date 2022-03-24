@@ -14,6 +14,7 @@
 // TODO: Better stringifys for builder shapes
 // TODO: Error messages should state property is missing, not `value ""`
 // TODO: node.s can be a lazy function to avoid unnecessary string building
+// TODO: Finish Default shape-builder
 
 import { inspect } from 'util'
 
@@ -70,7 +71,8 @@ type Node = {
   $: typeof GUBU         // Special marker to indicate normalized.
   t: ValType             // Value type name.
   d: number              // Depth.
-  v: any                 // Default value.
+  v: any                 // Defining value.
+  f: any                 // Default value.
   r: boolean             // Value is required.
   p: boolean             // Value is skippable - can be missing or undefined.
   n: number              // Number of keys in default value
@@ -367,10 +369,10 @@ function nodize(shape?: any, depth?: number): Node {
   t = ('undefined' === t ? 'any' : t) as ValType
 
   let v = shape
+  let f: any = shape // undefined
   let c: any = GUBU$NIL
   let r = false // Not required by default.
   let p = false // Only true when Skip builder is used.
-  // let b = undefined
   let u: any = {}
 
   let a: any[] = []
@@ -411,6 +413,7 @@ function nodize(shape?: any, depth?: number): Node {
       t = (shape.name.toLowerCase() as ValType)
       r = true
       v = clone(EMPTY_VAL[t])
+      f = v
 
       // Required "Object" is considered Open
       if ('Object' === shape.name) {
@@ -418,10 +421,10 @@ function nodize(shape?: any, depth?: number): Node {
       }
     }
     else if (v.gubu === GUBU || true === v.$?.gubu) {
-      // let gs = v.spec ? v.spec() : v
       let gs = v.node ? v.node() : v
       t = gs.t
       v = gs.v
+      f = gs.f
       r = gs.r
       u = { ...gs.u }
       a = [...gs.a]
@@ -452,6 +455,7 @@ function nodize(shape?: any, depth?: number): Node {
     $: GUBU,
     t,
     v: vmap,
+    f,
     n: null != vmap && 'object' === typeof (vmap) ? Object.keys(vmap).length : 0,
     c,
     r,
@@ -461,10 +465,6 @@ function nodize(shape?: any, depth?: number): Node {
     a,
     b,
   }
-
-  // if (b) {
-  //   node.b.push(b)
-  // }
 
   return node
 }
@@ -512,6 +512,7 @@ function make<S>(intop?: S, inopts?: Options) {
           s.err.push(makeErrImpl('never', s, 1070))
         }
         else if ('object' === s.type) {
+          let descend = true
           let val
           if (n.r && undefined === s.val) {
             s.ignoreVal = true
@@ -528,45 +529,32 @@ function make<S>(intop?: S, inopts?: Options) {
             val = Array.isArray(s.val) ? s.val : {}
           }
           else if (!n.p || null != s.val) {
+            // Descend into object, constructing child defaults
+            // if (undefined === n.f) {
             s.updateVal(s.val || (s.fromDefault = true, {}))
             val = s.val
+            // }
+            // Explicit default
+            // else {
+            //   s.fromDefault = true
+            //   s.updateVal(clone(n.f))
+            //   descend = false
+            // }
           }
 
-          val = null == val && false === s.ctx.err ? {} : val
+          if (descend) {
+            val = null == val && false === s.ctx.err ? {} : val
 
-          if (null != val) {
-            let hasKeys = false
-            let vkeys = Object.keys(n.v)
-            let start = s.nI
+            if (null != val) {
+              let hasKeys = false
+              let vkeys = Object.keys(n.v)
+              let start = s.nI
 
-            if (0 < vkeys.length) {
-              hasKeys = true
-              s.pI = start
-              for (let k of vkeys) {
-                let nvs = n.v[k] = nodize(n.v[k], 1 + s.dI)
-                s.nodes[s.nI] = nvs
-                s.vals[s.nI] = val[k]
-                s.parents[s.nI] = val
-                s.keys[s.nI] = k
-                s.nI++
-              }
-            }
-
-            let extra = Object.keys(val).filter(k => undefined === n.v[k])
-
-            if (0 < extra.length) {
-              // let extra = okeys.filter(k => undefined === n.v[k])
-
-              if (GUBU$NIL === n.c) {
-                s.ignoreVal = true
-                s.err.push(makeErrImpl(
-                  'closed', s, 1100, undefined, { k: extra }))
-              }
-              else {
+              if (0 < vkeys.length) {
                 hasKeys = true
                 s.pI = start
-                for (let k of extra) {
-                  let nvs = n.c = nodize(n.c, 1 + s.dI)
+                for (let k of vkeys) {
+                  let nvs = n.v[k] = nodize(n.v[k], 1 + s.dI)
                   s.nodes[s.nI] = nvs
                   s.vals[s.nI] = val[k]
                   s.parents[s.nI] = val
@@ -574,12 +562,36 @@ function make<S>(intop?: S, inopts?: Options) {
                   s.nI++
                 }
               }
-            }
 
-            if (hasKeys) {
-              s.dI++
-              s.nodes[s.nI++] = s.sI
-              s.nextSibling = false
+              let extra = Object.keys(val).filter(k => undefined === n.v[k])
+
+              if (0 < extra.length) {
+                // let extra = okeys.filter(k => undefined === n.v[k])
+
+                if (GUBU$NIL === n.c) {
+                  s.ignoreVal = true
+                  s.err.push(makeErrImpl(
+                    'closed', s, 1100, undefined, { k: extra }))
+                }
+                else {
+                  hasKeys = true
+                  s.pI = start
+                  for (let k of extra) {
+                    let nvs = n.c = nodize(n.c, 1 + s.dI)
+                    s.nodes[s.nI] = nvs
+                    s.vals[s.nI] = val[k]
+                    s.parents[s.nI] = val
+                    s.keys[s.nI] = k
+                    s.nI++
+                  }
+                }
+              }
+
+              if (hasKeys) {
+                s.dI++
+                s.nodes[s.nI++] = s.sI
+                s.nextSibling = false
+              }
             }
           }
         }
@@ -669,12 +681,15 @@ function make<S>(intop?: S, inopts?: Options) {
             s.err.push(makeErrImpl('required', s, 1060))
           }
           else if (
-            // 'custom' !== s.type &&
             undefined !== n.v &&
+            // undefined !== n.f &&
             !n.p ||
             'undefined' === s.type
           ) {
+            // console.log('DEF AAA', n.f)
+
             s.updateVal(n.v)
+            // s.updateVal(n.f)
             s.fromDefault = true
           }
           else if ('any' === s.type) {
@@ -910,7 +925,8 @@ const Default: Builder = function(this: Node, dval?: any, shape?: any) {
   node.r = false
 
   if (hasDefaultValue) {
-    node.v = dval
+    // node.v = dval
+    node.f = dval
   }
 
   // Always insert default.
