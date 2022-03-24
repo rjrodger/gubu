@@ -44,7 +44,7 @@ This is a valid Gubu specification. It means:
 ```
 {
   port: 8080,        // Must be a number, is optional, and the default is 8080
-  host: 'localhost'  // Must be a string, is optional, and the deffault is 'localhost'
+  host: 'localhost'  // Must be a string, is optional, and the default is 'localhost'
 }
 ```
 
@@ -2505,7 +2505,7 @@ const { Required } = Gubu
 let shape = Gubu(Required({x: 1}))
 
 console.log(shape({ x: 2 })) // PASS: prints { x: 2 })
-console.log(shapey({ x: 2, y: 3 })) // PASS: prints { x: 2, y: 3 }
+console.log(shape({ x: 2, y: 3 })) // PASS: prints { x: 2, y: 3 }
 console.log(shape()) // FAIL: object is required
 
 shape = Gubu(Open(Required({ x: 1 })))
@@ -2837,7 +2837,7 @@ Licensed under [MIT][].
       Strings](#empty-strings).
 
 [^4]: Unfortunately `new Function()` generates a function value with
-      the name `anonymous` that cannot be differentiated from a simpe
+      the name `anonymous` that cannot be differentiated from a simple
       function declaration of a function also called `anonymous`.
 
 [^5]: Correctly cloning a value in JavaScript is quite tricky, at
