@@ -351,7 +351,7 @@ describe('gubu', () => {
     let shape = Gubu({ countryCode: Check(/^[A-Z][A-Z]$/) })
     expect(shape({ countryCode: 'IE' })).toEqual({ countryCode: 'IE' })
     expect(() => shape({ countryCode: 'BAD' })).toThrow('Validation failed for property "countryCode" with value "BAD" because check "/^[A-Z][A-Z]$/" failed.')
-    expect(() => shape({})).toThrow('Validation failed for property "countryCode" with value "" because check "/^[A-Z][A-Z]$/" failed.')
+    expect(() => shape({})).toThrow('Validation failed for property "countryCode" with value "" because the value is required.')
     expect(() => shape({ countryCode: 123 })).toThrow('Validation failed for property "countryCode" with value "123" because check "/^[A-Z][A-Z]$/" failed.')
   })
 
@@ -1460,8 +1460,7 @@ Validation failed for value "x" because check "(v) => v > 10" failed.`)
     expect(() => shape_AfterB2({})).toThrow(`Validation failed for object "{}" because check "(v) => v.x % 2 === 0" failed.
 Validation failed for property "x" with value "" because the value is required.`)
 
-    expect(() => shape_AfterB2()).toThrow(`Validation failed for value "" because the value is required.
-Validation failed for value "" because check "(v) => v.x % 2 === 0" failed (threw: Cannot read prop`)
+    expect(() => shape_AfterB2()).toThrow(`Validation failed for value "" because the value is required.`)
 
     // TODO: modify value
 
@@ -1507,6 +1506,17 @@ Validation failed for value "" because check "(v) => v.x % 2 === 0" failed (thre
     let shape_BelowB0 = Gubu(Below(10))
     expect(shape_BelowB0(9)).toEqual(9)
     expect(() => shape_BelowB0(10)).toThrow('Value "10" for property "" must be below 10 (was 10).')
+
+
+    let shape_CheckB0 = Gubu(Check((v: any) => v > 10))
+    expect(shape_CheckB0(11)).toEqual(11)
+    expect(() => shape_CheckB0(10)).toThrow('check')
+
+    let shape_CheckB1 = Gubu(Check((v: any) => !(v.foo % 2), { foo: 2 }))
+    expect(shape_CheckB1({ foo: 4 })).toEqual({ foo: 4 })
+    expect(() => shape_CheckB1({ foo: 1 })).toThrow('check')
+    expect(shape_CheckB1({})).toEqual({ foo: 2 })
+    expect(() => shape_CheckB1()).toThrow('required')
 
 
     let shape_ClosedB0 = Gubu(Closed([Number]))
@@ -1999,7 +2009,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
     expect(g1({ a: 11 })).toMatchObject({ a: 11 })
     expect(() => g2({ a: 9 })).toThrow('Validation failed for property "a" with value "9" because check "(v) => v > 10" failed.')
     expect(() => g2({}))
-      .toThrow('Validation failed for property "a" with value "" because check "(v) => v > 10" failed.')
+      .toThrow('Validation failed for property "a" with value "" because the value is required.')
 
     let g3 = Gubu(Check((v: any) => v > 10))
     expect(g3(11)).toEqual(11)
@@ -2304,7 +2314,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
     let c1 = Gubu(Skip(Check(f0)))
 
     // TODO
-    // let c2 = Gubu(Skip(c0))
+    let c2 = Gubu(Skip(c0))
 
     expect(c0.spec()).toMatchObject({
       t: 'any',
@@ -2330,7 +2340,6 @@ Validation failed for property "b" with value "B" because the value is not of ty
       s: 'f0'
     })
 
-    /*
     expect(c2.spec()).toMatchObject({
       t: 'any',
       n: 0,
@@ -2340,9 +2349,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
       u: {},
       a: [],
       b: ['f0'],
-      s: 'f0'
     })
-    */
   })
 
 

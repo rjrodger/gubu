@@ -749,6 +749,9 @@ let tmp = {}
 
 
 
+console.log(Gubu({a:{b:1}}).node())
+
+
 
 let c0 = Gubu(Check(v => 1 === v))
 // let c1 = Gubu(Skip(Check(v => 1 === v)))
@@ -772,9 +775,10 @@ console.log(c2.spec())
 // console.log(c1.error(1))
 // console.log(c1.error())
 
-// let c2 = Gubu(Default(c0))
-// console.log(c2)
-// console.log(c2(1))
-// console.log(c2())
-// console.log(c2.error(1))
-// console.log(c2.error())
+let c3 = Gubu(Default(c0))
+console.log(c3)
+console.log(c3(1))
+console.log(c3(2))
+console.log(c3())
+console.log(c3.error(1))
+console.log(c3.error())

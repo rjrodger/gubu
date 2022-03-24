@@ -119,6 +119,7 @@ declare function make<S>(intop?: S, inopts?: Options): {
     match(root?: any, ctx?: Context | undefined): boolean;
     error(root?: any, ctx?: Context | undefined): GubuError[];
     spec(): any;
+    node(): Node;
     toString(): string;
     gubu: {
         gubu$: symbol;
@@ -157,6 +158,7 @@ declare type GubuShape = ReturnType<typeof make> & {
     match: (root?: any, ctx?: any) => boolean;
     error: (root?: any, ctx?: Context) => GubuError[];
     spec: () => any;
+    node: () => Node;
     gubu: typeof GUBU;
 };
 declare const G$: (node: any) => Node;

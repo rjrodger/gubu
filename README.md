@@ -1561,7 +1561,7 @@ serializable to JSON if there are no custom validations, and the
 custom user meta data is serializable.
 
 This structure can be accessed in [custom
-validators](#custom-validators) via the `state.node` parameter, and in
+validators](#custom-validation) via the `state.node` parameter, and in
 [shape builders](#shape-builders) via the [before](#custom-builders) and
 [after](#custom-builders) hook functions. It is also provided in error
 messages under the `n` property.
@@ -1937,7 +1937,7 @@ shape()         // FAIL: {x: Number} is required
 
 See also: 
 [Check](#check-builder), 
-[Afgter](#after-builder), 
+[After](#after-builder), 
 [Update](#update-type), 
 [State](#state-type).
 
@@ -1994,38 +1994,64 @@ See also:
 #### Check Builder
 <sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
 
-TODO
-
 ```ts
-Check( validate: Validate | RegExp | string , child?: any )
+Check( validate: Validate | RegExp, child?: any )
 ```
 
-* **Standalone:** `Check([String])`
-* **As Parent:** INVALID
-* **As Child:** `Required(Check([Number]))`
-* **Chainable:** `Skip([{x: 1}]).Check()`
+* **Standalone:** `Check(v => v > 10)`
+* **As Parent:** `Check(v => !(v.foo % 2), { foo: 2 })`
+* **As Child:** `Default('a', (Check(/a/))`
+* **Chainable:** `Skip(String).Check(/a/)`
 
-Restricts an array to an explicit set of elements. The array
-is "closed" and can only have the elements defined in the shape.
+Define a custom validation function. Return `true` if the value is
+valid, `false` otherwise.
 
-> NOTE: Arrays with two or more elements are already considered
-> closed. The `Check` shape builder makes it possible to close single
-> element arrays, which would normally be open with the single element
-> defining the general shape of all elements.
+The custom validation function has three arguments:
+* `val`: the value to validate
+* `update`: the [Update](#update-type) data structure
+* `state`: the [State](#state-type) data structure
+
+See the [custom validation](#custom-validation) section for more
+details on these arguments, and usage examples.
+
+Even if validation fails, the value will still be processed
+normally. This ensures that all errors, particularly those in child
+values, are also captured. To prevent further processing, set
+`Update.done = true`.
+
+This shape builder implicitly creates a [Required](#required-builder)
+value. Use the [Default](#default-builder) shape builder to make the
+value optional and provide a default. Use the [Skip](#skip-builder)
+shape builder to make the value skippable (if absent, no default is
+injected).
+
+The validation function will never be passed an `undefined` value, so
+validation functions do not need to check for this case. If you do
+need to obtain `undefined` values, use the [Before](#before-builder)
+shape builder.
+
+Instead of a validation function, you can also pass a regular
+expression. The value will be converted to a string (with
+`String(...)`) and matched against the regular expression.
+
 
 ```js
 const { Check } = Gubu
 
-// Check array.
-let shape = Gubu(Check([Number]))
-shape([1]) // PASS: returns [1]
-shape([1, 2]) // FAIL: element "2" is not allowed
+let shape = Gubu(Check(v => v > 10))
+shape(11) // PASS: 11 > 10 is true, returns 11
+shape(10) // FAIL: 10 > 10 is false
 
-// Open array.
-shape = Gubu([Number])
-shape([1]) // PASS: returns [1]
-shape([1, 2]) // PASS: returns [1, 2], all elements are numbers
+shape = Gubu(Check(/a/))
+shape('bar') // PASS: bar matches /a/
+shape('foo') // FAIL: foo does not match /a/
 ```
+
+See also: 
+[Before](#before-builder), 
+[After](#after-builder), 
+[Update](#update-type), 
+[State](#state-type).
 
 
 

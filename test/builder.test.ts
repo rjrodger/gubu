@@ -130,13 +130,15 @@ describe('builder', () => {
     expect(g0('x')).toEqual('x')
     expect(() => g0('y')).toThrow('Validation failed for value "y" because check "(v) => v === "x"" failed.')
     expect(() => g0(1)).toThrow('Validation failed for value "1" because check "(v) => v === "x"" failed.')
-    expect(() => g0()).toThrow('Validation failed for value "" because check "(v) => v === "x"" failed.')
+    expect(() => g0()).toThrow('Validation failed for value "" because the value is required.')
+    expect(Gubu(Skip(g0))()).toEqual(undefined)
+
 
     let g1 = Gubu(Check(/a/))
     expect(g1('a')).toEqual('a')
     expect(g1('qaq')).toEqual('qaq')
     expect(() => g1('q')).toThrow('Validation failed for value "q" because check "/a/" failed.')
-    expect(() => g1()).toThrow('Validation failed for value "" because check "/a/" failed.')
+    expect(() => g1()).toThrow('Validation failed for value "" because the value is required.')
 
     let g3 = Gubu(Check('number'))
     expect(g3(1)).toEqual(1)
@@ -151,8 +153,8 @@ describe('builder', () => {
 
     let g5 = Gubu(Check(/ul/i))
     expect(g5('*UL*')).toEqual('*UL*')
-    expect(() => g5()).toThrow('check')
-    expect(() => g5(undefined)).toThrow('check')
+    expect(() => g5()).toThrow('required')
+    expect(() => g5(undefined)).toThrow('required')
     expect(() => g5(NaN)).toThrow('check')
     expect(() => g5(null)).toThrow('check')
 
@@ -160,32 +162,45 @@ describe('builder', () => {
     expect(c0(1)).toEqual(1)
     expect(() => c0(2)).toThrow('Validation failed for value "2" because check "(v) => v === 1" failed.')
     expect(() => c0('x')).toThrow('check')
-    expect(() => c0()).toThrow('check')
+    expect(() => c0()).toThrow('required')
     expect(c0.error(1)).toEqual([])
     expect(c0.error('x')).toMatchObject([{ w: 'check' }])
-    expect(c0.error()).toMatchObject([{ w: 'check' }])
+    expect(c0.error()).toMatchObject([{ w: 'required' }])
 
-    /* TODO
     let c0s = Gubu(Skip(c0))
     expect(c0s(1)).toEqual(1)
-    expect(() => c0s(2)).toThrow('Validation failed for value "2" because check "(v) => 1 === v" failed.')
+    expect(() => c0s(2)).toThrow('Validation failed for value "2" because check "(v) => v === 1" failed.')
     expect(() => c0s('x')).toThrow('check')
     expect(c0s()).toEqual(undefined)
     expect(c0s.error(1)).toEqual([])
     expect(c0s.error('x')).toMatchObject([{ w: 'check' }])
-    expect(c0s.error()).toMatchObject([])
-    */
+    expect(c0s.error()).toEqual([])
 
+    let c0d = Gubu(Default('foo', c0))
+    expect(c0d(1)).toEqual(1)
+    expect(() => c0d(2)).toThrow('Validation failed for value "2" because check "(v) => v === 1" failed.')
+    expect(() => c0d('x')).toThrow('check')
+    expect(c0d()).toEqual('foo')
+    expect(c0d.error(1)).toEqual([])
+    expect(c0d.error('x')).toMatchObject([{ w: 'check' }])
+    expect(c0d.error()).toEqual([])
 
     let c1 = Gubu(Check(/a/))
     expect(c1('qaq')).toEqual('qaq')
     expect(() => c1('qbq')).toThrow('Validation failed for value "qbq" because check "/a/" failed.')
     expect(() => c1(1)).toThrow('check')
-    expect(() => c1()).toThrow('check')
+    expect(() => c1()).toThrow('required')
+
+    let c1d = Gubu(Default('a', Check(/a/)))
+    expect(c1d('qaq')).toEqual('qaq')
+    expect(() => c1d('qbq')).toThrow('Validation failed for value "qbq" because check "/a/" failed.')
+    expect(() => c1d(1)).toThrow('check')
+    expect(c1d()).toEqual('a')
 
 
-
-
+    let v0 = Gubu(Check((v: any) => !!v, Number))
+    expect(v0(1)).toEqual(1)
+    expect(() => v0('a')).toThrow('number')
   })
 
 
@@ -626,6 +641,14 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
       v: '',
       r: true,
     })
+  })
+
+
+  test('builder-before', () => {
+    // Use before to check for undefined, as it not passed to Check
+    let b0 = Gubu(Before((v: any) => undefined === v))
+    expect(b0(undefined)).toEqual(undefined)
+    expect(() => b0(1)).toThrow('check')
   })
 
 

@@ -370,8 +370,11 @@ function nodize(shape?: any, depth?: number): Node {
   let c: any = GUBU$NIL
   let r = false // Not required by default.
   let p = false // Only true when Skip builder is used.
-  let b = undefined
+  // let b = undefined
   let u: any = {}
+
+  let a: any[] = []
+  let b: any[] = []
 
   if ('object' === t) {
     if (Array.isArray(v)) {
@@ -415,13 +418,14 @@ function nodize(shape?: any, depth?: number): Node {
       }
     }
     else if (v.gubu === GUBU || true === v.$?.gubu) {
-      let gs = v.spec ? v.spec() : v
+      // let gs = v.spec ? v.spec() : v
+      let gs = v.node ? v.node() : v
       t = gs.t
       v = gs.v
       r = gs.r
       u = { ...gs.u }
-      // a = [...gs.a]
-      // b = [...gs.b]
+      a = [...gs.a]
+      b = [...gs.b]
     }
 
     // Instance of a class.
@@ -454,13 +458,13 @@ function nodize(shape?: any, depth?: number): Node {
     p,
     d: null == depth ? -1 : depth,
     u,
-    a: [],
-    b: [],
+    a,
+    b,
   }
 
-  if (b) {
-    node.b.push(b)
-  }
+  // if (b) {
+  //   node.b.push(b)
+  // }
 
   return node
 }
@@ -763,6 +767,12 @@ function make<S>(intop?: S, inopts?: Options) {
   }
 
 
+  gubuShape.node = (): Node => {
+    gubuShape.spec()
+    return top
+  }
+
+
   let desc: string = ''
   gubuShape.toString = () => {
     desc = truncate('' === desc ?
@@ -790,12 +800,13 @@ function make<S>(intop?: S, inopts?: Options) {
 function handleValidate(vf: Validate, s: State): Update {
   let update: Update = {}
 
-
   let valid = false
   let thrown
 
   try {
-    valid = vf(s.val, update, s)
+    // Check does not have to deal with `undefined`
+    valid = undefined === s.val && ((vf as any).gubu$?.Check) ? true :
+      vf(s.val, update, s)
   }
   catch (ve: any) {
     thrown = ve
@@ -1051,6 +1062,7 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
 
 const Exact: Builder = function(this: Node, ...vals: any[]) {
   let node = buildize()
+
   node.b.push(function Exact(val: any, update: Update, state: State) {
     for (let i = 0; i < vals.length; i++) {
       if (val === vals[i]) {
@@ -1095,7 +1107,10 @@ const Check: Builder = function(
   let node = buildize(this, shape)
 
   if ('function' === typeof check) {
-    // TODO: if validate is a RegExp, construct Validate
+    let c$ = check as any
+    c$.gubu$ = c$.gubu$ || {}
+    c$.gubu$.Check = true
+
     node.b.push(check)
     node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true)
     node.r = true
@@ -1108,6 +1123,7 @@ const Check: Builder = function(
       Object.defineProperty(refn, 'name', {
         value: String(check)
       })
+      Object.defineProperty(refn, 'gubu$', { value: { Check: true } })
       node.b.push(refn)
       node.s = stringify(check)
       node.r = true
@@ -1653,6 +1669,7 @@ type GubuShape = ReturnType<typeof make> &
   match: (root?: any, ctx?: any) => boolean,
   error: (root?: any, ctx?: Context) => GubuError[],
   spec: () => any,
+  node: () => Node,
   gubu: typeof GUBU
 }
 

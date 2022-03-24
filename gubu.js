@@ -176,8 +176,10 @@ function nodize(shape, depth) {
     let c = GUBU$NIL;
     let r = false; // Not required by default.
     let p = false; // Only true when Skip builder is used.
-    let b = undefined;
+    // let b = undefined
     let u = {};
+    let a = [];
+    let b = [];
     if ('object' === t) {
         if (Array.isArray(v)) {
             t = 'array';
@@ -214,13 +216,14 @@ function nodize(shape, depth) {
             }
         }
         else if (v.gubu === GUBU || true === ((_b = v.$) === null || _b === void 0 ? void 0 : _b.gubu)) {
-            let gs = v.spec ? v.spec() : v;
+            // let gs = v.spec ? v.spec() : v
+            let gs = v.node ? v.node() : v;
             t = gs.t;
             v = gs.v;
             r = gs.r;
             u = { ...gs.u };
-            // a = [...gs.a]
-            // b = [...gs.b]
+            a = [...gs.a];
+            b = [...gs.b];
         }
         // Instance of a class.
         else if (!((undefined === v.prototype && Function === v.constructor) ||
@@ -248,12 +251,12 @@ function nodize(shape, depth) {
         p,
         d: null == depth ? -1 : depth,
         u,
-        a: [],
-        b: [],
+        a,
+        b,
     };
-    if (b) {
-        node.b.push(b);
-    }
+    // if (b) {
+    //   node.b.push(b)
+    // }
     return node;
 }
 exports.nodize = nodize;
@@ -496,6 +499,10 @@ function make(intop, inopts) {
             return val;
         }, false, true));
     };
+    gubuShape.node = () => {
+        gubuShape.spec();
+        return top;
+    };
     let desc = '';
     gubuShape.toString = () => {
         desc = truncate('' === desc ?
@@ -512,11 +519,14 @@ function make(intop, inopts) {
     return gubuShape;
 }
 function handleValidate(vf, s) {
+    var _a;
     let update = {};
     let valid = false;
     let thrown;
     try {
-        valid = vf(s.val, update, s);
+        // Check does not have to deal with `undefined`
+        valid = undefined === s.val && ((_a = vf.gubu$) === null || _a === void 0 ? void 0 : _a.Check) ? true :
+            vf(s.val, update, s);
     }
     catch (ve) {
         thrown = ve;
@@ -744,7 +754,9 @@ exports.After = After;
 const Check = function (check, shape) {
     let node = buildize(this, shape);
     if ('function' === typeof check) {
-        // TODO: if validate is a RegExp, construct Validate
+        let c$ = check;
+        c$.gubu$ = c$.gubu$ || {};
+        c$.gubu$.Check = true;
         node.b.push(check);
         node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true);
         node.r = true;
@@ -756,6 +768,7 @@ const Check = function (check, shape) {
             Object.defineProperty(refn, 'name', {
                 value: String(check)
             });
+            Object.defineProperty(refn, 'gubu$', { value: { Check: true } });
             node.b.push(refn);
             node.s = stringify(check);
             node.r = true;
