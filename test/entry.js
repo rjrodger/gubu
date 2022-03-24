@@ -74,6 +74,8 @@ window.expect = function(sval) {
     toEqual: (cval)=>{
       passEqualJSON(cval)
     },
+    toBeTruthy: (cval)=>pass(cval,!!cval),
+    toBeFalsy: (cval)=>pass(cval,!cval),
     toBeDefined: (cval)=>pass(cval,undefined!==sval),
     toBeUndefined: (cval)=>pass(cval,undefined===sval),
     toMatch: (cval)=>pass(cval,sval.match(cval)),
@@ -94,3 +96,4 @@ window.expect = function(sval) {
 
 
 require('./gubu.test.js')
+require('./builder.test.js')
