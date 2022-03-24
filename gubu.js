@@ -17,7 +17,7 @@ exports.GValue = void 0;
 // TODO: Finish Default shape-builder
 const util_1 = require("util");
 // Package version.
-const VERSION = '1.0.0';
+const VERSION = '2.0.0';
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$');
 // A singleton for fast equality checks.
