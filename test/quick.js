@@ -787,14 +787,19 @@ let tmp = {}
 // let d0 = Gubu(Default(Number))
 // console.log(d0.node())
 
-console.log(Gubu({a:Number}).node())
+// console.log(Gubu({a:Number}).node())
 
 
 // let d8 = Gubu(Default({ a: Number }))
 // let d8 = Gubu(Default({ a: Number }, {a:null}))
-let d8 = Gubu(Default({ a: null }, { a: Number }))
+// let d8 = Gubu(Default({ a: null }, { a: Number }))
 // console.log(d8.node())
 // console.log(d8({ a: 1 }))
-console.log(d8())
+// console.log(d8())
 // (d8()).toEqual({ a: null })
 //(d8({ a: 'x' })).toThrow('type')
+
+
+
+console.log(Skip())
+console.log(Gubu.Skip())

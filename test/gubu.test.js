@@ -2442,5 +2442,30 @@ Validation failed for property "b" with value "B" because the value is not of ty
         let res1 = opt0({ a: '' });
         expect(res1).toEqual({ a: '', b: 'x' });
     });
+    test('builder-as-property', () => {
+        expect(Gubu.Skip()).toMatchObject(Skip());
+    });
+    test('skip-vs-any', () => {
+        let a0 = Gubu({ x: Any() });
+        let s0 = Gubu({ x: Skip() });
+        expect(a0()).toEqual({});
+        expect(s0()).toEqual({});
+        expect(a0({})).toEqual({});
+        expect(s0({})).toEqual({});
+        expect(a0({ x: 1 })).toEqual({ x: 1 });
+        expect(s0({ x: 1 })).toEqual({ x: 1 });
+        expect(a0({ x: undefined })).toEqual({ x: undefined });
+        expect(s0({ x: undefined })).toEqual({ x: undefined });
+        let a1 = Gubu({ x: Required().Any() });
+        let s1 = Gubu({ x: Required().Skip() });
+        expect(() => a1()).toThrow('required');
+        expect(s1()).toEqual({});
+        expect(() => a1({})).toThrow('required');
+        expect(s1({})).toEqual({});
+        expect(a1({ x: 1 })).toEqual({ x: 1 });
+        expect(s1({ x: 1 })).toEqual({ x: 1 });
+        expect(() => a1({ x: undefined })).toThrow('required');
+        expect(s1({ x: undefined })).toEqual({ x: undefined });
+    });
 });
 //# sourceMappingURL=gubu.test.js.map

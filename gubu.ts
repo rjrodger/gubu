@@ -16,6 +16,9 @@
 // TODO: node.s can be a lazy function to avoid unnecessary string building
 // TODO: Finish Default shape-builder
 
+// DOC: Skip also makes value optional - thus Skip() means any value, or nonexistent
+
+
 import { inspect } from 'util'
 
 
@@ -325,8 +328,13 @@ const EMPTY_VAL: { [name: string]: any } = {
 // Normalize a value into a Node.
 function nodize(shape?: any, depth?: number): Node {
 
+  // If using builder as property of Gubu, `this` is just Gubu, not a node.
+  if (make === shape) {
+    shape = undefined
+  }
+
   // Is this a (possibly incomplete) Node?
-  if (null != shape && shape.$?.gubu$) {
+  else if (null != shape && shape.$?.gubu$) {
 
     // Assume complete if gubu$ has special internal reference.
     if (GUBU$ === shape.$.gubu$) {

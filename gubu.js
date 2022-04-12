@@ -15,6 +15,7 @@ exports.GValue = void 0;
 // TODO: Error messages should state property is missing, not `value ""`
 // TODO: node.s can be a lazy function to avoid unnecessary string building
 // TODO: Finish Default shape-builder
+// DOC: Skip also makes value optional - thus Skip() means any value, or nonexistent
 const util_1 = require("util");
 // Package version.
 const VERSION = '2.0.0';
@@ -142,8 +143,12 @@ const EMPTY_VAL = {
 // Normalize a value into a Node.
 function nodize(shape, depth) {
     var _a, _b, _c, _d, _e;
+    // If using builder as property of Gubu, `this` is just Gubu, not a node.
+    if (make === shape) {
+        shape = undefined;
+    }
     // Is this a (possibly incomplete) Node?
-    if (null != shape && ((_a = shape.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
+    else if (null != shape && ((_a = shape.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
         // Assume complete if gubu$ has special internal reference.
         if (GUBU$ === shape.$.gubu$) {
             shape.d = null == depth ? shape.d : depth;
