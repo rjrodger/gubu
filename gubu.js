@@ -18,7 +18,7 @@ exports.GValue = void 0;
 // DOC: Skip also makes value optional - thus Skip() means any value, or nonexistent
 const util_1 = require("util");
 // Package version.
-const VERSION = '2.0.0';
+const VERSION = '2.0.1';
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$');
 // A singleton for fast equality checks.
