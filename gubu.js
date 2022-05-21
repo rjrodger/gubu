@@ -1,13 +1,13 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
-exports.GValue = exports.GSome = exports.GSkip = void 0;
+exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GFunc = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Never = exports.Min = exports.Max = exports.Func = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = void 0;
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
 // FEATURE: support custom builder registration so that can chain on builtins
-// TODO: Use child value for objects too
+// FEATURE: merge shapes (allows extending given shape - e.g. adding object props)
 // TODO: Validation of Builder parameters
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
@@ -15,6 +15,7 @@ exports.GValue = exports.GSome = exports.GSkip = void 0;
 // TODO: node.s can be a lazy function to avoid unnecessary string building
 // TODO: Finish Default shape-builder
 // DOC: Skip also makes value optional - thus Skip() means any value, or nonexistent
+// DOC: Optional
 const util_1 = require("util");
 // Package version.
 const VERSION = '2.0.1';
@@ -616,6 +617,13 @@ const Skip = function (shape) {
     return node;
 };
 exports.Skip = Skip;
+const Func = function (shape) {
+    let node = buildize(this);
+    node.t = 'function';
+    node.v = shape;
+    return node;
+};
+exports.Func = Func;
 // FINISH
 // const Default: Builder = function(this: Node, dval?: any, shape?: any) {
 //   let hasDefaultValue = 2 === arguments.length
@@ -1188,6 +1196,7 @@ if ('undefined' !== typeof (window)) {
         { b: Define, n: 'Define' },
         { b: Empty, n: 'Empty' },
         { b: Exact, n: 'Exact' },
+        { b: Func, n: 'Func' },
         { b: Max, n: 'Max' },
         { b: Min, n: 'Min' },
         { b: Never, n: 'Never' },
@@ -1217,6 +1226,7 @@ Object.assign(make, {
     Define,
     Empty,
     Exact,
+    Func,
     Max,
     Min,
     Never,
@@ -1240,6 +1250,7 @@ Object.assign(make, {
     GDefine: Define,
     GEmpty: Empty,
     GExact: Exact,
+    GFunc: Func,
     GMax: Max,
     GMin: Min,
     GNever: Never,
@@ -1286,6 +1297,8 @@ const GEmpty = Empty;
 exports.GEmpty = GEmpty;
 const GExact = Exact;
 exports.GExact = GExact;
+const GFunc = Func;
+exports.GFunc = GFunc;
 const GMax = Max;
 exports.GMax = GMax;
 const GMin = Min;

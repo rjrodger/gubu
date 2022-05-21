@@ -4,8 +4,8 @@
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
 // FEATURE: support custom builder registration so that can chain on builtins
+// FEATURE: merge shapes (allows extending given shape - e.g. adding object props)
 
-// TODO: Use child value for objects too
 // TODO: Validation of Builder parameters
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
@@ -14,6 +14,7 @@
 // TODO: Finish Default shape-builder
 
 // DOC: Skip also makes value optional - thus Skip() means any value, or nonexistent
+// DOC: Optional
 
 
 import { inspect } from 'util'
@@ -918,6 +919,14 @@ const Skip: Builder = function(this: Node, shape?: any) {
 }
 
 
+const Func: Builder = function(this: Node, shape?: any) {
+  let node = buildize(this)
+  node.t = 'function'
+  node.v = shape
+  return node
+}
+
+
 // FINISH
 // const Default: Builder = function(this: Node, dval?: any, shape?: any) {
 //   let hasDefaultValue = 2 === arguments.length
@@ -1692,6 +1701,7 @@ if ('undefined' !== typeof (window)) {
     { b: Define, n: 'Define' },
     { b: Empty, n: 'Empty' },
     { b: Exact, n: 'Exact' },
+    { b: Func, n: 'Func' },
     { b: Max, n: 'Max' },
     { b: Min, n: 'Min' },
     { b: Never, n: 'Never' },
@@ -1725,6 +1735,7 @@ Object.assign(make, {
   Define,
   Empty,
   Exact,
+  Func,
   Max,
   Min,
   Never,
@@ -1749,6 +1760,7 @@ Object.assign(make, {
   GDefine: Define,
   GEmpty: Empty,
   GExact: Exact,
+  GFunc: Func,
   GMax: Max,
   GMin: Min,
   GNever: Never,
@@ -1790,6 +1802,7 @@ type Gubu = typeof make & {
   Define: typeof Define
   Empty: typeof Empty
   Exact: typeof Exact
+  Func: typeof Func
   Max: typeof Max
   Min: typeof Min
   Never: typeof Never
@@ -1814,6 +1827,7 @@ type Gubu = typeof make & {
   GDefine: typeof Define
   GEmpty: typeof Empty
   GExact: typeof Exact
+  GFunc: typeof Func
   GMax: typeof Max
   GMin: typeof Min
   GNever: typeof Never
@@ -1847,6 +1861,7 @@ const GClosed = Closed
 const GDefine = Define
 const GEmpty = Empty
 const GExact = Exact
+const GFunc = Func
 const GMax = Max
 const GMin = Min
 const GNever = Never
@@ -1891,6 +1906,7 @@ export {
   Define,
   Empty,
   Exact,
+  Func,
   Max,
   Min,
   Never,
@@ -1915,6 +1931,7 @@ export {
   GDefine,
   GEmpty,
   GExact,
+  GFunc,
   GMax,
   GMin,
   GNever,

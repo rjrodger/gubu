@@ -18,7 +18,7 @@ const G$ = Gubu.G$;
 const stringify = Gubu.stringify;
 const truncate = Gubu.truncate;
 const nodize = Gubu.nodize;
-const { Above, After, All, Any, Before, Below, Check, Closed, Define, Empty, Exact, Max, Min, Never, One, Open, Refer, Rename, Required, Skip, Some, Value,
+const { Above, After, All, Any, Before, Below, Check, Closed, Define, Empty, Exact, Func, Max, Min, Never, One, Open, Refer, Rename, Required, Skip, Some, Value,
 // Default,
  } = Gubu;
 class Foo {
@@ -902,6 +902,13 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(o0.hasOwnProperty('a')).toBeFalsy();
         expect(o0.hasOwnProperty('b')).toBeFalsy();
         expect(o0.hasOwnProperty('c')).toBeFalsy();
+    });
+    test('function-basic', () => {
+        function Qaz() { }
+        let g0 = Gubu(Func(Qaz)); // needed other Foo is considered a class
+        let tmp = {};
+        expect(g0()).toEqual(Qaz);
+        expect(g0(tmp.f0 = () => true)).toEqual(tmp.f0);
     });
     test('api-object', () => {
         // This is an allowed way to get shape builders

@@ -129,6 +129,7 @@ declare function make<S>(intop?: S, inopts?: Options): {
 declare const Required: Builder;
 declare const Optional: Builder;
 declare const Skip: Builder;
+declare const Func: Builder;
 declare const Empty: Builder;
 declare const Any: Builder;
 declare const Never: Builder;
@@ -180,6 +181,7 @@ declare type Gubu = typeof make & {
     Define: typeof Define;
     Empty: typeof Empty;
     Exact: typeof Exact;
+    Func: typeof Func;
     Max: typeof Max;
     Min: typeof Min;
     Never: typeof Never;
@@ -203,6 +205,7 @@ declare type Gubu = typeof make & {
     GDefine: typeof Define;
     GEmpty: typeof Empty;
     GExact: typeof Exact;
+    GFunc: typeof Func;
     GMax: typeof Max;
     GMin: typeof Min;
     GNever: typeof Never;
@@ -228,6 +231,7 @@ declare const GClosed: Builder;
 declare const GDefine: Builder;
 declare const GEmpty: Builder;
 declare const GExact: Builder;
+declare const GFunc: Builder;
 declare const GMax: Builder;
 declare const GMin: Builder;
 declare const GNever: Builder;
@@ -241,4 +245,4 @@ declare const GSkip: Builder;
 declare const GSome: Builder;
 declare const GValue: Builder;
 export type { Validate, Update, Context, Builder, Node, State, GubuShape, };
-export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, Above, After, All, Any, Before, Below, Check, Closed, Define, Empty, Exact, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some, Value, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GCheck, GClosed, GDefine, GEmpty, GExact, GMax, GMin, GNever, GOne, GOpen, GOptional, GRefer, GRename, GRequired, GSkip, GSome, GValue, };
+export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, Above, After, All, Any, Before, Below, Check, Closed, Define, Empty, Exact, Func, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some, Value, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GCheck, GClosed, GDefine, GEmpty, GExact, GFunc, GMax, GMin, GNever, GOne, GOpen, GOptional, GRefer, GRename, GRequired, GSkip, GSome, GValue, };

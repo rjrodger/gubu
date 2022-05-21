@@ -44,6 +44,7 @@ const {
   Define,
   Empty,
   Exact,
+  Func,
   Max,
   Min,
   Never,
@@ -57,6 +58,7 @@ const {
   Value,
   // Default,
 } = Gubu
+
 
 
 
@@ -1142,6 +1144,18 @@ Validation failed for property "q.b" with value "x" because the value is not of 
 
 
   })
+
+
+  test('function-basic', () => {
+    function Qaz() { }
+    let g0 = Gubu(Func(Qaz)) // needed other Foo is considered a class
+
+    let tmp: any = {}
+    expect(g0()).toEqual(Qaz)
+    expect(g0(tmp.f0 = () => true)).toEqual(tmp.f0)
+  })
+
+
 
 
   test('api-object', () => {
