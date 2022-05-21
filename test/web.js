@@ -13,7 +13,9 @@ module.exports={
   "types": "gubu.d.ts",
   "homepage": "https://github.com/rjrodger/gubu",
   "keywords": [
-    "gubu"
+    "gubu",
+    "schema",
+    "validation"
   ],
   "author": "Richard Rodger (http://richardrodger.com)",
   "repository": {
@@ -42,10 +44,11 @@ module.exports={
     "node": ">=12"
   },
   "files": [
-    "*.ts",
     "*.js",
     "*.map",
-    "LICENSE"
+    "*.ts",
+    "LICENSE",
+    "README.md"
   ],
   "devDependencies": {
     "@types/jest": "^27.4.1",

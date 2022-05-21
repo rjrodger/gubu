@@ -1,9 +1,8 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GOpen = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Open = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
-exports.GValue = void 0;
-// CRITICAL: Object CLOSED by default, Provide Open builder, Keep Closed for arrays
+exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Never = exports.Min = exports.Max = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GValue = exports.GSome = exports.GSkip = void 0;
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
@@ -25,6 +24,8 @@ const GUBU$ = Symbol.for('gubu$');
 const GUBU = { gubu$: GUBU$, v$: VERSION };
 // A special marker for property abscence.
 const GUBU$NIL = Symbol.for('gubu$nil');
+// RegExp: first letter is upper case
+const UPPER_CASE_FIRST_RE = /^[A-Z]/;
 // The current validation state.
 class State {
     constructor(root, top, ctx, match) {
@@ -142,7 +143,7 @@ const EMPTY_VAL = {
 };
 // Normalize a value into a Node.
 function nodize(shape, depth) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d;
     // If using builder as property of Gubu, `this` is just Gubu, not a node.
     if (make === shape) {
         shape = undefined;
@@ -198,6 +199,7 @@ function nodize(shape, depth) {
             Function !== v.constructor &&
             Object !== v.constructor &&
             null != v.constructor) {
+            // console.log('QQQB', v, v.constructor)
             t = 'instance';
             u.n = v.constructor.name;
             u.i = v.constructor;
@@ -230,11 +232,12 @@ function nodize(shape, depth) {
             b = [...gs.b];
         }
         // Instance of a class.
-        else if (!((undefined === v.prototype && Function === v.constructor) ||
-            Function === ((_c = v.prototype) === null || _c === void 0 ? void 0 : _c.constructor))) {
+        // Note: uses the convention that a class name is captialized.
+        else if ('Function' === v.constructor.name &&
+            UPPER_CASE_FIRST_RE.test(v.name)) {
             t = 'instance';
             r = true;
-            u.n = (_e = (_d = v.prototype) === null || _d === void 0 ? void 0 : _d.constructor) === null || _e === void 0 ? void 0 : _e.name;
+            u.n = (_d = (_c = v.prototype) === null || _c === void 0 ? void 0 : _c.constructor) === null || _d === void 0 ? void 0 : _d.name;
             u.i = v;
         }
     }
@@ -267,7 +270,8 @@ function make(intop, inopts) {
     opts.name =
         null == opts.name ? 'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name;
     let top = nodize(intop, 0);
-    function exec(root, ctx, match) {
+    function exec(root, ctx, match // Suppress errors and return boolean result (true if match)
+    ) {
         let s = new State(root, top, ctx, match);
         // Iterative depth-first traversal of the shape using append-only array stacks.
         while (true) {
@@ -412,6 +416,7 @@ function make(intop, inopts) {
                     s.type === s.valType ||
                     ('instance' === s.type && n.u.i && s.val instanceof n.u.i) ||
                     ('null' === s.type && null === s.val))) {
+                    // console.log('QQQA', s.type, s.val, s.valType, n.u)
                     s.err.push(makeErrImpl('type', s, 1050));
                 }
                 // Value itself, or default.
@@ -592,6 +597,17 @@ const Required = function (shape) {
     return node;
 };
 exports.Required = Required;
+const Optional = function (shape) {
+    let node = buildize(this, shape);
+    node.r = false;
+    // Handle an explicit undefined.
+    if (undefined === shape && 1 === arguments.length) {
+        node.t = 'undefined';
+        node.v = undefined;
+    }
+    return node;
+};
+exports.Optional = Optional;
 const Skip = function (shape) {
     let node = buildize(this, shape);
     node.r = false;
@@ -655,7 +671,8 @@ const All = function (...inshapes) {
         if (!pass) {
             update.why = 'all';
             update.err = [
-                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy all of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy all of: ` +
+                    `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
         return pass;
@@ -684,7 +701,8 @@ const Some = function (...inshapes) {
         if (!pass) {
             update.why = 'some';
             update.err = [
-                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy any of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy any of: ` +
+                    `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
         return pass;
@@ -713,7 +731,8 @@ const One = function (...inshapes) {
         if (1 !== passN) {
             update.why = 'one';
             update.err = [
-                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy one of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+                makeErr(state, `Value "$VALUE" for property "$PATH" does not satisfy one of: ` +
+                    `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
         return true;
@@ -730,7 +749,8 @@ const Exact = function (...vals) {
             }
         }
         update.err =
-            makeErr(state, `Value "$VALUE" for property "$PATH" must be exactly one of: ${state.node.s}.`);
+            makeErr(state, `Value "$VALUE" for property "$PATH" must be exactly one of: ` +
+                `${state.node.s}.`);
         update.done = true;
         return false;
     });
@@ -798,27 +818,6 @@ const Closed = function (shape) {
     else {
         node.c = GUBU$NIL;
     }
-    /*
-      node.b.push(function Closed(val: any, update: Update, s: State) {
-        if (null != val && 'object' === typeof (val) && !Array.isArray(val)) {
-          let vkeys = Object.keys(val)
-          let allowed = node.v
-    
-          update.err = []
-          for (let k of vkeys) {
-            if (undefined === allowed[k]) {
-              update.err.push(
-                makeErrImpl('closed', s, 3010, '', { k })
-              )
-            }
-          }
-    
-          return 0 === update.err.length
-        }
-    
-        return true
-      })
-    */
     return node;
 };
 exports.Closed = Closed;
@@ -1063,6 +1062,7 @@ function makeErr(state, text, why, user) {
     return makeErrImpl(why || 'check', state, 4000, text, user);
 }
 exports.makeErr = makeErr;
+// TODO: optional message prefix from ctx
 // Internal utility to make ErrDesc objects.
 function makeErrImpl(why, s, mark, text, user, fname) {
     let err = {
@@ -1185,7 +1185,6 @@ if ('undefined' !== typeof (window)) {
         { b: Below, n: 'Below' },
         { b: Check, n: 'Check' },
         { b: Closed, n: 'Closed' },
-        { b: Open, n: 'Open' },
         { b: Define, n: 'Define' },
         { b: Empty, n: 'Empty' },
         { b: Exact, n: 'Exact' },
@@ -1193,6 +1192,8 @@ if ('undefined' !== typeof (window)) {
         { b: Min, n: 'Min' },
         { b: Never, n: 'Never' },
         { b: One, n: 'One' },
+        { b: Open, n: 'Open' },
+        { b: Optional, n: 'Optional' },
         { b: Refer, n: 'Refer' },
         { b: Rename, n: 'Rename' },
         { b: Required, n: 'Required' },
@@ -1213,7 +1214,6 @@ Object.assign(make, {
     Below,
     Check,
     Closed,
-    Open,
     Define,
     Empty,
     Exact,
@@ -1221,6 +1221,8 @@ Object.assign(make, {
     Min,
     Never,
     One,
+    Open,
+    Optional,
     Refer,
     Rename,
     Required,
@@ -1235,7 +1237,6 @@ Object.assign(make, {
     GBelow: Below,
     GCheck: Check,
     GClosed: Closed,
-    GOpen: Open,
     GDefine: Define,
     GEmpty: Empty,
     GExact: Exact,
@@ -1243,6 +1244,8 @@ Object.assign(make, {
     GMin: Min,
     GNever: Never,
     GOne: One,
+    GOpen: Open,
+    GOptional: Optional,
     GRefer: Refer,
     GRename: Rename,
     GRequired: Required,
@@ -1277,8 +1280,6 @@ const GCheck = Check;
 exports.GCheck = GCheck;
 const GClosed = Closed;
 exports.GClosed = GClosed;
-const GOpen = Open;
-exports.GOpen = GOpen;
 const GDefine = Define;
 exports.GDefine = GDefine;
 const GEmpty = Empty;
@@ -1293,6 +1294,10 @@ const GNever = Never;
 exports.GNever = GNever;
 const GOne = One;
 exports.GOne = GOne;
+const GOpen = Open;
+exports.GOpen = GOpen;
+const GOptional = Optional;
+exports.GOptional = GOptional;
 const GRefer = Refer;
 exports.GRefer = GRefer;
 const GRename = Rename;

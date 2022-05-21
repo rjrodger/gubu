@@ -12,7 +12,7 @@ const buildize = Gubu.buildize;
 const makeErr = Gubu.makeErr;
 const { Above, After, All, Any, Before, Below, Check, Closed, 
 // Default,
-Define, Empty, Exact, Max, Min, Never, One, Open, Refer, Rename, Required, Skip, Some, Value, } = Gubu;
+Define, Empty, Exact, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some, Value, } = Gubu;
 class Foo {
     constructor(a) {
         this.a = -1;
@@ -66,6 +66,55 @@ describe('builder', () => {
         let g8 = Gubu({ a: Required(1) });
         expect(g8({ a: 2 })).toMatchObject({ a: 2 });
         expect(() => g8({ a: 'x' })).toThrow(/number/);
+    });
+    test('builder-optional', () => {
+        expect(Gubu(Optional(1))()).toEqual(1);
+        expect(Gubu(Optional(1))(2)).toEqual(2);
+        expect(() => Gubu(Optional(1))(true)).toThrow('type');
+        expect(Gubu({ a: Optional(1) })()).toEqual({ a: 1 });
+        expect(Gubu({ a: Optional(1) })({})).toEqual({ a: 1 });
+        expect(Gubu({ a: Optional(1) })({ a: undefined })).toEqual({ a: 1 });
+        expect(Gubu({ a: Optional(1) })({ a: 2 })).toEqual({ a: 2 });
+        expect(() => Gubu({ a: Optional(1) })({ a: true })).toThrow('type');
+        expect(Gubu([Optional(1)])()).toEqual([]);
+        expect(Gubu([Optional(1)])([])).toEqual([]);
+        expect(Gubu([Optional(1)])([2])).toEqual([2]);
+        expect(Gubu([Optional(1)])([2, 3])).toEqual([2, 3]);
+        expect(() => Gubu([Optional(1)])([true])).toThrow('type');
+        expect(Gubu([null, Optional(1)])()).toEqual([null, 1]);
+        expect(Gubu(Closed([Optional(1)]))()).toEqual([1]);
+        expect(Gubu(Optional(String))()).toEqual('');
+        expect(Gubu(Optional(Number))()).toEqual(0);
+        expect(Gubu(Optional(Boolean))()).toEqual(false);
+        expect(Gubu(Optional(Object))()).toEqual({});
+        expect(Gubu(Optional(Array))()).toEqual([]);
+        expect(Gubu(Optional(Required('a')))()).toEqual('a');
+        expect(Gubu(Optional(Required(1)))()).toEqual(1);
+        expect(Gubu(Optional(Required(true)))()).toEqual(true);
+        expect(Gubu(Optional(Required({})))()).toEqual({});
+        expect(Gubu(Optional(Required([])))()).toEqual([]);
+        expect(Gubu(Optional())()).toEqual(undefined);
+        expect(Gubu(Optional())(undefined)).toEqual(undefined);
+        expect(Gubu(Optional())(1)).toEqual(1);
+        expect(Gubu(Optional())('a')).toEqual('a');
+        expect(Gubu(Optional())(true)).toEqual(true);
+        expect(Gubu(Optional())({})).toEqual({});
+        expect(Gubu(Optional())([])).toEqual([]);
+        expect(Gubu(Optional(null))()).toEqual(null);
+        expect(Gubu(Optional(NaN))()).toEqual(NaN);
+        expect(Gubu(Optional(Infinity))()).toEqual(Infinity);
+        expect(Gubu(Optional(-Infinity))()).toEqual(-Infinity);
+        expect(Gubu(Optional(null))(null)).toEqual(null);
+        expect(Gubu(Optional(NaN))(NaN)).toEqual(NaN);
+        expect(Gubu(Optional(Infinity))(Infinity)).toEqual(Infinity);
+        expect(Gubu(Optional(-Infinity))(-Infinity)).toEqual(-Infinity);
+        expect(() => Gubu(Optional(null))('a')).toThrow('type');
+        expect(() => Gubu(Optional(NaN))('a')).toThrow('type');
+        expect(() => Gubu(Optional(Infinity))('a')).toThrow('type');
+        expect(() => Gubu(Optional(-Infinity))('a')).toThrow('type');
+        expect(Gubu(Optional(undefined))()).toEqual(undefined);
+        expect(Gubu(Optional(undefined))(undefined)).toEqual(undefined);
+        expect(() => Gubu(Optional(undefined))('a')).toThrow('type');
     });
     test('builder-check', () => {
         let g0 = Gubu(Check((v) => v === "x"));

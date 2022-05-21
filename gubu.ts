@@ -1,8 +1,5 @@
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 
-// CRITICAL: Object CLOSED by default, Provide Open builder, Keep Closed for arrays
-
-
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
@@ -34,6 +31,8 @@ const GUBU = { gubu$: GUBU$, v$: VERSION }
 // A special marker for property abscence.
 const GUBU$NIL = Symbol.for('gubu$nil')
 
+// RegExp: first letter is upper case
+const UPPER_CASE_FIRST_RE = /^[A-Z]/
 
 // Options for creating a GubuShape.
 type Options = {
@@ -399,6 +398,7 @@ function nodize(shape?: any, depth?: number): Node {
       Object !== v.constructor &&
       null != v.constructor
     ) {
+      // console.log('QQQB', v, v.constructor)
       t = 'instance'
       u.n = v.constructor.name
       u.i = v.constructor
@@ -436,10 +436,11 @@ function nodize(shape?: any, depth?: number): Node {
     }
 
     // Instance of a class.
-    else if (!(
-      (undefined === v.prototype && Function === v.constructor) ||
-      Function === v.prototype?.constructor
-    )) {
+    // Note: uses the convention that a class name is captialized.
+    else if (
+      'Function' === v.constructor.name &&
+      UPPER_CASE_FIRST_RE.test(v.name)
+    ) {
       t = 'instance'
       r = true
       u.n = v.prototype?.constructor?.name
@@ -484,7 +485,7 @@ function make<S>(intop?: S, inopts?: Options) {
   function exec(
     root: any,
     ctx?: Context,
-    match?: boolean
+    match?: boolean // Suppress errors and return boolean result (true if match)
   ) {
     let s = new State(root, top, ctx, match)
 
@@ -658,6 +659,7 @@ function make<S>(intop?: S, inopts?: Options) {
           ('instance' === s.type && n.u.i && s.val instanceof n.u.i) ||
           ('null' === s.type && null === s.val)
         )) {
+          // console.log('QQQA', s.type, s.val, s.valType, n.u)
           s.err.push(makeErrImpl('type', s, 1050))
         }
 
@@ -892,6 +894,19 @@ const Required: Builder = function(this: Node, shape?: any) {
 }
 
 
+const Optional: Builder = function(this: Node, shape?: any) {
+  let node = buildize(this, shape)
+  node.r = false
+
+  // Handle an explicit undefined.
+  if (undefined === shape && 1 === arguments.length) {
+    node.t = 'undefined'
+    node.v = undefined
+  }
+  return node
+}
+
+
 const Skip: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   node.r = false
@@ -974,7 +989,8 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = 'all'
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for property "$PATH" does not satisfy all of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+          `Value "$VALUE" for property "$PATH" does not satisfy all of: ` +
+          `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
 
@@ -1013,7 +1029,8 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = 'some'
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for property "$PATH" does not satisfy any of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+          `Value "$VALUE" for property "$PATH" does not satisfy any of: ` +
+          `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
 
@@ -1050,7 +1067,8 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = 'one'
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for property "$PATH" does not satisfy one of: ${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+          `Value "$VALUE" for property "$PATH" does not satisfy one of: ` +
+          `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
 
@@ -1059,7 +1077,6 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
 
   return node
 }
-
 
 
 const Exact: Builder = function(this: Node, ...vals: any[]) {
@@ -1074,7 +1091,8 @@ const Exact: Builder = function(this: Node, ...vals: any[]) {
 
     update.err =
       makeErr(state,
-        `Value "$VALUE" for property "$PATH" must be exactly one of: ${state.node.s}.`
+        `Value "$VALUE" for property "$PATH" must be exactly one of: ` +
+        `${state.node.s}.`
       )
 
     update.done = true
@@ -1160,28 +1178,6 @@ const Closed: Builder = function(this: Node, shape?: any) {
   else {
     node.c = GUBU$NIL
   }
-
-  /*
-    node.b.push(function Closed(val: any, update: Update, s: State) {
-      if (null != val && 'object' === typeof (val) && !Array.isArray(val)) {
-        let vkeys = Object.keys(val)
-        let allowed = node.v
-  
-        update.err = []
-        for (let k of vkeys) {
-          if (undefined === allowed[k]) {
-            update.err.push(
-              makeErrImpl('closed', s, 3010, '', { k })
-            )
-          }
-        }
-  
-        return 0 === update.err.length
-      }
-  
-      return true
-    })
-  */
 
   return node
 }
@@ -1524,6 +1520,7 @@ function makeErr(state: State, text?: string, why?: string, user?: any) {
 }
 
 
+// TODO: optional message prefix from ctx
 // Internal utility to make ErrDesc objects.
 function makeErrImpl(
   why: string,
@@ -1683,6 +1680,7 @@ const G$ = (node: any): Node => nodize({ ...node, $: { gubu$: true } })
 /* istanbul ignore next */
 if ('undefined' !== typeof (window)) {
   let builds: { b: Builder, n: string }[] = [
+
     { b: Above, n: 'Above' },
     { b: After, n: 'After' },
     { b: All, n: 'All' },
@@ -1691,7 +1689,6 @@ if ('undefined' !== typeof (window)) {
     { b: Below, n: 'Below' },
     { b: Check, n: 'Check' },
     { b: Closed, n: 'Closed' },
-    { b: Open, n: 'Open' },
     { b: Define, n: 'Define' },
     { b: Empty, n: 'Empty' },
     { b: Exact, n: 'Exact' },
@@ -1699,12 +1696,15 @@ if ('undefined' !== typeof (window)) {
     { b: Min, n: 'Min' },
     { b: Never, n: 'Never' },
     { b: One, n: 'One' },
+    { b: Open, n: 'Open' },
+    { b: Optional, n: 'Optional' },
     { b: Refer, n: 'Refer' },
     { b: Rename, n: 'Rename' },
     { b: Required, n: 'Required' },
     { b: Skip, n: 'Skip' },
     { b: Some, n: 'Some' },
     { b: Value, n: 'Value' },
+
   ]
   for (let build of builds) {
     Object.defineProperty(build.b, 'name', { value: build.n })
@@ -1713,6 +1713,7 @@ if ('undefined' !== typeof (window)) {
 
 
 Object.assign(make, {
+
   Above,
   After,
   All,
@@ -1721,7 +1722,6 @@ Object.assign(make, {
   Below,
   Check,
   Closed,
-  Open,
   Define,
   Empty,
   Exact,
@@ -1729,6 +1729,8 @@ Object.assign(make, {
   Min,
   Never,
   One,
+  Open,
+  Optional,
   Refer,
   Rename,
   Required,
@@ -1744,7 +1746,6 @@ Object.assign(make, {
   GBelow: Below,
   GCheck: Check,
   GClosed: Closed,
-  GOpen: Open,
   GDefine: Define,
   GEmpty: Empty,
   GExact: Exact,
@@ -1752,6 +1753,8 @@ Object.assign(make, {
   GMin: Min,
   GNever: Never,
   GOne: One,
+  GOpen: Open,
+  GOptional: Optional,
   GRefer: Refer,
   GRename: Rename,
   GRequired: Required,
@@ -1784,7 +1787,6 @@ type Gubu = typeof make & {
   Below: typeof Below
   Check: typeof Check
   Closed: typeof Closed
-  Open: typeof Open
   Define: typeof Define
   Empty: typeof Empty
   Exact: typeof Exact
@@ -1792,6 +1794,8 @@ type Gubu = typeof make & {
   Min: typeof Min
   Never: typeof Never
   One: typeof One
+  Open: typeof Open
+  Optional: typeof Optional
   Refer: typeof Refer
   Rename: typeof Rename
   Required: typeof Required
@@ -1807,7 +1811,6 @@ type Gubu = typeof make & {
   GBelow: typeof Below
   GCheck: typeof Check
   GClosed: typeof Closed
-  GOpen: typeof Open
   GDefine: typeof Define
   GEmpty: typeof Empty
   GExact: typeof Exact
@@ -1815,6 +1818,8 @@ type Gubu = typeof make & {
   GMin: typeof Min
   GNever: typeof Never
   GOne: typeof One
+  GOpen: typeof Open
+  GOptional: typeof Optional
   GRefer: typeof Refer
   GRename: typeof Rename
   GRequired: typeof Required
@@ -1839,7 +1844,6 @@ const GBefore = Before
 const GBelow = Below
 const GCheck = Check
 const GClosed = Closed
-const GOpen = Open
 const GDefine = Define
 const GEmpty = Empty
 const GExact = Exact
@@ -1847,6 +1851,8 @@ const GMax = Max
 const GMin = Min
 const GNever = Never
 const GOne = One
+const GOpen = Open
+const GOptional = Optional
 const GRefer = Refer
 const GRename = Rename
 const GRequired = Required
@@ -1882,7 +1888,6 @@ export {
   Below,
   Check,
   Closed,
-  Open,
   Define,
   Empty,
   Exact,
@@ -1890,6 +1895,8 @@ export {
   Min,
   Never,
   One,
+  Open,
+  Optional,
   Refer,
   Rename,
   Required,
@@ -1905,7 +1912,6 @@ export {
   GBelow,
   GCheck,
   GClosed,
-  GOpen,
   GDefine,
   GEmpty,
   GExact,
@@ -1913,6 +1919,8 @@ export {
   GMin,
   GNever,
   GOne,
+  GOpen,
+  GOptional,
   GRefer,
   GRename,
   GRequired,

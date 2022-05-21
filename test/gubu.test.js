@@ -349,6 +349,39 @@ describe('gubu', () => {
         expect(g1([11, 't'])).toEqual([11, 't']);
         expect(g1([11, 22, 't'])).toEqual([11, 22, 't']);
     });
+    test('function-optional-basic', () => {
+        let f0t = () => true;
+        let f0f = () => false;
+        let g0 = Gubu(f0t);
+        expect(g0().toString()).toEqual('() => true');
+        expect(g0(f0f).toString()).toEqual('() => false');
+        expect(g0(() => null).toString()).toEqual('() => null');
+        let g1 = Gubu({ a: f0t });
+        expect(g1().a.toString()).toEqual('() => true');
+        expect(g1({ a: f0f }).a.toString()).toEqual('() => false');
+        expect(g1({ a: () => null }).a.toString()).toEqual('() => null');
+        function f1t() { return true; }
+        expect(g0(f1t).toString().replace(/\s/g, ''))
+            .toEqual('functionf1t(){returntrue;}');
+        expect(g1({ a: f1t }).a.toString().replace(/\s/g, ''))
+            .toEqual('functionf1t(){returntrue;}');
+        function f1f() { return false; }
+        let g2 = Gubu({ a: f1t });
+        expect(g2({ a: f1f }).a.toString().replace(/\s/g, ''))
+            .toEqual('functionf1f(){returnfalse;}');
+    });
+    test('class-optional-basic', () => {
+        class Planet {
+            constructor(name) {
+                this.name = name;
+            }
+        }
+        const mars = new Planet('Mars');
+        let g0 = Gubu(Planet);
+        expect(g0(mars)).toEqual(mars);
+        expect(() => g0(1)).toThrow('not an instance of Planet');
+        expect(() => g0(Planet)).toThrow('not an instance of Planet');
+    });
     test('array-basic-required', () => {
         let g1 = Gubu(Array);
         expect(g1([11, 22, 33])).toEqual([11, 22, 33]);
@@ -529,8 +562,8 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(Gubu(Error)(tmp.e0 = new Error())).toEqual(tmp.e0);
         expect(Gubu(Date)(tmp.d0 = new Date())).toEqual(tmp.d0);
         expect(Gubu(RegExp)(tmp.r0 = /a/)).toEqual(tmp.r0);
+        expect(Gubu(Map)(tmp.m0 = new Map())).toEqual(tmp.m0);
         expect(Gubu(Foo)(tmp.c0 = new Foo(2))).toEqual(tmp.c0);
-        // console.log(gubu(new Date()).spec())
         expect(Gubu('a')('x')).toEqual('x');
         expect(Gubu(0)(1)).toEqual(1);
         expect(Gubu(false)(true)).toEqual(true);

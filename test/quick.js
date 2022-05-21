@@ -801,5 +801,41 @@ let tmp = {}
 
 
 
-console.log(Skip())
-console.log(Gubu.Skip())
+// console.log(Skip())
+// console.log(Gubu.Skip())
+
+
+// let f0t = () => true
+
+// function f1t() { return true }
+// function f1f() { return false }
+
+// let f2t = () => true
+
+// let g0 = Gubu(f0t)
+// let g1 = Gubu(f1t)
+
+// console.dir(g0.spec())
+// console.dir(g1.spec())
+
+
+// try {
+//   console.log(g1(f1f).toString())
+// }
+// catch(e) {
+//   console.log(e.desc())
+// }
+// // console.log(g1(f2t).toString())
+
+// // let g2 = Gubu({ a: f1t })
+// // console.log(g2({ a: f1f }).a.toString())
+
+// // let g3 = Gubu({ a: f2t })
+// // console.log(g3({ a: f1f }).a.toString())
+
+
+console.dir(Gubu(()=>true).spec())
+console.dir(Gubu(function() {}).spec())
+console.dir(Gubu(function AAA() {}).spec())
+console.dir(Gubu(Error).spec())
+console.dir(Gubu(RegExp).spec())

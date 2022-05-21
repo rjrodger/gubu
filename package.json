@@ -8,7 +8,9 @@
   "types": "gubu.d.ts",
   "homepage": "https://github.com/rjrodger/gubu",
   "keywords": [
-    "gubu"
+    "gubu",
+    "schema",
+    "validation"
   ],
   "author": "Richard Rodger (http://richardrodger.com)",
   "repository": {
@@ -37,19 +39,20 @@
     "node": ">=12"
   },
   "files": [
-    "*.ts",
     "*.js",
     "*.map",
-    "LICENSE"
+    "*.ts",
+    "LICENSE",
+    "README.md"
   ],
   "devDependencies": {
-    "@types/jest": "^27.4.1",
+    "@types/jest": "^27.5.1",
     "browserify": "^17.0.0",
-    "esbuild": "^0.14.36",
+    "esbuild": "^0.14.39",
     "esbuild-jest": "^0.5.0",
-    "jest": "^27.5.1",
+    "jest": "^28.1.0",
     "tinyify": "^3.0.0",
-    "ts-jest": "^27.1.4",
-    "typescript": "^4.6.3"
+    "ts-jest": "^28.0.2",
+    "typescript": "^4.6.4"
   }
 }
