@@ -1,6 +1,6 @@
 {
   "name": "gubu",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "description": "An object shape validation utility.",
   "main": "gubu.js",
   "browser": "gubu.min.js",
