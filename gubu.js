@@ -1215,6 +1215,7 @@ if ('undefined' !== typeof (window)) {
     }
 }
 Object.assign(make, {
+    Gubu: make,
     Above,
     After,
     All,

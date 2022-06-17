@@ -114,10 +114,10 @@ declare class GubuError extends TypeError {
 }
 declare function nodize(shape?: any, depth?: number): Node;
 declare function make<S>(intop?: S, inopts?: Options): {
-    <R>(root?: R | undefined, ctx?: Context | undefined): R & S;
-    valid: <D>(root?: D | undefined, ctx?: Context | undefined) => root is D & S;
-    match(root?: any, ctx?: Context | undefined): boolean;
-    error(root?: any, ctx?: Context | undefined): GubuError[];
+    <R>(root?: R | undefined, ctx?: Context): R & S;
+    valid: <D>(root?: D | undefined, ctx?: Context) => root is D & S;
+    match(root?: any, ctx?: Context): boolean;
+    error(root?: any, ctx?: Context): GubuError[];
     spec(): any;
     node(): Node;
     toString(): string;
