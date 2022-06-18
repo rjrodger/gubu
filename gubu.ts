@@ -102,7 +102,9 @@ type Validate = (val: any, update: Update, state: State) => boolean
 // Help the minifier
 const S = {
   MT: '',
+  gubu: 'gubu',
   name: 'name',
+  nan: 'nan',
   never: 'never',
   number: 'number',
   required: 'required',
@@ -111,8 +113,14 @@ const S = {
   object: 'object',
   string: 'string',
   undefined: 'undefined',
+  any: 'any',
+  list: 'list',
+  instance: 'instance',
+  null: 'null',
+  type: 'type',
 
   Object: 'Object',
+  Array: 'Array',
 
   Above: 'Above',
   After: 'After',
@@ -139,8 +147,12 @@ const S = {
   Some: 'Some',
   Value: 'Value',
 
+  forprop: ' for property '
 }
 
+const keys = (arg: any) => Object.keys(arg)
+const defprop = (o: any, p: any, a: any) => Object.defineProperty(o, p, a)
+const isarr = (arg: any) => Array.isArray(arg)
 
 // The current validation state.
 class State {
@@ -245,7 +257,7 @@ class State {
     this.val = val
     this.valType = typeof (this.val)
     if (S.number === this.valType && isNaN(this.val)) {
-      this.valType = 'nan'
+      this.valType = S.nan
     }
     if (this.isRoot && !this.match) {
       this.root = this.val
@@ -415,8 +427,8 @@ function nodize(shape?: any, depth?: number): Node {
   }
 
   // Not a Node, so build one based on value and its type.
-  let t: ValType | 'undefined' = (null === shape ? 'null' : typeof (shape))
-  t = (S.undefined === t ? 'any' : t) as ValType
+  let t: ValType | 'undefined' = (null === shape ? (S.null as ValType) : typeof (shape))
+  t = (S.undefined === t ? S.any : t) as ValType
 
   let v = shape
   let c: any = GUBU$NIL
@@ -428,7 +440,7 @@ function nodize(shape?: any, depth?: number): Node {
   let b: any[] = []
 
   if (S.object === t) {
-    if (Array.isArray(v)) {
+    if (isarr(v)) {
       t = (S.array as ValType)
       if (1 === v.length) {
         c = v[0]
@@ -442,7 +454,7 @@ function nodize(shape?: any, depth?: number): Node {
       Object !== v.constructor &&
       null != v.constructor
     ) {
-      t = 'instance'
+      t = (S.instance as ValType)
       u.n = v.constructor.name
       u.i = v.constructor
     }
@@ -451,7 +463,7 @@ function nodize(shape?: any, depth?: number): Node {
       // c = GUBU$NIL
 
       // Empty object "{}" is considered Open
-      if (0 === Object.keys(v).length) {
+      if (0 === keys(v).length) {
         c = Any()
       }
     }
@@ -484,14 +496,14 @@ function nodize(shape?: any, depth?: number): Node {
       'Function' === v.constructor.name &&
       UPPER_CASE_FIRST_RE.test(v.name)
     ) {
-      t = 'instance'
+      t = (S.instance as ValType)
       r = true
       u.n = v.prototype?.constructor?.name
       u.i = v
     }
   }
   else if (S.number === t && isNaN(v)) {
-    t = 'nan'
+    t = (S.nan as ValType)
   }
   else if (S.string === t && S.MT === v) {
     u.empty = true
@@ -503,7 +515,7 @@ function nodize(shape?: any, depth?: number): Node {
     $: GUBU,
     t,
     v: vmap,
-    n: null != vmap && S.object === typeof (vmap) ? Object.keys(vmap).length : 0,
+    n: null != vmap && S.object === typeof (vmap) ? keys(vmap).length : 0,
     c,
     r,
     p,
@@ -568,11 +580,11 @@ function make<S>(intop?: S, inopts?: Options) {
             undefined !== s.val && (
               null === s.val ||
               S.object !== s.valType ||
-              Array.isArray(s.val)
+              isarr(s.val)
             )
           ) {
-            s.err.push(makeErrImpl('type', s, 1020))
-            val = Array.isArray(s.val) ? s.val : {}
+            s.err.push(makeErrImpl(S.type, s, 1020))
+            val = isarr(s.val) ? s.val : {}
           }
           else if (!n.p || null != s.val) {
             // Descend into object, constructing child defaults
@@ -584,7 +596,7 @@ function make<S>(intop?: S, inopts?: Options) {
 
           if (null != val) {
             let hasKeys = false
-            let vkeys = Object.keys(n.v)
+            let vkeys = keys(n.v)
             let start = s.nI
 
             if (0 < vkeys.length) {
@@ -600,7 +612,7 @@ function make<S>(intop?: S, inopts?: Options) {
               }
             }
 
-            let extra = Object.keys(val).filter(k => undefined === n.v[k])
+            let extra = keys(val).filter(k => undefined === n.v[k])
 
             if (0 < extra.length) {
               if (GUBU$NIL === n.c) {
@@ -635,15 +647,15 @@ function make<S>(intop?: S, inopts?: Options) {
             s.ignoreVal = true
             s.err.push(makeErrImpl(S.required, s, 1030))
           }
-          else if (undefined !== s.val && !Array.isArray(s.val)) {
-            s.err.push(makeErrImpl('type', s, 1040))
+          else if (undefined !== s.val && !isarr(s.val)) {
+            s.err.push(makeErrImpl(S.type, s, 1040))
           }
           else if (!n.p || null != s.val) {
             s.updateVal(s.val || (s.fromDefault = true, []))
 
             let hasValueElements = 0 < s.val.length
             let hasChildShape = GUBU$NIL !== n.c
-            let elementKeys = Object.keys(n.v).filter(k => !isNaN(+k))
+            let elementKeys = keys(n.v).filter(k => !isNaN(+k))
             let hasFixedElements = 0 < elementKeys.length
 
             if (hasValueElements || hasFixedElements) {
@@ -695,15 +707,14 @@ function make<S>(intop?: S, inopts?: Options) {
 
         // Invalid type.
         else if (!(
-          'any' === s.type ||
-          'list' === s.type ||
+          S.any === s.type ||
+          S.list === s.type ||
           undefined === s.val ||
           s.type === s.valType ||
-          ('instance' === s.type && n.u.i && s.val instanceof n.u.i) ||
-          ('null' === s.type && null === s.val)
+          (S.instance === s.type && n.u.i && s.val instanceof n.u.i) ||
+          (S.null === s.type && null === s.val)
         )) {
-          // console.log('QQQA', s.type, s.val, s.valType, n.u)
-          s.err.push(makeErrImpl('type', s, 1050))
+          s.err.push(makeErrImpl(S.type, s, 1050))
         }
 
         // Value itself, or default.
@@ -723,7 +734,7 @@ function make<S>(intop?: S, inopts?: Options) {
             s.updateVal(n.v)
             s.fromDefault = true
           }
-          else if ('any' === s.type) {
+          else if (S.any === s.type) {
             s.ignoreVal = undefined === s.ignoreVal ? true : s.ignoreVal
           }
         }
@@ -760,7 +771,7 @@ function make<S>(intop?: S, inopts?: Options) {
     }
 
     if (0 < s.err.length) {
-      if (Array.isArray(s.ctx.err)) {
+      if (isarr(s.ctx.err)) {
         s.ctx.err.push(...s.err)
       }
       else if (!s.match && false !== s.ctx.err) {
@@ -858,7 +869,7 @@ function handleValidate(vf: Validate, s: State): Update {
     thrown = ve
   }
 
-  let hasErrs = Array.isArray(update.err) ? 0 < update.err.length : null != update.err
+  let hasErrs = isarr(update.err) ? 0 < (update.err as Array<any>).length : null != update.err
 
   if (!valid || hasErrs) {
 
@@ -1000,7 +1011,7 @@ const Empty: Builder = function(this: Node, shape?: any) {
 // Value provides default.
 const Any: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
-  node.t = 'any'
+  node.t = (S.any as ValType)
   if (undefined !== shape) {
     node.v = shape
   }
@@ -1018,7 +1029,7 @@ const Never: Builder = function(this: Node, shape?: any) {
 // Pass only if all match. Does not short circuit (as defaults may be missed).
 const All: Builder = function(this: Node, ...inshapes: any[]) {
   let node = buildize()
-  node.t = 'list'
+  node.t = (S.list as ValType)
   node.r = true
 
   let shapes = inshapes.map(s => Gubu(s))
@@ -1037,10 +1048,10 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
     }
 
     if (!pass) {
-      update.why = 'all'
+      update.why = S.All
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for property "$PATH" does not satisfy all of: ` +
+          S.Value + ' "$VALUE"' + S.forprop + `"$PATH" does not satisfy all of: ` +
           `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
@@ -1056,7 +1067,7 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
 // TODO: UDPATE DOC: Does not short circuit (as defaults may be missed).
 const Some: Builder = function(this: Node, ...inshapes: any[]) {
   let node = buildize()
-  node.t = 'list'
+  node.t = (S.list as ValType)
   node.r = true
 
   let shapes = inshapes.map(s => Gubu(s))
@@ -1077,10 +1088,10 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
     }
 
     if (!pass) {
-      update.why = 'some'
+      update.why = S.Some
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for property "$PATH" does not satisfy any of: ` +
+          S.Value + ' "$VALUE"' + S.forprop + `"$PATH" does not satisfy any of: ` +
           `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
@@ -1095,7 +1106,7 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
 // Pass if exactly one matches. Does not short circuit (as defaults may be missed).
 const One: Builder = function(this: Node, ...inshapes: any[]) {
   let node = buildize()
-  node.t = 'list'
+  node.t = (S.list as ValType)
   node.r = true
 
   let shapes = inshapes.map(s => Gubu(s))
@@ -1115,10 +1126,10 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
     }
 
     if (1 !== passN) {
-      update.why = 'one'
+      update.why = S.One
       update.err = [
         makeErr(state,
-          `Value "$VALUE" for property "$PATH" does not satisfy one of: ` +
+          S.Value + ' "$VALUE"' + S.forprop + `"$PATH" does not satisfy one of: ` +
           `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
@@ -1142,7 +1153,7 @@ const Exact: Builder = function(this: Node, ...vals: any[]) {
 
     update.err =
       makeErr(state,
-        `Value "$VALUE" for property "$PATH" must be exactly one of: ` +
+        S.Value + ' "$VALUE"' + S.forprop + `"$PATH" must be exactly one of: ` +
         `${state.node.s}.`
       )
 
@@ -1191,10 +1202,10 @@ const Check: Builder = function(
     if (dstr.includes('RegExp')) {
       let refn = (v: any) =>
         (null == v || Number.isNaN(v)) ? false : !!String(v).match(check as string)
-      Object.defineProperty(refn, S.name, {
+      defprop(refn, S.name, {
         value: String(check)
       })
-      Object.defineProperty(refn, 'gubu$', { value: { Check: true } })
+      defprop(refn, 'gubu$', { value: { Check: true } })
       node.b.push(refn)
       node.s = stringify(check)
       node.r = true
@@ -1296,7 +1307,7 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
   let keep = 'boolean' === typeof opts.keep ? opts.keep : undefined
 
   // NOTE: Rename claims are experimental.
-  let claim = Array.isArray(opts.claim) ? opts.claim : []
+  let claim = isarr(opts.claim) ? opts.claim : []
 
   if (null != name && S.MT != name) {
 
@@ -1353,7 +1364,7 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
       }
       return true
     }
-    Object.defineProperty(before, S.name, { value: 'Rename:' + name })
+    defprop(before, S.name, { value: 'Rename:' + name })
     node.b.push(before)
 
     let after = (val: any, update: Update, s: State) => {
@@ -1364,7 +1375,7 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
         s.key !== name &&
         // Arrays require explicit deletion as validation is based on index
         // and will be lost.
-        !(Array.isArray(s.parent) && false !== keep)
+        !(isarr(s.parent) && false !== keep)
       ) {
         delete s.parent[s.key]
         update.done = true
@@ -1381,7 +1392,7 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
 
       return true
     }
-    Object.defineProperty(after, S.name, { value: 'Rename:' + name })
+    defprop(after, S.name, { value: 'Rename:' + name })
     node.a.push(after)
   }
 
@@ -1392,7 +1403,7 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
 function valueLen(val: any) {
   return S.number === typeof (val) ? val :
     S.number === typeof (val?.length) ? val.length :
-      null != val && S.object === typeof (val) ? Object.keys(val).length :
+      null != val && S.object === typeof (val) ? keys(val).length :
         NaN
 }
 
@@ -1425,11 +1436,11 @@ const Min: Builder = function(
     let errmsgpart = S.number === typeof (val) ? S.MT : 'length '
     update.err =
       makeErr(state,
-        `Value "$VALUE" for property "$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`)
+        S.Value + ' "$VALUE"' + S.forprop + `"$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`)
     return false
   })
 
-  node.s = 'Min(' + min + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
+  node.s = S.Min + '(' + min + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -1452,11 +1463,11 @@ const Max: Builder = function(
     let errmsgpart = S.number === typeof (val) ? S.MT : 'length '
     update.err =
       makeErr(state,
-        `Value "$VALUE" for property "$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`)
+        `Value "$VALUE"` + S.forprop + `"$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`)
     return false
   })
 
-  node.s = 'Max(' + max + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
+  node.s = S.Max + '(' + max + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -1479,11 +1490,11 @@ const Above: Builder = function(
     let errmsgpart = S.number === typeof (val) ? 'be' : 'have length'
     update.err =
       makeErr(state,
-        `Value "$VALUE" for property "$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`)
+        S.Value + ' "$VALUE"' + S.forprop + `"$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`)
     return false
   })
 
-  node.s = 'Above(' + above + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
+  node.s = S.Above + '(' + above + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -1506,11 +1517,11 @@ const Below: Builder = function(
     let errmsgpart = S.number === typeof (val) ? 'be' : 'have length'
     update.err =
       makeErr(state,
-        `Value "$VALUE" for property "$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`)
+        S.Value + ' "$VALUE"' + S.forprop + `"$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`)
     return false
   })
 
-  node.s = 'Below(' + below + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
+  node.s = S.Below + '(' + below + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -1598,12 +1609,12 @@ function makeErrImpl(
   if (null == text || S.MT === text) {
     let valkind = valstr.startsWith('[') ? S.array :
       valstr.startsWith('{') ? S.object : 'value'
-    let propkind = (valstr.startsWith('[') || Array.isArray(s.parents[s.pI])) ?
+    let propkind = (valstr.startsWith('[') || isarr(s.parents[s.pI])) ?
       'index' : 'property'
     let propkindverb = 'is'
     let propkey = user?.k
 
-    propkey = Array.isArray(propkey) ?
+    propkey = isarr(propkey) ?
       (propkind = (1 < propkey.length ?
         (propkindverb = 'are', 'properties') : propkind),
         propkey.join(', ')) :
@@ -1613,8 +1624,8 @@ function makeErrImpl(
       (0 < err.p.length ? `${propkind} "${err.p}" with ` : S.MT) +
       `${valkind} "${valstr}" because ` +
 
-      ('type' === why ? (
-        'instance' === s.node.t ?
+      (S.type === why ? (
+        S.instance === s.node.t ?
           `the ${valkind} is not an instance of ${s.node.u.n} ` :
           `the ${valkind} is not of type ${s.node.t}`) :
         S.required === why ? (S.MT === s.val ? 'an empty string is not allowed' :
@@ -1660,7 +1671,7 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
         S.object === typeof (val) &&
         val.constructor &&
         S.Object !== val.constructor.name &&
-        'Array' !== val.constructor.name
+        S.Array !== val.constructor.name
       ) {
         val =
           S.function === typeof val.toString ? val.toString() : val.constructor.name
@@ -1759,7 +1770,7 @@ if (S.undefined !== typeof (window)) {
 
   ]
   for (let build of builds) {
-    Object.defineProperty(build.b, S.name, { value: build.n })
+    defprop(build.b, S.name, { value: build.n })
   }
 }
 
@@ -1885,7 +1896,7 @@ type Gubu = typeof make & {
   GValue: typeof Value
 }
 
-Object.defineProperty(make, S.name, { value: 'gubu' })
+defprop(make, S.name, { value: S.gubu })
 
 
 // The primary export.
