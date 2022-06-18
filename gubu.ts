@@ -137,6 +137,7 @@ const S = {
   Max: 'Max',
   Min: 'Min',
   Never: 'Never',
+  Len: 'Len',
   One: 'One',
   Open: 'Open',
   Optional: 'Optional',
@@ -1533,6 +1534,33 @@ const Below: Builder = function(
 }
 
 
+const Len: Builder = function(
+  this: Node,
+  len: number,
+  shape?: any
+): Node {
+  let node = buildize(this, shape || Any())
+
+  node.b.push(function Len(val: any, update: Update, state: State) {
+    let vlen = valueLen(val)
+
+    if (len === vlen) {
+      return true
+    }
+
+    let errmsgpart = S.number === typeof (val) ? S.MT : ' in length'
+    update.err =
+      makeErr(state,
+        S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be exactly ${len}${errmsgpart} (was ${vlen}).`)
+    return false
+  })
+
+  node.s = S.Len + '(' + len + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
+
+  return node
+}
+
+
 const Value: Builder = function(
   this: Node,
   value?: any,
@@ -1567,6 +1595,7 @@ function buildize(node0?: any, node1?: any): Node {
     Max,
     Min,
     Never,
+    Len,
     Refer,
     Rename,
     Required,
@@ -1764,6 +1793,7 @@ if (S.undefined !== typeof (window)) {
     { b: Max, n: S.Max },
     { b: Min, n: S.Min },
     { b: Never, n: S.Never },
+    { b: Len, n: S.Len },
     { b: One, n: S.One },
     { b: Open, n: S.Open },
     { b: Optional, n: S.Optional },
@@ -1799,6 +1829,7 @@ Object.assign(make, {
   Max,
   Min,
   Never,
+  Len,
   One,
   Open,
   Optional,
@@ -1824,6 +1855,7 @@ Object.assign(make, {
   GMax: Max,
   GMin: Min,
   GNever: Never,
+  GLen: Len,
   GOne: One,
   GOpen: Open,
   GOptional: Optional,
@@ -1866,6 +1898,7 @@ type Gubu = typeof make & {
   Max: typeof Max
   Min: typeof Min
   Never: typeof Never
+  Len: typeof Len
   One: typeof One
   Open: typeof Open
   Optional: typeof Optional
@@ -1891,6 +1924,7 @@ type Gubu = typeof make & {
   GMax: typeof Max
   GMin: typeof Min
   GNever: typeof Never
+  GLen: typeof Len
   GOne: typeof One
   GOpen: typeof Open
   GOptional: typeof Optional
@@ -1925,6 +1959,7 @@ const GFunc = Func
 const GMax = Max
 const GMin = Min
 const GNever = Never
+const GLen = Len
 const GOne = One
 const GOpen = Open
 const GOptional = Optional
@@ -1970,6 +2005,7 @@ export {
   Max,
   Min,
   Never,
+  Len,
   One,
   Open,
   Optional,
@@ -1995,6 +2031,7 @@ export {
   GMax,
   GMin,
   GNever,
+  GLen,
   GOne,
   GOpen,
   GOptional,

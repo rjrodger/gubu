@@ -1,8 +1,8 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GFunc = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Never = exports.Min = exports.Max = exports.Func = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
-exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = void 0;
+exports.GOpen = exports.GOne = exports.GLen = exports.GNever = exports.GMin = exports.GMax = exports.GFunc = exports.GExact = exports.GEmpty = exports.GDefine = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Len = exports.Never = exports.Min = exports.Max = exports.Func = exports.Exact = exports.Empty = exports.Define = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = void 0;
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
@@ -63,6 +63,7 @@ const S = {
     Max: 'Max',
     Min: 'Min',
     Never: 'Never',
+    Len: 'Len',
     One: 'One',
     Open: 'Open',
     Optional: 'Optional',
@@ -1082,6 +1083,22 @@ const Below = function (below, shape) {
     return node;
 };
 exports.Below = Below;
+const Len = function (len, shape) {
+    let node = buildize(this, shape || Any());
+    node.b.push(function Len(val, update, state) {
+        let vlen = valueLen(val);
+        if (len === vlen) {
+            return true;
+        }
+        let errmsgpart = S.number === typeof (val) ? S.MT : ' in length';
+        update.err =
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be exactly ${len}${errmsgpart} (was ${vlen}).`);
+        return false;
+    });
+    node.s = S.Len + '(' + len + (null == shape ? S.MT : (',' + stringify(shape))) + ')';
+    return node;
+};
+exports.Len = Len;
 const Value = function (value, shape) {
     let node = undefined == shape ? buildize(this) : buildize(shape);
     let child = nodize(value);
@@ -1109,6 +1126,7 @@ function buildize(node0, node1) {
         Max,
         Min,
         Never,
+        Len,
         Refer,
         Rename,
         Required,
@@ -1252,6 +1270,7 @@ if (S.undefined !== typeof (window)) {
         { b: Max, n: S.Max },
         { b: Min, n: S.Min },
         { b: Never, n: S.Never },
+        { b: Len, n: S.Len },
         { b: One, n: S.One },
         { b: Open, n: S.Open },
         { b: Optional, n: S.Optional },
@@ -1283,6 +1302,7 @@ Object.assign(make, {
     Max,
     Min,
     Never,
+    Len,
     One,
     Open,
     Optional,
@@ -1307,6 +1327,7 @@ Object.assign(make, {
     GMax: Max,
     GMin: Min,
     GNever: Never,
+    GLen: Len,
     GOne: One,
     GOpen: Open,
     GOptional: Optional,
@@ -1358,6 +1379,8 @@ const GMin = Min;
 exports.GMin = GMin;
 const GNever = Never;
 exports.GNever = GNever;
+const GLen = Len;
+exports.GLen = GLen;
 const GOne = One;
 exports.GOne = GOne;
 const GOpen = Open;

@@ -16,6 +16,7 @@
 [Common Use Cases](#common-use-cases) | 
 [Install and Usage](#install) | 
 [Shape Rules](#shape-rules) | 
+[Shape Reference](#shape-builder-reference) | 
 [API](#api)
 
 
@@ -313,6 +314,7 @@ reference](#shape-builders).
 [Common Use Cases](#common-use-cases) | 
 [Install and Usage](#install) | 
 [Shape Rules](#shape-rules) | 
+[Shape Reference](#shape-builder-reference) | 
 [API](#api)
 
 
@@ -502,6 +504,7 @@ The built-in shape builders help you match the following shapes:
   * [Max](#max-builder): Match a value (or length of value) less than or equal to the given amount.
   * [Min](#min-builder): Match a value (or length of value) greater than or equal to the given amount.
   * [Above](#above-builder): Match a value (or length of value) greater than the given amount.
+  * [Len](#len-builder): Match a value (or length of value) exactly equal to the given amount.
 * General constraints:
   * [Closed](#closed-builder): Allow only explicitly defined elements in an array.
   * [Open](#open-builder): Allow arbitrary properties in an object (no constraint on their value).
@@ -960,8 +963,8 @@ by writing a [custom validator](#custom-validation) using the
 
 You can control the allowed length of an array using the shape
 builders [Min](#min-builder), [Max](#max-builder),
-[Above](#above-builder), and [Below](#below-builder) to restrict the
-length of the array.
+[Above](#above-builder), [Below](#below-builder), and
+[Len](#len-builder) to restrict the length of the array.
 
 ```
 let { Min } = Gubu
@@ -978,8 +981,8 @@ shape([]) // length is 0, not >= minimum 2
 
 
 The length constraining shape builders ([Min](#min-builder),
-[Max](#max-builder), [Above](#above-builder), and
-[Below](#below-builder)) work in a sensible way depending on the data
+[Max](#max-builder), [Above](#above-builder), [Below](#below-builder),
+and [Len](#len-builder)) work in a sensible way depending on the data
 type. For strings they control character length, for numbers they
 control magnitude, for objects they control property count, and for
 arrays, they control length:
@@ -1612,12 +1615,13 @@ refactoring or "schema noise".
 
 
 ### Shape Builder Reference
+<sub><sup>[top](#top)</sup></sub>
 
 [API](#api) | 
 [Shapes](#shape) | 
 [Errors](#errors) | 
 [Custom Validation](#custom-validation) |
-[Builders](#shape-builder-reference)
+[Shape Rules](#shape-rules)
 
 The built-in shape builders are:
 
@@ -1662,6 +1666,9 @@ The built-in shape builders are:
 
 * [Never](#never-builder): 
   This shape will never match anything.
+
+* [Len](#len-builder): 
+  Match a value (or length of value) exactly equal to the given amount.
 
 * [One](#one-builder): 
   Exactly one shape (and no more) must match value.
@@ -1734,6 +1741,7 @@ See also:
 [Below](#below-builder), 
 [Min](#min-builder), 
 [Max](#max-builder), 
+[Len](#len-builder), 
 [Check](#check-builder).
 
 
@@ -1974,6 +1982,7 @@ See also:
 [Above](#above-builder), 
 [Min](#min-builder), 
 [Max](#max-builder), 
+[Len](#len-builder), 
 [Check](#check-builder).
 
 
@@ -2245,6 +2254,7 @@ See also:
 [Above](#above-builder), 
 [Below](#below-builder), 
 [Min](#min-builder), 
+[Len](#len-builder), 
 [Check](#check-builder).
 
 
@@ -2295,8 +2305,58 @@ See also:
 [Above](#above-builder), 
 [Below](#below-builder), 
 [Max](#max-builder), 
+[Len](#len-builder), 
 [Check](#check-builder).
 
+
+
+---
+#### Len Builder
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
+
+```ts
+Len( value: number, child?: any )
+```
+
+* **Standalone:** `Len(2)`
+* **As Parent:** `Len(2, String)`
+* **As Child:** `Skip(Len(2))`
+* **Chainable:** `Required(String).Len(2)`
+
+Only allow values that have length equal to the given value. "Length" means:
+* Arrays: array length; 
+* Strings: string length; 
+* Objects: number of keys;
+* Numbers: numeric value;
+* Object with property `length`: numeric value of `length`;
+* Anything else fails.
+
+For more complex validation, use the [Check](#check-builder) shape builder to write
+a custom validation function.
+
+```js
+const { Len } = Gubu
+let shape = Gubu(Len(2))
+
+shape('abc') // FAIL: 'Value "abc" for property "" must be exactly 2 in length (was 3).'
+shape('ab')  // PASS: 'ab'.length 2 >= 2 ; returns 'ab'
+shape('a')   // FAIL: 'Value "a" for property "" must be exactly 2 in length (was 1).'
+
+shape(3) // FAIL: 3 != 2; returns 3
+shape(2) // PASS: 2 == 2; returns 2
+shape(1) // FAIL: throws 'Value "1" for property "" must be exactly 2 (was 1).'
+
+shape([1, 2, 3 ]) // FAIL: throws: 'Value "[1,2,3]" for property "" must be exactly 2 in length (was 3).'
+shape([1, 2])     // PASS: array length 2 >= 2; returns [1, 2]
+shape([1])        // FAIL: throws: 'Value "[1]" for property "" must be exactly 2 in length (was 1).'
+```
+
+See also: 
+[Above](#above-builder), 
+[Below](#below-builder), 
+[Max](#max-builder), 
+[Min](#min-builder), 
+[Check](#check-builder).
 
 
 ---

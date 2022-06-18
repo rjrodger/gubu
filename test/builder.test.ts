@@ -33,13 +33,13 @@ const {
   Below,
   Check,
   Closed,
-  // Default,
   Define,
   Empty,
   Exact,
   Max,
   Min,
   Never,
+  Len,
   One,
   Open,
   Optional,
@@ -1197,6 +1197,30 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
     expect(() => g0({ e: [{ x: 1, y: 2 }] })).toThrow('Value "{x:1,y:2}" for property "e.0" must have length below 2 (was 2).')
     expect(g0({ e: [] })).toMatchObject({ e: [] })
 
+  })
+
+
+  test('builder-len', () => {
+    let g0 = Gubu({
+      a: Len(1),
+      b: Len(2, [String]),
+      c: Len(3, 'foo'),
+      d: [Len(4, Number)],
+      e: [Len(2, {})],
+    })
+    expect(g0({ a: 'a' })).toMatchObject({ a: 'a' })
+    expect(g0({ a: 1 })).toMatchObject({ a: 1 })
+    expect(() => g0({ a: 'bb' }))
+      .toThrow(`Value "bb" for property "a" must be exactly 1 in length (was 2).`)
+
+    expect(g0({ b: ['x', 'y'] })).toMatchObject({ b: ['x', 'y'] })
+    expect(() => g0({ b: ['x', 'y', 'z'] }))
+      .toThrow(`Value "[x,y,z]" for property "b" ` +
+        `must be exactly 2 in length (was 3).`)
+    expect(() => g0({ b: ['x'] }))
+      .toThrow(`Value "[x]" for property "b" must be exactly 2 in length (was 1).`)
+    expect(() => g0({ b: [] }))
+      .toThrow(`Value "[]" for property "b" must be exactly 2 in length (was 0).`)
   })
 
 
