@@ -99,6 +99,49 @@ type Builder = (
 type Validate = (val: any, update: Update, state: State) => boolean
 
 
+// Help the minifier
+const S = {
+  MT: '',
+  name: 'name',
+  never: 'never',
+  number: 'number',
+  required: 'required',
+  array: 'array',
+  function: 'function',
+  object: 'object',
+  string: 'string',
+  undefined: 'undefined',
+
+  Object: 'Object',
+
+  Above: 'Above',
+  After: 'After',
+  All: 'All',
+  Any: 'Any',
+  Before: 'Before',
+  Below: 'Below',
+  Check: 'Check',
+  Closed: 'Closed',
+  Define: 'Define',
+  Empty: 'Empty',
+  Exact: 'Exact',
+  Func: 'Func',
+  Max: 'Max',
+  Min: 'Min',
+  Never: 'Never',
+  One: 'One',
+  Open: 'Open',
+  Optional: 'Optional',
+  Refer: 'Refer',
+  Rename: 'Rename',
+  Required: 'Required',
+  Skip: 'Skip',
+  Some: 'Some',
+  Value: 'Value',
+
+}
+
+
 // The current validation state.
 class State {
   match: boolean = false
@@ -109,11 +152,11 @@ class State {
   pI: number = 0  // Pointer to current node.
   sI: number = -1 // Pointer to next sibling node.
 
-  valType: string = 'never'
+  valType: string = S.never
   isRoot: boolean = false
 
-  key: string = ''
-  type: string = 'never'
+  key: string = S.MT
+  type: string = S.never
 
   stop: boolean = true
   nextSibling: boolean = true
@@ -201,7 +244,7 @@ class State {
   updateVal(val: any) {
     this.val = val
     this.valType = typeof (this.val)
-    if ('number' === this.valType && isNaN(this.val)) {
+    if (S.number === this.valType && isNaN(this.val)) {
       this.valType = 'nan'
     }
     if (this.isRoot && !this.match) {
@@ -314,12 +357,12 @@ const IS_TYPE: { [name: string]: boolean } = {
 
 // Empty values for each type.
 const EMPTY_VAL: { [name: string]: any } = {
-  string: '',
+  string: S.MT,
   number: 0,
   boolean: false,
   object: {},
   array: [],
-  symbol: Symbol(''),
+  symbol: Symbol(S.MT),
   bigint: BigInt(0),
   null: null,
 }
@@ -348,12 +391,12 @@ function nodize(shape?: any, depth?: number): Node {
       node.$ = { v$: VERSION, ...node.$, gubu$: GUBU$ }
 
       node.v =
-        (null != node.v && 'object' === typeof (node.v)) ? { ...node.v } : node.v
+        (null != node.v && S.object === typeof (node.v)) ? { ...node.v } : node.v
 
       // Leave as-is: node.c
 
       node.t = node.t || typeof (node.v)
-      if ('function' === node.t && IS_TYPE[node.v.name]) {
+      if (S.function === node.t && IS_TYPE[node.v.name]) {
         node.t = (node.v.name.toLowerCase() as ValType)
         node.v = clone(EMPTY_VAL[node.t])
       }
@@ -373,7 +416,7 @@ function nodize(shape?: any, depth?: number): Node {
 
   // Not a Node, so build one based on value and its type.
   let t: ValType | 'undefined' = (null === shape ? 'null' : typeof (shape))
-  t = ('undefined' === t ? 'any' : t) as ValType
+  t = (S.undefined === t ? 'any' : t) as ValType
 
   let v = shape
   let c: any = GUBU$NIL
@@ -384,9 +427,9 @@ function nodize(shape?: any, depth?: number): Node {
   let a: any[] = []
   let b: any[] = []
 
-  if ('object' === t) {
+  if (S.object === t) {
     if (Array.isArray(v)) {
-      t = 'array'
+      t = (S.array as ValType)
       if (1 === v.length) {
         c = v[0]
         v = []
@@ -399,7 +442,6 @@ function nodize(shape?: any, depth?: number): Node {
       Object !== v.constructor &&
       null != v.constructor
     ) {
-      // console.log('QQQB', v, v.constructor)
       t = 'instance'
       u.n = v.constructor.name
       u.i = v.constructor
@@ -415,14 +457,14 @@ function nodize(shape?: any, depth?: number): Node {
     }
   }
 
-  else if ('function' === t) {
+  else if (S.function === t) {
     if (IS_TYPE[shape.name]) {
       t = (shape.name.toLowerCase() as ValType)
       r = true
       v = clone(EMPTY_VAL[t])
 
       // Required "Object" is considered Open
-      if ('Object' === shape.name) {
+      if (S.Object === shape.name) {
         c = Any()
       }
     }
@@ -448,20 +490,20 @@ function nodize(shape?: any, depth?: number): Node {
       u.i = v
     }
   }
-  else if ('number' === t && isNaN(v)) {
+  else if (S.number === t && isNaN(v)) {
     t = 'nan'
   }
-  else if ('string' === t && '' === v) {
+  else if (S.string === t && S.MT === v) {
     u.empty = true
   }
 
-  let vmap = (null != v && ('object' === t || 'array' === t)) ? { ...v } : v
+  let vmap = (null != v && (S.object === t || S.array === t)) ? { ...v } : v
 
   let node: Node = {
     $: GUBU,
     t,
     v: vmap,
-    n: null != vmap && 'object' === typeof (vmap) ? Object.keys(vmap).length : 0,
+    n: null != vmap && S.object === typeof (vmap) ? Object.keys(vmap).length : 0,
     c,
     r,
     p,
@@ -479,7 +521,7 @@ function nodize(shape?: any, depth?: number): Node {
 function make<S>(intop?: S, inopts?: Options) {
   const opts = null == inopts ? {} : inopts
   opts.name =
-    null == opts.name ? 'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name
+    null == opts.name ? 'G' + (S.MT + Math.random()).substring(2, 8) : S.MT + opts.name
 
   let top: Node = nodize(intop, 0)
 
@@ -513,19 +555,19 @@ function make<S>(intop?: S, inopts?: Options) {
       }
 
       if (!done) {
-        if ('never' === s.type) {
-          s.err.push(makeErrImpl('never', s, 1070))
+        if (S.never === s.type) {
+          s.err.push(makeErrImpl(S.never, s, 1070))
         }
-        else if ('object' === s.type) {
+        else if (S.object === s.type) {
           let val
           if (n.r && undefined === s.val) {
             s.ignoreVal = true
-            s.err.push(makeErrImpl('required', s, 1010))
+            s.err.push(makeErrImpl(S.required, s, 1010))
           }
           else if (
             undefined !== s.val && (
               null === s.val ||
-              'object' !== s.valType ||
+              S.object !== s.valType ||
               Array.isArray(s.val)
             )
           ) {
@@ -588,10 +630,10 @@ function make<S>(intop?: S, inopts?: Options) {
           }
         }
 
-        else if ('array' === s.type) {
+        else if (S.array === s.type) {
           if (n.r && undefined === s.val) {
             s.ignoreVal = true
-            s.err.push(makeErrImpl('required', s, 1030))
+            s.err.push(makeErrImpl(S.required, s, 1030))
           }
           else if (undefined !== s.val && !Array.isArray(s.val)) {
             s.err.push(makeErrImpl('type', s, 1040))
@@ -624,7 +666,7 @@ function make<S>(intop?: S, inopts?: Options) {
                     s.nodes[s.nI] = elementShape
                     s.vals[s.nI] = s.val[elementIndex]
                     s.parents[s.nI] = s.val
-                    s.keys[s.nI] = '' + elementIndex
+                    s.keys[s.nI] = S.MT + elementIndex
                     s.nI++
                   }
                 }
@@ -637,7 +679,7 @@ function make<S>(intop?: S, inopts?: Options) {
                   s.nodes[s.nI] = elementShape
                   s.vals[s.nI] = s.val[elementIndex]
                   s.parents[s.nI] = s.val
-                  s.keys[s.nI] = '' + elementIndex
+                  s.keys[s.nI] = S.MT + elementIndex
                   s.nI++
                 }
               }
@@ -669,14 +711,14 @@ function make<S>(intop?: S, inopts?: Options) {
           let parentKey = s.path[s.dI]
 
           if (n.r &&
-            ('undefined' !== s.type || !s.parent.hasOwnProperty(parentKey))) {
+            (S.undefined !== s.type || !s.parent.hasOwnProperty(parentKey))) {
             s.ignoreVal = true
-            s.err.push(makeErrImpl('required', s, 1060))
+            s.err.push(makeErrImpl(S.required, s, 1060))
           }
           else if (
             undefined !== n.v &&
             !n.p ||
-            'undefined' === s.type
+            S.undefined === s.type
           ) {
             s.updateVal(n.v)
             s.fromDefault = true
@@ -687,8 +729,8 @@ function make<S>(intop?: S, inopts?: Options) {
         }
 
         // Empty strings fail even if string is optional. Use Empty() to allow.
-        else if ('string' === s.type && '' === s.val && !n.u.empty) {
-          s.err.push(makeErrImpl('required', s, 1080))
+        else if (S.string === s.type && S.MT === s.val && !n.u.empty) {
+          s.err.push(makeErrImpl(S.required, s, 1080))
         }
       }
 
@@ -777,9 +819,9 @@ function make<S>(intop?: S, inopts?: Options) {
   }
 
 
-  let desc: string = ''
+  let desc: string = S.MT
   gubuShape.toString = () => {
-    desc = truncate('' === desc ?
+    desc = truncate(S.MT === desc ?
       stringify(
         (
           top &&
@@ -826,15 +868,15 @@ function handleValidate(vf: Validate, s: State): Update {
       return update
     }
 
-    let w = update.why || 'check' // 'custom'
+    let w = update.why || 'check'
     let p = pathstr(s)
 
-    if ('string' === typeof (update.err)) {
-      s.err.push(makeErr(s, update.err))
+    if (S.string === typeof (update.err)) {
+      s.err.push(makeErr(s, (update.err as string)))
     }
-    else if ('object' === typeof (update.err)) {
+    else if (S.object === typeof (update.err)) {
       // Assumes makeErr already called
-      s.err.push(...[update.err].flat().map(e => {
+      s.err.push(...[update.err].flat().map((e: any) => {
         e.p = null == e.p ? p : e.p
         e.m = null == e.m ? 2010 : e.m
         return e
@@ -842,7 +884,7 @@ function handleValidate(vf: Validate, s: State): Update {
     }
     else {
       let fname = vf.name
-      if (null == fname || '' == fname) {
+      if (null == fname || S.MT == fname) {
         fname = truncate(vf.toString().replace(/[ \t\r\n]+/g, ' '))
       }
       s.err.push(makeErrImpl(
@@ -887,7 +929,7 @@ const Required: Builder = function(this: Node, shape?: any) {
 
   // Handle an explicit undefined.
   if (undefined === shape && 1 === arguments.length) {
-    node.t = 'undefined'
+    node.t = (S.undefined as ValType)
     node.v = undefined
   }
 
@@ -901,7 +943,7 @@ const Optional: Builder = function(this: Node, shape?: any) {
 
   // Handle an explicit undefined.
   if (undefined === shape && 1 === arguments.length) {
-    node.t = 'undefined'
+    node.t = (S.undefined as ValType)
     node.v = undefined
   }
   return node
@@ -921,7 +963,7 @@ const Skip: Builder = function(this: Node, shape?: any) {
 
 const Func: Builder = function(this: Node, shape?: any) {
   let node = buildize(this)
-  node.t = 'function'
+  node.t = (S.function as ValType)
   node.v = shape
   return node
 }
@@ -968,7 +1010,7 @@ const Any: Builder = function(this: Node, shape?: any) {
 
 const Never: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
-  node.t = 'never'
+  node.t = (S.never as ValType)
   return node
 }
 
@@ -1135,21 +1177,21 @@ const Check: Builder = function(
 ) {
   let node = buildize(this, shape)
 
-  if ('function' === typeof check) {
+  if (S.function === typeof check) {
     let c$ = check as any
     c$.gubu$ = c$.gubu$ || {}
     c$.gubu$.Check = true
 
-    node.b.push(check)
-    node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true)
+    node.b.push((check as Validate))
+    node.s = (null == node.s ? S.MT : node.s + ';') + stringify(check, null, true)
     node.r = true
   }
-  else if ('object' === typeof check) {
+  else if (S.object === typeof check) {
     let dstr = Object.prototype.toString.call(check)
     if (dstr.includes('RegExp')) {
       let refn = (v: any) =>
-        (null == v || Number.isNaN(v)) ? false : !!String(v).match(check)
-      Object.defineProperty(refn, 'name', {
+        (null == v || Number.isNaN(v)) ? false : !!String(v).match(check as string)
+      Object.defineProperty(refn, S.name, {
         value: String(check)
       })
       Object.defineProperty(refn, 'gubu$', { value: { Check: true } })
@@ -1160,7 +1202,7 @@ const Check: Builder = function(
   }
   // string is type name.
   // TODO: validate check is ValType
-  else if ('string' === typeof check) {
+  else if (S.string === typeof check) {
     node.t = check as ValType
     node.r = true
   }
@@ -1180,7 +1222,7 @@ const Closed: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
 
   // Makes one element array fixed.
-  if ('array' === node.t && GUBU$NIL !== node.c && 0 === node.n) {
+  if (S.array === node.t && GUBU$NIL !== node.c && 0 === node.n) {
     node.v = [node.c]
     node.c = GUBU$NIL
   }
@@ -1195,11 +1237,11 @@ const Closed: Builder = function(this: Node, shape?: any) {
 const Define: Builder = function(this: Node, inopts: any, shape?: any): Node {
   let node = buildize(this, shape)
 
-  let opts = 'object' === typeof inopts ? inopts || {} : {}
-  let name = 'string' === typeof inopts ? inopts : opts.name
+  let opts = S.object === typeof inopts ? inopts || {} : {}
+  let name = S.string === typeof inopts ? inopts : opts.name
 
 
-  if (null != name && '' != name) {
+  if (null != name && S.MT != name) {
     node.b.push(function Define(_val: any, _update: Update, state: State) {
       let ref = state.ctx.ref = state.ctx.ref || {}
       ref[name] = state.node
@@ -1215,20 +1257,20 @@ const Define: Builder = function(this: Node, inopts: any, shape?: any): Node {
 const Refer: Builder = function(this: Node, inopts: any, shape?: any): Node {
   let node = buildize(this, shape)
 
-  let opts = 'object' === typeof inopts ? inopts || {} : {}
-  let name = 'string' === typeof inopts ? inopts : opts.name
+  let opts = S.object === typeof inopts ? inopts || {} : {}
+  let name = S.string === typeof inopts ? inopts : opts.name
 
   // Fill should be false (the default) if used recursively, to prevent loops.
   let fill = !!opts.fill
 
-  if (null != name && '' != name) {
+  if (null != name && S.MT != name) {
     node.b.push(function Refer(val: any, update: Update, state: State) {
       if (undefined !== val || fill) {
         let ref = state.ctx.ref = state.ctx.ref || {}
 
         if (undefined !== ref[name]) {
           let node = { ...ref[name] }
-          node.t = node.t || 'never'
+          node.t = node.t || S.never
 
           update.node = node
           update.type = node.t
@@ -1249,14 +1291,14 @@ const Refer: Builder = function(this: Node, inopts: any, shape?: any): Node {
 const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
   let node = buildize(this, shape)
 
-  let opts = 'object' === typeof inopts ? inopts || {} : {}
-  let name = 'string' === typeof inopts ? inopts : opts.name
+  let opts = S.object === typeof inopts ? inopts || {} : {}
+  let name = S.string === typeof inopts ? inopts : opts.name
   let keep = 'boolean' === typeof opts.keep ? opts.keep : undefined
 
   // NOTE: Rename claims are experimental.
   let claim = Array.isArray(opts.claim) ? opts.claim : []
 
-  if (null != name && '' != name) {
+  if (null != name && S.MT != name) {
 
     // If there is a claim, grab the value so that validations
     // can be applied to it.
@@ -1311,7 +1353,7 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
       }
       return true
     }
-    Object.defineProperty(before, 'name', { value: 'Rename:' + name })
+    Object.defineProperty(before, S.name, { value: 'Rename:' + name })
     node.b.push(before)
 
     let after = (val: any, update: Update, s: State) => {
@@ -1339,7 +1381,7 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
 
       return true
     }
-    Object.defineProperty(after, 'name', { value: 'Rename:' + name })
+    Object.defineProperty(after, S.name, { value: 'Rename:' + name })
     node.a.push(after)
   }
 
@@ -1348,9 +1390,9 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
 
 
 function valueLen(val: any) {
-  return 'number' === typeof (val) ? val :
-    'number' === typeof (val?.length) ? val.length :
-      null != val && 'object' === typeof (val) ? Object.keys(val).length :
+  return S.number === typeof (val) ? val :
+    S.number === typeof (val?.length) ? val.length :
+      null != val && S.object === typeof (val) ? Object.keys(val).length :
         NaN
 }
 
@@ -1359,7 +1401,7 @@ function truncate(str?: string, len?: number): string {
   let strval = String(str)
   let outlen = null == len || isNaN(len) ? 30 : len < 0 ? 0 : ~~len
   let strlen = null == str ? 0 : strval.length
-  let substr = null == str ? '' : strval.substring(0, strlen)
+  let substr = null == str ? S.MT : strval.substring(0, strlen)
   substr = outlen < strlen ? substr.substring(0, outlen - 3) + '...' : substr
   return substr.substring(0, outlen)
 }
@@ -1380,14 +1422,14 @@ const Min: Builder = function(
       return true
     }
 
-    let errmsgpart = 'number' === typeof (val) ? '' : 'length '
+    let errmsgpart = S.number === typeof (val) ? S.MT : 'length '
     update.err =
       makeErr(state,
         `Value "$VALUE" for property "$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`)
     return false
   })
 
-  node.s = 'Min(' + min + (null == shape ? '' : (',' + stringify(shape))) + ')'
+  node.s = 'Min(' + min + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -1407,14 +1449,14 @@ const Max: Builder = function(
       return true
     }
 
-    let errmsgpart = 'number' === typeof (val) ? '' : 'length '
+    let errmsgpart = S.number === typeof (val) ? S.MT : 'length '
     update.err =
       makeErr(state,
         `Value "$VALUE" for property "$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`)
     return false
   })
 
-  node.s = 'Max(' + max + (null == shape ? '' : (',' + stringify(shape))) + ')'
+  node.s = 'Max(' + max + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -1434,14 +1476,14 @@ const Above: Builder = function(
       return true
     }
 
-    let errmsgpart = 'number' === typeof (val) ? 'be' : 'have length'
+    let errmsgpart = S.number === typeof (val) ? 'be' : 'have length'
     update.err =
       makeErr(state,
         `Value "$VALUE" for property "$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`)
     return false
   })
 
-  node.s = 'Above(' + above + (null == shape ? '' : (',' + stringify(shape))) + ')'
+  node.s = 'Above(' + above + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -1461,14 +1503,14 @@ const Below: Builder = function(
       return true
     }
 
-    let errmsgpart = 'number' === typeof (val) ? 'be' : 'have length'
+    let errmsgpart = S.number === typeof (val) ? 'be' : 'have length'
     update.err =
       makeErr(state,
         `Value "$VALUE" for property "$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`)
     return false
   })
 
-  node.s = 'Below(' + below + (null == shape ? '' : (',' + stringify(shape))) + ')'
+  node.s = 'Below(' + below + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -1546,16 +1588,16 @@ function makeErrImpl(
     p: pathstr(s),
     w: why,
     m: mark,
-    t: '',
+    t: S.MT,
     u: user || {},
   }
 
-  let jstr = undefined === s.val ? '' : stringify(s.val)
-  let valstr = truncate(jstr.replace(/"/g, ''))
+  let jstr = undefined === s.val ? S.MT : stringify(s.val)
+  let valstr = truncate(jstr.replace(/"/g, S.MT))
 
-  if (null == text || '' === text) {
-    let valkind = valstr.startsWith('[') ? 'array' :
-      valstr.startsWith('{') ? 'object' : 'value'
+  if (null == text || S.MT === text) {
+    let valkind = valstr.startsWith('[') ? S.array :
+      valstr.startsWith('{') ? S.object : 'value'
     let propkind = (valstr.startsWith('[') || Array.isArray(s.parents[s.pI])) ?
       'index' : 'property'
     let propkindverb = 'is'
@@ -1568,18 +1610,18 @@ function makeErrImpl(
       propkey
 
     err.t = `Validation failed for ` +
-      (0 < err.p.length ? `${propkind} "${err.p}" with ` : '') +
+      (0 < err.p.length ? `${propkind} "${err.p}" with ` : S.MT) +
       `${valkind} "${valstr}" because ` +
 
       ('type' === why ? (
         'instance' === s.node.t ?
           `the ${valkind} is not an instance of ${s.node.u.n} ` :
           `the ${valkind} is not of type ${s.node.t}`) :
-        'required' === why ? ('' === s.val ? 'an empty string is not allowed' :
+        S.required === why ? (S.MT === s.val ? 'an empty string is not allowed' :
           `the ${valkind} is required`) :
           'closed' === why ?
             `the ${propkind} "${propkey}" ${propkindverb} not allowed` :
-            'never' === why ? 'no value is allowed' :
+            S.never === why ? 'no value is allowed' :
               `check "${null == fname ? why : fname}" failed`) +
       (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.')
   }
@@ -1594,7 +1636,7 @@ function makeErrImpl(
 
 
 function node2str(n: Node): string {
-  return (null != n.s && '' !== n.s) ? n.s :
+  return (null != n.s && S.MT !== n.s) ? n.s :
     (!n.r && undefined !== n.v) ? n.v : n.t
 }
 
@@ -1615,19 +1657,19 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
 
       if (
         null != val &&
-        'object' === typeof (val) &&
+        S.object === typeof (val) &&
         val.constructor &&
-        'Object' !== val.constructor.name &&
+        S.Object !== val.constructor.name &&
         'Array' !== val.constructor.name
       ) {
         val =
-          'function' === typeof val.toString ? val.toString() : val.constructor.name
+          S.function === typeof val.toString ? val.toString() : val.constructor.name
       }
-      else if ('function' === typeof (val)) {
-        if ('function' === typeof ((make as any)[val.name]) && isNaN(+key)) {
+      else if (S.function === typeof (val)) {
+        if (S.function === typeof ((make as any)[val.name]) && isNaN(+key)) {
           val = undefined
         }
-        else if (null != val.name && '' !== val.name) {
+        else if (null != val.name && S.MT !== val.name) {
           val = val.name
         }
         else {
@@ -1655,7 +1697,7 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
   }
 
   if (true === dequote) {
-    str = str.replace(/^"/, '').replace(/"$/, '')
+    str = str.replace(/^"/, S.MT).replace(/"$/, S.MT)
   }
 
   return str
@@ -1663,7 +1705,7 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
 
 
 function clone(x: any) {
-  return null == x ? x : 'object' !== typeof (x) ? x : JSON.parse(JSON.stringify(x))
+  return null == x ? x : S.object !== typeof (x) ? x : JSON.parse(JSON.stringify(x))
 }
 
 
@@ -1687,37 +1729,37 @@ const G$ = (node: any): Node => nodize({ ...node, $: { gubu$: true } })
 
 // Fix builder names after terser mangles them.
 /* istanbul ignore next */
-if ('undefined' !== typeof (window)) {
+if (S.undefined !== typeof (window)) {
   let builds: { b: Builder, n: string }[] = [
 
-    { b: Above, n: 'Above' },
-    { b: After, n: 'After' },
-    { b: All, n: 'All' },
-    { b: Any, n: 'Any' },
-    { b: Before, n: 'Before' },
-    { b: Below, n: 'Below' },
-    { b: Check, n: 'Check' },
-    { b: Closed, n: 'Closed' },
-    { b: Define, n: 'Define' },
-    { b: Empty, n: 'Empty' },
-    { b: Exact, n: 'Exact' },
-    { b: Func, n: 'Func' },
-    { b: Max, n: 'Max' },
-    { b: Min, n: 'Min' },
-    { b: Never, n: 'Never' },
-    { b: One, n: 'One' },
-    { b: Open, n: 'Open' },
-    { b: Optional, n: 'Optional' },
-    { b: Refer, n: 'Refer' },
-    { b: Rename, n: 'Rename' },
-    { b: Required, n: 'Required' },
-    { b: Skip, n: 'Skip' },
-    { b: Some, n: 'Some' },
-    { b: Value, n: 'Value' },
+    { b: Above, n: S.Above },
+    { b: After, n: S.After },
+    { b: All, n: S.All },
+    { b: Any, n: S.Any },
+    { b: Before, n: S.Before },
+    { b: Below, n: S.Below },
+    { b: Check, n: S.Check },
+    { b: Closed, n: S.Closed },
+    { b: Define, n: S.Define },
+    { b: Empty, n: S.Empty },
+    { b: Exact, n: S.Exact },
+    { b: Func, n: S.Func },
+    { b: Max, n: S.Max },
+    { b: Min, n: S.Min },
+    { b: Never, n: S.Never },
+    { b: One, n: S.One },
+    { b: Open, n: S.Open },
+    { b: Optional, n: S.Optional },
+    { b: Refer, n: S.Refer },
+    { b: Rename, n: S.Rename },
+    { b: Required, n: S.Required },
+    { b: Skip, n: S.Skip },
+    { b: Some, n: S.Some },
+    { b: Value, n: S.Value },
 
   ]
   for (let build of builds) {
-    Object.defineProperty(build.b, 'name', { value: build.n })
+    Object.defineProperty(build.b, S.name, { value: build.n })
   }
 }
 
@@ -1843,7 +1885,7 @@ type Gubu = typeof make & {
   GValue: typeof Value
 }
 
-Object.defineProperty(make, 'name', { value: 'gubu' })
+Object.defineProperty(make, S.name, { value: 'gubu' })
 
 
 // The primary export.
