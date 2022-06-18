@@ -21,7 +21,7 @@ import { inspect } from 'util'
 
 
 // Package version.
-const VERSION = '3.0.0'
+const VERSION = '3.1.0'
 
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$')
