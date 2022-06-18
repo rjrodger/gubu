@@ -72,11 +72,15 @@ const S = {
     Skip: 'Skip',
     Some: 'Some',
     Value: 'Value',
-    forprop: ' for property '
+    forprop: ' for property ',
+    $PATH: '"$PATH"',
+    $VALUE: '"$VALUE"',
 };
 const keys = (arg) => Object.keys(arg);
 const defprop = (o, p, a) => Object.defineProperty(o, p, a);
 const isarr = (arg) => Array.isArray(arg);
+const JP = (arg) => JSON.parse(arg);
+const JS = (a0, a1) => JSON.stringify(a0, a1);
 // The current validation state.
 class State {
     constructor(root, top, ctx, match) {
@@ -545,7 +549,7 @@ function make(intop, inopts) {
         // TODO: when c is GUBU$NIL it is not present, should have some indicator value
         // Normalize spec, discard errors.
         gubuShape(undefined, { err: false });
-        return JSON.parse(stringify(top, (_key, val) => {
+        return JP(stringify(top, (_key, val) => {
             if (GUBU$ === val) {
                 return true;
             }
@@ -727,7 +731,7 @@ const All = function (...inshapes) {
         if (!pass) {
             update.why = S.All;
             update.err = [
-                makeErr(state, S.Value + ' "$VALUE"' + S.forprop + `"$PATH" does not satisfy all of: ` +
+                makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' does not satisfy all of: ' +
                     `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
@@ -757,7 +761,7 @@ const Some = function (...inshapes) {
         if (!pass) {
             update.why = S.Some;
             update.err = [
-                makeErr(state, S.Value + ' "$VALUE"' + S.forprop + `"$PATH" does not satisfy any of: ` +
+                makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' does not satisfy any of: ' +
                     `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
@@ -787,7 +791,7 @@ const One = function (...inshapes) {
         if (1 !== passN) {
             update.why = S.One;
             update.err = [
-                makeErr(state, S.Value + ' "$VALUE"' + S.forprop + `"$PATH" does not satisfy one of: ` +
+                makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' does not satisfy one of: ' +
                     `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
@@ -805,7 +809,7 @@ const Exact = function (...vals) {
             }
         }
         update.err =
-            makeErr(state, S.Value + ' "$VALUE"' + S.forprop + `"$PATH" must be exactly one of: ` +
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' must be exactly one of: ' +
                 `${state.node.s}.`);
         update.done = true;
         return false;
@@ -1023,7 +1027,7 @@ const Min = function (min, shape) {
         }
         let errmsgpart = S.number === typeof (val) ? S.MT : 'length ';
         update.err =
-            makeErr(state, S.Value + ' "$VALUE"' + S.forprop + `"$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
         return false;
     });
     node.s = S.Min + '(' + min + (null == shape ? S.MT : (',' + stringify(shape))) + ')';
@@ -1039,7 +1043,7 @@ const Max = function (max, shape) {
         }
         let errmsgpart = S.number === typeof (val) ? S.MT : 'length ';
         update.err =
-            makeErr(state, `Value "$VALUE"` + S.forprop + `"$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`);
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`);
         return false;
     });
     node.s = S.Max + '(' + max + (null == shape ? S.MT : (',' + stringify(shape))) + ')';
@@ -1055,7 +1059,7 @@ const Above = function (above, shape) {
         }
         let errmsgpart = S.number === typeof (val) ? 'be' : 'have length';
         update.err =
-            makeErr(state, S.Value + ' "$VALUE"' + S.forprop + `"$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`);
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must ${errmsgpart} above ${above} (was ${vlen}).`);
         return false;
     });
     node.s = S.Above + '(' + above + (null == shape ? S.MT : (',' + stringify(shape))) + ')';
@@ -1071,7 +1075,7 @@ const Below = function (below, shape) {
         }
         let errmsgpart = S.number === typeof (val) ? 'be' : 'have length';
         update.err =
-            makeErr(state, S.Value + ' "$VALUE"' + S.forprop + `"$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`);
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must ${errmsgpart} below ${below} (was ${vlen}).`);
         return false;
     });
     node.s = S.Below + '(' + below + (null == shape ? S.MT : (',' + stringify(shape))) + ')';
@@ -1177,7 +1181,7 @@ function stringify(src, replacer, dequote, expand) {
         src = node2str(src);
     }
     try {
-        str = JSON.stringify(src, (key, val) => {
+        str = JS(src, (key, val) => {
             var _a, _b;
             if (replacer) {
                 val = replacer(key, val);
@@ -1216,7 +1220,7 @@ function stringify(src, replacer, dequote, expand) {
         str = String(str);
     }
     catch (e) {
-        str = JSON.stringify(String(src));
+        str = JS(String(src));
     }
     if (true === dequote) {
         str = str.replace(/^"/, S.MT).replace(/"$/, S.MT);
@@ -1225,7 +1229,7 @@ function stringify(src, replacer, dequote, expand) {
 }
 exports.stringify = stringify;
 function clone(x) {
-    return null == x ? x : S.object !== typeof (x) ? x : JSON.parse(JSON.stringify(x));
+    return null == x ? x : S.object !== typeof (x) ? x : JP(JS(x));
 }
 const G$ = (node) => nodize({ ...node, $: { gubu$: true } });
 exports.G$ = G$;

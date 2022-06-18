@@ -147,12 +147,18 @@ const S = {
   Some: 'Some',
   Value: 'Value',
 
-  forprop: ' for property '
+  forprop: ' for property ',
+  $PATH: '"$PATH"',
+  $VALUE: '"$VALUE"',
 }
+
 
 const keys = (arg: any) => Object.keys(arg)
 const defprop = (o: any, p: any, a: any) => Object.defineProperty(o, p, a)
 const isarr = (arg: any) => Array.isArray(arg)
+const JP = (arg: string) => JSON.parse(arg)
+const JS = (a0: any, a1?: any) => JSON.stringify(a0, a1)
+
 
 // The current validation state.
 class State {
@@ -815,7 +821,7 @@ function make<S>(intop?: S, inopts?: Options) {
 
     // Normalize spec, discard errors.
     gubuShape(undefined, { err: false })
-    return JSON.parse(stringify(top, (_key: string, val: any) => {
+    return JP(stringify(top, (_key: string, val: any) => {
       if (GUBU$ === val) {
         return true
       }
@@ -1051,7 +1057,7 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = S.All
       update.err = [
         makeErr(state,
-          S.Value + ' "$VALUE"' + S.forprop + `"$PATH" does not satisfy all of: ` +
+          S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' does not satisfy all of: ' +
           `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
@@ -1091,7 +1097,7 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = S.Some
       update.err = [
         makeErr(state,
-          S.Value + ' "$VALUE"' + S.forprop + `"$PATH" does not satisfy any of: ` +
+          S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' does not satisfy any of: ' +
           `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
@@ -1129,7 +1135,7 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = S.One
       update.err = [
         makeErr(state,
-          S.Value + ' "$VALUE"' + S.forprop + `"$PATH" does not satisfy one of: ` +
+          S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' does not satisfy one of: ' +
           `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
@@ -1153,7 +1159,7 @@ const Exact: Builder = function(this: Node, ...vals: any[]) {
 
     update.err =
       makeErr(state,
-        S.Value + ' "$VALUE"' + S.forprop + `"$PATH" must be exactly one of: ` +
+        S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' must be exactly one of: ' +
         `${state.node.s}.`
       )
 
@@ -1436,7 +1442,7 @@ const Min: Builder = function(
     let errmsgpart = S.number === typeof (val) ? S.MT : 'length '
     update.err =
       makeErr(state,
-        S.Value + ' "$VALUE"' + S.forprop + `"$PATH" must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`)
+        S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`)
     return false
   })
 
@@ -1463,7 +1469,7 @@ const Max: Builder = function(
     let errmsgpart = S.number === typeof (val) ? S.MT : 'length '
     update.err =
       makeErr(state,
-        `Value "$VALUE"` + S.forprop + `"$PATH" must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`)
+        S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`)
     return false
   })
 
@@ -1490,7 +1496,7 @@ const Above: Builder = function(
     let errmsgpart = S.number === typeof (val) ? 'be' : 'have length'
     update.err =
       makeErr(state,
-        S.Value + ' "$VALUE"' + S.forprop + `"$PATH" must ${errmsgpart} above ${above} (was ${vlen}).`)
+        S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must ${errmsgpart} above ${above} (was ${vlen}).`)
     return false
   })
 
@@ -1517,7 +1523,7 @@ const Below: Builder = function(
     let errmsgpart = S.number === typeof (val) ? 'be' : 'have length'
     update.err =
       makeErr(state,
-        S.Value + ' "$VALUE"' + S.forprop + `"$PATH" must ${errmsgpart} below ${below} (was ${vlen}).`)
+        S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must ${errmsgpart} below ${below} (was ${vlen}).`)
     return false
   })
 
@@ -1661,7 +1667,7 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
   }
 
   try {
-    str = JSON.stringify(src, (key: any, val: any) => {
+    str = JS(src, (key: any, val: any) => {
       if (replacer) {
         val = replacer(key, val)
       }
@@ -1704,7 +1710,7 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
     str = String(str)
   }
   catch (e: any) {
-    str = JSON.stringify(String(src))
+    str = JS(String(src))
   }
 
   if (true === dequote) {
@@ -1716,7 +1722,7 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
 
 
 function clone(x: any) {
-  return null == x ? x : S.object !== typeof (x) ? x : JSON.parse(JSON.stringify(x))
+  return null == x ? x : S.object !== typeof (x) ? x : JP(JS(x))
 }
 
 
