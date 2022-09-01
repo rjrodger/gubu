@@ -38,6 +38,7 @@ const {
   Define,
   Empty,
   Exact,
+  Func,
   Key,
   Len,
   Max,
@@ -1227,14 +1228,34 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
   })
 
 
+  test('builder-func', () => {
+    let f0 = () => 1
+    let f1 = () => 2
+    let g0 = Gubu(Func(f0))
+    expect(g0()).toEqual(f0)
+    expect(g0(f1)).toEqual(f1)
+    expect(() => g0(1)).toThrow('type')
+
+    // Escapes type functions
+    let g1 = Gubu(Func(Number))
+    expect(g1()).toEqual(Number)
+    expect(g1(Number)).toEqual(Number)
+    expect(() => g1(1)).toThrow('type')
+  })
+
+
+
   test('builder-key', () => {
     let g0 = Gubu({
       a: {
         b: {
           c: {
             name: Key(),
-            part: Key(2),
+            part0: Key(0),
+            part1: Key(1),
+            part2: Key(2),
             join: Key(3, '.'),
+            self: Key(-1),
             custom: Key((path: string, _state: State) => {
               return path.length
             }),
@@ -1249,7 +1270,10 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
         b: {
           c: {
             name: 'c',
-            part: ['b', 'c'],
+            self: ['self'],
+            part0: [],
+            part1: ['c'],
+            part2: ['b', 'c'],
             join: 'a.b.c',
             custom: 5,
             x: 2,
@@ -1257,6 +1281,10 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
         }
       }
     })
+
+
+    let g1 = Gubu(Child({ name: Key() }))
+    expect(g1({ a: {}, b: {} })).toMatchObject({ a: { name: 'a' }, b: { name: 'b' } })
   })
 
 

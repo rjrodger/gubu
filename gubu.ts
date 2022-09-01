@@ -1090,9 +1090,10 @@ const Key: Builder = function(this: Node, depth?: number, join?: string) {
       update.val = custom(state.path, state)
     }
     else if (ascend) {
+      let d = (depth as number)
       update.val = state.path.slice(
-        state.path.length - 1 - (depth as number),
-        state.path.length - 1
+        state.path.length - 1 - (0 <= d ? d : 0),
+        state.path.length - 1 + (0 <= d ? 0 : 1),
       )
 
       if ('string' === typeof join) {

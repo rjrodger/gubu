@@ -10,7 +10,7 @@ if (GubuModule.Gubu) {
 const Gubu = GubuModule;
 const buildize = Gubu.buildize;
 const makeErr = Gubu.makeErr;
-const { Above, After, All, Any, Before, Below, Check, Child, Closed, Default, Define, Empty, Exact, Key, Len, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some, Value, } = Gubu;
+const { Above, After, All, Any, Before, Below, Check, Child, Closed, Default, Define, Empty, Exact, Func, Key, Len, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some, Value, } = Gubu;
 class Foo {
     constructor(a) {
         this.a = -1;
@@ -972,14 +972,30 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         expect(() => g0({ b: [] }))
             .toThrow(`Value "[]" for property "b" must be exactly 2 in length (was 0).`);
     });
+    test('builder-func', () => {
+        let f0 = () => 1;
+        let f1 = () => 2;
+        let g0 = Gubu(Func(f0));
+        expect(g0()).toEqual(f0);
+        expect(g0(f1)).toEqual(f1);
+        expect(() => g0(1)).toThrow('type');
+        // Escapes type functions
+        let g1 = Gubu(Func(Number));
+        expect(g1()).toEqual(Number);
+        expect(g1(Number)).toEqual(Number);
+        expect(() => g1(1)).toThrow('type');
+    });
     test('builder-key', () => {
         let g0 = Gubu({
             a: {
                 b: {
                     c: {
                         name: Key(),
-                        part: Key(2),
+                        part0: Key(0),
+                        part1: Key(1),
+                        part2: Key(2),
                         join: Key(3, '.'),
+                        self: Key(-1),
                         custom: Key((path, _state) => {
                             return path.length;
                         }),
@@ -993,7 +1009,10 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
                 b: {
                     c: {
                         name: 'c',
-                        part: ['b', 'c'],
+                        self: ['self'],
+                        part0: [],
+                        part1: ['c'],
+                        part2: ['b', 'c'],
                         join: 'a.b.c',
                         custom: 5,
                         x: 2,
@@ -1001,6 +1020,8 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
                 }
             }
         });
+        let g1 = Gubu(Child({ name: Key() }));
+        expect(g1({ a: {}, b: {} })).toMatchObject({ a: { name: 'a' }, b: { name: 'b' } });
     });
     test('builder-child', () => {
         let g0 = Gubu(Child(Number));

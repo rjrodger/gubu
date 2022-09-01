@@ -764,7 +764,8 @@ const Key = function (depth, join) {
             update.val = custom(state.path, state);
         }
         else if (ascend) {
-            update.val = state.path.slice(state.path.length - 1 - depth, state.path.length - 1);
+            let d = depth;
+            update.val = state.path.slice(state.path.length - 1 - (0 <= d ? d : 0), state.path.length - 1 + (0 <= d ? 0 : 1));
             if ('string' === typeof join) {
                 update.val = update.val.join(join);
             }

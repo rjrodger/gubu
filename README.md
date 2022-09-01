@@ -503,12 +503,15 @@ The built-in shape builders help you match the following shapes:
   * [Below](#below-builder): Match a value (or length of value) less than the given amount.
   * [Max](#max-builder): Match a value (or length of value) less than or equal to the given amount.
   * [Min](#min-builder): Match a value (or length of value) greater than or equal to the given amount.
-  * [Above](#above-builder): Match a value (or length of value) greater than the given amount.
   * [Len](#len-builder): Match a value (or length of value) exactly equal to the given amount.
+  * [Above](#above-builder): Match a value (or length of value) greater than the given amount.
+  * [Func](#func-builder): The value is explicitly a function.
+
 * General constraints:
   * [Closed](#closed-builder): Allow only explicitly defined elements in an array.
   * [Open](#open-builder): Allow arbitrary properties in an object (no constraint on their value).
-  * [Value](#value-builder): All non-explicit values of an object must match this shape.
+  * [Value](#value-builder): All non-explicit child values of a shape must match this shape.
+  * [Child](#child-builder): All non-explicit child values of an object must match this shape.
 * Mutations:
   * [Rename](#rename-builder): Rename the key of a property.
   * [Define](#define-builder): Define a name for a value.
@@ -517,6 +520,7 @@ The built-in shape builders help you match the following shapes:
   * [Check](#check-builder): Define a general custom validation function for the value (recommended).
   * [Before](#before-builder): Define a custom validation function called before a value is processed (advanced use).
   * [After](#after-builder): Define a custom validation function called after a value is processed (advanced use).
+  * [Key](#key-builder): The key (or path) of the current object is injected as the value.
 
 
 ### Regular Expressions
@@ -1646,6 +1650,9 @@ The built-in shape builders are:
 * [Check](#check-builder): 
   Check value with a custom validation function or regular expression.
 
+* [Child](#child-builder): 
+  All non-explicit child values of an object must match this shape.
+
 * [Closed](#closed-builder): 
   Allow only explicitly defined elements in an array.
 
@@ -1657,6 +1664,12 @@ The built-in shape builders are:
 
 * [Exact](#exact-builder): 
   The value must one of an exact list of values.
+
+* [Func](#func-builder): 
+  The value is explicitly a function.
+
+* [Key](#key-builder): 
+  The key (or path) of the current object is injected as the value.
 
 * [Max](#max-builder): 
   Match a value (or length of value) less than or equal to the given amount.
@@ -1692,7 +1705,7 @@ The built-in shape builders are:
   Some shapes (at least one) must match value.
 
 * [Value](#value-builder): 
-  All non-explicit values of an object must match this shape.
+  All non-explicit child values of a shape must match this shape.
 
 
 ---
@@ -2648,7 +2661,7 @@ let shape = Gubu(Value())
 let shape = Gubu(Value(Number, {}))
 console.log(shape({ x: 10 })) // PASS: prints { x: 10 }
 console.log(shape({ x: 10, y: 11 })) // PASS: prints { x: 10, y: 11 }
-console.log(shape({ x: true })) // FAIL: 
+console.log(shape({ x: true })) // FAIL: true is not a numbner
 
 shape = Gubu({
   page: Value(
@@ -2701,6 +2714,121 @@ result === {
   }
 }
 ```
+
+
+---
+#### Child Builder
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
+
+```ts
+Child( general: any )
+```
+
+* **Standalone:** `Child(Number)`
+* **As Parent:** `Child(Number)`
+* **As Child:** `Required(Child(Number))`
+* **Chainable:** `Skip({x: 1}).Child(Number)`
+
+Specify the shape that each child value of an object must satisify/
+Does not apply to any explicitly defined property child values.
+
+
+```js
+const { Child } = Gubu
+
+let shape = Gubu(Child(Number))
+console.log(shape({ x: 10 })) // PASS: prints { x: 10 }
+console.log(shape({ x: 10, y: 11 })) // PASS: prints { x: 10, y: 11 }
+console.log(shape({ x: true })) // FAIL: true is not a number
+
+shape = Gubu({
+  page: Child(
+    {
+      title: String,
+      template: 'standard'
+    },
+  )
+})
+
+let result = shape({
+  page: {
+    about: {
+      title: 'About'
+    },
+    contact: {
+      title: 'Contact'
+    }
+  }
+})
+
+result === {
+  page: {
+    about: {
+      template: 'standard',
+      title: 'About',
+    },
+    contact: {
+      template: 'standard',
+      title: 'Contact',
+    },
+  }
+}
+```
+
+
+---
+#### Func Builder
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
+
+```ts
+Func( Function )
+```
+
+* **Standalone:** `Func(()=>true)`
+* **As Parent:** `Func(()=>true)`
+* **As Child:** `Required({foo: Func(()=>true)})`
+* **Chainable:** `{foo: Skip().Func(()=>true)}`
+
+The value is explicitly a function, with the given default. Most useful for 
+escaping `String`, `Number`, `Boolean`.
+
+
+```js
+const { Func } = Gubu
+
+let shape = Gubu({ a: Func(Number) })
+console.log(shape({ a: Number })) // prints { a: Number })
+```
+
+
+---
+#### Key Builder
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
+
+```ts
+Key(depth-or-custom?: number | (path,state)=>value, join?:string)
+```
+
+* **Standalone:** `{a:{b:Key()}`
+* **As Parent:** `Key(()=>true)`
+* **As Child:** `Required({foo: Key(()=>true)})`
+* **Chainable:** `{foo: Skip().Key(()=>true)}`
+
+Inject the parent key or path as the value.
+
+
+```js
+const { Key } = Gubu
+
+let shape = Gubu(Child({name:Key()}))
+console.log(shape({ a: {}, b: {} })) // prints { a: { name:'a'}, b: { name:'b'} })
+
+shape = Gubu({a:{b:{c:{Child({path:Key(2,'.')}}}}}}))
+
+// prints { a: { b: { c: { name:'b.c'} } } })
+console.log(shape({ a: { b: { c: {} } } })) 
+```
+
 
 
 ### Custom Builders
