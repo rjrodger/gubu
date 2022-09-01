@@ -12,6 +12,7 @@ const {
   Rename,
   Required,
   Define,
+  Default,
   Refer,
   Skip,
   Empty,
@@ -25,7 +26,7 @@ const {
   Any,
   Check,
   Open,
-  Default,
+  Key,
 } = require('../gubu')
 
 
@@ -840,5 +841,23 @@ let tmp = {}
 // console.dir(Gubu(Error).spec())
 // console.dir(Gubu(RegExp).spec())
 
-console.log(g=Gubu(/a/),g())
-console.dir(g.spec(),{depth:null})
+
+// console.log(Default(Object))
+// console.log(g=Gubu(Default(Object)),g())
+// console.dir(g.spec(),{depth:null})
+
+
+
+// let d5 = Gubu(Default({ a: null }, { a: Number }))
+// console.dir(d5.spec(),{depth:null})
+// console.log(d5())
+
+
+
+// console.log(Gubu({a:{name:Key()}})({a:{}}))
+console.dir(Gubu({a:{b:{c:{name:Key(2)}}}})({a:{b:{c:{}}}}),{depth:null})
+console.dir(Gubu({a:{b:{c:{name:Key(2,'.')}}}})({a:{b:{c:{}}}}),{depth:null})
+console.dir(Gubu({a:{b:{c:{name:Key((path,state)=>{
+  console.log('QQQ', path, state)
+  return 2
+})}}}})({a:{b:{c:{}}}}),{depth:null})

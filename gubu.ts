@@ -132,6 +132,7 @@ const S = {
   Check: 'Check',
   Closed: 'Closed',
   Define: 'Define',
+  Default: 'Default',
   Empty: 'Empty',
   Exact: 'Exact',
   Func: 'Func',
@@ -419,6 +420,7 @@ function nodize(shape?: any, depth?: number): Node {
       if (S.function === node.t && IS_TYPE[node.v.name]) {
         node.t = (node.v.name.toLowerCase() as ValType)
         node.v = clone(EMPTY_VAL[node.t])
+        node.f = node.v
       }
 
       node.r = !!node.r
@@ -582,17 +584,22 @@ function make<S>(intop?: S, inopts?: Options) {
       }
 
       if (!done) {
+        let descend = true
+        let valundef = undefined === s.val
+
         if (S.never === s.type) {
           s.err.push(makeErrImpl(S.never, s, 1070))
         }
         else if (S.object === s.type) {
           let val
-          if (n.r && undefined === s.val) {
+
+          if (n.r && valundef) {
             s.ignoreVal = true
             s.err.push(makeErrImpl(S.required, s, 1010))
           }
           else if (
-            undefined !== s.val && (
+            // undefined !== s.val && (
+            !valundef && (
               null === s.val ||
               S.object !== s.valType ||
               isarr(s.val)
@@ -601,45 +608,33 @@ function make<S>(intop?: S, inopts?: Options) {
             s.err.push(makeErrImpl(S.type, s, 1020))
             val = isarr(s.val) ? s.val : {}
           }
-          else if (!n.p || null != s.val) {
+
+          // Not skippable, use default or create object
+          else if (!n.p && valundef && undefined !== n.f) {
+            s.updateVal(n.f)
+            s.fromDefault = true
+            val = s.val
+            descend = false
+          }
+          else if (!n.p || !valundef) {
             // Descend into object, constructing child defaults
             s.updateVal(s.val || (s.fromDefault = true, {}))
             val = s.val
           }
 
-          val = null == val && false === s.ctx.err ? {} : val
+          if (descend) {
+            val = null == val && false === s.ctx.err ? {} : val
 
-          if (null != val) {
-            let hasKeys = false
-            let vkeys = keys(n.v)
-            let start = s.nI
+            if (null != val) {
+              let hasKeys = false
+              let vkeys = keys(n.v)
+              let start = s.nI
 
-            if (0 < vkeys.length) {
-              hasKeys = true
-              s.pI = start
-              for (let k of vkeys) {
-                let nvs = n.v[k] = nodize(n.v[k], 1 + s.dI)
-                s.nodes[s.nI] = nvs
-                s.vals[s.nI] = val[k]
-                s.parents[s.nI] = val
-                s.keys[s.nI] = k
-                s.nI++
-              }
-            }
-
-            let extra = keys(val).filter(k => undefined === n.v[k])
-
-            if (0 < extra.length) {
-              if (GUBU$NIL === n.c) {
-                s.ignoreVal = true
-                s.err.push(makeErrImpl(
-                  'closed', s, 1100, undefined, { k: extra }))
-              }
-              else {
+              if (0 < vkeys.length) {
                 hasKeys = true
                 s.pI = start
-                for (let k of extra) {
-                  let nvs = n.c = nodize(n.c, 1 + s.dI)
+                for (let k of vkeys) {
+                  let nvs = n.v[k] = nodize(n.v[k], 1 + s.dI)
                   s.nodes[s.nI] = nvs
                   s.vals[s.nI] = val[k]
                   s.parents[s.nI] = val
@@ -647,23 +642,49 @@ function make<S>(intop?: S, inopts?: Options) {
                   s.nI++
                 }
               }
-            }
 
-            if (hasKeys) {
-              s.dI++
-              s.nodes[s.nI++] = s.sI
-              s.nextSibling = false
+              let extra = keys(val).filter(k => undefined === n.v[k])
+
+              if (0 < extra.length) {
+                if (GUBU$NIL === n.c) {
+                  s.ignoreVal = true
+                  s.err.push(makeErrImpl(
+                    'closed', s, 1100, undefined, { k: extra }))
+                }
+                else {
+                  hasKeys = true
+                  s.pI = start
+                  for (let k of extra) {
+                    let nvs = n.c = nodize(n.c, 1 + s.dI)
+                    s.nodes[s.nI] = nvs
+                    s.vals[s.nI] = val[k]
+                    s.parents[s.nI] = val
+                    s.keys[s.nI] = k
+                    s.nI++
+                  }
+                }
+              }
+
+              if (hasKeys) {
+                s.dI++
+                s.nodes[s.nI++] = s.sI
+                s.nextSibling = false
+              }
             }
           }
         }
 
         else if (S.array === s.type) {
-          if (n.r && undefined === s.val) {
+          if (n.r && valundef) {
             s.ignoreVal = true
             s.err.push(makeErrImpl(S.required, s, 1030))
           }
-          else if (undefined !== s.val && !isarr(s.val)) {
+          else if (!valundef && !isarr(s.val)) {
             s.err.push(makeErrImpl(S.type, s, 1040))
+          }
+          else if (!n.p && valundef && undefined !== n.f) {
+            s.updateVal(n.f)
+            s.fromDefault = true
           }
           else if (!n.p || null != s.val) {
             s.updateVal(s.val || (s.fromDefault = true, []))
@@ -742,7 +763,8 @@ function make<S>(intop?: S, inopts?: Options) {
             s.err.push(makeErrImpl(S.required, s, 1060))
           }
           else if (
-            undefined !== n.v &&
+            // undefined !== n.v &&
+            undefined !== n.f &&
             !n.p ||
             S.undefined === s.type
           ) {
@@ -998,22 +1020,22 @@ const Func: Builder = function(this: Node, shape?: any) {
 }
 
 
-// const Default: Builder = function(this: Node, dval?: any, shape?: any) {
-//   let hasDefaultValue = 2 === arguments.length
-//   shape = hasDefaultValue ? shape : dval
+const Default: Builder = function(this: Node, dval?: any, shape?: any) {
+  let node = buildize(this, undefined === shape ? dval : shape)
+  node.r = false
+  node.f = dval
 
-//   let node = buildize(this, shape)
-//   node.r = false
+  let t = typeof dval
+  if (S.function === t && IS_TYPE[dval.name]) {
+    node.t = (dval.name.toLowerCase() as ValType)
+    node.f = clone(EMPTY_VAL[node.t])
+  }
 
-//   if (hasDefaultValue) {
-//     node.f = dval
-//   }
+  // Always insert default.
+  node.p = false
 
-//   // Always insert default.
-//   node.p = false
-
-//   return node
-// }
+  return node
+}
 
 
 
@@ -1040,6 +1062,47 @@ const Any: Builder = function(this: Node, shape?: any) {
 const Never: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   node.t = (S.never as ValType)
+  return node
+}
+
+
+const Key: Builder = function(this: Node, depth?: number, join?: string) {
+  let node = buildize(this)
+
+  let ascend = 'number' === typeof depth
+  node.t = (S.string as ValType)
+
+  if (ascend && null == join) {
+    node = nodize([])
+  }
+
+  let custom: any = null
+  if ('function' === typeof depth) {
+    custom = depth
+    node = Any()
+  }
+
+  node.b.push(function Key(_val: any, update: Update, state: State) {
+    if (custom) {
+      update.val = custom(state.path, state)
+    }
+    else if (ascend) {
+      update.val = state.path.slice(
+        state.path.length - 2 - (depth as number),
+        state.path.length - 2
+      )
+
+      if ('string' === typeof join) {
+        update.val = update.val.join(join)
+      }
+    }
+    else if (null == depth) {
+      update.val = state.path[state.path.length - 2]
+    }
+
+    return true
+  })
+
   return node
 }
 
@@ -1798,6 +1861,7 @@ if (S.undefined !== typeof (window)) {
     { b: Check, n: S.Check },
     { b: Closed, n: S.Closed },
     { b: Define, n: S.Define },
+    { b: Default, n: S.Default },
     { b: Empty, n: S.Empty },
     { b: Exact, n: S.Exact },
     { b: Func, n: S.Func },
@@ -1834,6 +1898,7 @@ Object.assign(make, {
   Check,
   Closed,
   Define,
+  Default,
   Empty,
   Exact,
   Func,
@@ -1860,6 +1925,7 @@ Object.assign(make, {
   GCheck: Check,
   GClosed: Closed,
   GDefine: Define,
+  GDefault: Default,
   GEmpty: Empty,
   GExact: Exact,
   GFunc: Func,
@@ -1903,6 +1969,7 @@ type Gubu = typeof make & {
   Check: typeof Check
   Closed: typeof Closed
   Define: typeof Define
+  Default: typeof Default
   Empty: typeof Empty
   Exact: typeof Exact
   Func: typeof Func
@@ -1929,6 +1996,7 @@ type Gubu = typeof make & {
   GCheck: typeof Check
   GClosed: typeof Closed
   GDefine: typeof Define
+  GDefault: typeof Default
   GEmpty: typeof Empty
   GExact: typeof Exact
   GFunc: typeof Func
@@ -1964,6 +2032,7 @@ const GBelow = Below
 const GCheck = Check
 const GClosed = Closed
 const GDefine = Define
+const GDefault = Default
 const GEmpty = Empty
 const GExact = Exact
 const GFunc = Func
@@ -2010,9 +2079,11 @@ export {
   Check,
   Closed,
   Define,
+  Default,
   Empty,
   Exact,
   Func,
+  Key,
   Max,
   Min,
   Never,
@@ -2036,6 +2107,7 @@ export {
   GCheck,
   GClosed,
   GDefine,
+  GDefault,
   GEmpty,
   GExact,
   GFunc,
