@@ -32,15 +32,17 @@ const {
   Before,
   Below,
   Check,
+  Child,
   Closed,
-  Define,
   Default,
+  Define,
   Empty,
   Exact,
+  Key,
+  Len,
   Max,
   Min,
   Never,
-  Len,
   One,
   Open,
   Optional,
@@ -1222,6 +1224,46 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
       .toThrow(`Value "[x]" for property "b" must be exactly 2 in length (was 1).`)
     expect(() => g0({ b: [] }))
       .toThrow(`Value "[]" for property "b" must be exactly 2 in length (was 0).`)
+  })
+
+
+  test('builder-key', () => {
+    let g0 = Gubu({
+      a: {
+        b: {
+          c: {
+            name: Key(),
+            part: Key(2),
+            join: Key(3, '.'),
+            custom: Key((path: string, _state: State) => {
+              return path.length
+            }),
+            x: 1,
+          }
+        }
+      }
+    })
+
+    expect(g0({ a: { b: { c: { x: 2 } } } })).toMatchObject({
+      a: {
+        b: {
+          c: {
+            name: 'c',
+            part: ['b', 'c'],
+            join: 'a.b.c',
+            custom: 5,
+            x: 2,
+          }
+        }
+      }
+    })
+  })
+
+
+  test('builder-child', () => {
+    let g0 = Gubu(Child(Number))
+    expect(g0({ a: 1, b: 2 })).toMatchObject({ a: 1, b: 2 })
+    expect(() => g0({ a: 1, b: 2, c: 'c' })).toThrow('type')
   })
 
 

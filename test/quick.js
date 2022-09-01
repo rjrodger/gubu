@@ -855,9 +855,15 @@ let tmp = {}
 
 
 // console.log(Gubu({a:{name:Key()}})({a:{}}))
-console.dir(Gubu({a:{b:{c:{name:Key(2)}}}})({a:{b:{c:{}}}}),{depth:null})
-console.dir(Gubu({a:{b:{c:{name:Key(2,'.')}}}})({a:{b:{c:{}}}}),{depth:null})
-console.dir(Gubu({a:{b:{c:{name:Key((path,state)=>{
-  console.log('QQQ', path, state)
-  return 2
-})}}}})({a:{b:{c:{}}}}),{depth:null})
+// console.dir(Gubu({a:{b:{c:{name:Key(2)}}}})({a:{b:{c:{}}}}),{depth:null})
+// console.dir(Gubu({a:{b:{c:{name:Key(2,'.')}}}})({a:{b:{c:{}}}}),{depth:null})
+// console.dir(Gubu({a:{b:{c:{name:Key((path,state)=>{
+//   console.log('QQQ', path, state)
+//   return 2
+// })}}}})({a:{b:{c:{}}}}),{depth:null})
+
+
+
+console.log(Gubu.isShape(Gubu(Number)))
+console.log(Gubu.isShape(Number))
+

@@ -1,8 +1,8 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GNever = exports.GMin = exports.GMax = exports.GFunc = exports.GExact = exports.GEmpty = exports.GDefault = exports.GDefine = exports.GClosed = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Len = exports.Never = exports.Min = exports.Max = exports.Key = exports.Func = exports.Exact = exports.Empty = exports.Default = exports.Define = exports.Closed = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
-exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GLen = void 0;
+exports.GKey = exports.GFunc = exports.GExact = exports.GEmpty = exports.GDefault = exports.GDefine = exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Len = exports.Never = exports.Min = exports.Max = exports.Key = exports.Func = exports.Exact = exports.Empty = exports.Default = exports.Define = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GLen = exports.GNever = exports.GMin = exports.GMax = void 0;
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
@@ -55,12 +55,14 @@ const S = {
     Before: 'Before',
     Below: 'Below',
     Check: 'Check',
+    Child: 'Child',
     Closed: 'Closed',
     Define: 'Define',
     Default: 'Default',
     Empty: 'Empty',
     Exact: 'Exact',
     Func: 'Func',
+    Key: 'Key',
     Max: 'Max',
     Min: 'Min',
     Never: 'Never',
@@ -762,7 +764,7 @@ const Key = function (depth, join) {
             update.val = custom(state.path, state);
         }
         else if (ascend) {
-            update.val = state.path.slice(state.path.length - 2 - depth, state.path.length - 2);
+            update.val = state.path.slice(state.path.length - 1 - depth, state.path.length - 1);
             if ('string' === typeof join) {
                 update.val = update.val.join(join);
             }
@@ -1169,6 +1171,13 @@ const Value = function (value, shape) {
     return node;
 };
 exports.Value = Value;
+// Object child shape
+const Child = function (child) {
+    let node = buildize(this, {});
+    node.c = nodize(child);
+    return node;
+};
+exports.Child = Child;
 function buildize(node0, node1) {
     // Detect chaining. If not chained, ignore `this` if it is the global context.
     let node = nodize(null == node0 || node0.window === node0 || node0.global === node0
@@ -1181,6 +1190,7 @@ function buildize(node0, node1) {
         Before,
         Below,
         Check,
+        Child,
         Closed,
         Open,
         Define,
@@ -1325,12 +1335,14 @@ if (S.undefined !== typeof (window)) {
         { b: Before, n: S.Before },
         { b: Below, n: S.Below },
         { b: Check, n: S.Check },
+        { b: Child, n: S.Child },
         { b: Closed, n: S.Closed },
         { b: Define, n: S.Define },
         { b: Default, n: S.Default },
         { b: Empty, n: S.Empty },
         { b: Exact, n: S.Exact },
         { b: Func, n: S.Func },
+        { b: Key, n: S.Key },
         { b: Max, n: S.Max },
         { b: Min, n: S.Min },
         { b: Never, n: S.Never },
@@ -1358,12 +1370,14 @@ Object.assign(make, {
     Before,
     Below,
     Check,
+    Child,
     Closed,
     Define,
     Default,
     Empty,
     Exact,
     Func,
+    Key,
     Max,
     Min,
     Never,
@@ -1384,12 +1398,14 @@ Object.assign(make, {
     GBefore: Before,
     GBelow: Below,
     GCheck: Check,
+    GChild: Child,
     GClosed: Closed,
     GDefine: Define,
     GDefault: Default,
     GEmpty: Empty,
     GExact: Exact,
     GFunc: Func,
+    GKey: Key,
     GMax: Max,
     GMin: Min,
     GNever: Never,
@@ -1409,6 +1425,7 @@ Object.assign(make, {
     stringify,
     truncate,
     nodize,
+    isShape: (v) => (v && GUBU === v.gubu)
 });
 defprop(make, S.name, { value: S.gubu });
 // The primary export.
@@ -1429,6 +1446,8 @@ const GBelow = Below;
 exports.GBelow = GBelow;
 const GCheck = Check;
 exports.GCheck = GCheck;
+const GChild = Child;
+exports.GChild = GChild;
 const GClosed = Closed;
 exports.GClosed = GClosed;
 const GDefine = Define;
@@ -1441,6 +1460,8 @@ const GExact = Exact;
 exports.GExact = GExact;
 const GFunc = Func;
 exports.GFunc = GFunc;
+const GKey = Key;
+exports.GKey = GKey;
 const GMax = Max;
 exports.GMax = GMax;
 const GMin = Min;

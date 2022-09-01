@@ -130,12 +130,14 @@ const S = {
   Before: 'Before',
   Below: 'Below',
   Check: 'Check',
+  Child: 'Child',
   Closed: 'Closed',
   Define: 'Define',
   Default: 'Default',
   Empty: 'Empty',
   Exact: 'Exact',
   Func: 'Func',
+  Key: 'Key',
   Max: 'Max',
   Min: 'Min',
   Never: 'Never',
@@ -889,6 +891,7 @@ function make<S>(intop?: S, inopts?: Options) {
 
   gubuShape.gubu = GUBU
 
+
   return gubuShape
 }
 
@@ -1088,8 +1091,8 @@ const Key: Builder = function(this: Node, depth?: number, join?: string) {
     }
     else if (ascend) {
       update.val = state.path.slice(
-        state.path.length - 2 - (depth as number),
-        state.path.length - 2
+        state.path.length - 1 - (depth as number),
+        state.path.length - 1
       )
 
       if ('string' === typeof join) {
@@ -1499,7 +1502,6 @@ function truncate(str?: string, len?: number): string {
 }
 
 
-
 const Min: Builder = function(
   this: Node,
   min: number | string,
@@ -1647,6 +1649,17 @@ const Value: Builder = function(
 }
 
 
+// Object child shape
+const Child: Builder = function(
+  this: Node,
+  child?: any,
+): Node {
+  let node = buildize(this, {})
+  node.c = nodize(child)
+  return node
+}
+
+
 function buildize(node0?: any, node1?: any): Node {
   // Detect chaining. If not chained, ignore `this` if it is the global context.
   let node =
@@ -1661,6 +1674,7 @@ function buildize(node0?: any, node1?: any): Node {
     Before,
     Below,
     Check,
+    Child,
     Closed,
     Open,
     Define,
@@ -1839,6 +1853,7 @@ type GubuShape = ReturnType<typeof make> &
   error: (root?: any, ctx?: Context) => GubuError[],
   spec: () => any,
   node: () => Node,
+  isShape: (v: any) => boolean,
   gubu: typeof GUBU
 }
 
@@ -1859,12 +1874,14 @@ if (S.undefined !== typeof (window)) {
     { b: Before, n: S.Before },
     { b: Below, n: S.Below },
     { b: Check, n: S.Check },
+    { b: Child, n: S.Child },
     { b: Closed, n: S.Closed },
     { b: Define, n: S.Define },
     { b: Default, n: S.Default },
     { b: Empty, n: S.Empty },
     { b: Exact, n: S.Exact },
     { b: Func, n: S.Func },
+    { b: Key, n: S.Key },
     { b: Max, n: S.Max },
     { b: Min, n: S.Min },
     { b: Never, n: S.Never },
@@ -1896,12 +1913,14 @@ Object.assign(make, {
   Before,
   Below,
   Check,
+  Child,
   Closed,
   Define,
   Default,
   Empty,
   Exact,
   Func,
+  Key,
   Max,
   Min,
   Never,
@@ -1923,12 +1942,14 @@ Object.assign(make, {
   GBefore: Before,
   GBelow: Below,
   GCheck: Check,
+  GChild: Child,
   GClosed: Closed,
   GDefine: Define,
   GDefault: Default,
   GEmpty: Empty,
   GExact: Exact,
   GFunc: Func,
+  GKey: Key,
   GMax: Max,
   GMin: Min,
   GNever: Never,
@@ -1949,6 +1970,8 @@ Object.assign(make, {
   stringify,
   truncate,
   nodize,
+  isShape: (v: any) => (v && GUBU === v.gubu)
+
 })
 
 
@@ -1967,12 +1990,14 @@ type Gubu = typeof make & {
   Before: typeof Before
   Below: typeof Below
   Check: typeof Check
+  Child: typeof Child
   Closed: typeof Closed
   Define: typeof Define
   Default: typeof Default
   Empty: typeof Empty
   Exact: typeof Exact
   Func: typeof Func
+  Key: typeof Key
   Max: typeof Max
   Min: typeof Min
   Never: typeof Never
@@ -1994,12 +2019,14 @@ type Gubu = typeof make & {
   GBefore: typeof Before
   GBelow: typeof Below
   GCheck: typeof Check
+  GChild: typeof Child
   GClosed: typeof Closed
   GDefine: typeof Define
   GDefault: typeof Default
   GEmpty: typeof Empty
   GExact: typeof Exact
   GFunc: typeof Func
+  GKey: typeof Key
   GMax: typeof Max
   GMin: typeof Min
   GNever: typeof Never
@@ -2030,12 +2057,14 @@ const GAny = Any
 const GBefore = Before
 const GBelow = Below
 const GCheck = Check
+const GChild = Child
 const GClosed = Closed
 const GDefine = Define
 const GDefault = Default
 const GEmpty = Empty
 const GExact = Exact
 const GFunc = Func
+const GKey = Key
 const GMax = Max
 const GMin = Min
 const GNever = Never
@@ -2077,6 +2106,7 @@ export {
   Before,
   Below,
   Check,
+  Child,
   Closed,
   Define,
   Default,
@@ -2105,12 +2135,14 @@ export {
   GBefore,
   GBelow,
   GCheck,
+  GChild,
   GClosed,
   GDefine,
   GDefault,
   GEmpty,
   GExact,
   GFunc,
+  GKey,
   GMax,
   GMin,
   GNever,
