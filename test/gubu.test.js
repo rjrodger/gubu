@@ -1117,6 +1117,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
                     '$': { 'gubu$': true, 'v$': package_json_1.default.version },
                     t: 'number',
                     v: 1,
+                    f: 1,
                     n: 0,
                     r: false,
                     p: false,
@@ -1773,7 +1774,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
                     }
                 ]
             });
-            expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","err":[{"n":{"$":{"v$":"' + package_json_1.default.version + '"},"t":"nan","v":null,"n":0,"r":false,"p":false,"d":0,"u":{},"a":[],"b":[]},"v":1,"p":"","w":"type","m":1050,"t":"Validation failed for value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for value \\"1\\" because the value is not of type nan."}');
+            expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","err":[{"n":{"$":{"v$":"' + package_json_1.default.version + '"},"t":"nan","v":null,"f":null,"n":0,"r":false,"p":false,"d":0,"u":{},"a":[],"b":[]},"v":1,"p":"","w":"type","m":1050,"t":"Validation failed for value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for value \\"1\\" because the value is not of type nan."}');
         }
     });
     test('spec-basic', () => {
@@ -1919,6 +1920,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
                     u: {},
                     a: [],
                     b: [],
+                    f: 1,
                     v: 1,
                     n: 0,
                 },
@@ -1988,6 +1990,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
                         u: {},
                         a: [],
                         b: [],
+                        f: 1,
                         v: 1,
                         n: 0
                     },

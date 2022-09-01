@@ -74,7 +74,8 @@ type Node = {
   $: typeof GUBU         // Special marker to indicate normalized.
   t: ValType             // Value type name.
   d: number              // Depth.
-  v: any                 // Defining value (used as default).
+  v: any                 // Defining value.
+  f: any                 // Default, if any.
   r: boolean             // Value is required.
   p: boolean             // Value is skippable - can be missing or undefined.
   n: number              // Number of keys in default value
@@ -438,6 +439,7 @@ function nodize(shape?: any, depth?: number): Node {
   t = (S.undefined === t ? S.any : t) as ValType
 
   let v = shape
+  let f = v
   let c: any = GUBU$NIL
   let r = false // Not required by default.
   let p = false // Only true when Skip builder is used.
@@ -447,6 +449,7 @@ function nodize(shape?: any, depth?: number): Node {
   let b: any[] = []
 
   if (S.object === t) {
+    f = undefined
     if (isarr(v)) {
       t = (S.array as ValType)
       if (1 === v.length) {
@@ -464,6 +467,7 @@ function nodize(shape?: any, depth?: number): Node {
       t = (S.instance as ValType)
       u.n = v.constructor.name
       u.i = v.constructor
+      f = v
     }
 
     else {
@@ -476,11 +480,13 @@ function nodize(shape?: any, depth?: number): Node {
     }
   }
 
+  // NOTE: use Check for validation functions
   else if (S.function === t) {
     if (IS_TYPE[shape.name]) {
       t = (shape.name.toLowerCase() as ValType)
       r = true
       v = clone(EMPTY_VAL[t])
+      f = v
 
       // Required "Object" is considered Open
       if (S.Object === shape.name) {
@@ -491,6 +497,7 @@ function nodize(shape?: any, depth?: number): Node {
       let gs = v.node ? v.node() : v
       t = gs.t
       v = gs.v
+      f = v
       r = gs.r
       u = { ...gs.u }
       a = [...gs.a]
@@ -522,6 +529,7 @@ function nodize(shape?: any, depth?: number): Node {
     $: GUBU,
     t,
     v: vmap,
+    f,
     n: null != vmap && S.object === typeof (vmap) ? keys(vmap).length : 0,
     c,
     r,
@@ -738,7 +746,9 @@ function make<S>(intop?: S, inopts?: Options) {
             !n.p ||
             S.undefined === s.type
           ) {
-            s.updateVal(n.v)
+            // Inject default value.
+            // s.updateVal(n.v)
+            s.updateVal(n.f)
             s.fromDefault = true
           }
           else if (S.any === s.type) {
@@ -983,11 +993,11 @@ const Func: Builder = function(this: Node, shape?: any) {
   let node = buildize(this)
   node.t = (S.function as ValType)
   node.v = shape
+  node.f = shape
   return node
 }
 
 
-// FINISH
 // const Default: Builder = function(this: Node, dval?: any, shape?: any) {
 //   let hasDefaultValue = 2 === arguments.length
 //   shape = hasDefaultValue ? shape : dval
@@ -1021,6 +1031,7 @@ const Any: Builder = function(this: Node, shape?: any) {
   node.t = (S.any as ValType)
   if (undefined !== shape) {
     node.v = shape
+    node.f = shape
   }
   return node
 }

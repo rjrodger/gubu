@@ -834,8 +834,11 @@ let tmp = {}
 // // console.log(g3({ a: f1f }).a.toString())
 
 
-console.dir(Gubu(()=>true).spec())
-console.dir(Gubu(function() {}).spec())
-console.dir(Gubu(function AAA() {}).spec())
-console.dir(Gubu(Error).spec())
-console.dir(Gubu(RegExp).spec())
+// console.dir(Gubu(()=>true).spec())
+// console.dir(Gubu(function() {}).spec())
+// console.dir(Gubu(function AAA() {}).spec())
+// console.dir(Gubu(Error).spec())
+// console.dir(Gubu(RegExp).spec())
+
+console.log(g=Gubu(/a/),g())
+console.dir(g.spec(),{depth:null})

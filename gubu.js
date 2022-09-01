@@ -236,6 +236,7 @@ function nodize(shape, depth) {
     let t = (null === shape ? S.null : typeof (shape));
     t = (S.undefined === t ? S.any : t);
     let v = shape;
+    let f = v;
     let c = GUBU$NIL;
     let r = false; // Not required by default.
     let p = false; // Only true when Skip builder is used.
@@ -243,6 +244,7 @@ function nodize(shape, depth) {
     let a = [];
     let b = [];
     if (S.object === t) {
+        f = undefined;
         if (isarr(v)) {
             t = S.array;
             if (1 === v.length) {
@@ -258,6 +260,7 @@ function nodize(shape, depth) {
             t = S.instance;
             u.n = v.constructor.name;
             u.i = v.constructor;
+            f = v;
         }
         else {
             // c = GUBU$NIL
@@ -267,11 +270,13 @@ function nodize(shape, depth) {
             }
         }
     }
+    // NOTE: use Check for validation functions
     else if (S.function === t) {
         if (IS_TYPE[shape.name]) {
             t = shape.name.toLowerCase();
             r = true;
             v = clone(EMPTY_VAL[t]);
+            f = v;
             // Required "Object" is considered Open
             if (S.Object === shape.name) {
                 c = Any();
@@ -281,6 +286,7 @@ function nodize(shape, depth) {
             let gs = v.node ? v.node() : v;
             t = gs.t;
             v = gs.v;
+            f = v;
             r = gs.r;
             u = { ...gs.u };
             a = [...gs.a];
@@ -307,6 +313,7 @@ function nodize(shape, depth) {
         $: GUBU,
         t,
         v: vmap,
+        f,
         n: null != vmap && S.object === typeof (vmap) ? keys(vmap).length : 0,
         c,
         r,
@@ -484,7 +491,9 @@ function make(intop, inopts) {
                     else if (undefined !== n.v &&
                         !n.p ||
                         S.undefined === s.type) {
-                        s.updateVal(n.v);
+                        // Inject default value.
+                        // s.updateVal(n.v)
+                        s.updateVal(n.f);
                         s.fromDefault = true;
                     }
                     else if (S.any === s.type) {
@@ -674,10 +683,10 @@ const Func = function (shape) {
     let node = buildize(this);
     node.t = S.function;
     node.v = shape;
+    node.f = shape;
     return node;
 };
 exports.Func = Func;
-// FINISH
 // const Default: Builder = function(this: Node, dval?: any, shape?: any) {
 //   let hasDefaultValue = 2 === arguments.length
 //   shape = hasDefaultValue ? shape : dval
@@ -702,6 +711,7 @@ const Any = function (shape) {
     node.t = S.any;
     if (undefined !== shape) {
         node.v = shape;
+        node.f = shape;
     }
     return node;
 };
