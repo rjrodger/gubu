@@ -6,7 +6,7 @@ declare class Bar {
     b: number;
     constructor(b: number);
 }
-declare type Zed = {
+type Zed = {
     c: number;
     d: {
         e: string;

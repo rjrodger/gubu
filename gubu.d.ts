@@ -2,13 +2,14 @@ declare const GUBU: {
     gubu$: symbol;
     v$: string;
 };
-declare type Options = {
+type Options = {
     name?: string;
 };
-declare type Context = Record<string, any> & {
+type Context = Record<string, any> & {
     err?: ErrDesc[] | boolean;
+    log?: (point: string, state: State) => void;
 };
-declare type ValType = 'any' | // Any type.
+type ValType = 'any' | // Any type.
 'array' | // An array.
 'bigint' | // A BigInt value.
 'boolean' | // The values `true` or `false`.
@@ -23,7 +24,7 @@ declare type ValType = 'any' | // Any type.
 'string' | // A string (but *not* the empty string).
 'symbol' | // A symbol reference.
 'undefined';
-declare type Node = {
+type Node = {
     $: typeof GUBU;
     t: ValType;
     d: number;
@@ -38,12 +39,12 @@ declare type Node = {
     a: Validate[];
     s?: string;
 };
-declare type Builder = (opts?: any, // Builder options.
+type Builder = (opts?: any, // Builder options.
 ...vals: any[]) => Node & // Builders build Nodes.
 {
     [name: string]: Builder | any;
 };
-declare type Validate = (val: any, update: Update, state: State) => boolean;
+type Validate = (val: any, update: Update, state: State) => boolean;
 declare class State {
     match: boolean;
     dI: number;
@@ -75,7 +76,7 @@ declare class State {
     next(): void;
     updateVal(val: any): void;
 }
-declare type Update = {
+type Update = {
     done?: boolean;
     val?: any;
     uval?: any;
@@ -87,7 +88,7 @@ declare type Update = {
     err?: string | ErrDesc | ErrDesc[];
     why?: string;
 };
-declare type ErrDesc = {
+type ErrDesc = {
     k: string;
     n: Node;
     v: any;
@@ -159,7 +160,7 @@ declare const Child: Builder;
 declare function buildize(node0?: any, node1?: any): Node;
 declare function makeErr(state: State, text?: string, why?: string, user?: any): ErrDesc;
 declare function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean): string;
-declare type GubuShape = ReturnType<typeof make> & {
+type GubuShape = ReturnType<typeof make> & {
     valid: <D, S>(root?: D, ctx?: any) => root is (D & S);
     match: (root?: any, ctx?: any) => boolean;
     error: (root?: any, ctx?: Context) => GubuError[];
@@ -169,7 +170,7 @@ declare type GubuShape = ReturnType<typeof make> & {
     gubu: typeof GUBU;
 };
 declare const G$: (node: any) => Node;
-declare type Gubu = typeof make & {
+type Gubu = typeof make & {
     G$: typeof G$;
     buildize: typeof buildize;
     makeErr: typeof makeErr;

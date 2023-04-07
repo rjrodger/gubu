@@ -37,8 +37,30 @@ function J(x,s) {
 let tmp = {}
 
 
-// let a1 = Gubu({ a: 1 })
-// J(a1({}))
+let log = (point,state)=>{
+  console.log(
+    'LOG',
+    point,
+    'd='+state.dI,
+    // 'p='+state.pI,
+    state.path.slice(1,state.dI+1).join('.'),
+    'kv'===point?(state.key+'='+state.val):'',
+    // 'kv'===point?state:'',
+    ''
+  )
+}
+
+let a1 = Gubu({
+  a: 11,
+  b: { c: 22 },
+  m: {},
+  d: { e: { f: 33 } },
+  g: [],
+  h: [44],
+  i: [55,66],
+})
+J(a1(undefined,{err:false,log}))
+// console.log(a1({h:['a']}))
 // J(a1({a:'x'}))
 
 // let ab1 = Gubu({ a: { b: 1 } })
@@ -864,6 +886,6 @@ let tmp = {}
 
 
 
-console.log(Gubu.isShape(Gubu(Number)))
-console.log(Gubu.isShape(Number))
+// console.log(Gubu.isShape(Gubu(Number)))
+// console.log(Gubu.isShape(Number))
 

@@ -46,6 +46,7 @@ type Options = {
 // The reserved properties are: `err`.
 type Context = Record<string, any> & {
   err?: ErrDesc[] | boolean // Provide an array to collect errors, instead of throwing.
+  log?: (point: string, state: State) => void
 }
 
 
@@ -192,6 +193,9 @@ class State {
   err: any[] = []
   parents: Node[] = []
   keys: string[] = []
+
+  // NOTE: not "clean"!
+  // Actual path is always only path[0,dI+1]
   path: string[] = []
 
   node: Node
@@ -234,9 +238,16 @@ class State {
     let nextNode = this.nodes[this.pI]
 
     while (+nextNode) {
+      this.dI--
+
+      this.ctx.log &&
+        -1 < this.dI &&
+        this.ctx.log('e' +
+          (Array.isArray(this.parents[this.pI]) ? 'a' : 'o'),
+          this)
+
       this.pI = +nextNode
       nextNode = this.nodes[this.pI]
-      this.dI--
     }
 
     if (!nextNode) {
@@ -277,32 +288,30 @@ class State {
 
 
 
-  /* Uncomment for debugging.
-  printStacks() {
-    console.log('\nNODE',
-      'd=' + this.dI,
-      'c=' + this.cI,
-      'p=' + this.pI,
-      'n=' + this.nI,
-      +this.node,
-      this.node.t,
-      this.path,
-      this.err.length)
-
-    for (let i = 0;
-      i < this.nodes.length ||
-      i < this.vals.length ||
-      i < this.parents.length;
-      i++) {
-      console.log(i, '\t',
-        isNaN(+this.nodes[i]) ?
-          this.keys[i] + ':' + (this.nodes[i] as any)?.t :
-          +this.nodes[i], '\t',
-        stringify(this.vals[i]), '\t',
-        stringify(this.parents[i]))
-    }
-  }
-  */
+  // Uncomment for debugging.
+  // printStacks() {
+  //   console.log('\nNODE',
+  //     'd=' + this.dI,
+  //     'c=' + this.cI,
+  //     'p=' + this.pI,
+  //     'n=' + this.nI,
+  //     +this.node,
+  //     this.node.t,
+  //     this.path,
+  //     this.err.length)
+  //   for (let i = 0;
+  //     i < this.nodes.length ||
+  //     i < this.vals.length ||
+  //     i < this.parents.length;
+  //     i++) {
+  //     console.log(i, '\t',
+  //       isNaN(+this.nodes[i]) ?
+  //         this.keys[i] + ':' + (this.nodes[i] as any)?.t :
+  //         +this.nodes[i], '\t',
+  //       stringify(this.vals[i]), '\t',
+  //       stringify(this.parents[i]))
+  //   }
+  // }
 }
 
 
@@ -556,6 +565,7 @@ function make<S>(intop?: S, inopts?: Options) {
 
   let top: Node = nodize(intop, 0)
 
+  // Lazily execute top against root to see if they match
   function exec(
     root: any,
     ctx?: Context,
@@ -600,7 +610,6 @@ function make<S>(intop?: S, inopts?: Options) {
             s.err.push(makeErrImpl(S.required, s, 1010))
           }
           else if (
-            // undefined !== s.val && (
             !valundef && (
               null === s.val ||
               S.object !== s.valType ||
@@ -628,6 +637,8 @@ function make<S>(intop?: S, inopts?: Options) {
             val = null == val && false === s.ctx.err ? {} : val
 
             if (null != val) {
+              s.ctx.log && s.ctx.log('so', s)
+
               let hasKeys = false
               let vkeys = keys(n.v)
               let start = s.nI
@@ -669,8 +680,13 @@ function make<S>(intop?: S, inopts?: Options) {
 
               if (hasKeys) {
                 s.dI++
-                s.nodes[s.nI++] = s.sI
+                s.nodes[s.nI] = s.sI
+                s.parents[s.nI] = val
                 s.nextSibling = false
+                s.nI++
+              }
+              else {
+                s.ctx.log && s.ctx.log('eo', s)
               }
             }
           }
@@ -691,10 +707,13 @@ function make<S>(intop?: S, inopts?: Options) {
           else if (!n.p || null != s.val) {
             s.updateVal(s.val || (s.fromDefault = true, []))
 
-            let hasValueElements = 0 < s.val.length
+            // n.c set by nodize for array with len=1
             let hasChildShape = GUBU$NIL !== n.c
+            let hasValueElements = 0 < s.val.length
             let elementKeys = keys(n.v).filter(k => !isNaN(+k))
             let hasFixedElements = 0 < elementKeys.length
+
+            s.ctx.log && s.ctx.log('sa', s)
 
             if (hasValueElements || hasFixedElements) {
               s.pI = s.nI
@@ -736,9 +755,21 @@ function make<S>(intop?: S, inopts?: Options) {
 
               if (!s.ignoreVal) {
                 s.dI++
-                s.nodes[s.nI++] = s.sI
+                s.nodes[s.nI] = s.sI
+                s.parents[s.nI] = s.val
                 s.nextSibling = false
+                s.nI++
               }
+            }
+            else {
+              // Ensure single element array still generates log
+              // for the element when only walking shape.
+              s.ctx.log &&
+                hasChildShape &&
+                undefined == root &&
+                s.ctx.log('kv', { ...s, key: 0, val: n.c })
+
+              s.ctx.log && s.ctx.log('ea', s)
             }
           }
         }
@@ -771,18 +802,25 @@ function make<S>(intop?: S, inopts?: Options) {
             S.undefined === s.type
           ) {
             // Inject default value.
-            // s.updateVal(n.v)
             s.updateVal(n.f)
             s.fromDefault = true
           }
           else if (S.any === s.type) {
             s.ignoreVal = undefined === s.ignoreVal ? true : s.ignoreVal
           }
+
+          // TODO: ensure object,array points called even if errors
+          s.ctx.log && s.ctx.log('kv', s)
         }
 
         // Empty strings fail even if string is optional. Use Empty() to allow.
         else if (S.string === s.type && S.MT === s.val && !n.u.empty) {
           s.err.push(makeErrImpl(S.required, s, 1080))
+          s.ctx.log && s.ctx.log('kv', s)
+        }
+
+        else {
+          s.ctx.log && s.ctx.log('kv', s)
         }
       }
 
@@ -810,6 +848,9 @@ function make<S>(intop?: S, inopts?: Options) {
         s.pI = s.sI
       }
     }
+
+    // console.log(s.printStacks())
+
 
     if (0 < s.err.length) {
       if (isarr(s.ctx.err)) {

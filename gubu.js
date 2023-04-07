@@ -106,6 +106,8 @@ class State {
         this.err = [];
         this.parents = [];
         this.keys = [];
+        // NOTE: not "clean"!
+        // Actual path is always only path[0,dI+1]
         this.path = [];
         this.root = root;
         this.vals = [root, -1];
@@ -126,9 +128,13 @@ class State {
         // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
         let nextNode = this.nodes[this.pI];
         while (+nextNode) {
+            this.dI--;
+            this.ctx.log &&
+                -1 < this.dI &&
+                this.ctx.log('e' +
+                    (Array.isArray(this.parents[this.pI]) ? 'a' : 'o'), this);
             this.pI = +nextNode;
             nextNode = this.nodes[this.pI];
-            this.dI--;
         }
         if (!nextNode) {
             this.stop = true;
@@ -336,6 +342,7 @@ function make(intop, inopts) {
     opts.name =
         null == opts.name ? 'G' + (S.MT + Math.random()).substring(2, 8) : S.MT + opts.name;
     let top = nodize(intop, 0);
+    // Lazily execute top against root to see if they match
     function exec(root, ctx, match // Suppress errors and return boolean result (true if match)
     ) {
         let s = new State(root, top, ctx, match);
@@ -369,9 +376,7 @@ function make(intop, inopts) {
                         s.ignoreVal = true;
                         s.err.push(makeErrImpl(S.required, s, 1010));
                     }
-                    else if (
-                    // undefined !== s.val && (
-                    !valundef && (null === s.val ||
+                    else if (!valundef && (null === s.val ||
                         S.object !== s.valType ||
                         isarr(s.val))) {
                         s.err.push(makeErrImpl(S.type, s, 1020));
@@ -392,6 +397,7 @@ function make(intop, inopts) {
                     if (descend) {
                         val = null == val && false === s.ctx.err ? {} : val;
                         if (null != val) {
+                            s.ctx.log && s.ctx.log('so', s);
                             let hasKeys = false;
                             let vkeys = keys(n.v);
                             let start = s.nI;
@@ -428,8 +434,13 @@ function make(intop, inopts) {
                             }
                             if (hasKeys) {
                                 s.dI++;
-                                s.nodes[s.nI++] = s.sI;
+                                s.nodes[s.nI] = s.sI;
+                                s.parents[s.nI] = val;
                                 s.nextSibling = false;
+                                s.nI++;
+                            }
+                            else {
+                                s.ctx.log && s.ctx.log('eo', s);
                             }
                         }
                     }
@@ -448,10 +459,12 @@ function make(intop, inopts) {
                     }
                     else if (!n.p || null != s.val) {
                         s.updateVal(s.val || (s.fromDefault = true, []));
-                        let hasValueElements = 0 < s.val.length;
+                        // n.c set by nodize for array with len=1
                         let hasChildShape = GUBU$NIL !== n.c;
+                        let hasValueElements = 0 < s.val.length;
                         let elementKeys = keys(n.v).filter(k => !isNaN(+k));
                         let hasFixedElements = 0 < elementKeys.length;
+                        s.ctx.log && s.ctx.log('sa', s);
                         if (hasValueElements || hasFixedElements) {
                             s.pI = s.nI;
                             let elementIndex = 0;
@@ -486,9 +499,20 @@ function make(intop, inopts) {
                             }
                             if (!s.ignoreVal) {
                                 s.dI++;
-                                s.nodes[s.nI++] = s.sI;
+                                s.nodes[s.nI] = s.sI;
+                                s.parents[s.nI] = s.val;
                                 s.nextSibling = false;
+                                s.nI++;
                             }
+                        }
+                        else {
+                            // Ensure single element array still generates log
+                            // for the element when only walking shape.
+                            s.ctx.log &&
+                                hasChildShape &&
+                                undefined == root &&
+                                s.ctx.log('kv', { ...s, key: 0, val: n.c });
+                            s.ctx.log && s.ctx.log('ea', s);
                         }
                     }
                 }
@@ -515,17 +539,22 @@ function make(intop, inopts) {
                         !n.p ||
                         S.undefined === s.type) {
                         // Inject default value.
-                        // s.updateVal(n.v)
                         s.updateVal(n.f);
                         s.fromDefault = true;
                     }
                     else if (S.any === s.type) {
                         s.ignoreVal = undefined === s.ignoreVal ? true : s.ignoreVal;
                     }
+                    // TODO: ensure object,array points called even if errors
+                    s.ctx.log && s.ctx.log('kv', s);
                 }
                 // Empty strings fail even if string is optional. Use Empty() to allow.
                 else if (S.string === s.type && S.MT === s.val && !n.u.empty) {
                     s.err.push(makeErrImpl(S.required, s, 1080));
+                    s.ctx.log && s.ctx.log('kv', s);
+                }
+                else {
+                    s.ctx.log && s.ctx.log('kv', s);
                 }
             }
             // Call Afters
@@ -548,6 +577,7 @@ function make(intop, inopts) {
                 s.pI = s.sI;
             }
         }
+        // console.log(s.printStacks())
         if (0 < s.err.length) {
             if (isarr(s.ctx.err)) {
                 s.ctx.err.push(...s.err);
