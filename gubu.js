@@ -163,6 +163,18 @@ class State {
             this.root = this.val;
         }
     }
+    // Uncomment for debugging.
+    printStacks() {
+        var _a;
+        console.log('\nNODE', 'd=' + this.dI, 'c=' + this.cI, 'p=' + this.pI, 'n=' + this.nI, +this.node, this.node.t, this.path, this.err.length);
+        for (let i = 0; i < this.nodes.length ||
+            i < this.vals.length ||
+            i < this.parents.length; i++) {
+            console.log(i, '\t', isNaN(+this.nodes[i]) ?
+                this.keys[i] + ':' + ((_a = this.nodes[i]) === null || _a === void 0 ? void 0 : _a.t) :
+                +this.nodes[i], '\t', stringify(this.vals[i]), '\t', stringify(this.parents[i]));
+        }
+    }
 }
 // Custom Error class.
 class GubuError extends TypeError {
@@ -207,7 +219,7 @@ const EMPTY_VAL = {
     null: null,
 };
 // Normalize a value into a Node.
-function nodize(shape, depth) {
+function nodize(shape, depth, meta) {
     var _a, _b, _c, _d;
     // If using builder as property of Gubu, `this` is just Gubu, not a node.
     if (make === shape) {
@@ -239,6 +251,7 @@ function nodize(shape, depth) {
             node.b = node.b || [];
             node.a = node.a || [];
             node.u = node.u || {};
+            node.m = node.m || meta;
             return node;
         }
     }
@@ -332,6 +345,7 @@ function nodize(shape, depth) {
         u,
         a,
         b,
+        m: meta
     };
     return node;
 }
@@ -347,6 +361,8 @@ function make(intop, inopts) {
     ) {
         let s = new State(root, top, ctx, match);
         // Iterative depth-first traversal of the shape using append-only array stacks.
+        // Stack entries are either sub-nodes to validate, or back pointers to
+        // next depth-first sub-node index.
         while (true) {
             s.next();
             if (s.stop) {
@@ -404,8 +420,30 @@ function make(intop, inopts) {
                             if (0 < vkeys.length) {
                                 hasKeys = true;
                                 s.pI = start;
-                                for (let k of vkeys) {
-                                    let nvs = n.v[k] = nodize(n.v[k], 1 + s.dI);
+                                //for (let k of vkeys) {
+                                for (let kI = 0; kI < vkeys.length; kI++) {
+                                    let k = vkeys[kI];
+                                    let meta = undefined;
+                                    // TODO: make optional
+                                    // Meta key must immediately preceed key
+                                    if (k.endsWith('$')) {
+                                        meta = { short: '' };
+                                        if ('string' === typeof (n.v[k])) {
+                                            meta.short = n.v[k];
+                                        }
+                                        else {
+                                            meta = { ...meta, ...n.v[k] };
+                                        }
+                                        kI++;
+                                        if (vkeys.length <= kI) {
+                                            break;
+                                        }
+                                        if (vkeys[kI] !== k.substring(0, k.length - 1)) {
+                                            throw new Error('Invalid meta key: ' + k);
+                                        }
+                                        k = vkeys[kI];
+                                    }
+                                    let nvs = n.v[k] = nodize(n.v[k], 1 + s.dI, meta);
                                     s.nodes[s.nI] = nvs;
                                     s.vals[s.nI] = val[k];
                                     s.parents[s.nI] = val;

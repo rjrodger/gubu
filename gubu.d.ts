@@ -38,6 +38,10 @@ type Node = {
     b: Validate[];
     a: Validate[];
     s?: string;
+    m?: NodeMeta;
+};
+type NodeMeta = {
+    short: string;
 };
 type Builder = (opts?: any, // Builder options.
 ...vals: any[]) => Node & // Builders build Nodes.
@@ -75,6 +79,7 @@ declare class State {
     constructor(root: any, top: Node, ctx?: Context, match?: boolean);
     next(): void;
     updateVal(val: any): void;
+    printStacks(): void;
 }
 type Update = {
     done?: boolean;
@@ -114,7 +119,7 @@ declare class GubuError extends TypeError {
         message: string;
     };
 }
-declare function nodize(shape?: any, depth?: number): Node;
+declare function nodize(shape?: any, depth?: number, meta?: NodeMeta): Node;
 declare function make<S>(intop?: S, inopts?: Options): {
     <R>(root?: R | undefined, ctx?: Context): R & S;
     valid: <D>(root?: D | undefined, ctx?: Context) => root is D & S;
