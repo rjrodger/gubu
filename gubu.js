@@ -18,7 +18,7 @@ exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRe
 // DOC: Optional
 const util_1 = require("util");
 // Package version.
-const VERSION = '4.0.0';
+const VERSION = '5.0.0';
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$');
 // A singleton for fast equality checks.
