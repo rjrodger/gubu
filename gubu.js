@@ -18,7 +18,7 @@ exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRe
 // DOC: Optional
 const util_1 = require("util");
 // Package version.
-const VERSION = '5.0.0';
+const VERSION = '5.0.1';
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$');
 // A singleton for fast equality checks.
@@ -424,9 +424,10 @@ function make(intop, inopts) {
                                 for (let kI = 0; kI < vkeys.length; kI++) {
                                     let k = vkeys[kI];
                                     let meta = undefined;
-                                    // TODO: make optional
+                                    // TODO: make optional, needs tests
+                                    // Experimental feature for jsonic docs
                                     // Meta key must immediately preceed key
-                                    if (k.endsWith('$')) {
+                                    if (k.endsWith('$$')) {
                                         meta = { short: '' };
                                         if ('string' === typeof (n.v[k])) {
                                             meta.short = n.v[k];
@@ -438,7 +439,7 @@ function make(intop, inopts) {
                                         if (vkeys.length <= kI) {
                                             break;
                                         }
-                                        if (vkeys[kI] !== k.substring(0, k.length - 1)) {
+                                        if (vkeys[kI] !== k.substring(0, k.length - 2)) {
                                             throw new Error('Invalid meta key: ' + k);
                                         }
                                         k = vkeys[kI];

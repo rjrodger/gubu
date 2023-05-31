@@ -21,7 +21,7 @@ import { inspect } from 'util'
 
 
 // Package version.
-const VERSION = '5.0.0'
+const VERSION = '5.0.1'
 
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$')
@@ -661,9 +661,10 @@ function make<S>(intop?: S, inopts?: Options) {
                   let k = vkeys[kI]
                   let meta: NodeMeta | undefined = undefined
 
-                  // TODO: make optional
+                  // TODO: make optional, needs tests
+                  // Experimental feature for jsonic docs
                   // Meta key must immediately preceed key
-                  if (k.endsWith('$')) {
+                  if (k.endsWith('$$')) {
                     meta = { short: '' }
                     if ('string' === typeof (n.v[k])) {
                       meta.short = n.v[k]
@@ -675,7 +676,7 @@ function make<S>(intop?: S, inopts?: Options) {
                     if (vkeys.length <= kI) {
                       break
                     }
-                    if (vkeys[kI] !== k.substring(0, k.length - 1)) {
+                    if (vkeys[kI] !== k.substring(0, k.length - 2)) {
                       throw new Error('Invalid meta key: ' + k)
                     }
                     k = vkeys[kI]

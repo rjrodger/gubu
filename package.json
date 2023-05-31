@@ -1,6 +1,6 @@
 {
   "name": "gubu",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "An object shape validation utility.",
   "main": "gubu.js",
   "browser": "gubu.min.js",
@@ -46,9 +46,9 @@
     "README.md"
   ],
   "devDependencies": {
-    "@types/jest": "^29.5.0",
+    "@types/jest": "^29.5.1",
     "browserify": "^17.0.0",
-    "esbuild": "^0.17.16",
+    "esbuild": "^0.17.19",
     "esbuild-jest": "^0.5.0",
     "jest": "^29.5.0",
     "tinyify": "^4.0.0",
