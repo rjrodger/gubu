@@ -50,17 +50,32 @@ let log = (point,state)=>{
   )
 }
 
-let a1 = Gubu({
-  // a: 11,
-  // b: { c: 22 },
-  // m: {},
-  d: { e: { f: 33, g: { h: 3333 } } },
-  d2: { e2: { f2: 333 } },
-  // g: [],
-  // h: [44],
-  // i: [55,66],
+
+let g0 = Gubu({
+  'a': {
+    x: 1
+  }
 })
-J(a1(undefined,{err:false,log}))
+
+console.log(g0({
+  a: {
+    x: 1,
+    y: 2
+  }
+}))
+
+
+// let a1 = Gubu({
+//   // a: 11,
+//   // b: { c: 22 },
+//   // m: {},
+//   d: { e: { f: 33, g: { h: 3333 } } },
+//   d2: { e2: { f2: 333 } },
+//   // g: [],
+//   // h: [44],
+//   // i: [55,66],
+// })
+// J(a1(undefined,{err:false,log}))
 // console.log(a1({h:['a']}))
 // J(a1({a:'x'}))
 
