@@ -170,9 +170,9 @@ class State {
         for (let i = 0; i < this.nodes.length ||
             i < this.vals.length ||
             i < this.parents.length; i++) {
-            console.log(i, '\t', isNaN(+this.nodes[i]) ?
+            console.log(i, '\t', ('' + (isNaN(+this.nodes[i]) ?
                 this.keys[i] + ':' + ((_a = this.nodes[i]) === null || _a === void 0 ? void 0 : _a.t) :
-                +this.nodes[i], '\t', stringify(this.vals[i]), '\t', stringify(this.parents[i]));
+                +this.nodes[i])).padEnd(32, ' '), stringify(this.vals[i]).padEnd(32, ' '), stringify(this.parents[i]));
         }
     }
 }
@@ -444,11 +444,28 @@ function make(intop, inopts) {
                                         }
                                         k = vkeys[kI];
                                     }
-                                    let nvs = n.v[k] = nodize(n.v[k], 1 + s.dI, meta);
+                                    let rk = k;
+                                    let ov = n.v[k];
+                                    if (k.startsWith('$$')) {
+                                        // let parts = k.split(' ')
+                                        let m = /^\s*("(\\.|[^"\\])*"|[^\s]+)\s+(.*?)\s*$/
+                                            .exec(k.substring(2));
+                                        if (!m) {
+                                            throw new Error('Invalid key expr: ' + k);
+                                        }
+                                        // console.log(m)
+                                        rk = m[1];
+                                        let src = m[3];
+                                        ov = expr({ src, val: ov });
+                                        // let builder = (make as any)[buildexpr]
+                                    }
+                                    let nvs = nodize(ov, 1 + s.dI, meta);
+                                    // console.log('VALK', val, k, val[k])
+                                    n.v[rk] = nvs;
                                     s.nodes[s.nI] = nvs;
-                                    s.vals[s.nI] = val[k];
+                                    s.vals[s.nI] = val[rk];
                                     s.parents[s.nI] = val;
-                                    s.keys[s.nI] = k;
+                                    s.keys[s.nI] = rk;
                                     s.nI++;
                                 }
                             }
@@ -676,6 +693,37 @@ function make(intop, inopts) {
     }
     gubuShape.gubu = GUBU;
     return gubuShape;
+}
+function expr(spec) {
+    if (null == spec.tokens) {
+        spec.tokens = [];
+        let tre = /\s*([)(]|"(\\.|[^"\\])*"|[^)(\s]+)\s*/g;
+        let t = null;
+        while (t = tre.exec(spec.src)) {
+            spec.tokens.push(t[1]);
+        }
+    }
+    spec.i = spec.i || 0;
+    let head = spec.tokens[spec.i];
+    // TODO: restrict to a proper lookup
+    // also support extensions
+    let fn = make[head];
+    spec.i++;
+    if (null == fn) {
+        return JSON.parse(head);
+    }
+    if ('(' === spec.tokens[spec.i]) {
+        spec.i++;
+    }
+    let args = [];
+    let t = null;
+    while (null != (t = spec.tokens[spec.i]) && ')' != t) {
+        args.push(expr(spec));
+    }
+    spec.i++;
+    // console.log('CALL',s.i,h,args)
+    spec.val = fn.call(spec.val, ...args);
+    return spec.val;
 }
 function handleValidate(vf, s) {
     var _a;

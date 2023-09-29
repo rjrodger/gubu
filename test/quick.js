@@ -52,17 +52,25 @@ let log = (point,state)=>{
 
 
 let g0 = Gubu({
-  'a': {
-    x: 1
+  // '$$ a Open': {
+  // '$$["a","Open"]': {
+  '$$ a Open Required': {
+  // a: {
+    // a: Open({
+    // x: 1,
+    '$$ x Min(1)': Number,
   }
+  // })
 })
+
+// console.log('=============')
 
 console.log(g0({
   a: {
     x: 1,
     y: 2
   }
-}))
+},{log:null}))
 
 
 // let a1 = Gubu({
