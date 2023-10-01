@@ -1,4 +1,4 @@
-/* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
+/* Copyright (c) 2021-2023 Richard Rodger and other contributors, MIT License */
 
 import Pkg from '../package.json'
 

@@ -2,8 +2,15 @@ declare const GUBU: {
     gubu$: symbol;
     v$: string;
 };
-type Options = {
+type GubuOptions = {
     name?: string;
+    meta?: {
+        active?: boolean;
+        suffix?: string;
+    };
+    keyexpr?: {
+        active?: boolean;
+    };
 };
 type Context = Record<string, any> & {
     err?: ErrDesc[] | boolean;
@@ -120,7 +127,7 @@ declare class GubuError extends TypeError {
     };
 }
 declare function nodize(shape?: any, depth?: number, meta?: NodeMeta): Node;
-declare function make<S>(intop?: S, inopts?: Options): {
+declare function make<S>(intop?: S, inopts?: GubuOptions): {
     <R>(root?: R | undefined, ctx?: Context): R & S;
     valid: <D>(root?: D | undefined, ctx?: Context) => root is D & S;
     match(root?: any, ctx?: Context): boolean;

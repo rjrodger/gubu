@@ -35,9 +35,21 @@ const GUBU$NIL = Symbol.for('gubu$nil')
 // RegExp: first letter is upper case
 const UPPER_CASE_FIRST_RE = /^[A-Z]/
 
+
 // Options for creating a GubuShape.
-type Options = {
+type GubuOptions = {
   name?: string // Name this Gubu shape.
+
+  // Meta properties
+  meta?: {
+    active?: boolean // If true, recognize meta properties.
+    suffix?: string // Key suffix to mark meta properties
+  }
+
+  // Key expressions
+  keyexpr?: {
+    active?: boolean // If true, recognize key expressions.
+  }
 }
 
 
@@ -45,7 +57,8 @@ type Options = {
 // Add your own references here for use in your own custom validations.
 // The reserved properties are: `err`.
 type Context = Record<string, any> & {
-  err?: ErrDesc[] | boolean // Provide an array to collect errors, instead of throwing.
+  // Provide an array to collect errors, instead of throwing.
+  err?: ErrDesc[] | boolean
   log?: (point: string, state: State) => void
 }
 
@@ -566,10 +579,24 @@ function nodize(shape?: any, depth?: number, meta?: NodeMeta): Node {
 
 
 // Create a GubuShape from a shape specification.
-function make<S>(intop?: S, inopts?: Options) {
-  const opts = null == inopts ? {} : inopts
+function make<S>(intop?: S, inopts?: GubuOptions) {
+  const opts: GubuOptions = null == inopts ? {} : inopts
+
+  // Ironically, we can't Gubu GubuOptions, so we have to set
+  // option defaults manually.
   opts.name =
-    null == opts.name ? 'G' + (S.MT + Math.random()).substring(2, 8) : S.MT + opts.name
+    null == opts.name ?
+      'G' + (S.MT + Math.random()).substring(2, 8) : S.MT + opts.name
+
+  // Meta properties are off by default.
+  let optsmeta = opts.meta = opts.meta || ({} as any)
+  optsmeta.active = (true === optsmeta.active) || false
+  optsmeta.suffix = 'string' == typeof optsmeta.suffix ? optsmeta.suffix : '$$'
+
+  // Key expressions are off by default.
+  let optskeyexpr = opts.keyexpr = opts.keyexpr || ({} as any)
+  optskeyexpr.active = (true === optskeyexpr.active) || false
+
 
   let top: Node = nodize(intop, 0)
 
@@ -663,8 +690,10 @@ function make<S>(intop?: S, inopts?: Options) {
 
                   // TODO: make optional, needs tests
                   // Experimental feature for jsonic docs
-                  // Meta key must immediately preceed key
-                  if (k.endsWith('$$')) {
+
+                  // NOTE: Meta key *must* immediately preceed key:
+                  // { x$$: <META>, x: 1 }}
+                  if (optsmeta.active && k.endsWith(optsmeta.suffix)) {
                     meta = { short: '' }
                     if ('string' === typeof (n.v[k])) {
                       meta.short = n.v[k]
@@ -672,36 +701,31 @@ function make<S>(intop?: S, inopts?: Options) {
                     else {
                       meta = { ...meta, ...n.v[k] }
                     }
+                    delete n.v[k]
                     kI++
                     if (vkeys.length <= kI) {
                       break
                     }
-                    if (vkeys[kI] !== k.substring(0, k.length - 2)) {
+                    if (vkeys[kI] !== k
+                      .substring(0, k.length - optsmeta.suffix.length)) {
                       throw new Error('Invalid meta key: ' + k)
                     }
                     k = vkeys[kI]
                   }
 
-
-
                   let rk = k
                   let ov: any = n.v[k]
 
-                  if (k.startsWith('$$')) {
+                  if (optskeyexpr.active) {
                     // let parts = k.split(' ')
-                    let m = /^\s*("(\\.|[^"\\])*"|[^\s]+)\s+(.*?)\s*$/
-                      .exec(k.substring(2))
-                    if (!m) {
-                      throw new Error('Invalid key expr: ' + k)
+                    let m = /^\s*("(\\.|[^"\\])*"|[^\s]+):\s*(.*?)\s*$/
+                      .exec(k)
+                    if (m) {
+                      rk = m[1]
+                      let src = m[3]
+
+                      ov = expr({ src, val: ov })
                     }
-
-                    // console.log(m)
-
-                    rk = m[1]
-                    let src = m[3]
-
-                    ov = expr({ src, val: ov })
-                    // let builder = (make as any)[buildexpr]
                   }
 
                   let nvs = nodize(ov, 1 + s.dI, meta)

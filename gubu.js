@@ -353,8 +353,18 @@ exports.nodize = nodize;
 // Create a GubuShape from a shape specification.
 function make(intop, inopts) {
     const opts = null == inopts ? {} : inopts;
+    // Ironically, we can't Gubu GubuOptions, so we have to set
+    // option defaults manually.
     opts.name =
-        null == opts.name ? 'G' + (S.MT + Math.random()).substring(2, 8) : S.MT + opts.name;
+        null == opts.name ?
+            'G' + (S.MT + Math.random()).substring(2, 8) : S.MT + opts.name;
+    // Meta properties are off by default.
+    let optsmeta = opts.meta = opts.meta || {};
+    optsmeta.active = (true === optsmeta.active) || false;
+    optsmeta.suffix = 'string' == typeof optsmeta.suffix ? optsmeta.suffix : '$$';
+    // Key expressions are off by default.
+    let optskeyexpr = opts.keyexpr = opts.keyexpr || {};
+    optskeyexpr.active = (true === optskeyexpr.active) || false;
     let top = nodize(intop, 0);
     // Lazily execute top against root to see if they match
     function exec(root, ctx, match // Suppress errors and return boolean result (true if match)
@@ -426,8 +436,9 @@ function make(intop, inopts) {
                                     let meta = undefined;
                                     // TODO: make optional, needs tests
                                     // Experimental feature for jsonic docs
-                                    // Meta key must immediately preceed key
-                                    if (k.endsWith('$$')) {
+                                    // NOTE: Meta key *must* immediately preceed key:
+                                    // { x$$: <META>, x: 1 }}
+                                    if (optsmeta.active && k.endsWith(optsmeta.suffix)) {
                                         meta = { short: '' };
                                         if ('string' === typeof (n.v[k])) {
                                             meta.short = n.v[k];
@@ -435,29 +446,28 @@ function make(intop, inopts) {
                                         else {
                                             meta = { ...meta, ...n.v[k] };
                                         }
+                                        delete n.v[k];
                                         kI++;
                                         if (vkeys.length <= kI) {
                                             break;
                                         }
-                                        if (vkeys[kI] !== k.substring(0, k.length - 2)) {
+                                        if (vkeys[kI] !== k
+                                            .substring(0, k.length - optsmeta.suffix.length)) {
                                             throw new Error('Invalid meta key: ' + k);
                                         }
                                         k = vkeys[kI];
                                     }
                                     let rk = k;
                                     let ov = n.v[k];
-                                    if (k.startsWith('$$')) {
+                                    if (optskeyexpr.active) {
                                         // let parts = k.split(' ')
-                                        let m = /^\s*("(\\.|[^"\\])*"|[^\s]+)\s+(.*?)\s*$/
-                                            .exec(k.substring(2));
-                                        if (!m) {
-                                            throw new Error('Invalid key expr: ' + k);
+                                        let m = /^\s*("(\\.|[^"\\])*"|[^\s]+):\s*(.*?)\s*$/
+                                            .exec(k);
+                                        if (m) {
+                                            rk = m[1];
+                                            let src = m[3];
+                                            ov = expr({ src, val: ov });
                                         }
-                                        // console.log(m)
-                                        rk = m[1];
-                                        let src = m[3];
-                                        ov = expr({ src, val: ov });
-                                        // let builder = (make as any)[buildexpr]
                                     }
                                     let nvs = nodize(ov, 1 + s.dI, meta);
                                     // console.log('VALK', val, k, val[k])
