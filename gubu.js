@@ -1,8 +1,8 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GKey = exports.GFunc = exports.GExact = exports.GEmpty = exports.GDefault = exports.GDefine = exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Len = exports.Never = exports.Min = exports.Max = exports.Key = exports.Func = exports.Exact = exports.Empty = exports.Default = exports.Define = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
-exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GLen = exports.GNever = exports.GMin = exports.GMax = void 0;
+exports.GFunc = exports.GExact = exports.GEmpty = exports.GDefault = exports.GDefine = exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Len = exports.Never = exports.Min = exports.Max = exports.Key = exports.Func = exports.Exact = exports.Empty = exports.Default = exports.Define = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.expr = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GLen = exports.GNever = exports.GMin = exports.GMax = exports.GKey = void 0;
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
@@ -467,6 +467,7 @@ function make(intop, inopts) {
                                             rk = m[1];
                                             let src = m[3];
                                             ov = expr({ src, val: ov });
+                                            delete n.v[k];
                                         }
                                     }
                                     let nvs = nodize(ov, 1 + s.dI, meta);
@@ -704,37 +705,75 @@ function make(intop, inopts) {
     gubuShape.gubu = GUBU;
     return gubuShape;
 }
+// Parse a builder expression into actual Builders.
+// Function call syntax; Depth first; literals must be JSON values;
+// Commas are optional. Top level builders are applied in order.
+// Dot-concatenated builders are applied in order.
+// Primary value is passed as Builder `this` context.
+// Examples:
+// Gubu({
+//   'x: Open': {},
+//   'y: Min(1) Max(4)': 2,
+//   'z: Required(Min(1))': 2,
+//   'q: Min(1).Below(4)': 3,
+// })
 function expr(spec) {
+    // console.log('EXPR', spec.src)
+    let top = false;
     if (null == spec.tokens) {
+        top = true;
         spec.tokens = [];
-        let tre = /\s*([)(]|"(\\.|[^"\\])*"|[^)(\s]+)\s*/g;
+        let tre = /\s*,?\s*([)(\.]|"(\\.|[^"\\])*"|[^)(,\s]+)\s*/g;
         let t = null;
         while (t = tre.exec(spec.src)) {
             spec.tokens.push(t[1]);
         }
+        // console.log('TOKENS', spec.tokens.join(' '))
     }
     spec.i = spec.i || 0;
     let head = spec.tokens[spec.i];
+    // console.log('HEAD', head)
     // TODO: restrict to a proper lookup
     // also support extensions
-    let fn = make[head];
+    // let fn = (make as any)[head]
+    let fn = BuilderMap[head];
+    if (')' === spec.tokens[spec.i]) {
+        spec.i++;
+        return spec.val;
+    }
     spec.i++;
     if (null == fn) {
-        return JSON.parse(head);
+        try {
+            return JSON.parse(head);
+        }
+        catch (je) {
+            throw new SyntaxError(`Gubu: unexpected token ${head} in builder expression ${spec.src}`);
+        }
     }
     if ('(' === spec.tokens[spec.i]) {
         spec.i++;
     }
     let args = [];
     let t = null;
-    while (null != (t = spec.tokens[spec.i]) && ')' != t) {
-        args.push(expr(spec));
+    while (null != (t = spec.tokens[spec.i]) && ')' !== t) {
+        let ev = expr(spec);
+        args.push(ev);
+        // console.log('ARGS', spec.i, ev, 'A:', args)
     }
     spec.i++;
-    // console.log('CALL',s.i,h,args)
+    // console.log('CALL', spec.i, fn.name, args)
     spec.val = fn.call(spec.val, ...args);
+    // if (!cb && spec.i < spec.tokens.length) {
+    if ('.' === spec.tokens[spec.i]) {
+        spec.i++;
+        return expr(spec);
+    }
+    else if (top && spec.i < spec.tokens.length) {
+        return expr(spec);
+    }
     return spec.val;
 }
+exports.expr = expr;
 function handleValidate(vf, s) {
     var _a;
     let update = {};
@@ -1310,6 +1349,7 @@ function buildize(node0, node1) {
     // Detect chaining. If not chained, ignore `this` if it is the global context.
     let node = nodize(null == node0 || node0.window === node0 || node0.global === node0
         ? node1 : node0);
+    // Only add chainable Builders.
     // NOTE: One, Some, All not chainable.
     return Object.assign(node, {
         Above,
@@ -1452,6 +1492,36 @@ function clone(x) {
 }
 const G$ = (node) => nodize({ ...node, $: { gubu$: true } });
 exports.G$ = G$;
+const BuilderMap = {
+    Above,
+    After,
+    All,
+    Any,
+    Before,
+    Below,
+    Check,
+    Child,
+    Closed,
+    Define,
+    Default,
+    Empty,
+    Exact,
+    Func,
+    Key,
+    Max,
+    Min,
+    Never,
+    Len,
+    One,
+    Open,
+    Optional,
+    Refer,
+    Rename,
+    Required,
+    Skip,
+    Some,
+    Value,
+};
 // Fix builder names after terser mangles them.
 /* istanbul ignore next */
 if (S.undefined !== typeof (window)) {
@@ -1491,34 +1561,35 @@ if (S.undefined !== typeof (window)) {
 }
 Object.assign(make, {
     Gubu: make,
-    Above,
-    After,
-    All,
-    Any,
-    Before,
-    Below,
-    Check,
-    Child,
-    Closed,
-    Define,
-    Default,
-    Empty,
-    Exact,
-    Func,
-    Key,
-    Max,
-    Min,
-    Never,
-    Len,
-    One,
-    Open,
-    Optional,
-    Refer,
-    Rename,
-    Required,
-    Skip,
-    Some,
-    Value,
+    ...BuilderMap,
+    // Above,
+    // After,
+    // All,
+    // Any,
+    // Before,
+    // Below,
+    // Check,
+    // Child,
+    // Closed,
+    // Define,
+    // Default,
+    // Empty,
+    // Exact,
+    // Func,
+    // Key,
+    // Max,
+    // Min,
+    // Never,
+    // Len,
+    // One,
+    // Open,
+    // Optional,
+    // Refer,
+    // Rename,
+    // Required,
+    // Skip,
+    // Some,
+    // Value,
     GAbove: Above,
     GAfter: After,
     GAll: All,

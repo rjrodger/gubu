@@ -52,25 +52,42 @@ let log = (point,state)=>{
 
 
 let g0 = Gubu({
-  // '$$ a Open': {
-  // '$$["a","Open"]': {
-  '$$ a Open Required': {
-  // a: {
-    // a: Open({
-    // x: 1,
-    '$$ x Min(1)': Number,
-  }
-  // })
-})
+  // 'a': Open({x:1}),
+  // 'b': {x:1},
+  'x: Min(1) Max(4)': 2,
+  // 'y: Min(1).Max(4)': 2,
+  // 'y: Min(1)': 2,
+  // 'z: Min(1,Max(4))': 2,
+  // 'z: Required(Min(1) Max(4))': 2,
+  // 'z: Required(min(1,Max(4)))': 2,
+  // 'k:Exact(0,"q",true,","," ")':"q"
+},{keyexpr:{active:true}})
 
-// console.log('=============')
+console.log(g0.spec().v)
+// console.log(g0({k:true}))
+// console.log(g0({x:0}))
+// console.log(g0({x:5}))
 
-console.log(g0({
-  a: {
-    x: 1,
-    y: 2
-  }
-},{log:null}))
+// let g0 = Gubu({
+//   // '$$ a Open': {
+//   // '$$["a","Open"]': {
+//   '$$ a Open Required': {
+//   // a: {
+//     // a: Open({
+//     // x: 1,
+//     '$$ x Min(1)': Number,
+//   }
+//   // })
+// })
+
+// // console.log('=============')
+
+// console.log(g0({
+//   a: {
+//     x: 1,
+//     y: 2
+//   }
+// },{log:null}))
 
 
 // let a1 = Gubu({

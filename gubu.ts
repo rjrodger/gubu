@@ -725,6 +725,7 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
                       let src = m[3]
 
                       ov = expr({ src, val: ov })
+                      delete n.v[k]
                     }
                   }
 
@@ -1022,33 +1023,64 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
 }
 
 
+// Parse a builder expression into actual Builders.
+// Function call syntax; Depth first; literals must be JSON values;
+// Commas are optional. Top level builders are applied in order.
+// Dot-concatenated builders are applied in order.
+// Primary value is passed as Builder `this` context.
+// Examples:
+// Gubu({
+//   'x: Open': {},
+//   'y: Min(1) Max(4)': 2,
+//   'z: Required(Min(1))': 2,
+//   'q: Min(1).Below(4)': 3,
+// })
 function expr(spec: {
   src: string
   val: any
   tokens?: string[]
   i?: number
 }) {
+  // console.log('EXPR', spec.src)
+
+  let top = false
+
   if (null == spec.tokens) {
+    top = true
     spec.tokens = []
-    let tre = /\s*([)(]|"(\\.|[^"\\])*"|[^)(\s]+)\s*/g
+    let tre = /\s*,?\s*([)(\.]|"(\\.|[^"\\])*"|[^)(,\s]+)\s*/g
     let t = null
     while (t = tre.exec(spec.src)) {
       spec.tokens.push(t[1])
     }
+    // console.log('TOKENS', spec.tokens.join(' '))
   }
 
   spec.i = spec.i || 0
 
   let head = spec.tokens[spec.i]
+  // console.log('HEAD', head)
 
   // TODO: restrict to a proper lookup
   // also support extensions
-  let fn = (make as any)[head]
+  // let fn = (make as any)[head]
+  let fn = BuilderMap[head]
+
+  if (')' === spec.tokens[spec.i]) {
+    spec.i++
+    return spec.val
+  }
 
   spec.i++
 
   if (null == fn) {
-    return JSON.parse(head)
+    try {
+      return JSON.parse(head)
+    }
+    catch (je: any) {
+      throw new SyntaxError(
+        `Gubu: unexpected token ${head} in builder expression ${spec.src}`)
+    }
   }
 
   if ('(' === spec.tokens[spec.i]) {
@@ -1057,14 +1089,25 @@ function expr(spec: {
 
   let args = []
   let t = null
-  while (null != (t = spec.tokens[spec.i]) && ')' != t) {
-    args.push(expr(spec))
+  while (null != (t = spec.tokens[spec.i]) && ')' !== t) {
+    let ev = expr(spec)
+    args.push(ev)
+    // console.log('ARGS', spec.i, ev, 'A:', args)
   }
   spec.i++
 
-  // console.log('CALL',s.i,h,args)
+  // console.log('CALL', spec.i, fn.name, args)
 
   spec.val = fn.call(spec.val, ...args)
+
+  // if (!cb && spec.i < spec.tokens.length) {
+  if ('.' === spec.tokens[spec.i]) {
+    spec.i++
+    return expr(spec)
+  }
+  else if (top && spec.i < spec.tokens.length) {
+    return expr(spec)
+  }
 
   return spec.val
 }
@@ -1085,7 +1128,8 @@ function handleValidate(vf: Validate, s: State): Update {
     thrown = ve
   }
 
-  let hasErrs = isarr(update.err) ? 0 < (update.err as Array<any>).length : null != update.err
+  let hasErrs =
+    isarr(update.err) ? 0 < (update.err as Array<any>).length : null != update.err
 
   if (!valid || hasErrs) {
 
@@ -1841,6 +1885,7 @@ function buildize(node0?: any, node1?: any): Node {
     nodize(null == node0 || node0.window === node0 || node0.global === node0
       ? node1 : node0)
 
+  // Only add chainable Builders.
   // NOTE: One, Some, All not chainable.
   return Object.assign(node, {
     Above,
@@ -2037,6 +2082,37 @@ type GubuShape = ReturnType<typeof make> &
 const G$ = (node: any): Node => nodize({ ...node, $: { gubu$: true } })
 
 
+const BuilderMap: Record<string, Builder> = {
+  Above,
+  After,
+  All,
+  Any,
+  Before,
+  Below,
+  Check,
+  Child,
+  Closed,
+  Define,
+  Default,
+  Empty,
+  Exact,
+  Func,
+  Key,
+  Max,
+  Min,
+  Never,
+  Len,
+  One,
+  Open,
+  Optional,
+  Refer,
+  Rename,
+  Required,
+  Skip,
+  Some,
+  Value,
+}
+
 // Fix builder names after terser mangles them.
 /* istanbul ignore next */
 if (S.undefined !== typeof (window)) {
@@ -2081,34 +2157,35 @@ if (S.undefined !== typeof (window)) {
 Object.assign(make, {
   Gubu: make,
 
-  Above,
-  After,
-  All,
-  Any,
-  Before,
-  Below,
-  Check,
-  Child,
-  Closed,
-  Define,
-  Default,
-  Empty,
-  Exact,
-  Func,
-  Key,
-  Max,
-  Min,
-  Never,
-  Len,
-  One,
-  Open,
-  Optional,
-  Refer,
-  Rename,
-  Required,
-  Skip,
-  Some,
-  Value,
+  ...BuilderMap,
+  // Above,
+  // After,
+  // All,
+  // Any,
+  // Before,
+  // Below,
+  // Check,
+  // Child,
+  // Closed,
+  // Define,
+  // Default,
+  // Empty,
+  // Exact,
+  // Func,
+  // Key,
+  // Max,
+  // Min,
+  // Never,
+  // Len,
+  // One,
+  // Open,
+  // Optional,
+  // Refer,
+  // Rename,
+  // Required,
+  // Skip,
+  // Some,
+  // Value,
 
   GAbove: Above,
   GAfter: After,
@@ -2273,6 +2350,7 @@ export {
   makeErr,
   stringify,
   truncate,
+  expr,
 
   Above,
   After,

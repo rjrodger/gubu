@@ -140,6 +140,12 @@ declare function make<S>(intop?: S, inopts?: GubuOptions): {
         v$: string;
     };
 };
+declare function expr(spec: {
+    src: string;
+    val: any;
+    tokens?: string[];
+    i?: number;
+}): any;
 declare const Required: Builder;
 declare const Optional: Builder;
 declare const Skip: Builder;
@@ -276,4 +282,4 @@ declare const GSkip: Builder;
 declare const GSome: Builder;
 declare const GValue: Builder;
 export type { Validate, Update, Context, Builder, Node, State, GubuShape, };
-export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, Above, After, All, Any, Before, Below, Check, Child, Closed, Define, Default, Empty, Exact, Func, Key, Max, Min, Never, Len, One, Open, Optional, Refer, Rename, Required, Skip, Some, Value, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GCheck, GChild, GClosed, GDefine, GDefault, GEmpty, GExact, GFunc, GKey, GMax, GMin, GNever, GLen, GOne, GOpen, GOptional, GRefer, GRename, GRequired, GSkip, GSome, GValue, };
+export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, expr, Above, After, All, Any, Before, Below, Check, Child, Closed, Define, Default, Empty, Exact, Func, Key, Max, Min, Never, Len, One, Open, Optional, Refer, Rename, Required, Skip, Some, Value, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GCheck, GChild, GClosed, GDefine, GDefault, GEmpty, GExact, GFunc, GKey, GMax, GMin, GNever, GLen, GOne, GOpen, GOptional, GRefer, GRename, GRequired, GSkip, GSome, GValue, };
