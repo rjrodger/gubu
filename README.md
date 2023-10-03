@@ -22,17 +22,20 @@
 
 This is a schema validator in the tradition of [Joi](https://joi.dev)
 or any [JSON-Schema](https://json-schema.org/) validator, but with a
-much nicer developer experience.
+much nicer developer experience. It works in JavaScript and
+TypeScript, on the browser and the backend.
 
-The big idea is that your schema looks (almost) exactly like your
-data. That makes your schema much easier to read and reason about. You
+**The big idea is that your schema looks (almost) exactly like your
+data.** 
+
+That makes your schema much easier to read and reason about. You
 could call it:
 
 > "Schema By Example"
 
 Let's say you want to have the some options for a module you are writing:
 
-```
+```js
 {
   port: 8080,
   host: 'localhost'
@@ -42,16 +45,16 @@ Let's say you want to have the some options for a module you are writing:
 This is a valid Gubu specification. It means:
 
 
-```
+```js
 {
   port: 8080,        // Must be a number, is optional, and the default is 8080
   host: 'localhost'  // Must be a string, is optional, and the default is 'localhost'
 }
 ```
 
-If you user does not specify these options, then you get the defaults:
+If your user does not specify these options, then you get the defaults:
 
-```
+```js
 {} --> { port: 8080, host: 'localhost' }
 ```
 
@@ -59,7 +62,7 @@ In Gubu, the most common case for options is the easiest: everything
 is optional, and the default value defines the type you will accept.
 This also works for objects, which get "filled out" if not present:
 
-```
+```js
 const { Gubu } = require('gubu')
 
 const shape = Gubu({
@@ -94,7 +97,7 @@ so Gubu leaves that decision to calling code.
 To make properties required, you use the standard JavaScript wrapper
 objects (*Number*, *String*, *Boolean*, ...):
 
-```
+```js
 const { Gubu } = import 'gubu' // `import` also works! And in browsers too.
 
 const shape = Gubu({
@@ -117,7 +120,7 @@ need to specify the type.
 To validate arrays, you provide an example element. All elements of the
 array must match the example element:
 
-```
+```js
 const shape = Gubu([Number])
 
 // All good - we want numbers!
@@ -139,8 +142,9 @@ Joi](https://github.com/rjrodger/joiprops), but it's pretty clunky.
 This validator is motivated by two use cases: adding message
 validation to the [Seneca microservices
 framework](https://senecajs.org), and providing deep defaults for
-complex custom Vue.js components. I think it does both jobs rather
-nicely with an easy-to-read syntax.
+complex [React](https://react.dev/) and [Vue.js](https://vuejs.org/)
+components. I think it does both jobs rather nicely with an
+easy-to-read syntax.
 
 On the philosophical side, this validator is motivated by the idea of
 [query-by-example](https://wiki.c2.com/?QueryByExample). This comes
@@ -272,7 +276,7 @@ use shape builder functions that still respect your data structure.
 The [Required](#required-builder) shape builder makes a value
 explicitly required:
 
-```
+```js
 const { Gubu, Required } = require('gubu')
 
 const userShape = Gubu({
@@ -298,7 +302,7 @@ userShape({
 Shape builders are exported by the Gubu module directly, and are also
 available as properties of the `Gubu` function:
 
-```
+```js
 const { Gubu, Required, Closed } = import 'gubu'
 
 Required === Gubu.Required
@@ -329,17 +333,17 @@ $ npm install gubu
 ## Usage
 
 
-The *Gubu* module has no dependencies. A single function named `Gubu`
-is exported.  Shape builders (such as [Required](#required-builder))
-and utility functions are provided as properties of `Gubu` or can be
-exported separately.
+The *Gubu* module has no dependencies. A function named `Gubu` is
+exported as the main entry point.  Shape builders (such as
+[Required](#required-builder)) and utility functions are provided as
+properties of `Gubu` or can be imported separately.
 
 
 ### TypeScript
 
 *Gubu* is written in TypeScript, and can be imported naturally:
 
-```
+```js
 import { Gubu } from 'gubu' 
 ```
 
@@ -393,7 +397,7 @@ module).
 
 For objects, write them as you want them:
 
-```
+```js
 let shape = Gubu({
   foo: {
     bar: {
@@ -406,7 +410,7 @@ let shape = Gubu({
 
 The above shape will match:
 
-```
+```js
 {
   foo: {
     bar: {
@@ -420,7 +424,7 @@ The above shape will match:
 If you want to allow arbitrary properties in an object, you can use the 
 [Open](#open-builder) shape builder:
 
-```
+```js
 let openObject = Gubu(Open({ a: 1 }))
 
 // This now passes (normally property `b` would not be allowed).
@@ -453,7 +457,7 @@ And you can manipulate the value if you need to:
 
 You can also compose validations together:
 
-```
+```js
 const shape = Gubu({ a: Gubu({ x: Number }) })
 
 // Matches { a: { x: 1 } } as expected
@@ -469,13 +473,38 @@ your top level variable namespace.
 As a convenience, you can chain most builders. Thus a `Required` and
 `Closed` object can be specified with:
 
-```
+```js
 const { Gubu } = require('gubu')
 
 const shape = Gubu({
   a: Gubu.Closed({ x: 1 }).Required(),
   b: Gubu.Required({ x: 1 }).Closed(), // Same as line above
 })
+```
+
+You can also use an optional syntax to avoid importing the shape
+builders entirely. This is useful if you want your schemas to be fully
+serializable to JSON.
+
+```
+// The key string format `name: builder-expression` is converted into 
+// an application of the shape builders on the value.
+
+const shape = Gubu({ 'a: Open': { x: 1 }}, { keyexpr: { active: true } })
+
+// Matches as a.y is allowed as a is Open
+shape({ a: { x: 1, y: 2 } })
+
+// shape is equivalent to:
+shape = Gubu({ a: Open({ x: 1 }) })
+
+```
+
+The builder expression syntax is the same as JavaScript function call
+syntax, **but** all values must be in JSON format.
+
+```js
+const shape = Gubu({ 'a: Exact("red",1,true)': 'red'}, { keyexpr: { active: true } })
 ```
 
 You can write your own builders&mdash;see the next section.
@@ -505,13 +534,12 @@ The built-in shape builders help you match the following shapes:
   * [Min](#min-builder): Match a value (or length of value) greater than or equal to the given amount.
   * [Len](#len-builder): Match a value (or length of value) exactly equal to the given amount.
   * [Above](#above-builder): Match a value (or length of value) greater than the given amount.
-  * [Func](#func-builder): The value is explicitly a function.
-
 * General constraints:
   * [Closed](#closed-builder): Allow only explicitly defined elements in an array.
   * [Open](#open-builder): Allow arbitrary properties in an object (no constraint on their value).
   * [Value](#value-builder): All non-explicit child values of a shape must match this shape.
   * [Child](#child-builder): All non-explicit child values of an object must match this shape.
+  * [Func](#func-builder): The value is explicitly a function.
 * Mutations:
   * [Rename](#rename-builder): Rename the key of a property.
   * [Define](#define-builder): Define a name for a value.
@@ -531,7 +559,7 @@ string (using `String(...)`), and will be valid if it matches the
 regular expression. The values `null`, `undefined` and `NaN` are not
 converted to strings and will always fail this check.
 
-```
+```js
 let shape = Gubu({ countryCode: Check(/^[A-Z][A-Z]$/) })
 
 shape({ countryCode: 'IE' })) // PASS.
@@ -545,7 +573,7 @@ You can use the [Define](#define-builder) and [Refer](#refer-builder)
 shape builders to validate recursive shapes. Use `Define` first to
 name a given shape. Then use `Refer` to apply the definition of the shape.
 
-```
+```js
 let tree = Gubu({
   root: Define('BRANCH', {
     value: String,
@@ -679,7 +707,7 @@ in default cases.
 
 The general form of an object shape is:
 
-```
+```js
 { 
   'propName0': <SHAPE>,
   'propName1': <SHAPE>,
@@ -701,7 +729,7 @@ To mark an object property as required, use the [required
 value](#required-values) shapes (such as `String`), or use the shape
 builder [Required](#required-builder):
 
-```
+```js
 const { Required } = Gubu
 
 let shape = Gubu({
@@ -727,7 +755,7 @@ they are children of optional objects&mdash;they wouldn't be required
 otherwise! To allow such deep required properties to be missing, use
 an explicit [Skip](#skip-builder) shape builder:
 
-```
+```js
 let strictShape = Gubu({ a: { b: String } })
 
 // Passes
@@ -755,7 +783,7 @@ Normally, objects can only contain explicitly defined properties. To
 allow an object to have an unrestricted set of properties, use the
 [Open](#open-builder) shape builder:
 
-```
+```js
 const { Open } = Gubu
 
 let shape = Gubu(Open({
@@ -774,7 +802,7 @@ wraps, and does not apply to child objects. You need to use `Open`
 explicitly for each object that can have arbitrary properties.
 
 
-```
+```js
 shape = Gubu(Open({
   a: Open({
     b: 1
@@ -797,7 +825,7 @@ present. To prevent this, use the shape builder [Skip](#skip-builder)
 to indicate that you do *not* wish an object to be inserted when it is
 missing&mdash;it can be skipped.
 
-```
+```js
 const { Skip } = Gubu
 let shape = Gubu({
   a: { x: 1 },
@@ -820,7 +848,7 @@ If the object value is present but empty, any default values will be inserted.
 You can define a general shape for all non-explicit object values
 using the [Value](#value-builder) shape builder:
 
-```
+```js
 const { Value } = Gubu
 
 let shape = Gubu(Value(String, {
@@ -843,7 +871,7 @@ non-explicit properties.
 The general shape can be any valid shape:
 
 
-```
+```js
 const { Required, Value } = Gubu
 
 let shape = Gubu({
@@ -872,7 +900,7 @@ Arrays can be specified directly using the first element as the shape
 that each element of the value array must match. If you want an array
 of numbers (`[ 1, 2, 3 ]`, say), then the shape is `[Number]`.
 
-```
+```js
 let shape = Gubu([Number])
 shape() // PASS: returns [] (the array itself is optional)
 shape([]) // PASS: returns [] (empty arrays pass)
@@ -896,7 +924,7 @@ below.
 
 The general form of an array shape is:
 
-```
+```js
 [
   <SHAPE>,
 ]
@@ -910,7 +938,7 @@ For special cases, where elements at specific indexes must match
 specific shapes, you can define these arrays using the
 [Closed](#closed-builder) shape builder.
 
-```
+```js
 let shape = Gubu(Closed([Number, String, Boolean]))
 
 // This passes, returning the array as is.
@@ -941,7 +969,7 @@ To mark an array element as required, use the [required
 value](#required-values) shapes (such as `String`), or use the shape
 builder [Required](#required-builder).
 
-```
+```js
 let shape = Gubu([{ x: 1 }, Required({ y: true })])
 
 // These pass
@@ -970,7 +998,7 @@ builders [Min](#min-builder), [Max](#max-builder),
 [Above](#above-builder), [Below](#below-builder), and
 [Len](#len-builder) to restrict the length of the array.
 
-```
+```js
 let { Min } = Gubu
 let shape = Gubu(Min(2, [Number]))
 
@@ -991,7 +1019,7 @@ type. For strings they control character length, for numbers they
 control magnitude, for objects they control property count, and for
 arrays, they control length:
 
-```
+```js
 let { Max } = Gubu
 
 // Maximum string length
@@ -1016,7 +1044,7 @@ values, defining an optional value shape with a default. This allows
 you to provide default functions for your module options, if you are
 using *Gubu* as an option validator.
 
-```
+```js
 let shape = Gubu({
   fn: () => true
 })
@@ -1051,7 +1079,7 @@ You can define custom validators by providing a function to the
 function will provide the value to validate. Return `true` if the
 value is valid, and `false` if not.
 
-```
+```js
 import { Gubu, Check } from 'gubu'
 
 let shape = Gubu({ a: Check((v) => 10 < v) })
@@ -1063,7 +1091,7 @@ shape({ a: 9 })  // fails, as 10 < 9 is false
 You can modify the value using the second argument to the custom
 validation function, by assigning a new value to the `val` property:
 
-```
+```js
 let shape = Gubu({ 
   a: Check((value, update) => {
     update.val = value * 2 
@@ -1079,7 +1107,7 @@ As a special case, if you want to explicitly set the value to
 
 You can also provide a custom error message using the `update` argument:
 
-```
+```js
 let shape = Gubu({ 
   a: Check((value, update) => {
     update.err = 'BAD VALUE $VALUE AT $PATH'
@@ -1099,7 +1127,7 @@ should not be considered stable. Review the [source
 code](https://github.com/rjrodger/gubu/blob/main/gubu.ts#L98) to see
 what is available.
 
-```
+```js
 shape = Gubu({
   a: Check((value: any, update: any, state: any) => {
     update.val = value + ` KEY=${state.key}`
@@ -1124,7 +1152,7 @@ advanced usage.
 
 To construct a shape use the `Gubu` function exported by this module:
 
-```
+```js
 // Using require
 const { Gubu } = require('gubu')
 
@@ -1157,7 +1185,7 @@ The `Gubu` function provides all built-in [shape builders](#shape-builders)
 (`Required`, `Closed`, etc.) as properties. These are also exported directly
 from the module, so the following are equivalent:
 
-```
+```js
 const { Gubu, Required } = import 'gubu'
 
 const { Gubu } = require('gubu')
@@ -1168,7 +1196,7 @@ If you are concerned about namespacing the builders (if the names
 clash with your own names), the shape builders are also available with
 a 'G' prefix as an alias:
 
-```
+```js
 Gubu.GRequired === Gubu.Required
 ```
 
@@ -1178,7 +1206,7 @@ Gubu.GRequired === Gubu.Required
 When you create a shape using `Gubu`, a `GubuShape` shape validator
 function is returned:
 
-```
+```js
 // TypeScript
 import { Gubu, GubuShape } from 'gubu'
 
@@ -1208,7 +1236,7 @@ If you provide a context with the property `err` as an empty array,
 any validation errors will be added to this array, and an Error will
 **not be thrown**:
 
-```
+```js
 let ctx = { err: [] }
 Gubu(Number)('abc', ctx)  // does not throw
 console.log(err[0]) // prints error description (number was expected)
@@ -1275,7 +1303,7 @@ is usable in your own application as-is. You can use the `ErrDesc`
 object instead to create entirely custom messages. Custom messages for
 specific custom errors can also be defined (see below).
 
-```
+```js
 Gubu(Number)('abc') // throws an Error with message:
 `
 Validation failed for value "abc" because the value is not of type number.'
@@ -1312,7 +1340,7 @@ customization. The properties are:
 
 The property `n` is the [shape node](#shape-nodes) whose validation failed.
 
-```
+```js
 try {
     Gubu({x: Number})({x: 'abc'})
 }
@@ -1378,7 +1406,7 @@ inspect the source code).
 Instead of throwing validation errors, you can collect them using the
 reserved property `err` in the context argument:
 
-```
+```js
 let ctx = { err: [] }
 Gubu(Number)('abc', ctx)  // does not throw
 // ctx.err now contains an array of ErrDesc objects 
@@ -1401,7 +1429,7 @@ against the `undefined` value.
 When using a [custom validator](#custom-validation) you can provide a custom
 error message using the `Update.err` property.
 
-```
+```js
 let shape = Gubu({ a: (value, update) => {
   update.err = 'BAD VALUE $VALUE AT $PATH'
   return false // always fails
@@ -1423,13 +1451,13 @@ optional default values (from which types will be inferred).
 The [GubuShape](#gubushape-function) function also contains a property
 function `valid` with form:
 
-```
+```js
 valid(value: any, context?: any): boolean
 ```
 
 This can be used as a [type guard](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates):
 
-```
+```js
 const shape = Gubu({ x: 1, y: 'Y' })
 let data = { x: 2 }
 
@@ -1443,7 +1471,7 @@ if (shape.valid(data)) {
 
 The `valid` function does not throw, but you can optionally collect
 [errors](#Errors) in the usual way with:
-```
+```js
 ...
 context = { err: [] }
 if (shape.valid(data, context)) {
@@ -1460,7 +1488,7 @@ else {
 Where TypeScript cannot infer your types properly, you'll need to
 manually define them:
 
-```
+```js
 let shape = Gubu(Open({ x: 1}) as unknown as { x: number })
 let data = { z: true }
 
@@ -1474,7 +1502,7 @@ if (shape.valid(data)) {
 
 The holy grail would be for Gubu to use your type definitions directly:
 
-```
+```js
 interface User {
   name: string
   age: number
@@ -1494,7 +1522,7 @@ definitions, here are your options:
 
 1. Create an instance of your type, and use that as the shape definition:
 
-```
+```js
 Class Car {
   // These defaults become the shape definitions
   make: string = ''
@@ -1584,7 +1612,7 @@ For example, the [Required](#required-builder) shape builder marks a
 value as required. This is most useful for objects and array, which
 are by default optional:
 
-```
+```js
 const { Gubu, Required } = require('gubu') // shaper builders are exported
 let easier = Gubu({ x: 1 })
 let stricter = Gubu(Required({ x: 1 }))
@@ -1600,7 +1628,7 @@ Most shape builders can also be chained. For example, the
 added to an object. To also make the object required you can use
 either of these expressions:
 
-```
+```js
 const { Required, Open } = Gubu // shape builders are also properties of Gubu
 Gubu(Open({ a: 1, b: 2 }).Required())
 Gubu(Required({ a: 1, b: 2 }).Open())
@@ -1609,7 +1637,7 @@ Gubu(Required({ a: 1, b: 2 }).Open())
 Most shape builders can be composed (check their expected arguments!),
 so the following are also equivalent:
 
-```
+```js
 Gubu(Open(Required({ a: 1, b: 2 })))
 Gubu(Required(Open({ a: 1, b: 2 })))
 ```
@@ -1774,7 +1802,7 @@ After( validate: Validate, child?: any )
 Provide a validation function that will run **after** the value has been
 processed normally. The validation function has the form:
 
-```
+```js
 Validate(value: any, update?: Update, state?: State): boolean
 ```
 
@@ -1910,7 +1938,7 @@ Before( validate: Validate, child?: any )
 Provide a validation function that will run **before** the value has been
 processed normally. The validation function has the form:
 
-```
+```js
 Validate(value: any, update?: Update, state?: State): boolean
 ```
 
@@ -2853,7 +2881,7 @@ const Skip: Builder = function(this: Node, shape?: any) {
 
 A shape builder function has the form:
 
-```
+```js
 Builder( options?: any, ...values?: any[] ): Node
 ```
 
@@ -2861,7 +2889,7 @@ You can use the utility function `buildize` to create an initial
 [Shape Node](#shape-nodes) instance. To accept a child shape, pass
 in the first shape value provided to your `Builder`:
 
-```
+```js
 const Skip: Builder = function(this: Node, shape?: any) {
   let node = buildize(this, shape)
   ...
@@ -2869,7 +2897,7 @@ const Skip: Builder = function(this: Node, shape?: any) {
 
 Once you have a `Node`, you can manipulate it directly:
 
-```
+```js
   node.r = false
 
   // Do not insert empty arrays and objects.

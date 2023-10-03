@@ -27,21 +27,17 @@ const {
 
 describe('extend', () => {
 
-  test('meta', () => {
+  test('meta-basic', () => {
     let g0 = Gubu({
       'x$$': { foo: 99 },
       x: 1
     }, { meta: { active: true } })
-    // console.log(g0)
-    // console.log(g0.spec())
-    // console.log(g0.node())
-    // console.log(g0({}))
-    // console.log(g0({}))
 
     expect(g0.spec().v.x.m).toEqual({ short: '', foo: 99 })
   })
 
-  test('expr', () => {
+
+  test('expr-basic', () => {
     let g0 = Gubu({
       // 'x: Open': {
       x: {
@@ -75,6 +71,17 @@ describe('extend', () => {
     // TODO: FIX: this msg is doubled
     expect(() => g1({ z: 5 })).toThrow('Value "5" for property "z" must be a maximum of 4 (was 5)')
 
+  })
+
+
+  // TODO: regexps!
+  // TODO: what if builder expr is just a literal?
+
+  test('expr-syntax', () => {
+    let GE = (exp: string, val: any) =>
+      Gubu({ ['x:' + exp]: val }, { keyexpr: { active: true } })
+    expect(() => GE('BadBuilder', 1))
+      .toThrow('Gubu: unexpected token BadBuilder in builder expression BadBuilder')
   })
 })
 

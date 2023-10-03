@@ -1018,6 +1018,8 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
 
   gubuShape.gubu = GUBU
 
+  // Validate shape spec. This will throw if there's an issue with the spec.
+  gubuShape.spec()
 
   return gubuShape
 }
@@ -1059,11 +1061,7 @@ function expr(spec: {
   spec.i = spec.i || 0
 
   let head = spec.tokens[spec.i]
-  // console.log('HEAD', head)
 
-  // TODO: restrict to a proper lookup
-  // also support extensions
-  // let fn = (make as any)[head]
   let fn = BuilderMap[head]
 
   if (')' === spec.tokens[spec.i]) {
