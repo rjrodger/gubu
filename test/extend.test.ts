@@ -22,6 +22,8 @@ const Gubu: GubuX = GubuModule
 const {
   Min,
   Max,
+  Value,
+  Check,
 } = Gubu
 
 
@@ -83,6 +85,33 @@ describe('extend', () => {
     expect(() => GE('BadBuilder', 1))
       .toThrow('Gubu: unexpected token BadBuilder in builder expression BadBuilder')
   })
+
+
+  test('expr-regexp', () => {
+    let g0 = Gubu({
+      'x: Check(/a/)': String,
+    }, { keyexpr: { active: true } })
+
+    expect(g0({ x: 'zaz' })).toEqual({ x: 'zaz' })
+    expect(() => g0({ x: 'zbz' })).toThrow('check "/a/" failed')
+  })
+
+
+  /* Refactor to make this work
+  test('expr-array', () => {
+    let g0 = Gubu({
+      // 'a: Value(Check(/a/))': [String]
+      'a: Value(String)': [String]
+      // a: Value(Check(/a/), [String])
+    }, { keyexpr: { active: true } })
+
+    console.log(g0.spec())
+
+    expect(g0({ a: ['zaz'] })).toEqual({ a: ['zaz'] })
+    expect(() => g0({ a: ['zbz'] })).toThrow('check "/a/" failed')
+  })
+  */
+
 })
 
 

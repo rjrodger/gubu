@@ -54,19 +54,32 @@ let log = (point,state)=>{
 let g0 = Gubu({
   // 'a': Open({x:1}),
   // 'b': {x:1},
-  'x: Min(1) Max(4)': 2,
+  // 'x: Min(1) Max(4)': 2,
   // 'y: Min(1).Max(4)': 2,
   // 'y: Min(1)': 2,
   // 'z: Min(1,Max(4))': 2,
   // 'z: Required(Min(1) Max(4))': 2,
   // 'z: Required(min(1,Max(4)))': 2,
   // 'k:Exact(0,"q",true,","," ")':"q"
+
+  // 'a: Check(/a/)': [String]
+  // 'a: Child(Len(3))': [String]
+  'a: Value(Check(/a/))': [String]
+  // a: Value(Check(/a/), [String])
+  
 },{keyexpr:{active:true}})
 
-console.log(g0.spec().v)
+// FIX: spec is string!
+// REFACTOR: Value(child,val) -> Value(val, child) - consistent
+
+console.log(g0.spec())
 // console.log(g0({k:true}))
 // console.log(g0({x:0}))
 // console.log(g0({x:5}))
+
+console.log(g0({ a: ['zaz'] }))
+console.log(g0({ a: ['zbz'] }))
+
 
 // let g0 = Gubu({
 //   // '$$ a Open': {

@@ -803,7 +803,7 @@ explicitly for each object that can have arbitrary properties.
 
 
 ```js
-shape = Gubu(Open({
+let shape = Gubu(Open({
   a: Open({
     b: 1
   })
@@ -816,6 +816,17 @@ shape({ a: { b: 11, c: 22 }, d: 33 }) // PASS, returns object
 An empty object shape (`{}`) is automatically open and will allow any
 properties.
 
+The [Open](#open-builder) shape builder can also be used without
+adding the `Open` builder function to your imports. Instead, use the
+optional `keyexpr` feature and specify that an object is open with:
+
+```js
+let shape = Gubu({
+  'a: Open': {
+    b: 1
+  }
+}, { keyexpr: { active: true } })
+```
 
 
 ##### Optional Objects
@@ -864,7 +875,7 @@ shape({ a: 'abc' }) // a must be a number
 shape({ b: { x: 1 } }) // b must be a string
 ```
 
-Using the [Value](#value-builder) shape builder in this automatically
+Using the [Value](#value-builder) shape builder in this way automatically
 makes the object open, but constrains the values that can be used for
 non-explicit properties.
 
@@ -1063,6 +1074,65 @@ shape({)) === {
 
 To require a function, use the shape `Function`,
 (`Gubu(Function)(()=>true)` will pass).
+
+
+#### Key Expressions
+
+If you wish to avoid importing the shape builder functions, or you
+would like your shape schema to be serializable to JSON, then you can
+use *key expressions*.
+
+Key expressions allow you to specify the shape builders in the
+property key string. They must be enabled with an optional flag when
+creating the shape.
+
+```js
+let shape = Gubu({
+  'a: Skip': 1
+}, { keyexpr: { active: true } })
+```
+
+This syntax is equivalent to:
+
+```js
+let shape = Gubu({
+  a: Skip(1)
+})
+```
+
+When key epxressions are active, any key string of the form: 
+```
+key:builder-expression
+``` 
+is evaluated as a key expression.
+
+The syntax of key expressions is the same as JavaScript function call
+syntax. However, literal values must be written as JSON, and commas
+between arguments are optional. Sequential shape builder functions are
+evaluated left-to-right.
+
+The following are all equivalent:
+
+```js
+let shape = Gubu({
+  a: Min(1, Max(4, Number)), // A number x, where 1 <= x <= 4.
+  'b: Min(1, Max(4))': Number, // The property value (in this case, Number) is implicit,
+  'c: Min(1) Max(4)': Number, // Same effect, since both operate on Number.
+  'd: Min(1).Max(4)': Number, // Chaining is also supported.
+
+}, { keyexpr: { active: true } })
+```
+
+Not all shape builders are supported, only those that can accept
+literal values as arguments. Thus custom [Check]($check-builder)
+functions cannot be specified as key expressions.
+
+The literal value arguments are parsed with JSON.parse, so must be
+valid JSON. In addition, regular expressions, and the values
+`undefined` and `NaN` are also recognized.
+
+Key expressions can only be used with object keys, and are not
+supported at the top level.
 
 
 #### Custom Validation

@@ -1,5 +1,6 @@
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 
+// FEATURE: regexp in array: [/a/] => all elements must match /a/
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
@@ -1050,7 +1051,7 @@ function expr(spec: {
   if (null == spec.tokens) {
     top = true
     spec.tokens = []
-    let tre = /\s*,?\s*([)(\.]|"(\\.|[^"\\])*"|[^)(,\s]+)\s*/g
+    let tre = /\s*,?\s*([)(\.]|"(\\.|[^"\\])*"|\/(\\.|[^\/\\])*\/[a-z]?|[^)(,\s]+)\s*/g
     let t = null
     while (t = tre.exec(spec.src)) {
       spec.tokens.push(t[1])
@@ -1073,7 +1074,18 @@ function expr(spec: {
 
   if (null == fn) {
     try {
-      return JSON.parse(head)
+      if ('undefined' === head) {
+        return undefined
+      }
+      else if ('NaN' === head) {
+        return NaN
+      }
+      else if (head.match(/^\/.+\/$/)) {
+        return new RegExp(head.substring(1, head.length - 1))
+      }
+      else {
+        return JSON.parse(head)
+      }
     }
     catch (je: any) {
       throw new SyntaxError(
