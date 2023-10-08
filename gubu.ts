@@ -228,6 +228,9 @@ class State {
   ctx: any
   oval: any
 
+  check?: Function
+  checkargs?: Record<string, any>
+
   constructor(
     root: any,
     top: Node,
@@ -250,6 +253,7 @@ class State {
     this.fromDefault = false
     this.ignoreVal = undefined
     this.isRoot = 0 === this.pI
+    this.check = undefined
 
     // Dereference the back pointers to ancestor siblings.
     // Only objects|arrays can be nodes, so a number is a back pointer.
@@ -356,6 +360,8 @@ type ErrDesc = {
   v: any     // Failing value.
   p: string  // Key path to value.
   w: string  // Error code ("why").
+  c: string  // Check function name.
+  a: Record<string, any>     // Builder args.
   m: number  // Error mark for debugging.
   t: string  // Error message text.
   u: any     // User custom info.
@@ -731,7 +737,6 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
                   }
 
                   let nvs = nodize(ov, 1 + s.dI, meta)
-                  // console.log('VALK', val, k, val[k])
 
                   n.v[rk] = nvs
 
@@ -1132,7 +1137,7 @@ function handleValidate(vf: Validate, s: State): Update {
   try {
     // Check does not have to deal with `undefined`
     valid = undefined === s.val && ((vf as any).gubu$?.Check) ? true :
-      vf(s.val, update, s)
+      (s.check = vf, vf(s.val, update, s))
   }
   catch (ve: any) {
     thrown = ve
@@ -1745,14 +1750,17 @@ const Min: Builder = function(
       return true
     }
 
+    state.checkargs = { min: 1 }
     let errmsgpart = S.number === typeof (val) ? S.MT : 'length '
     update.err =
       makeErr(state,
-        S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`)
+        S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+        ` must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`)
     return false
   })
 
-  node.s = S.Min + '(' + min + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
+  node.s = S.Min + '(' + min + (null == shape ? S.MT :
+    (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -1951,6 +1959,8 @@ function makeErrImpl(
     v: s.val,
     p: pathstr(s),
     w: why,
+    c: s.check?.name || 'none',
+    a: s.checkargs || {},
     m: mark,
     t: S.MT,
     u: user || {},

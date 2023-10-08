@@ -124,6 +124,7 @@ class State {
         this.fromDefault = false;
         this.ignoreVal = undefined;
         this.isRoot = 0 === this.pI;
+        this.check = undefined;
         // Dereference the back pointers to ancestor siblings.
         // Only objects|arrays can be nodes, so a number is a back pointer.
         // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
@@ -472,7 +473,6 @@ function make(intop, inopts) {
                                         }
                                     }
                                     let nvs = nodize(ov, 1 + s.dI, meta);
-                                    // console.log('VALK', val, k, val[k])
                                     n.v[rk] = nvs;
                                     s.nodes[s.nI] = nvs;
                                     s.vals[s.nI] = val[rk];
@@ -792,7 +792,7 @@ function handleValidate(vf, s) {
     try {
         // Check does not have to deal with `undefined`
         valid = undefined === s.val && ((_a = vf.gubu$) === null || _a === void 0 ? void 0 : _a.Check) ? true :
-            vf(s.val, update, s);
+            (s.check = vf, vf(s.val, update, s));
     }
     catch (ve) {
         thrown = ve;
@@ -1268,12 +1268,15 @@ const Min = function (min, shape) {
         if (min <= vlen) {
             return true;
         }
+        state.checkargs = { min: 1 };
         let errmsgpart = S.number === typeof (val) ? S.MT : 'length ';
         update.err =
-            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+                ` must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
         return false;
     });
-    node.s = S.Min + '(' + min + (null == shape ? S.MT : (',' + stringify(shape))) + ')';
+    node.s = S.Min + '(' + min + (null == shape ? S.MT :
+        (',' + stringify(shape))) + ')';
     return node;
 };
 exports.Min = Min;
@@ -1394,12 +1397,15 @@ exports.makeErr = makeErr;
 // TODO: optional message prefix from ctx
 // Internal utility to make ErrDesc objects.
 function makeErrImpl(why, s, mark, text, user, fname) {
+    var _a;
     let err = {
         k: s.key,
         n: s.node,
         v: s.val,
         p: pathstr(s),
         w: why,
+        c: ((_a = s.check) === null || _a === void 0 ? void 0 : _a.name) || 'none',
+        a: s.checkargs || {},
         m: mark,
         t: S.MT,
         u: user || {},

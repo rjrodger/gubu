@@ -2395,8 +2395,25 @@ minimum value. "Length" means:
 For more complex validation, use the [Check](#check-builder) shape builder to write
 a custom validation function.
 
+
+##### Min Builder Example
+
 ```js
 const { Min } = Gubu
+
+let shape = Gubu({
+  size: Min(2, 4)  // Minimum is 2, default is 4, type is Number, optional
+})
+
+shape({}) // PASS => { size: 4 } - uses default
+shape({ size: 3 }) // PASS => { size: 3 }
+shape({ size: 1 }) // FAIL
+```
+
+
+##### Min Builder Behaviour
+
+```js
 let shape = Gubu(Min(2))
 
 shape(3) // PASS: 3 >= 2; returns 3
@@ -2411,6 +2428,9 @@ shape([1, 2, 3]) // PASS: array length 3 >= 2; returns [1, 2, 3]
 shape([1, 2])    // PASS: array length 2 >= 2; returns [1, 2]
 shape([1])       // FAIL: throws: 'Value "[1]" for property "" must be a minimum length of 2 (was 1).'
 ```
+
+
+
 
 See also: 
 [Above](#above-builder), 

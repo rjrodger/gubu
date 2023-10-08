@@ -56,7 +56,7 @@ let g0 = Gubu({
   // 'b': {x:1},
   // 'x: Min(1) Max(4)': 2,
   // 'y: Min(1).Max(4)': 2,
-  // 'y: Min(1)': 2,
+  'y: Min(1)': 2,
   // 'z: Min(1,Max(4))': 2,
   // 'z: Required(Min(1) Max(4))': 2,
   // 'z: Required(min(1,Max(4)))': 2,
@@ -64,8 +64,9 @@ let g0 = Gubu({
 
   // 'a: Check(/a/)': [String]
   // 'a: Child(Len(3))': [String]
-  'a: Value(Check(/a/))': [String]
+  // 'a: Value(Check(/a/))': [String]
   // a: Value(Check(/a/), [String])
+  // 'a: Value(Check(/a/))':[String]
   
 },{keyexpr:{active:true}})
 
@@ -73,12 +74,17 @@ let g0 = Gubu({
 // REFACTOR: Value(child,val) -> Value(val, child) - consistent
 
 console.log(g0.spec())
-// console.log(g0({k:true}))
+try {
+  console.log(g0({y:0}))
+}catch(e) {
+  console.log(e)
+  console.dir(e.desc(),{depth:null})
+}
 // console.log(g0({x:0}))
 // console.log(g0({x:5}))
 
-console.log(g0({ a: ['zaz'] }))
-console.log(g0({ a: ['zbz'] }))
+// console.log(g0({ a: ['zaz'] }))
+// console.log(g0({ a: ['zbz'] }))
 
 
 // let g0 = Gubu({

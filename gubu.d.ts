@@ -83,6 +83,8 @@ declare class State {
     vals: any[];
     ctx: any;
     oval: any;
+    check?: Function;
+    checkargs?: Record<string, any>;
     constructor(root: any, top: Node, ctx?: Context, match?: boolean);
     next(): void;
     updateVal(val: any): void;
@@ -106,6 +108,8 @@ type ErrDesc = {
     v: any;
     p: string;
     w: string;
+    c: string;
+    a: Record<string, any>;
     m: number;
     t: string;
     u: any;
