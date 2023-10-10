@@ -22,7 +22,8 @@ const Gubu: GubuX = GubuModule
 const {
   Min,
   Max,
-  Value,
+  // Value,
+  Child,
   Check,
 } = Gubu
 
@@ -36,6 +37,19 @@ describe('extend', () => {
     }, { meta: { active: true } })
 
     expect(g0.spec().v.x.m).toEqual({ short: '', foo: 99 })
+  })
+
+
+  test('expr-active', () => {
+    let g0 = Gubu({
+      'x: Min(1)': 1
+    })
+    expect(() => g0({ x: 0 })).toThrow('minimum')
+
+    let g1 = Gubu({
+      'x: Min(1)': 1
+    }, { keyexpr: { active: false } })
+    expect(g1({})).toEqual({ 'x: Min(1)': 1 })
   })
 
 
@@ -81,9 +95,13 @@ describe('extend', () => {
 
   test('expr-syntax', () => {
     let GE = (exp: string, val: any) =>
-      Gubu({ ['x:' + exp]: val }, { keyexpr: { active: true } })
+      Gubu({ ['x:' + exp]: val })
+
     expect(() => GE('BadBuilder', 1))
       .toThrow('Gubu: unexpected token BadBuilder in builder expression BadBuilder')
+
+    expect(GE('1', 2)({ x: 3 })).toEqual({ x: 3 })
+    expect(GE('1', 2)({ x: 1 })).toEqual({ x: 1 })
   })
 
 
@@ -97,20 +115,59 @@ describe('extend', () => {
   })
 
 
-  /* Refactor to make this work
+  test('expr-object-open', () => {
+    let g0 = Gubu({
+      'a: Open': { x: 1, y: 'q' }
+    })
+    expect(g0({ a: { z: true } })).toEqual({ a: { x: 1, y: 'q', z: true } })
+    expect(() => g0({ a: { x: 'q' } })).toThrow('not of type number')
+
+    let g1 = Gubu({
+      a: { b: { c: { 'd: Open': { x: 1 } } } }
+    })
+    expect(g1({ a: { b: { c: { d: { y: 2 } } } } }))
+      .toEqual({ a: { b: { c: { d: { x: 1, y: 2 } } } } })
+    expect(() => g1({ a: { b: { c: { d: { x: 'q' } } } } }))
+      .toThrow('not of type number')
+
+    let g2 = Gubu({
+      'a: Child(Number)': { x: 'q' }
+    })
+    expect(g2({ a: { z: 1 } })).toEqual({ a: { x: 'q', z: 1 } })
+    expect(() => g2({ a: { z: 'q' } })).toThrow('not of type number')
+
+  })
+
+
+  test('expr-object', () => {
+    let g0 = Gubu({
+      a: Child(Number, {})
+    })
+    expect(g0({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
+    expect(() => g0({ a: { x: 'q' } })).toThrow('not of type number')
+
+    let g1 = Gubu({
+      'a: Child(Number)': {}
+    })
+    expect(g1({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
+    expect(() => g1({ a: { x: 'q' } })).toThrow('not of type number')
+  })
+
+
   test('expr-array', () => {
     let g0 = Gubu({
-      // 'a: Value(Check(/a/))': [String]
-      'a: Value(String)': [String]
-      // a: Value(Check(/a/), [String])
-    }, { keyexpr: { active: true } })
+      a: Child(Number, [])
+    })
+    expect(g0({ a: [1, 2] })).toEqual({ a: [1, 2] })
+    expect(() => g0({ a: [1, 'x'] })).toThrow('not of type number')
 
-    console.log(g0.spec())
-
-    expect(g0({ a: ['zaz'] })).toEqual({ a: ['zaz'] })
-    expect(() => g0({ a: ['zbz'] })).toThrow('check "/a/" failed')
+    let g1 = Gubu({
+      'a: Child(Number)': []
+    })
+    expect(g1({ a: [1, 2] })).toEqual({ a: [1, 2] })
+    expect(() => g1({ a: [1, 'x'] })).toThrow('not of type number')
   })
-  */
+
 
 })
 

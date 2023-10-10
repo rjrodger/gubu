@@ -1,5 +1,5 @@
 "use strict";
-/* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
+/* Copyright (c) 2021-2023 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Bar = exports.Foo = void 0;
 // Handle web (Gubu) versus node ({Gubu}) export.
@@ -10,7 +10,9 @@ if (GubuModule.Gubu) {
 const Gubu = GubuModule;
 const buildize = Gubu.buildize;
 const makeErr = Gubu.makeErr;
-const { Above, After, All, Any, Before, Below, Check, Child, Closed, Default, Define, Empty, Exact, Func, Key, Len, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some, Value, } = Gubu;
+const { Above, After, All, Any, Before, Below, Check, Child, Closed, Default, Define, Empty, Exact, Func, Key, Len, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some,
+// Value,
+ } = Gubu;
 class Foo {
     constructor(a) {
         this.a = -1;
@@ -799,7 +801,7 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
             }
         });
     });
-    test('builder-min', () => {
+    test('builder-min-basic', () => {
         let g0 = Gubu({
             a: Min(10),
             b: Min(2, [String]),
@@ -830,6 +832,15 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
         expect(() => g0({ e: [{ x: 1 }] })).toThrow('Value "{x:1}" for property "e.0" must be a minimum length of 2 (was 1).');
         expect(() => g0({ e: [{}] })).toThrow('Value "{}" for property "e.0" must be a minimum length of 2 (was 0).');
         expect(g0({ e: [] })).toMatchObject({ e: [] });
+    });
+    test('builder-min-example', () => {
+        const { Min } = Gubu;
+        let shape = Gubu({
+            size: Min(2, 4) // Minimum is 2, default is 4, type is Number, optional
+        });
+        expect(shape({})).toEqual({ size: 4 });
+        expect(shape({ size: 3 })).toEqual({ size: 3 });
+        expect(() => shape({ size: 1 })).toThrow('minimum');
     });
     test('builder-max', () => {
         let g0 = Gubu({
@@ -1027,25 +1038,46 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         let g0 = Gubu(Child(Number));
         expect(g0({ a: 1, b: 2 })).toMatchObject({ a: 1, b: 2 });
         expect(() => g0({ a: 1, b: 2, c: 'c' })).toThrow('type');
-    });
-    test('builder-value', () => {
-        let g0 = Gubu(Value(String, { a: 1 }));
-        expect(g0({})).toMatchObject({});
-        expect(g0({ a: 2 })).toMatchObject({ a: 2 });
-        expect(() => g0({ a: 'x' })).toThrow('type');
-        expect(g0({ a: 2, b: 'x' })).toMatchObject({ a: 2, b: 'x' });
-        expect(g0({ a: 2, b: 'x', c: 'y' })).toMatchObject({ a: 2, b: 'x', c: 'y' });
-        expect(() => g0({ a: 2, b: 3 })).toThrow('Validation failed for property "b" with value "3" because the value is not of type string.');
-        expect(() => g0({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for property "c" with value "4" because the value is not of type string.');
-        expect(() => g0({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "true" because the value is not of type number.');
-        expect(() => g0({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "z" because the value is not of type number.');
-        let g1 = Gubu({ a: Required({ b: 1 }).Value({ x: String }) });
-        expect(g1({ a: { b: 2, c: { x: 'x' } } }))
+        let g1 = Gubu(Child(String, { a: 1 }));
+        expect(g1({})).toMatchObject({});
+        expect(g1({ a: 2 })).toMatchObject({ a: 2 });
+        expect(() => g1({ a: 'x' })).toThrow('type');
+        expect(g1({ a: 2, b: 'x' })).toMatchObject({ a: 2, b: 'x' });
+        expect(g1({ a: 2, b: 'x', c: 'y' })).toMatchObject({ a: 2, b: 'x', c: 'y' });
+        expect(() => g1({ a: 2, b: 3 })).toThrow('Validation failed for property "b" with value "3" because the value is not of type string.');
+        expect(() => g1({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for property "c" with value "4" because the value is not of type string.');
+        expect(() => g1({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "true" because the value is not of type number.');
+        expect(() => g1({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "z" because the value is not of type number.');
+        let g2 = Gubu({ a: Required({ b: 1 }).Child({ x: String }) });
+        expect(g2({ a: { b: 2, c: { x: 'x' } } }))
             .toMatchObject({ a: { b: 2, c: { x: 'x' } } });
-        expect(g1({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } }))
+        expect(g2({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } }))
             .toMatchObject({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } });
-        expect(() => g1({ a: { b: 2, c: 3 } })).toThrow('Validation failed for property "a.c" with value "3" because the value is not of type object.');
+        expect(() => g2({ a: { b: 2, c: 3 } })).toThrow('Validation failed for property "a.c" with value "3" because the value is not of type object.');
     });
+    /*
+    test('builder-value', () => {
+      let g1 = Gubu(Value(String, { a: 1 }))
+      expect(g0({})).toMatchObject({})
+      expect(g0({ a: 2 })).toMatchObject({ a: 2 })
+      expect(() => g0({ a: 'x' })).toThrow('type')
+      expect(g0({ a: 2, b: 'x' })).toMatchObject({ a: 2, b: 'x' })
+      expect(g0({ a: 2, b: 'x', c: 'y' })).toMatchObject({ a: 2, b: 'x', c: 'y' })
+      expect(() => g0({ a: 2, b: 3 })).toThrow('Validation failed for property "b" with value "3" because the value is not of type string.')
+      expect(() => g0({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for property "c" with value "4" because the value is not of type string.')
+  
+      expect(() => g0({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "true" because the value is not of type number.')
+  
+      expect(() => g0({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "z" because the value is not of type number.')
+  
+      let g1 = Gubu({ a: Required({ b: 1 }).Value({ x: String }) })
+      expect(g1({ a: { b: 2, c: { x: 'x' } } }))
+        .toMatchObject({ a: { b: 2, c: { x: 'x' } } })
+      expect(g1({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } }))
+        .toMatchObject({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } })
+      expect(() => g1({ a: { b: 2, c: 3 } })).toThrow('Validation failed for property "a.c" with value "3" because the value is not of type object.')
+    })
+    */
     test('builder-void', () => {
         // Skip does not insert, but does check type.
         let t0 = Gubu(Skip());

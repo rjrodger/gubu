@@ -1,8 +1,8 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GFunc = exports.GExact = exports.GEmpty = exports.GDefault = exports.GDefine = exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Value = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Len = exports.Never = exports.Min = exports.Max = exports.Key = exports.Func = exports.Exact = exports.Empty = exports.Default = exports.Define = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.expr = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
-exports.GValue = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GLen = exports.GNever = exports.GMin = exports.GMax = exports.GKey = void 0;
+exports.GKey = exports.GFunc = exports.GExact = exports.GEmpty = exports.GDefault = exports.GDefine = exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Len = exports.Never = exports.Min = exports.Max = exports.Key = exports.Func = exports.Exact = exports.Empty = exports.Default = exports.Define = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.expr = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GLen = exports.GNever = exports.GMin = exports.GMax = void 0;
 // FEATURE: regexp in array: [/a/] => all elements must match /a/
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
@@ -364,9 +364,9 @@ function make(intop, inopts) {
     let optsmeta = opts.meta = opts.meta || {};
     optsmeta.active = (true === optsmeta.active) || false;
     optsmeta.suffix = 'string' == typeof optsmeta.suffix ? optsmeta.suffix : '$$';
-    // Key expressions are off by default.
+    // Key expressions are on by default.
     let optskeyexpr = opts.keyexpr = opts.keyexpr || {};
-    optskeyexpr.active = (true === optskeyexpr.active) || false;
+    optskeyexpr.active = (false !== optskeyexpr.active);
     let top = nodize(intop, 0);
     // Lazily execute top against root to see if they match
     function exec(root, ctx, match // Suppress errors and return boolean result (true if match)
@@ -741,9 +741,18 @@ function expr(spec) {
         return spec.val;
     }
     spec.i++;
+    let fixed = {
+        Number: Number,
+        String: String,
+        Boolean: Boolean,
+    };
     if (null == fn) {
         try {
-            if ('undefined' === head) {
+            let val = fixed[head];
+            if (val) {
+                return val;
+            }
+            else if ('undefined' === head) {
                 return undefined;
             }
             else if ('NaN' === head) {
@@ -1344,16 +1353,21 @@ const Len = function (len, shape) {
     return node;
 };
 exports.Len = Len;
-const Value = function (value, shape) {
-    let node = undefined == shape ? buildize(this) : buildize(shape);
-    let child = nodize(value);
-    node.c = child;
-    return node;
-};
-exports.Value = Value;
-// Object child shape
-const Child = function (child) {
-    let node = buildize(this, {});
+/*
+const Value: Builder = function(
+  this: Node,
+  value?: any,
+  shape?: any
+): Node {
+  let node = undefined == shape ? buildize(this) : buildize(shape)
+  let child = nodize(value)
+  node.c = child
+  return node
+}
+*/
+// Child shape
+const Child = function (child, shape) {
+    let node = buildize(this, shape || {});
     node.c = nodize(child);
     return node;
 };
@@ -1385,7 +1399,7 @@ function buildize(node0, node1) {
         Rename,
         Required,
         Skip,
-        Value,
+        // Value,
     });
 }
 exports.buildize = buildize;
@@ -1536,7 +1550,7 @@ const BuilderMap = {
     Required,
     Skip,
     Some,
-    Value,
+    // Value,
 };
 // Fix builder names after terser mangles them.
 /* istanbul ignore next */
@@ -1569,7 +1583,7 @@ if (S.undefined !== typeof (window)) {
         { b: Required, n: S.Required },
         { b: Skip, n: S.Skip },
         { b: Some, n: S.Some },
-        { b: Value, n: S.Value },
+        // { b: Value, n: S.Value },
     ];
     for (let build of builds) {
         defprop(build.b, S.name, { value: build.n });
@@ -1633,7 +1647,7 @@ Object.assign(make, {
     GRequired: Required,
     GSkip: Skip,
     GSome: Some,
-    GValue: Value,
+    // GValue: Value,
     G$,
     buildize,
     makeErr,
@@ -1701,6 +1715,4 @@ const GSkip = Skip;
 exports.GSkip = GSkip;
 const GSome = Some;
 exports.GSome = GSome;
-const GValue = Value;
-exports.GValue = GValue;
 //# sourceMappingURL=gubu.js.map

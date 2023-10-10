@@ -600,9 +600,9 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
   optsmeta.active = (true === optsmeta.active) || false
   optsmeta.suffix = 'string' == typeof optsmeta.suffix ? optsmeta.suffix : '$$'
 
-  // Key expressions are off by default.
+  // Key expressions are on by default.
   let optskeyexpr = opts.keyexpr = opts.keyexpr || ({} as any)
-  optskeyexpr.active = (true === optskeyexpr.active) || false
+  optskeyexpr.active = (false !== optskeyexpr.active)
 
 
   let top: Node = nodize(intop, 0)
@@ -1077,9 +1077,19 @@ function expr(spec: {
 
   spec.i++
 
+  let fixed: Record<string, any> = {
+    Number: Number,
+    String: String,
+    Boolean: Boolean,
+  }
+
   if (null == fn) {
     try {
-      if ('undefined' === head) {
+      let val = fixed[head]
+      if (val) {
+        return val
+      }
+      else if ('undefined' === head) {
         return undefined
       }
       else if ('NaN' === head) {
@@ -1874,6 +1884,7 @@ const Len: Builder = function(
 }
 
 
+/*
 const Value: Builder = function(
   this: Node,
   value?: any,
@@ -1884,14 +1895,16 @@ const Value: Builder = function(
   node.c = child
   return node
 }
+*/
 
 
-// Object child shape
+// Child shape
 const Child: Builder = function(
   this: Node,
   child?: any,
+  shape?: any
 ): Node {
-  let node = buildize(this, {})
+  let node = buildize(this, shape || {})
   node.c = nodize(child)
   return node
 }
@@ -1926,7 +1939,7 @@ function buildize(node0?: any, node1?: any): Node {
     Rename,
     Required,
     Skip,
-    Value,
+    // Value,
   })
 }
 
@@ -2130,7 +2143,7 @@ const BuilderMap: Record<string, Builder> = {
   Required,
   Skip,
   Some,
-  Value,
+  // Value,
 }
 
 // Fix builder names after terser mangles them.
@@ -2165,7 +2178,7 @@ if (S.undefined !== typeof (window)) {
     { b: Required, n: S.Required },
     { b: Skip, n: S.Skip },
     { b: Some, n: S.Some },
-    { b: Value, n: S.Value },
+    // { b: Value, n: S.Value },
 
   ]
   for (let build of builds) {
@@ -2234,7 +2247,7 @@ Object.assign(make, {
   GRequired: Required,
   GSkip: Skip,
   GSome: Some,
-  GValue: Value,
+  // GValue: Value,
 
   G$,
   buildize,
@@ -2282,7 +2295,7 @@ type Gubu = typeof make & {
   Required: typeof Required
   Skip: typeof Skip
   Some: typeof Some
-  Value: typeof Value
+  // uValue: typeof Value
 
   GAbove: typeof Above
   GAfter: typeof After
@@ -2311,7 +2324,7 @@ type Gubu = typeof make & {
   GRequired: typeof Required
   GSkip: typeof Skip
   GSome: typeof Some
-  GValue: typeof Value
+  // GValue: typeof Value
 }
 
 defprop(make, S.name, { value: S.gubu })
@@ -2349,7 +2362,7 @@ const GRename = Rename
 const GRequired = Required
 const GSkip = Skip
 const GSome = Some
-const GValue = Value
+// const GValue = Value
 
 
 export type {
@@ -2399,7 +2412,7 @@ export {
   Required,
   Skip,
   Some,
-  Value,
+  // Value,
 
   GAbove,
   GAfter,
@@ -2428,6 +2441,6 @@ export {
   GRequired,
   GSkip,
   GSome,
-  GValue,
+  // GValue,
 }
 

@@ -55,7 +55,8 @@ const {
   Required,
   Skip,
   Some,
-  Value,
+  Child,
+  // Value,
   // Default,
 } = Gubu
 
@@ -967,6 +968,36 @@ Validation failed for property "q.b" with value "x" because the value is not of 
       .toEqual({ x: 11, y: 22, z: 33, k: 44 })
 
 
+
+    let g1v = Gubu(Child(Number, { x: 1 }))
+    expect(g1v()).toEqual({ x: 1 })
+    expect(g1v({})).toEqual({ x: 1 })
+    expect(g1v({ x: 11 })).toEqual({ x: 11 })
+    expect(g1v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 })
+    expect(g1v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 })
+    expect(() => g1v({ x: 11, y: true })).toThrow('Validation failed for property "y" with value "true" because the value is not of type number.')
+
+    let g2v = Gubu(Child(Number, { x: 1, y: 2 }))
+    expect(g2v()).toEqual({ x: 1, y: 2 })
+    expect(g2v({})).toEqual({ x: 1, y: 2 })
+    expect(g2v({ x: 11 })).toEqual({ x: 11, y: 2 })
+    expect(g2v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 })
+    expect(g2v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 })
+    expect(() => g2v({ x: 11, y: 22, z: true })).toThrow('Validation failed for property "z" with value "true" because the value is not of type number.')
+
+    let g3v = Gubu(Child(Number, { x: 1, y: 2, z: 3 }))
+    expect(g3v()).toEqual({ x: 1, y: 2, z: 3 })
+    expect(g3v({})).toEqual({ x: 1, y: 2, z: 3 })
+    expect(g3v({ x: 11 })).toEqual({ x: 11, y: 2, z: 3 })
+    expect(g3v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22, z: 3 })
+    expect(g3v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 })
+    expect(g3v({ x: 11, y: 22, z: 33, k: 44 }))
+      .toEqual({ x: 11, y: 22, z: 33, k: 44 })
+    expect(() => g3v({ x: 11, y: 22, z: 33, k: true })).toThrow('Validation failed for property "k" with value "true" because the value is not of type number.')
+
+
+
+    /*
     let g1v = Gubu(Value(Number, { x: 1 }))
     expect(g1v()).toEqual({ x: 1 })
     expect(g1v({})).toEqual({ x: 1 })
@@ -992,6 +1023,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
     expect(g3v({ x: 11, y: 22, z: 33, k: 44 }))
       .toEqual({ x: 11, y: 22, z: 33, k: 44 })
     expect(() => g3v({ x: 11, y: 22, z: 33, k: true })).toThrow('Validation failed for property "k" with value "true" because the value is not of type number.')
+    */
 
 
     // Empty object is Open
@@ -1173,6 +1205,34 @@ Validation failed for property "q.b" with value "x" because the value is not of 
     expect(obj01({ c: {} })).toEqual({ a: { x: 1 }, c: {} })
     expect(obj01({ c: { z: {} } })).toEqual({ a: { x: 1 }, c: { z: { k: 3 } } })
 
+
+    let obj11 = Gubu({
+      people: Required({}).Child({ name: String, age: Number })
+    })
+
+    expect(obj11({
+      people: {
+        alice: { name: 'Alice', age: 99 },
+        bob: { name: 'Bob', age: 98 },
+      }
+    })).toEqual({
+      people: {
+        alice: { name: 'Alice', age: 99 },
+        bob: { name: 'Bob', age: 98 },
+      }
+    })
+
+    expect(() => obj11({
+      people: {
+        alice: { name: 'Alice', age: 99 },
+        bob: { name: 'Bob' }
+      }
+    })).toThrow('Validation failed for property "people.bob.age" with value "" because the value is required.')
+    expect(() => obj11({})).toThrow('Validation failed for property "people" with value "" because the value is required.')
+
+
+
+    /*
     let obj11 = Gubu({
       people: Required({}).Value({ name: String, age: Number })
     })
@@ -1196,7 +1256,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
       }
     })).toThrow('Validation failed for property "people.bob.age" with value "" because the value is required.')
     expect(() => obj11({})).toThrow('Validation failed for property "people" with value "" because the value is required.')
-
+    */
 
     let shape = Gubu({
       foo: Number,
@@ -1257,8 +1317,23 @@ Validation failed for property "q.b" with value "x" because the value is not of 
       .toEqual({ a: { b: 11, c: 22 }, d: 33 })
 
 
+    /*
     const { Value } = Gubu
     shape = Gubu(Value(String, {
+      a: 123,
+    }))
+
+    // All non-explicit properties must be a String
+    expect(shape({ a: 11, b: 'abc' })).toEqual({ a: 11, b: 'abc' }) // b is a string
+    expect(shape({ c: 'foo', d: 'bar' })).toEqual({ a: 123, c: 'foo', d: 'bar' }) // c and d are strings
+
+    // These fail
+    expect(() => shape({ a: 'abc' })).toThrow('number') // a must be a number
+    expect(() => shape({ b: { x: 1 } })).toThrow('string') // b must be a string
+    */
+
+    const { Child } = Gubu
+    shape = Gubu(Child(String, {
       a: 123,
     }))
 
@@ -1702,6 +1777,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
     // TODO: more complex objects
 
 
+    /*
     let shape_ValueB0 = Gubu(Value(Number, {}))
     expect(shape_ValueB0({ x: 10 })).toEqual({ x: 10 })
     expect(shape_ValueB0({ x: 10, y: 11 })).toEqual({ x: 10, y: 11 })
@@ -1754,7 +1830,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
         },
       },
     })
-
+    */
   })
 
 
@@ -1912,6 +1988,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
     expect(() => g4([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.')
     expect(() => g4([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.')
 
+    /*
     let g4v = Gubu(Value(Number, []))
     expect(g4v()).toEqual([])
     expect(g4v([])).toEqual([])
@@ -1933,7 +2010,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
     expect(() => g4vo(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.')
     expect(() => g4vo([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.')
     expect(() => g4vo([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.')
-
+    */
 
     // NOTE: array without spec can hold anything.
     let g6 = Gubu([])
