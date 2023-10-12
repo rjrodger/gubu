@@ -59,9 +59,11 @@ describe('extend', () => {
     // TODO: regexps!
     // TODO: what if builder expr is just a literal?
     test('expr-syntax', () => {
-        let GE = (exp, val) => Gubu({ ['x:' + exp]: val }, { keyexpr: { active: true } });
+        let GE = (exp, val) => Gubu({ ['x:' + exp]: val });
         expect(() => GE('BadBuilder', 1))
             .toThrow('Gubu: unexpected token BadBuilder in builder expression BadBuilder');
+        expect(GE('1', 2)({ x: 3 })).toEqual({ x: 3 });
+        expect(GE('1', 2)({ x: 1 })).toEqual({ x: 1 });
     });
     test('expr-regexp', () => {
         let g0 = Gubu({
@@ -84,7 +86,7 @@ describe('extend', () => {
         expect(() => g1({ a: { b: { c: { d: { x: 'q' } } } } }))
             .toThrow('not of type number');
         let g2 = Gubu({
-            'a: Open(Child(Number))': { x: 'q' }
+            'a: Child(Number)': { x: 'q' }
         });
         expect(g2({ a: { z: 1 } })).toEqual({ a: { x: 'q', z: 1 } });
         expect(() => g2({ a: { z: 'q' } })).toThrow('not of type number');

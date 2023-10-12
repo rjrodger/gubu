@@ -51,6 +51,8 @@ type GubuOptions = {
   keyexpr?: {
     active?: boolean // If true, recognize key expressions.
   }
+
+  prefix?: string // custom prefix for error messages.
 }
 
 
@@ -95,6 +97,8 @@ type Node = {
   p: boolean             // Value is skippable - can be missing or undefined.
   n: number              // Number of keys in default value
   c: any                 // Default child.
+  k: string[]
+  e: boolean
   u: Record<string, any> // Custom user meta data
   b: Validate[]          // Custom before validation functions.
   a: Validate[]          // Custom after vaidation functions.
@@ -169,6 +173,7 @@ const S = {
   Rename: 'Rename',
   Required: 'Required',
   Skip: 'Skip',
+  Ignore: 'Ignore',
   Some: 'Some',
   Value: 'Value',
 
@@ -209,6 +214,7 @@ class State {
   // NOTE: tri-valued; undefined = soft ignore
   ignoreVal: boolean | undefined = undefined
 
+  curerr: any[] = []
   err: any[] = []
   parents: Node[] = []
   keys: string[] = []
@@ -295,6 +301,8 @@ class State {
     this.path[this.dI] = this.key
 
     this.oval = this.val
+
+    this.curerr.length = 0
   }
 
 
@@ -312,6 +320,7 @@ class State {
 
 
   // Uncomment for debugging.
+  /*
   printStacks() {
     console.log('\nNODE',
       'd=' + this.dI,
@@ -335,6 +344,7 @@ class State {
         stringify(this.parents[i]))
     }
   }
+  */
 }
 
 
@@ -372,20 +382,38 @@ type ErrDesc = {
 class GubuError extends TypeError {
   gubu = true
   code: string
+  prefix: string
+  props: ({
+    path: string,
+    type: string,
+    value: any,
+  }[])
   desc: () => ({ name: string, code: string, err: ErrDesc[], ctx: any })
 
   constructor(
     code: string,
+    prefix: string | undefined,
     err: ErrDesc[],
     ctx: any,
   ) {
-    super(err.map((e: ErrDesc) => e.t).join('\n'))
+    prefix = (null == prefix) ? '' : (prefix + ': ')
+    super(prefix + err.map((e: ErrDesc) => e.t).join('\n'))
     let name = 'GubuError'
     let ge = this as unknown as any
     ge.name = name
 
     this.code = code
+    this.prefix = prefix
     this.desc = () => ({ name, code, err, ctx, })
+    this.stack = this.stack?.replace(/.*\/gubu\/gubu\.[tj]s.*\n/g, '')
+
+    this.props = err.map((e: ErrDesc) => ({
+      path: e.p,
+      what: e.w,
+      type: e.n?.t,
+      value: e.v
+    }))
+
   }
 
   toJSON() {
@@ -575,6 +603,8 @@ function nodize(shape?: any, depth?: number, meta?: NodeMeta): Node {
     r,
     p,
     d: null == depth ? -1 : depth,
+    k: [],
+    e: true,
     u,
     a,
     b,
@@ -595,10 +625,14 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
     null == opts.name ?
       'G' + (S.MT + Math.random()).substring(2, 8) : S.MT + opts.name
 
+  opts.prefix = null == opts.prefix ? undefined : opts.prefix
+
   // Meta properties are off by default.
   let optsmeta = opts.meta = opts.meta || ({} as any)
   optsmeta.active = (true === optsmeta.active) || false
   optsmeta.suffix = 'string' == typeof optsmeta.suffix ? optsmeta.suffix : '$$'
+
+
 
   // Key expressions are on by default.
   let optskeyexpr = opts.keyexpr = opts.keyexpr || ({} as any)
@@ -644,14 +678,14 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
         let valundef = undefined === s.val
 
         if (S.never === s.type) {
-          s.err.push(makeErrImpl(S.never, s, 1070))
+          s.curerr.push(makeErrImpl(S.never, s, 1070))
         }
         else if (S.object === s.type) {
           let val
 
           if (n.r && valundef) {
             s.ignoreVal = true
-            s.err.push(makeErrImpl(S.required, s, 1010))
+            s.curerr.push(makeErrImpl(S.required, s, 1010))
           }
           else if (
             !valundef && (
@@ -660,7 +694,7 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
               isarr(s.val)
             )
           ) {
-            s.err.push(makeErrImpl(S.type, s, 1020))
+            s.curerr.push(makeErrImpl(S.type, s, 1020))
             val = isarr(s.val) ? s.val : {}
           }
 
@@ -740,6 +774,10 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
 
                   n.v[rk] = nvs
 
+                  if (!n.k.includes(rk)) {
+                    n.k.push(rk)
+                  }
+
                   s.nodes[s.nI] = nvs
                   s.vals[s.nI] = val[rk]
                   s.parents[s.nI] = val
@@ -753,7 +791,7 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
               if (0 < extra.length) {
                 if (GUBU$NIL === n.c) {
                   s.ignoreVal = true
-                  s.err.push(makeErrImpl(
+                  s.curerr.push(makeErrImpl(
                     'closed', s, 1100, undefined, { k: extra }))
                 }
                 else {
@@ -787,10 +825,10 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
         else if (S.array === s.type) {
           if (n.r && valundef) {
             s.ignoreVal = true
-            s.err.push(makeErrImpl(S.required, s, 1030))
+            s.curerr.push(makeErrImpl(S.required, s, 1030))
           }
           else if (!valundef && !isarr(s.val)) {
-            s.err.push(makeErrImpl(S.type, s, 1040))
+            s.curerr.push(makeErrImpl(S.type, s, 1040))
           }
           else if (!n.p && valundef && undefined !== n.f) {
             s.updateVal(n.f)
@@ -816,7 +854,7 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
               if (hasFixedElements) {
                 if (elementKeys.length < s.val.length && !hasChildShape) {
                   s.ignoreVal = true
-                  s.err.push(makeErrImpl('closed', s, 1090, undefined,
+                  s.curerr.push(makeErrImpl('closed', s, 1090, undefined,
                     { k: elementKeys.length }))
                 }
                 else {
@@ -875,7 +913,7 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
           (S.instance === s.type && n.u.i && s.val instanceof n.u.i) ||
           (S.null === s.type && null === s.val)
         )) {
-          s.err.push(makeErrImpl(S.type, s, 1050))
+          s.curerr.push(makeErrImpl(S.type, s, 1050))
         }
 
         // Value itself, or default.
@@ -885,7 +923,7 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
           if (n.r &&
             (S.undefined !== s.type || !s.parent.hasOwnProperty(parentKey))) {
             s.ignoreVal = true
-            s.err.push(makeErrImpl(S.required, s, 1060))
+            s.curerr.push(makeErrImpl(S.required, s, 1060))
           }
           else if (
             // undefined !== n.v &&
@@ -907,7 +945,7 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
 
         // Empty strings fail even if string is optional. Use Empty() to allow.
         else if (S.string === s.type && S.MT === s.val && !n.u.empty) {
-          s.err.push(makeErrImpl(S.required, s, 1080))
+          s.curerr.push(makeErrImpl(S.required, s, 1080))
           s.ctx.log && s.ctx.log('kv', s)
         }
 
@@ -939,17 +977,21 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
       if (s.nextSibling) {
         s.pI = s.sI
       }
+
+      if (s.node.e) {
+        s.err.push(...s.curerr)
+      }
     }
 
     // console.log(s.printStacks())
 
-
+    // s.err = s.err.filter(e => null != e)
     if (0 < s.err.length) {
       if (isarr(s.ctx.err)) {
         s.ctx.err.push(...s.err)
       }
       else if (!s.match && false !== s.ctx.err) {
-        throw new GubuError('shape', s.err, s.ctx)
+        throw new GubuError('shape', opts.prefix, s.err, s.ctx)
       }
     }
 
@@ -1168,11 +1210,11 @@ function handleValidate(vf: Validate, s: State): Update {
     let p = pathstr(s)
 
     if (S.string === typeof (update.err)) {
-      s.err.push(makeErr(s, (update.err as string)))
+      s.curerr.push(makeErr(s, (update.err as string)))
     }
     else if (S.object === typeof (update.err)) {
       // Assumes makeErr already called
-      s.err.push(...[update.err].flat().map((e: any) => {
+      s.curerr.push(...[update.err].flat().filter(e => null != e).map((e: any) => {
         e.p = null == e.p ? p : e.p
         e.m = null == e.m ? 2010 : e.m
         return e
@@ -1183,7 +1225,7 @@ function handleValidate(vf: Validate, s: State): Update {
       if (null == fname || S.MT == fname) {
         fname = truncate(vf.toString().replace(/[ \t\r\n]+/g, ' '))
       }
-      s.err.push(makeErrImpl(
+      s.curerr.push(makeErrImpl(
         w, s, 1045, undefined, { thrown }, fname))
     }
 
@@ -1252,6 +1294,27 @@ const Skip: Builder = function(this: Node, shape?: any) {
 
   // Do not insert empty arrays and objects.
   node.p = true
+
+  return node
+}
+
+
+const Ignore: Builder = function(this: Node, shape?: any) {
+  let node = buildize(this, shape)
+  node.r = false
+
+  // Do not insert empty arrays and objects.
+  node.p = true
+
+  node.e = false
+
+  node.a.push(function Key(_val: any, update: Update, state: State) {
+    if (0 < state.curerr.length) {
+      update.uval = undefined
+      update.done = false
+    }
+    return true
+  })
 
   return node
 }
@@ -1939,7 +2002,7 @@ function buildize(node0?: any, node1?: any): Node {
     Rename,
     Required,
     Skip,
-    // Value,
+    Ignore,
   })
 }
 
@@ -2096,23 +2159,10 @@ function clone(x: any) {
 }
 
 
-
-
-
-type GubuShape = ReturnType<typeof make> &
-{
-  valid: <D, S>(root?: D, ctx?: any) => root is (D & S),
-  match: (root?: any, ctx?: any) => boolean,
-  error: (root?: any, ctx?: Context) => GubuError[],
-  spec: () => any,
-  node: () => Node,
-  isShape: (v: any) => boolean,
-  gubu: typeof GUBU
-}
-
-
-
-const G$ = (node: any): Node => nodize({ ...node, $: { gubu$: true } })
+const G$ = (node: any): Node => nodize({
+  ...node,
+  $: { gubu$: true }
+})
 
 
 const BuilderMap: Record<string, Builder> = {
@@ -2142,47 +2192,15 @@ const BuilderMap: Record<string, Builder> = {
   Rename,
   Required,
   Skip,
+  Ignore,
   Some,
-  // Value,
 }
 
 // Fix builder names after terser mangles them.
 /* istanbul ignore next */
 if (S.undefined !== typeof (window)) {
-  let builds: { b: Builder, n: string }[] = [
-
-    { b: Above, n: S.Above },
-    { b: After, n: S.After },
-    { b: All, n: S.All },
-    { b: Any, n: S.Any },
-    { b: Before, n: S.Before },
-    { b: Below, n: S.Below },
-    { b: Check, n: S.Check },
-    { b: Child, n: S.Child },
-    { b: Closed, n: S.Closed },
-    { b: Define, n: S.Define },
-    { b: Default, n: S.Default },
-    { b: Empty, n: S.Empty },
-    { b: Exact, n: S.Exact },
-    { b: Func, n: S.Func },
-    { b: Key, n: S.Key },
-    { b: Max, n: S.Max },
-    { b: Min, n: S.Min },
-    { b: Never, n: S.Never },
-    { b: Len, n: S.Len },
-    { b: One, n: S.One },
-    { b: Open, n: S.Open },
-    { b: Optional, n: S.Optional },
-    { b: Refer, n: S.Refer },
-    { b: Rename, n: S.Rename },
-    { b: Required, n: S.Required },
-    { b: Skip, n: S.Skip },
-    { b: Some, n: S.Some },
-    // { b: Value, n: S.Value },
-
-  ]
-  for (let build of builds) {
-    defprop(build.b, S.name, { value: build.n })
+  for (let builderName in BuilderMap) {
+    defprop(BuilderMap[builderName], S.name, { value: builderName })
   }
 }
 
@@ -2190,64 +2208,13 @@ if (S.undefined !== typeof (window)) {
 Object.assign(make, {
   Gubu: make,
 
+  // Builders by name, allows `const { Open } = Gubu`.
   ...BuilderMap,
-  // Above,
-  // After,
-  // All,
-  // Any,
-  // Before,
-  // Below,
-  // Check,
-  // Child,
-  // Closed,
-  // Define,
-  // Default,
-  // Empty,
-  // Exact,
-  // Func,
-  // Key,
-  // Max,
-  // Min,
-  // Never,
-  // Len,
-  // One,
-  // Open,
-  // Optional,
-  // Refer,
-  // Rename,
-  // Required,
-  // Skip,
-  // Some,
-  // Value,
 
-  GAbove: Above,
-  GAfter: After,
-  GAll: All,
-  GAny: Any,
-  GBefore: Before,
-  GBelow: Below,
-  GCheck: Check,
-  GChild: Child,
-  GClosed: Closed,
-  GDefine: Define,
-  GDefault: Default,
-  GEmpty: Empty,
-  GExact: Exact,
-  GFunc: Func,
-  GKey: Key,
-  GMax: Max,
-  GMin: Min,
-  GNever: Never,
-  GLen: Len,
-  GOne: One,
-  GOpen: Open,
-  GOptional: Optional,
-  GRefer: Refer,
-  GRename: Rename,
-  GRequired: Required,
-  GSkip: Skip,
-  GSome: Some,
-  // GValue: Value,
+  // Builders by alias, allows `const { GOpen } = Gubu`, to avoid naming conflicts.
+  ...(Object.entries(BuilderMap).reduce((a: any, n) => (a['G' + n[0]] = n[1]), {})),
+
+  isShape: (v: any) => (v && GUBU === v.gubu),
 
   G$,
   buildize,
@@ -2255,76 +2222,33 @@ Object.assign(make, {
   stringify,
   truncate,
   nodize,
-  isShape: (v: any) => (v && GUBU === v.gubu)
-
+  expr,
+  MakeArgu,
 })
 
 
-type Gubu = typeof make & {
+type GubuShape = ReturnType<typeof make> &
+{
+  valid: <D, S>(root?: D, ctx?: any) => root is (D & S),
+  match: (root?: any, ctx?: any) => boolean,
+  error: (root?: any, ctx?: Context) => GubuError[],
+  spec: () => any,
+  node: () => Node,
+  isShape: (v: any) => boolean,
+  gubu: typeof GUBU
+}
+
+
+
+type Gubu = typeof make & typeof BuilderMap & {
   G$: typeof G$,
   buildize: typeof buildize,
   makeErr: typeof makeErr,
   stringify: typeof stringify,
   truncate: typeof truncate,
   nodize: typeof nodize,
-
-  Above: typeof Above
-  After: typeof After
-  All: typeof All
-  Any: typeof Any
-  Before: typeof Before
-  Below: typeof Below
-  Check: typeof Check
-  Child: typeof Child
-  Closed: typeof Closed
-  Define: typeof Define
-  Default: typeof Default
-  Empty: typeof Empty
-  Exact: typeof Exact
-  Func: typeof Func
-  Key: typeof Key
-  Max: typeof Max
-  Min: typeof Min
-  Never: typeof Never
-  Len: typeof Len
-  One: typeof One
-  Open: typeof Open
-  Optional: typeof Optional
-  Refer: typeof Refer
-  Rename: typeof Rename
-  Required: typeof Required
-  Skip: typeof Skip
-  Some: typeof Some
-  // uValue: typeof Value
-
-  GAbove: typeof Above
-  GAfter: typeof After
-  GAll: typeof All
-  GAny: typeof Any
-  GBefore: typeof Before
-  GBelow: typeof Below
-  GCheck: typeof Check
-  GChild: typeof Child
-  GClosed: typeof Closed
-  GDefine: typeof Define
-  GDefault: typeof Default
-  GEmpty: typeof Empty
-  GExact: typeof Exact
-  GFunc: typeof Func
-  GKey: typeof Key
-  GMax: typeof Max
-  GMin: typeof Min
-  GNever: typeof Never
-  GLen: typeof Len
-  GOne: typeof One
-  GOpen: typeof Open
-  GOptional: typeof Optional
-  GRefer: typeof Refer
-  GRename: typeof Rename
-  GRequired: typeof Required
-  GSkip: typeof Skip
-  GSome: typeof Some
-  // GValue: typeof Value
+  expr: typeof expr,
+  MakeArgu: typeof MakeArgu,
 }
 
 defprop(make, S.name, { value: S.gubu })
@@ -2361,8 +2285,36 @@ const GRefer = Refer
 const GRename = Rename
 const GRequired = Required
 const GSkip = Skip
+const GIgnore = Ignore
 const GSome = Some
-// const GValue = Value
+
+
+type Argu = (
+  args: any[] | IArguments,
+  whence: string | Record<string, any>,
+  spec: Record<string, any>
+) => Record<string, any>
+
+
+function MakeArgu(prefix: string): Argu {
+  return function Argu(
+    args: any[] | IArguments,
+    whence: string | Record<string, any>,
+    spec: Record<string, any>
+  ) {
+    spec = spec || whence
+    whence = 'string' === typeof whence ? ' (' + whence + ')' : ''
+    let shape = Gubu(spec, { prefix: prefix + whence })
+    let keys = shape.spec().k
+    let argmap: any = {}
+    for (let kI = 0; kI < keys.length; kI++) {
+      argmap[keys[kI]] = kI < args.length ? args[kI] : args[args.length - 1]
+    }
+    return shape(argmap)
+  }
+}
+
+
 
 
 export type {
@@ -2384,6 +2336,7 @@ export {
   stringify,
   truncate,
   expr,
+  MakeArgu,
 
   Above,
   After,
@@ -2411,8 +2364,8 @@ export {
   Rename,
   Required,
   Skip,
+  Ignore,
   Some,
-  // Value,
 
   GAbove,
   GAfter,
@@ -2440,7 +2393,7 @@ export {
   GRename,
   GRequired,
   GSkip,
+  GIgnore,
   GSome,
-  // GValue,
 }
 

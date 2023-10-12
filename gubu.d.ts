@@ -11,6 +11,7 @@ type GubuOptions = {
     keyexpr?: {
         active?: boolean;
     };
+    prefix?: string;
 };
 type Context = Record<string, any> & {
     err?: ErrDesc[] | boolean;
@@ -41,6 +42,8 @@ type Node = {
     p: boolean;
     n: number;
     c: any;
+    k: string[];
+    e: boolean;
     u: Record<string, any>;
     b: Validate[];
     a: Validate[];
@@ -71,6 +74,7 @@ declare class State {
     nextSibling: boolean;
     fromDefault: boolean;
     ignoreVal: boolean | undefined;
+    curerr: any[];
     err: any[];
     parents: Node[];
     keys: string[];
@@ -88,7 +92,6 @@ declare class State {
     constructor(root: any, top: Node, ctx?: Context, match?: boolean);
     next(): void;
     updateVal(val: any): void;
-    printStacks(): void;
 }
 type Update = {
     done?: boolean;
@@ -117,13 +120,19 @@ type ErrDesc = {
 declare class GubuError extends TypeError {
     gubu: boolean;
     code: string;
+    prefix: string;
+    props: ({
+        path: string;
+        type: string;
+        value: any;
+    }[]);
     desc: () => ({
         name: string;
         code: string;
         err: ErrDesc[];
         ctx: any;
     });
-    constructor(code: string, err: ErrDesc[], ctx: any);
+    constructor(code: string, prefix: string | undefined, err: ErrDesc[], ctx: any);
     toJSON(): this & {
         err: any;
         name: string;
@@ -153,6 +162,7 @@ declare function expr(spec: {
 declare const Required: Builder;
 declare const Optional: Builder;
 declare const Skip: Builder;
+declare const Ignore: Builder;
 declare const Func: Builder;
 declare const Default: Builder;
 declare const Empty: Builder;
@@ -181,6 +191,8 @@ declare const Child: Builder;
 declare function buildize(node0?: any, node1?: any): Node;
 declare function makeErr(state: State, text?: string, why?: string, user?: any): ErrDesc;
 declare function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean): string;
+declare const G$: (node: any) => Node;
+declare const BuilderMap: Record<string, Builder>;
 type GubuShape = ReturnType<typeof make> & {
     valid: <D, S>(root?: D, ctx?: any) => root is (D & S);
     match: (root?: any, ctx?: any) => boolean;
@@ -190,68 +202,15 @@ type GubuShape = ReturnType<typeof make> & {
     isShape: (v: any) => boolean;
     gubu: typeof GUBU;
 };
-declare const G$: (node: any) => Node;
-type Gubu = typeof make & {
+type Gubu = typeof make & typeof BuilderMap & {
     G$: typeof G$;
     buildize: typeof buildize;
     makeErr: typeof makeErr;
     stringify: typeof stringify;
     truncate: typeof truncate;
     nodize: typeof nodize;
-    Above: typeof Above;
-    After: typeof After;
-    All: typeof All;
-    Any: typeof Any;
-    Before: typeof Before;
-    Below: typeof Below;
-    Check: typeof Check;
-    Child: typeof Child;
-    Closed: typeof Closed;
-    Define: typeof Define;
-    Default: typeof Default;
-    Empty: typeof Empty;
-    Exact: typeof Exact;
-    Func: typeof Func;
-    Key: typeof Key;
-    Max: typeof Max;
-    Min: typeof Min;
-    Never: typeof Never;
-    Len: typeof Len;
-    One: typeof One;
-    Open: typeof Open;
-    Optional: typeof Optional;
-    Refer: typeof Refer;
-    Rename: typeof Rename;
-    Required: typeof Required;
-    Skip: typeof Skip;
-    Some: typeof Some;
-    GAbove: typeof Above;
-    GAfter: typeof After;
-    GAll: typeof All;
-    GAny: typeof Any;
-    GBefore: typeof Before;
-    GBelow: typeof Below;
-    GCheck: typeof Check;
-    GChild: typeof Child;
-    GClosed: typeof Closed;
-    GDefine: typeof Define;
-    GDefault: typeof Default;
-    GEmpty: typeof Empty;
-    GExact: typeof Exact;
-    GFunc: typeof Func;
-    GKey: typeof Key;
-    GMax: typeof Max;
-    GMin: typeof Min;
-    GNever: typeof Never;
-    GLen: typeof Len;
-    GOne: typeof One;
-    GOpen: typeof Open;
-    GOptional: typeof Optional;
-    GRefer: typeof Refer;
-    GRename: typeof Rename;
-    GRequired: typeof Required;
-    GSkip: typeof Skip;
-    GSome: typeof Some;
+    expr: typeof expr;
+    MakeArgu: typeof MakeArgu;
 };
 declare const Gubu: Gubu;
 declare const GAbove: Builder;
@@ -280,6 +239,9 @@ declare const GRefer: Builder;
 declare const GRename: Builder;
 declare const GRequired: Builder;
 declare const GSkip: Builder;
+declare const GIgnore: Builder;
 declare const GSome: Builder;
+type Argu = (args: any[] | IArguments, whence: string | Record<string, any>, spec: Record<string, any>) => Record<string, any>;
+declare function MakeArgu(prefix: string): Argu;
 export type { Validate, Update, Context, Builder, Node, State, GubuShape, };
-export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, expr, Above, After, All, Any, Before, Below, Check, Child, Closed, Define, Default, Empty, Exact, Func, Key, Max, Min, Never, Len, One, Open, Optional, Refer, Rename, Required, Skip, Some, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GCheck, GChild, GClosed, GDefine, GDefault, GEmpty, GExact, GFunc, GKey, GMax, GMin, GNever, GLen, GOne, GOpen, GOptional, GRefer, GRename, GRequired, GSkip, GSome, };
+export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, expr, MakeArgu, Above, After, All, Any, Before, Below, Check, Child, Closed, Define, Default, Empty, Exact, Func, Key, Max, Min, Never, Len, One, Open, Optional, Refer, Rename, Required, Skip, Ignore, Some, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GCheck, GChild, GClosed, GDefine, GDefault, GEmpty, GExact, GFunc, GKey, GMax, GMin, GNever, GLen, GOne, GOpen, GOptional, GRefer, GRename, GRequired, GSkip, GIgnore, GSome, };

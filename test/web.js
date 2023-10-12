@@ -1,6 +1,6 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 (function (global){(function (){
-!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{("undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:this).Gubu=e()}}((function(){var e={},t={};Object.defineProperty(t,"__esModule",{value:!0}),t.Gubu=void 0;const n=Symbol.for("gubu$"),l={gubu$:n,v$:"5.0.1"},r=Symbol.for("gubu$nil"),i=/^[A-Z]/,o="",u="gubu",s="name",a="nan",f="never",h="number",p="required",c="array",d="function",v="object",g="string",y="undefined",b="any",m="list",$="instance",I="null",x="type",k="Object",w="Array",G="Above",S="After",N="All",V="Any",R="Before",A="Below",O="Check",D="Child",j="Closed",C="Define",E="Default",B="Empty",M="Exact",L="Func",T="Key",q="Max",F="Min",P="Never",W="Len",J="One",K="Open",z="Optional",H="Refer",U="Rename",_="Required",Z="Skip",Q="Some",X="Value",Y=" for property ",ee='"$PATH"',te='"$VALUE"',ne=e=>Object.keys(e),le=(e,t,n)=>Object.defineProperty(e,t,n),re=e=>Array.isArray(e),ie=e=>JSON.parse(e),oe=(e,t)=>JSON.stringify(e,t);class ue{constructor(e,t,n,l){this.match=!1,this.dI=0,this.nI=2,this.cI=-1,this.pI=0,this.sI=-1,this.valType=f,this.isRoot=!1,this.key=o,this.type=f,this.stop=!0,this.nextSibling=!0,this.fromDefault=!1,this.ignoreVal=void 0,this.err=[],this.parents=[],this.keys=[],this.path=[],this.root=e,this.vals=[e,-1],this.node=t,this.nodes=[t,-1],this.ctx=n||{},this.match=!!l}next(){this.stop=!1,this.fromDefault=!1,this.ignoreVal=void 0,this.isRoot=0===this.pI;let e=this.nodes[this.pI];for(;+e;)this.dI--,this.ctx.log&&-1<this.dI&&this.ctx.log("e"+(Array.isArray(this.parents[this.pI])?"a":"o"),this),this.pI=+e,e=this.nodes[this.pI];e?(this.node=e,this.updateVal(this.vals[this.pI]),this.key=this.keys[this.pI],this.cI=this.pI,this.sI=this.pI+1,this.parent=this.parents[this.pI],this.nextSibling=!0,this.type=this.node.t,this.path[this.dI]=this.key,this.oval=this.val):this.stop=!0}updateVal(e){this.val=e,this.valType=typeof this.val,h===this.valType&&isNaN(this.val)&&(this.valType=a),this.isRoot&&!this.match&&(this.root=this.val)}printStacks(){var e;console.log("\nNODE","d="+this.dI,"c="+this.cI,"p="+this.pI,"n="+this.nI,+this.node,this.node.t,this.path,this.err.length);for(let t=0;t<this.nodes.length||t<this.vals.length||t<this.parents.length;t++)console.log(t,"\t",isNaN(+this.nodes[t])?this.keys[t]+":"+(null===(e=this.nodes[t])||void 0===e?void 0:e.t):+this.nodes[t],"\t",_e(this.vals[t]),"\t",_e(this.parents[t]))}}class se extends TypeError{constructor(e,t,n){super(t.map(e=>e.t).join("\n")),this.gubu=!0,this.name="GubuError",this.code=e,this.desc=()=>({name:"GubuError",code:e,err:t,ctx:n})}toJSON(){return{...this,err:this.desc().err,name:this.name,message:this.message}}}const ae={String:!0,Number:!0,Boolean:!0,Object:!0,Array:!0,Function:!0,Symbol:!0,BigInt:!0},fe={string:o,number:0,boolean:!1,object:{},array:[],symbol:Symbol(o),bigint:BigInt(0),null:null};function he(e,t,u){var s,f,p,m;if(pe===e)e=void 0;else if(null!=e&&(null===(s=e.$)||void 0===s?void 0:s.gubu$)){if(n===e.$.gubu$)return e.d=null==t?e.d:t,e;if(!0===e.$.gubu$){let l={...e};return l.$={v$:"5.0.1",...l.$,gubu$:n},l.v=null!=l.v&&v===typeof l.v?{...l.v}:l.v,l.t=l.t||typeof l.v,d===l.t&&ae[l.v.name]&&(l.t=l.v.name.toLowerCase(),l.v=Ze(fe[l.t]),l.f=l.v),l.r=!!l.r,l.p=!!l.p,l.d=null==t?null==l.d?-1:l.d:t,l.b=l.b||[],l.a=l.a||[],l.u=l.u||{},l.m=l.m||u,l}}let x=null===e?I:typeof e;x=y===x?b:x;let w=e,G=w,S=r,N=!1,V={},R=[],A=[];if(v===x)G=void 0,re(w)?(x=c,1===w.length&&(S=w[0],w=[])):null!=w&&Function!==w.constructor&&Object!==w.constructor&&null!=w.constructor?(x=$,V.n=w.constructor.name,V.i=w.constructor,G=w):0===ne(w).length&&(S=Ie());else if(d===x)if(ae[e.name])x=e.name.toLowerCase(),N=!0,w=Ze(fe[x]),G=w,k===e.name&&(S=Ie());else if(w.gubu===l||!0===(null===(f=w.$)||void 0===f?void 0:f.gubu)){let e=w.node?w.node():w;x=e.t,w=e.v,G=w,N=e.r,V={...e.u},R=[...e.a],A=[...e.b]}else"Function"===w.constructor.name&&i.test(w.name)&&(x=$,N=!0,V.n=null===(m=null===(p=w.prototype)||void 0===p?void 0:p.constructor)||void 0===m?void 0:m.name,V.i=w);else h===x&&isNaN(w)?x=a:g===x&&o===w&&(V.empty=!0);let O=null==w||v!==x&&c!==x?w:{...w};return{$:l,t:x,v:O,f:G,n:null!=O&&v===typeof O?ne(O).length:0,c:S,r:N,p:!1,d:null==t?-1:t,u:V,a:R,b:A,m:u}}function pe(t,i){const u=null==i?{}:i;u.name=null==u.name?"G"+(o+Math.random()).substring(2,8):o+u.name;let s=he(t,0);function a(e,t,n){let l=new ue(e,s,t,n);for(;l.next(),!l.stop;){let t=l.node,n=!1;if(0<t.b.length)for(let e=0;e<t.b.length;e++){let r=ce(t.b[e],l);t=l.node,void 0!==r.done&&(n=r.done)}if(!n){let n=!0,i=void 0===l.val;if(f===l.type)l.err.push(He(f,l,1070));else if(v===l.type){let e;if(t.r&&i?(l.ignoreVal=!0,l.err.push(He(p,l,1010))):i||null!==l.val&&v===l.valType&&!re(l.val)?!t.p&&i&&void 0!==t.f?(l.updateVal(t.f),l.fromDefault=!0,e=l.val,n=!1):t.p&&i||(l.updateVal(l.val||(l.fromDefault=!0,{})),e=l.val):(l.err.push(He(x,l,1020)),e=re(l.val)?l.val:{}),n&&(e=null==e&&!1===l.ctx.err?{}:e,null!=e)){l.ctx.log&&l.ctx.log("so",l);let n=!1,i=ne(t.v),o=l.nI;if(0<i.length){n=!0,l.pI=o;for(let n=0;n<i.length;n++){let r,o=i[n];if(o.endsWith("$$")){if(r={short:""},"string"==typeof t.v[o]?r.short=t.v[o]:r={...r,...t.v[o]},n++,i.length<=n)break;if(i[n]!==o.substring(0,o.length-2))throw new Error("Invalid meta key: "+o);o=i[n]}let u=t.v[o]=he(t.v[o],1+l.dI,r);l.nodes[l.nI]=u,l.vals[l.nI]=e[o],l.parents[l.nI]=e,l.keys[l.nI]=o,l.nI++}}let u=ne(e).filter(e=>void 0===t.v[e]);if(0<u.length)if(r===t.c)l.ignoreVal=!0,l.err.push(He("closed",l,1100,void 0,{k:u}));else{n=!0,l.pI=o;for(let n of u){let r=t.c=he(t.c,1+l.dI);l.nodes[l.nI]=r,l.vals[l.nI]=e[n],l.parents[l.nI]=e,l.keys[l.nI]=n,l.nI++}}n?(l.dI++,l.nodes[l.nI]=l.sI,l.parents[l.nI]=e,l.nextSibling=!1,l.nI++):l.ctx.log&&l.ctx.log("eo",l)}}else if(c===l.type)if(t.r&&i)l.ignoreVal=!0,l.err.push(He(p,l,1030));else if(i||re(l.val)){if(!t.p&&i&&void 0!==t.f)l.updateVal(t.f),l.fromDefault=!0;else if(!t.p||null!=l.val){l.updateVal(l.val||(l.fromDefault=!0,[]));let n=r!==t.c,i=0<l.val.length,u=ne(t.v).filter(e=>!isNaN(+e)),s=0<u.length;if(l.ctx.log&&l.ctx.log("sa",l),i||s){l.pI=l.nI;let e=0;if(s)if(u.length<l.val.length&&!n)l.ignoreVal=!0,l.err.push(He("closed",l,1090,void 0,{k:u.length}));else for(;e<u.length;e++){let n=t.v[e]=he(t.v[e],1+l.dI);l.nodes[l.nI]=n,l.vals[l.nI]=l.val[e],l.parents[l.nI]=l.val,l.keys[l.nI]=o+e,l.nI++}if(n&&i){let n=t.c=he(t.c,1+l.dI);for(;e<l.val.length;e++)l.nodes[l.nI]=n,l.vals[l.nI]=l.val[e],l.parents[l.nI]=l.val,l.keys[l.nI]=o+e,l.nI++}l.ignoreVal||(l.dI++,l.nodes[l.nI]=l.sI,l.parents[l.nI]=l.val,l.nextSibling=!1,l.nI++)}else l.ctx.log&&n&&null==e&&l.ctx.log("kv",{...l,key:0,val:t.c}),l.ctx.log&&l.ctx.log("ea",l)}}else l.err.push(He(x,l,1040));else if(b===l.type||m===l.type||void 0===l.val||l.type===l.valType||$===l.type&&t.u.i&&l.val instanceof t.u.i||I===l.type&&null===l.val)if(void 0===l.val){let e=l.path[l.dI];!t.r||y===l.type&&l.parent.hasOwnProperty(e)?void 0!==t.f&&!t.p||y===l.type?(l.updateVal(t.f),l.fromDefault=!0):b===l.type&&(l.ignoreVal=void 0===l.ignoreVal||l.ignoreVal):(l.ignoreVal=!0,l.err.push(He(p,l,1060))),l.ctx.log&&l.ctx.log("kv",l)}else g!==l.type||o!==l.val||t.u.empty||l.err.push(He(p,l,1080)),l.ctx.log&&l.ctx.log("kv",l);else l.err.push(He(x,l,1050))}if(0<t.a.length)for(let e=0;e<t.a.length;e++){let r=ce(t.a[e],l);t=l.node,void 0!==r.done&&(n=r.done)}let i=l.node.p?!1!==l.ignoreVal:!!l.ignoreVal;!l.match&&null!=l.parent&&!n&&!i&&(l.parent[l.key]=l.val),l.nextSibling&&(l.pI=l.sI)}if(0<l.err.length)if(re(l.ctx.err))l.ctx.err.push(...l.err);else if(!l.match&&!1!==l.ctx.err)throw new se("shape",l.err,l.ctx);return l.match?0===l.err.length:l.root}function h(e,t){return a(e,t,!1)}h.valid=function(e,t){let n=t||{};return n.err=n.err||[],a(e,n,!1),0===n.err.length},h.match=(e,t)=>a(e,t=t||{},!0),h.error=(e,t)=>{let n=t||{};return n.err=n.err||[],a(e,n,!1),n.err},h.spec=()=>(h(void 0,{err:!1}),ie(_e(s,(e,t)=>n===t||t,!1,!0))),h.node=()=>(h.spec(),s);let d=o;return h.toString=()=>(d=Me(o===d?_e(s&&s.$&&(n===s.$.gubu$||!0===s.$.gubu$)?s.v:s):d),`[Gubu ${u.name} ${d}]`),e.inspect&&e.inspect.custom&&(h[e.inspect.custom]=h.toString),h.gubu=l,h}function ce(e,t){var n;let l,r={},i=!1;try{i=!(void 0!==t.val||!(null===(n=e.gubu$)||void 0===n?void 0:n.Check))||e(t.val,r,t)}catch(s){l=s}let u=re(r.err)?0<r.err.length:null!=r.err;if(!i||u){if(void 0===t.val&&(t.node.p||!t.node.r)&&!0!==r.done)return delete r.err,r;let n=r.why||"check",i=de(t);if(g===typeof r.err)t.err.push(ze(t,r.err));else if(v===typeof r.err)t.err.push(...[r.err].flat().map(e=>(e.p=null==e.p?i:e.p,e.m=null==e.m?2010:e.m,e)));else{let r=e.name;null!=r&&o!=r||(r=Me(e.toString().replace(/[ \t\r\n]+/g," "))),t.err.push(He(n,t,1045,void 0,{thrown:l},r))}r.done=null==r.done||r.done}return r.hasOwnProperty("uval")?(t.updateVal(r.uval),t.ignoreVal=!1):void 0===r.val||Number.isNaN(r.val)||(t.updateVal(r.val),t.ignoreVal=!1),void 0!==r.node&&(t.node=r.node),void 0!==r.type&&(t.type=r.type),r}function de(e){return e.path.slice(1,e.dI+1).filter(e=>null!=e).join(".")}const ve=function(e){let t=Ke(this,e);return t.r=!0,t.p=!1,void 0===e&&1===arguments.length&&(t.t=y,t.v=void 0),t},ge=function(e){let t=Ke(this,e);return t.r=!1,void 0===e&&1===arguments.length&&(t.t=y,t.v=void 0),t},ye=function(e){let t=Ke(this,e);return t.r=!1,t.p=!0,t},be=function(e){let t=Ke(this);return t.t=d,t.v=e,t.f=e,t},me=function(e,t){let n=Ke(this,void 0===t?e:t);return n.r=!1,n.f=e,d===typeof e&&ae[e.name]&&(n.t=e.name.toLowerCase(),n.f=Ze(fe[n.t])),n.p=!1,n},$e=function(e){let t=Ke(this,e);return t.u.empty=!0,t},Ie=function(e){let t=Ke(this,e);return t.t=b,void 0!==e&&(t.v=e,t.f=e),t},xe=function(e){let t=Ke(this,e);return t.t=f,t},ke=function(e,t){let n=Ke(this),l="number"==typeof e;n.t=g,l&&null==t&&(n=he([]));let r=null;return"function"==typeof e&&(r=e,n=Ie()),n.b.push((function(n,i,o){if(r)i.val=r(o.path,o);else if(l){let n=e;i.val=o.path.slice(o.path.length-1-(0<=n?n:0),o.path.length-1+(0<=n?0:1)),"string"==typeof t&&(i.val=i.val.join(t))}else null==e&&(i.val=o.path[o.path.length-2]);return!0})),n},we=function(...e){let t=Ke();t.t=m,t.r=!0;let n=e.map(e=>Xe(e));return t.u.list=e,t.b.push((function(t,l,r){let i=!0;for(let e of n){let n={...r.ctx,err:[]};e(t,n),0<n.err.length&&(i=!1)}return i||(l.why=N,l.err=[ze(r,X+" "+te+Y+ee+" does not satisfy all of: "+e.map(e=>_e(e,null,!0)).join(", "))]),i})),t},Ge=function(...e){let t=Ke();t.t=m,t.r=!0;let n=e.map(e=>Xe(e));return t.u.list=e,t.b.push((function(t,l,r){let i=!1;for(let e of n){let n={...r.ctx,err:[]},o=e.match(t,n);o&&(l.val=e(t,n)),i||(i=o)}return i||(l.why=Q,l.err=[ze(r,X+" "+te+Y+ee+" does not satisfy any of: "+e.map(e=>_e(e,null,!0)).join(", "))]),i})),t},Se=function(...e){let t=Ke();t.t=m,t.r=!0;let n=e.map(e=>Xe(e));return t.u.list=e,t.b.push((function(t,l,r){let i=0;for(let e of n){let n={...r.ctx,err:[]};if(e.match(t,n)){i++,l.val=e(t,n);break}}return 1!==i&&(l.why=J,l.err=[ze(r,X+" "+te+Y+ee+" does not satisfy one of: "+e.map(e=>_e(e,null,!0)).join(", "))]),!0})),t},Ne=function(...e){let t=Ke();return t.b.push((function(t,n,l){for(let r=0;r<e.length;r++)if(t===e[r])return!0;return n.err=ze(l,X+" "+te+Y+ee+" must be exactly one of: "+l.node.s+"."),n.done=!0,!1})),t.s=e.map(e=>_e(e,null,!0)).join(", "),t},Ve=function(e,t){let n=Ke(this,t);return n.b.push(e),n},Re=function(e,t){let n=Ke(this,t);return n.a.push(e),n},Ae=function(e,t){let n=Ke(this,t);if(d===typeof e){let t=e;t.gubu$=t.gubu$||{},t.gubu$.Check=!0,n.b.push(e),n.s=(null==n.s?o:n.s+";")+_e(e,null,!0),n.r=!0}else if(v===typeof e){if(Object.prototype.toString.call(e).includes("RegExp")){let t=t=>null!=t&&!Number.isNaN(t)&&!!String(t).match(e);le(t,s,{value:String(e)}),le(t,"gubu$",{value:{Check:!0}}),n.b.push(t),n.s=_e(e),n.r=!0}}else g===typeof e&&(n.t=e,n.r=!0);return n},Oe=function(e){let t=Ke(this,e);return t.c=Ie(),t},De=function(e){let t=Ke(this,e);return c===t.t&&r!==t.c&&0===t.n?(t.v=[t.c],t.c=r):t.c=r,t},je=function(e,t){let n=Ke(this,t),l=g===typeof e?e:(v===typeof e&&e||{}).name;return null!=l&&o!=l&&n.b.push((function(e,t,n){return(n.ctx.ref=n.ctx.ref||{})[l]=n.node,!0})),n},Ce=function(e,t){let n=Ke(this,t),l=v===typeof e&&e||{},r=g===typeof e?e:l.name,i=!!l.fill;return null!=r&&o!=r&&n.b.push((function(e,t,n){if(void 0!==e||i){let e=n.ctx.ref=n.ctx.ref||{};if(void 0!==e[r]){let n={...e[r]};n.t=n.t||f,t.node=n,t.type=n.t}}return!0})),n},Ee=function(e,t){let n=Ke(this,t),l=v===typeof e&&e||{},r=g===typeof e?e:l.name,i="boolean"==typeof l.keep?l.keep:void 0,u=re(l.claim)?l.claim:[];if(null!=r&&o!=r){let e=(e,t,n)=>{if(void 0===e&&0<u.length){n.ctx.Rename=n.ctx.Rename||{},n.ctx.Rename.fromDefault=n.ctx.Rename.fromDefault||{};for(let e of u){let l=n.ctx.Rename.fromDefault[e]||{};if(void 0!==n.parent[e]&&!l.yes){t.val=n.parent[e],n.match||(n.parent[r]=t.val),t.node=l.node;for(let e=0;e<n.err.length;e++)n.err[e].k===l.key&&(n.err.splice(e,1),e--);if(i){let t=n.cI+1;n.nodes.splice(t,0,he(l.dval)),n.vals.splice(t,0,void 0),n.parents.splice(t,0,n.parent),n.keys.splice(t,0,e),n.nI++,n.pI++}else delete n.parent[e];break}}void 0===t.val&&(t.val=n.node.v)}return!0};le(e,s,{value:"Rename:"+r}),n.b.push(e);let t=(e,t,n)=>(n.parent[r]=e,n.match||i||n.key===r||re(n.parent)&&!1!==i||(delete n.parent[n.key],t.done=!0),n.ctx.Rename=n.ctx.Rename||{},n.ctx.Rename.fromDefault=n.ctx.Rename.fromDefault||{},n.ctx.Rename.fromDefault[r]={yes:n.fromDefault,key:n.key,dval:n.node.v,node:n.node},!0);le(t,s,{value:"Rename:"+r}),n.a.push(t)}return n};function Be(e){return h===typeof e?e:h===typeof(null==e?void 0:e.length)?e.length:null!=e&&v===typeof e?ne(e).length:NaN}function Me(e,t){let n=String(e),l=null==t||isNaN(t)?30:t<0?0:~~t,r=null==e?0:n.length,i=null==e?o:n.substring(0,r);return i=l<r?i.substring(0,l-3)+"...":i,i.substring(0,l)}const Le=function(e,t){let n=Ke(this,t);return n.b.push((function(t,n,l){let r=Be(t);if(e<=r)return!0;let i=h===typeof t?o:"length ";return n.err=ze(l,X+" "+te+Y+ee+` must be a minimum ${i}of ${e} (was ${r}).`),!1})),n.s=F+"("+e+(null==t?o:","+_e(t))+")",n},Te=function(e,t){let n=Ke(this,t);return n.b.push((function(t,n,l){let r=Be(t);if(r<=e)return!0;let i=h===typeof t?o:"length ";return n.err=ze(l,X+" "+te+Y+ee+` must be a maximum ${i}of ${e} (was ${r}).`),!1})),n.s=q+"("+e+(null==t?o:","+_e(t))+")",n},qe=function(e,t){let n=Ke(this,t);return n.b.push((function(t,n,l){let r=Be(t);if(e<r)return!0;let i=h===typeof t?"be":"have length";return n.err=ze(l,X+" "+te+Y+ee+` must ${i} above ${e} (was ${r}).`),!1})),n.s=G+"("+e+(null==t?o:","+_e(t))+")",n},Fe=function(e,t){let n=Ke(this,t);return n.b.push((function(t,n,l){let r=Be(t);if(r<e)return!0;let i=h===typeof t?"be":"have length";return n.err=ze(l,X+" "+te+Y+ee+` must ${i} below ${e} (was ${r}).`),!1})),n.s=A+"("+e+(null==t?o:","+_e(t))+")",n},Pe=function(e,t){let n=Ke(this,t||Ie());return n.b.push((function(t,n,l){let r=Be(t);if(e===r)return!0;let i=h===typeof t?o:" in length";return n.err=ze(l,X+" "+te+Y+ee+` must be exactly ${e}${i} (was ${r}).`),!1})),n.s=W+"("+e+(null==t?o:","+_e(t))+")",n},We=function(e,t){let n=Ke(null==t?this:t),l=he(e);return n.c=l,n},Je=function(e){let t=Ke(this,{});return t.c=he(e),t};function Ke(e,t){let n=he(null==e||e.window===e||e.global===e?t:e);return Object.assign(n,{Above:qe,After:Re,Any:Ie,Before:Ve,Below:Fe,Check:Ae,Child:Je,Closed:De,Open:Oe,Define:je,Empty:$e,Exact:Ne,Max:Te,Min:Le,Never:xe,Len:Pe,Refer:Ce,Rename:Ee,Required:ve,Skip:ye,Value:We})}function ze(e,t,n,l){return He(n||"check",e,4e3,t,l)}function He(e,t,n,l,r,i){let u={k:t.key,n:t.node,v:t.val,p:de(t),w:e,m:n,t:o,u:r||{}},s=Me((void 0===t.val?o:_e(t.val)).replace(/"/g,o));if(null==l||o===l){let n=s.startsWith("[")?c:s.startsWith("{")?v:"value",l=s.startsWith("[")||re(t.parents[t.pI])?"index":"property",a="is",h=null==r?void 0:r.k;h=re(h)?(l=1<h.length?(a="are","properties"):l,h.join(", ")):h,u.t="Validation failed for "+(0<u.p.length?`${l} "${u.p}" with `:o)+`${n} "${s}" because `+(x===e?$===t.node.t?`the ${n} is not an instance of ${t.node.u.n} `:`the ${n} is not of type ${t.node.t}`:p===e?o===t.val?"an empty string is not allowed":`the ${n} is required`:"closed"===e?`the ${l} "${h}" ${a} not allowed`:f===e?"no value is allowed":`check "${null==i?e:i}" failed`)+(u.u.thrown?" (threw: "+u.u.thrown.message+")":".")}else u.t=l.replace(/\$VALUE/g,s).replace(/\$PATH/g,u.p);return u}function Ue(e){return null!=e.s&&o!==e.s?e.s:e.r||void 0===e.v?e.t:e.v}function _e(e,t,l,r){let i;r||!e||!e.$||n!==e.$.gubu$&&!0!==e.$.gubu$||(e=Ue(e));try{i=oe(e,(e,l)=>{var i,u;if(t&&(l=t(e,l)),null!=l&&v===typeof l&&l.constructor&&k!==l.constructor.name&&w!==l.constructor.name)l=d===typeof l.toString?l.toString():l.constructor.name;else if(d===typeof l)l=d===typeof pe[l.name]&&isNaN(+e)?void 0:null!=l.name&&o!==l.name?l.name:Me(l.toString().replace(/[ \t\r\n]+/g," "));else if("bigint"==typeof l)l=String(l.toString());else{if(Number.isNaN(l))return"NaN";!0===r||!0!==(null===(i=null==l?void 0:l.$)||void 0===i?void 0:i.gubu$)&&n!==(null===(u=null==l?void 0:l.$)||void 0===u?void 0:u.gubu$)||(l=Ue(l))}return l}),i=String(i)}catch(u){i=oe(String(e))}return!0===l&&(i=i.replace(/^"/,o).replace(/"$/,o)),i}function Ze(e){return null==e||v!==typeof e?e:ie(oe(e))}const Qe=e=>he({...e,$:{gubu$:!0}});if(y!==typeof window){let e=[{b:qe,n:G},{b:Re,n:S},{b:we,n:N},{b:Ie,n:V},{b:Ve,n:R},{b:Fe,n:A},{b:Ae,n:O},{b:Je,n:D},{b:De,n:j},{b:je,n:C},{b:me,n:E},{b:$e,n:B},{b:Ne,n:M},{b:be,n:L},{b:ke,n:T},{b:Te,n:q},{b:Le,n:F},{b:xe,n:P},{b:Pe,n:W},{b:Se,n:J},{b:Oe,n:K},{b:ge,n:z},{b:Ce,n:H},{b:Ee,n:U},{b:ve,n:_},{b:ye,n:Z},{b:Ge,n:Q},{b:We,n:X}];for(let t of e)le(t.b,s,{value:t.n})}Object.assign(pe,{Gubu:pe,Above:qe,After:Re,All:we,Any:Ie,Before:Ve,Below:Fe,Check:Ae,Child:Je,Closed:De,Define:je,Default:me,Empty:$e,Exact:Ne,Func:be,Key:ke,Max:Te,Min:Le,Never:xe,Len:Pe,One:Se,Open:Oe,Optional:ge,Refer:Ce,Rename:Ee,Required:ve,Skip:ye,Some:Ge,Value:We,GAbove:qe,GAfter:Re,GAll:we,GAny:Ie,GBefore:Ve,GBelow:Fe,GCheck:Ae,GChild:Je,GClosed:De,GDefine:je,GDefault:me,GEmpty:$e,GExact:Ne,GFunc:be,GKey:ke,GMax:Te,GMin:Le,GNever:xe,GLen:Pe,GOne:Se,GOpen:Oe,GOptional:ge,GRefer:Ce,GRename:Ee,GRequired:ve,GSkip:ye,GSome:Ge,GValue:We,G$:Qe,buildize:Ke,makeErr:ze,stringify:_e,truncate:Me,nodize:he,isShape:e=>e&&l===e.gubu}),le(pe,s,{value:u});const Xe=pe;t.Gubu=Xe;const{Gubu:Ye}=t;return Ye}));
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{("undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:this).Gubu=e()}}((function(){var e={},t={};Object.defineProperty(t,"__esModule",{value:!0}),t.Gubu=void 0;const n=Symbol.for("gubu$"),l={gubu$:n,v$:"5.0.1"},r=Symbol.for("gubu$nil"),i=/^[A-Z]/,o="",s="gubu",u="name",a="nan",f="never",h="number",c="required",p="array",d="function",v="object",g="string",y="undefined",m="any",b="list",$="instance",I="null",x="type",k="Object",w="Array",N="Above",S="All",V="Below",R="Max",O="Min",j="Len",A="One",D="Some",E="Value",C=" for property ",G='"$PATH"',B='"$VALUE"',T=e=>Object.keys(e),L=(e,t,n)=>Object.defineProperty(e,t,n),M=e=>Array.isArray(e),P=e=>JSON.parse(e),q=(e,t)=>JSON.stringify(e,t);class F{constructor(e,t,n,l){this.match=!1,this.dI=0,this.nI=2,this.cI=-1,this.pI=0,this.sI=-1,this.valType=f,this.isRoot=!1,this.key=o,this.type=f,this.stop=!0,this.nextSibling=!0,this.fromDefault=!1,this.ignoreVal=void 0,this.err=[],this.parents=[],this.keys=[],this.path=[],this.root=e,this.vals=[e,-1],this.node=t,this.nodes=[t,-1],this.ctx=n||{},this.match=!!l}next(){this.stop=!1,this.fromDefault=!1,this.ignoreVal=void 0,this.isRoot=0===this.pI,this.check=void 0;let e=this.nodes[this.pI];for(;+e;)this.dI--,this.ctx.log&&-1<this.dI&&this.ctx.log("e"+(Array.isArray(this.parents[this.pI])?"a":"o"),this),this.pI=+e,e=this.nodes[this.pI];e?(this.node=e,this.updateVal(this.vals[this.pI]),this.key=this.keys[this.pI],this.cI=this.pI,this.sI=this.pI+1,this.parent=this.parents[this.pI],this.nextSibling=!0,this.type=this.node.t,this.path[this.dI]=this.key,this.oval=this.val):this.stop=!0}updateVal(e){this.val=e,this.valType=typeof this.val,h===this.valType&&isNaN(this.val)&&(this.valType=a),this.isRoot&&!this.match&&(this.root=this.val)}printStacks(){var e;console.log("\nNODE","d="+this.dI,"c="+this.cI,"p="+this.pI,"n="+this.nI,+this.node,this.node.t,this.path,this.err.length);for(let t=0;t<this.nodes.length||t<this.vals.length||t<this.parents.length;t++)console.log(t,"\t",(""+(isNaN(+this.nodes[t])?this.keys[t]+":"+(null===(e=this.nodes[t])||void 0===e?void 0:e.t):+this.nodes[t])).padEnd(32," "),je(this.vals[t]).padEnd(32," "),je(this.parents[t]))}}class J extends TypeError{constructor(e,t,n){super(t.map(e=>e.t).join("\n")),this.gubu=!0,this.name="GubuError",this.code=e,this.desc=()=>({name:"GubuError",code:e,err:t,ctx:n})}toJSON(){return{...this,err:this.desc().err,name:this.name,message:this.message}}}const W={String:!0,Number:!0,Boolean:!0,Object:!0,Array:!0,Function:!0,Symbol:!0,BigInt:!0},z={string:o,number:0,boolean:!1,object:{},array:[],symbol:Symbol(o),bigint:BigInt(0),null:null};function H(e,t,s){var u,f,c,b;if(U===e)e=void 0;else if(null!=e&&(null===(u=e.$)||void 0===u?void 0:u.gubu$)){if(n===e.$.gubu$)return e.d=null==t?e.d:t,e;if(!0===e.$.gubu$){let l={...e};return l.$={v$:"5.0.1",...l.$,gubu$:n},l.v=null!=l.v&&v===typeof l.v?{...l.v}:l.v,l.t=l.t||typeof l.v,d===l.t&&W[l.v.name]&&(l.t=l.v.name.toLowerCase(),l.v=Ae(z[l.t]),l.f=l.v),l.r=!!l.r,l.p=!!l.p,l.d=null==t?null==l.d?-1:l.d:t,l.b=l.b||[],l.a=l.a||[],l.u=l.u||{},l.m=l.m||s,l}}let x=null===e?I:typeof e;x=y===x?m:x;let w=e,N=w,S=r,V=!1,R={},O=[],j=[];if(v===x)N=void 0,M(w)?(x=p,1===w.length&&(S=w[0],w=[])):null!=w&&Function!==w.constructor&&Object!==w.constructor&&null!=w.constructor?(x=$,R.n=w.constructor.name,R.i=w.constructor,N=w):0===T(w).length&&(S=le());else if(d===x)if(W[e.name])x=e.name.toLowerCase(),V=!0,w=Ae(z[x]),N=w,k===e.name&&(S=le());else if(w.gubu===l||!0===(null===(f=w.$)||void 0===f?void 0:f.gubu)){let e=w.node?w.node():w;x=e.t,w=e.v,N=w,V=e.r,R={...e.u},O=[...e.a],j=[...e.b]}else"Function"===w.constructor.name&&i.test(w.name)&&(x=$,V=!0,R.n=null===(b=null===(c=w.prototype)||void 0===c?void 0:c.constructor)||void 0===b?void 0:b.name,R.i=w);else h===x&&isNaN(w)?x=a:g===x&&o===w&&(R.empty=!0);let A=null==w||v!==x&&p!==x?w:{...w};return{$:l,t:x,v:A,f:N,n:null!=A&&v===typeof A?T(A).length:0,c:S,r:V,p:!1,d:null==t?-1:t,u:R,a:O,b:j,m:s}}function U(t,i){const s=null==i?{}:i;s.name=null==s.name?"G"+(o+Math.random()).substring(2,8):o+s.name;let u=s.meta=s.meta||{};u.active=!0===u.active||!1,u.suffix="string"==typeof u.suffix?u.suffix:"$$";let a=s.keyexpr=s.keyexpr||{};a.active=!1!==a.active;let h=H(t,0);function d(e,t,n){let l=new F(e,h,t,n);for(;l.next(),!l.stop;){let t=l.node,n=!1;if(0<t.b.length)for(let e=0;e<t.b.length;e++){let r=K(t.b[e],l);t=l.node,void 0!==r.done&&(n=r.done)}if(!n){let n=!0,i=void 0===l.val;if(f===l.type)l.err.push(Re(f,l,1070));else if(v===l.type){let e;if(t.r&&i?(l.ignoreVal=!0,l.err.push(Re(c,l,1010))):i||null!==l.val&&v===l.valType&&!M(l.val)?!t.p&&i&&void 0!==t.f?(l.updateVal(t.f),l.fromDefault=!0,e=l.val,n=!1):t.p&&i||(l.updateVal(l.val||(l.fromDefault=!0,{})),e=l.val):(l.err.push(Re(x,l,1020)),e=M(l.val)?l.val:{}),n&&(e=null==e&&!1===l.ctx.err?{}:e,null!=e)){l.ctx.log&&l.ctx.log("so",l);let n=!1,i=T(t.v),o=l.nI;if(0<i.length){n=!0,l.pI=o;for(let n=0;n<i.length;n++){let r,o=i[n];if(u.active&&o.endsWith(u.suffix)){if(r={short:""},"string"==typeof t.v[o]?r.short=t.v[o]:r={...r,...t.v[o]},delete t.v[o],n++,i.length<=n)break;if(i[n]!==o.substring(0,o.length-u.suffix.length))throw new Error("Invalid meta key: "+o);o=i[n]}let s=o,f=t.v[o];if(a.active){let e=/^\s*("(\\.|[^"\\])*"|[^\s]+):\s*(.*?)\s*$/.exec(o);e&&(s=e[1],f=_({src:e[3],val:f}),delete t.v[o])}let h=H(f,1+l.dI,r);t.v[s]=h,l.nodes[l.nI]=h,l.vals[l.nI]=e[s],l.parents[l.nI]=e,l.keys[l.nI]=s,l.nI++}}let s=T(e).filter(e=>void 0===t.v[e]);if(0<s.length)if(r===t.c)l.ignoreVal=!0,l.err.push(Re("closed",l,1100,void 0,{k:s}));else{n=!0,l.pI=o;for(let n of s){let r=t.c=H(t.c,1+l.dI);l.nodes[l.nI]=r,l.vals[l.nI]=e[n],l.parents[l.nI]=e,l.keys[l.nI]=n,l.nI++}}n?(l.dI++,l.nodes[l.nI]=l.sI,l.parents[l.nI]=e,l.nextSibling=!1,l.nI++):l.ctx.log&&l.ctx.log("eo",l)}}else if(p===l.type)if(t.r&&i)l.ignoreVal=!0,l.err.push(Re(c,l,1030));else if(i||M(l.val)){if(!t.p&&i&&void 0!==t.f)l.updateVal(t.f),l.fromDefault=!0;else if(!t.p||null!=l.val){l.updateVal(l.val||(l.fromDefault=!0,[]));let n=r!==t.c,i=0<l.val.length,s=T(t.v).filter(e=>!isNaN(+e)),u=0<s.length;if(l.ctx.log&&l.ctx.log("sa",l),i||u){l.pI=l.nI;let e=0;if(u)if(s.length<l.val.length&&!n)l.ignoreVal=!0,l.err.push(Re("closed",l,1090,void 0,{k:s.length}));else for(;e<s.length;e++){let n=t.v[e]=H(t.v[e],1+l.dI);l.nodes[l.nI]=n,l.vals[l.nI]=l.val[e],l.parents[l.nI]=l.val,l.keys[l.nI]=o+e,l.nI++}if(n&&i){let n=t.c=H(t.c,1+l.dI);for(;e<l.val.length;e++)l.nodes[l.nI]=n,l.vals[l.nI]=l.val[e],l.parents[l.nI]=l.val,l.keys[l.nI]=o+e,l.nI++}l.ignoreVal||(l.dI++,l.nodes[l.nI]=l.sI,l.parents[l.nI]=l.val,l.nextSibling=!1,l.nI++)}else l.ctx.log&&n&&null==e&&l.ctx.log("kv",{...l,key:0,val:t.c}),l.ctx.log&&l.ctx.log("ea",l)}}else l.err.push(Re(x,l,1040));else if(m===l.type||b===l.type||void 0===l.val||l.type===l.valType||$===l.type&&t.u.i&&l.val instanceof t.u.i||I===l.type&&null===l.val)if(void 0===l.val){let e=l.path[l.dI];!t.r||y===l.type&&l.parent.hasOwnProperty(e)?void 0!==t.f&&!t.p||y===l.type?(l.updateVal(t.f),l.fromDefault=!0):m===l.type&&(l.ignoreVal=void 0===l.ignoreVal||l.ignoreVal):(l.ignoreVal=!0,l.err.push(Re(c,l,1060))),l.ctx.log&&l.ctx.log("kv",l)}else g!==l.type||o!==l.val||t.u.empty||l.err.push(Re(c,l,1080)),l.ctx.log&&l.ctx.log("kv",l);else l.err.push(Re(x,l,1050))}if(0<t.a.length)for(let e=0;e<t.a.length;e++){let r=K(t.a[e],l);t=l.node,void 0!==r.done&&(n=r.done)}let i=l.node.p?!1!==l.ignoreVal:!!l.ignoreVal;!l.match&&null!=l.parent&&!n&&!i&&(l.parent[l.key]=l.val),l.nextSibling&&(l.pI=l.sI)}if(0<l.err.length)if(M(l.ctx.err))l.ctx.err.push(...l.err);else if(!l.match&&!1!==l.ctx.err)throw new J("shape",l.err,l.ctx);return l.match?0===l.err.length:l.root}function k(e,t){return d(e,t,!1)}k.valid=function(e,t){let n=t||{};return n.err=n.err||[],d(e,n,!1),0===n.err.length},k.match=(e,t)=>d(e,t=t||{},!0),k.error=(e,t)=>{let n=t||{};return n.err=n.err||[],d(e,n,!1),n.err},k.spec=()=>(k(void 0,{err:!1}),P(je(h,(e,t)=>n===t||t,!1,!0))),k.node=()=>(k.spec(),h);let w=o;return k.toString=()=>(w=be(o===w?je(h&&h.$&&(n===h.$.gubu$||!0===h.$.gubu$)?h.v:h):w),`[Gubu ${s.name} ${w}]`),e.inspect&&e.inspect.custom&&(k[e.inspect.custom]=k.toString),k.gubu=l,k.spec(),k}function _(e){let t=!1;if(null==e.tokens){t=!0,e.tokens=[];let n=/\s*,?\s*([)(\.]|"(\\.|[^"\\])*"|\/(\\.|[^\/\\])*\/[a-z]?|[^)(,\s]+)\s*/g,l=null;for(;l=n.exec(e.src);)e.tokens.push(l[1])}e.i=e.i||0;let n=e.tokens[e.i],l=Ee[n];if(")"===e.tokens[e.i])return e.i++,e.val;e.i++;let r={Number:Number,String:String,Boolean:Boolean};if(null==l)try{return r[n]||("undefined"===n?void 0:"NaN"===n?NaN:n.match(/^\/.+\/$/)?new RegExp(n.substring(1,n.length-1)):JSON.parse(n))}catch(s){throw new SyntaxError(`Gubu: unexpected token ${n} in builder expression ${e.src}`)}"("===e.tokens[e.i]&&e.i++;let i=[],o=null;for(;null!=(o=e.tokens[e.i])&&")"!==o;){let t=_(e);i.push(t)}return e.i++,e.val=l.call(e.val,...i),"."===e.tokens[e.i]?(e.i++,_(e)):t&&e.i<e.tokens.length?_(e):e.val}function K(e,t){var n;let l,r={},i=!1;try{i=!(void 0!==t.val||!(null===(n=e.gubu$)||void 0===n?void 0:n.Check))||(t.check=e,e(t.val,r,t))}catch(u){l=u}let s=M(r.err)?0<r.err.length:null!=r.err;if(!i||s){if(void 0===t.val&&(t.node.p||!t.node.r)&&!0!==r.done)return delete r.err,r;let n=r.why||"check",i=Z(t);if(g===typeof r.err)t.err.push(Ve(t,r.err));else if(v===typeof r.err)t.err.push(...[r.err].flat().map(e=>(e.p=null==e.p?i:e.p,e.m=null==e.m?2010:e.m,e)));else{let r=e.name;null!=r&&o!=r||(r=be(e.toString().replace(/[ \t\r\n]+/g," "))),t.err.push(Re(n,t,1045,void 0,{thrown:l},r))}r.done=null==r.done||r.done}return r.hasOwnProperty("uval")?(t.updateVal(r.uval),t.ignoreVal=!1):void 0===r.val||Number.isNaN(r.val)||(t.updateVal(r.val),t.ignoreVal=!1),void 0!==r.node&&(t.node=r.node),void 0!==r.type&&(t.type=r.type),r}function Z(e){return e.path.slice(1,e.dI+1).filter(e=>null!=e).join(".")}const Q=function(e){let t=Se(this,e);return t.r=!0,t.p=!1,void 0===e&&1===arguments.length&&(t.t=y,t.v=void 0),t},X=function(e){let t=Se(this,e);return t.r=!1,void 0===e&&1===arguments.length&&(t.t=y,t.v=void 0),t},Y=function(e){let t=Se(this,e);return t.r=!1,t.p=!0,t},ee=function(e){let t=Se(this);return t.t=d,t.v=e,t.f=e,t},te=function(e,t){let n=Se(this,void 0===t?e:t);return n.r=!1,n.f=e,d===typeof e&&W[e.name]&&(n.t=e.name.toLowerCase(),n.f=Ae(z[n.t])),n.p=!1,n},ne=function(e){let t=Se(this,e);return t.u.empty=!0,t},le=function(e){let t=Se(this,e);return t.t=m,void 0!==e&&(t.v=e,t.f=e),t},re=function(e){let t=Se(this,e);return t.t=f,t},ie=function(e,t){let n=Se(this),l="number"==typeof e;n.t=g,l&&null==t&&(n=H([]));let r=null;return"function"==typeof e&&(r=e,n=le()),n.b.push((function(n,i,o){if(r)i.val=r(o.path,o);else if(l){let n=e;i.val=o.path.slice(o.path.length-1-(0<=n?n:0),o.path.length-1+(0<=n?0:1)),"string"==typeof t&&(i.val=i.val.join(t))}else null==e&&(i.val=o.path[o.path.length-2]);return!0})),n},oe=function(...e){let t=Se();t.t=b,t.r=!0;let n=e.map(e=>Ce(e));return t.u.list=e,t.b.push((function(t,l,r){let i=!0;for(let e of n){let n={...r.ctx,err:[]};e(t,n),0<n.err.length&&(i=!1)}return i||(l.why=S,l.err=[Ve(r,E+" "+B+C+G+" does not satisfy all of: "+e.map(e=>je(e,null,!0)).join(", "))]),i})),t},se=function(...e){let t=Se();t.t=b,t.r=!0;let n=e.map(e=>Ce(e));return t.u.list=e,t.b.push((function(t,l,r){let i=!1;for(let e of n){let n={...r.ctx,err:[]},o=e.match(t,n);o&&(l.val=e(t,n)),i||(i=o)}return i||(l.why=D,l.err=[Ve(r,E+" "+B+C+G+" does not satisfy any of: "+e.map(e=>je(e,null,!0)).join(", "))]),i})),t},ue=function(...e){let t=Se();t.t=b,t.r=!0;let n=e.map(e=>Ce(e));return t.u.list=e,t.b.push((function(t,l,r){let i=0;for(let e of n){let n={...r.ctx,err:[]};if(e.match(t,n)){i++,l.val=e(t,n);break}}return 1!==i&&(l.why=A,l.err=[Ve(r,E+" "+B+C+G+" does not satisfy one of: "+e.map(e=>je(e,null,!0)).join(", "))]),!0})),t},ae=function(...e){let t=Se();return t.b.push((function(t,n,l){for(let r=0;r<e.length;r++)if(t===e[r])return!0;return n.err=Ve(l,E+" "+B+C+G+" must be exactly one of: "+l.node.s+"."),n.done=!0,!1})),t.s=e.map(e=>je(e,null,!0)).join(", "),t},fe=function(e,t){let n=Se(this,t);return n.b.push(e),n},he=function(e,t){let n=Se(this,t);return n.a.push(e),n},ce=function(e,t){let n=Se(this,t);if(d===typeof e){let t=e;t.gubu$=t.gubu$||{},t.gubu$.Check=!0,n.b.push(e),n.s=(null==n.s?o:n.s+";")+je(e,null,!0),n.r=!0}else if(v===typeof e){if(Object.prototype.toString.call(e).includes("RegExp")){let t=t=>null!=t&&!Number.isNaN(t)&&!!String(t).match(e);L(t,u,{value:String(e)}),L(t,"gubu$",{value:{Check:!0}}),n.b.push(t),n.s=je(e),n.r=!0}}else g===typeof e&&(n.t=e,n.r=!0);return n},pe=function(e){let t=Se(this,e);return t.c=le(),t},de=function(e){let t=Se(this,e);return p===t.t&&r!==t.c&&0===t.n?(t.v=[t.c],t.c=r):t.c=r,t},ve=function(e,t){let n=Se(this,t),l=g===typeof e?e:(v===typeof e&&e||{}).name;return null!=l&&o!=l&&n.b.push((function(e,t,n){return(n.ctx.ref=n.ctx.ref||{})[l]=n.node,!0})),n},ge=function(e,t){let n=Se(this,t),l=v===typeof e&&e||{},r=g===typeof e?e:l.name,i=!!l.fill;return null!=r&&o!=r&&n.b.push((function(e,t,n){if(void 0!==e||i){let e=n.ctx.ref=n.ctx.ref||{};if(void 0!==e[r]){let n={...e[r]};n.t=n.t||f,t.node=n,t.type=n.t}}return!0})),n},ye=function(e,t){let n=Se(this,t),l=v===typeof e&&e||{},r=g===typeof e?e:l.name,i="boolean"==typeof l.keep?l.keep:void 0,s=M(l.claim)?l.claim:[];if(null!=r&&o!=r){let e=(e,t,n)=>{if(void 0===e&&0<s.length){n.ctx.Rename=n.ctx.Rename||{},n.ctx.Rename.fromDefault=n.ctx.Rename.fromDefault||{};for(let e of s){let l=n.ctx.Rename.fromDefault[e]||{};if(void 0!==n.parent[e]&&!l.yes){t.val=n.parent[e],n.match||(n.parent[r]=t.val),t.node=l.node;for(let e=0;e<n.err.length;e++)n.err[e].k===l.key&&(n.err.splice(e,1),e--);if(i){let t=n.cI+1;n.nodes.splice(t,0,H(l.dval)),n.vals.splice(t,0,void 0),n.parents.splice(t,0,n.parent),n.keys.splice(t,0,e),n.nI++,n.pI++}else delete n.parent[e];break}}void 0===t.val&&(t.val=n.node.v)}return!0};L(e,u,{value:"Rename:"+r}),n.b.push(e);let t=(e,t,n)=>(n.parent[r]=e,n.match||i||n.key===r||M(n.parent)&&!1!==i||(delete n.parent[n.key],t.done=!0),n.ctx.Rename=n.ctx.Rename||{},n.ctx.Rename.fromDefault=n.ctx.Rename.fromDefault||{},n.ctx.Rename.fromDefault[r]={yes:n.fromDefault,key:n.key,dval:n.node.v,node:n.node},!0);L(t,u,{value:"Rename:"+r}),n.a.push(t)}return n};function me(e){return h===typeof e?e:h===typeof(null==e?void 0:e.length)?e.length:null!=e&&v===typeof e?T(e).length:NaN}function be(e,t){let n=String(e),l=null==t||isNaN(t)?30:t<0?0:~~t,r=null==e?0:n.length,i=null==e?o:n.substring(0,r);return i=l<r?i.substring(0,l-3)+"...":i,i.substring(0,l)}const $e=function(e,t){let n=Se(this,t);return n.b.push((function(t,n,l){let r=me(t);if(e<=r)return!0;l.checkargs={min:1};let i=h===typeof t?o:"length ";return n.err=Ve(l,E+" "+B+C+G+` must be a minimum ${i}of ${e} (was ${r}).`),!1})),n.s=O+"("+e+(null==t?o:","+je(t))+")",n},Ie=function(e,t){let n=Se(this,t);return n.b.push((function(t,n,l){let r=me(t);if(r<=e)return!0;let i=h===typeof t?o:"length ";return n.err=Ve(l,E+" "+B+C+G+` must be a maximum ${i}of ${e} (was ${r}).`),!1})),n.s=R+"("+e+(null==t?o:","+je(t))+")",n},xe=function(e,t){let n=Se(this,t);return n.b.push((function(t,n,l){let r=me(t);if(e<r)return!0;let i=h===typeof t?"be":"have length";return n.err=Ve(l,E+" "+B+C+G+` must ${i} above ${e} (was ${r}).`),!1})),n.s=N+"("+e+(null==t?o:","+je(t))+")",n},ke=function(e,t){let n=Se(this,t);return n.b.push((function(t,n,l){let r=me(t);if(r<e)return!0;let i=h===typeof t?"be":"have length";return n.err=Ve(l,E+" "+B+C+G+` must ${i} below ${e} (was ${r}).`),!1})),n.s=V+"("+e+(null==t?o:","+je(t))+")",n},we=function(e,t){let n=Se(this,t||le());return n.b.push((function(t,n,l){let r=me(t);if(e===r)return!0;let i=h===typeof t?o:" in length";return n.err=Ve(l,E+" "+B+C+G+` must be exactly ${e}${i} (was ${r}).`),!1})),n.s=j+"("+e+(null==t?o:","+je(t))+")",n},Ne=function(e,t){let n=Se(this,t||{});return n.c=H(e),n};function Se(e,t){let n=H(null==e||e.window===e||e.global===e?t:e);return Object.assign(n,{Above:xe,After:he,Any:le,Before:fe,Below:ke,Check:ce,Child:Ne,Closed:de,Open:pe,Define:ve,Empty:ne,Exact:ae,Max:Ie,Min:$e,Never:re,Len:we,Refer:ge,Rename:ye,Required:Q,Skip:Y})}function Ve(e,t,n,l){return Re(n||"check",e,4e3,t,l)}function Re(e,t,n,l,r,i){var s;let u={k:t.key,n:t.node,v:t.val,p:Z(t),w:e,c:(null===(s=t.check)||void 0===s?void 0:s.name)||"none",a:t.checkargs||{},m:n,t:o,u:r||{}},a=be((void 0===t.val?o:je(t.val)).replace(/"/g,o));if(null==l||o===l){let n=a.startsWith("[")?p:a.startsWith("{")?v:"value",l=a.startsWith("[")||M(t.parents[t.pI])?"index":"property",s="is",h=null==r?void 0:r.k;h=M(h)?(l=1<h.length?(s="are","properties"):l,h.join(", ")):h,u.t="Validation failed for "+(0<u.p.length?`${l} "${u.p}" with `:o)+`${n} "${a}" because `+(x===e?$===t.node.t?`the ${n} is not an instance of ${t.node.u.n} `:`the ${n} is not of type ${t.node.t}`:c===e?o===t.val?"an empty string is not allowed":`the ${n} is required`:"closed"===e?`the ${l} "${h}" ${s} not allowed`:f===e?"no value is allowed":`check "${null==i?e:i}" failed`)+(u.u.thrown?" (threw: "+u.u.thrown.message+")":".")}else u.t=l.replace(/\$VALUE/g,a).replace(/\$PATH/g,u.p);return u}function Oe(e){return null!=e.s&&o!==e.s?e.s:e.r||void 0===e.v?e.t:e.v}function je(e,t,l,r){let i;r||!e||!e.$||n!==e.$.gubu$&&!0!==e.$.gubu$||(e=Oe(e));try{i=q(e,(e,l)=>{var i,s;if(t&&(l=t(e,l)),null!=l&&v===typeof l&&l.constructor&&k!==l.constructor.name&&w!==l.constructor.name)l=d===typeof l.toString?l.toString():l.constructor.name;else if(d===typeof l)l=d===typeof U[l.name]&&isNaN(+e)?void 0:null!=l.name&&o!==l.name?l.name:be(l.toString().replace(/[ \t\r\n]+/g," "));else if("bigint"==typeof l)l=String(l.toString());else{if(Number.isNaN(l))return"NaN";!0===r||!0!==(null===(i=null==l?void 0:l.$)||void 0===i?void 0:i.gubu$)&&n!==(null===(s=null==l?void 0:l.$)||void 0===s?void 0:s.gubu$)||(l=Oe(l))}return l}),i=String(i)}catch(s){i=q(String(e))}return!0===l&&(i=i.replace(/^"/,o).replace(/"$/,o)),i}function Ae(e){return null==e||v!==typeof e?e:P(q(e))}const De=e=>H({...e,$:{gubu$:!0}}),Ee={Above:xe,After:he,All:oe,Any:le,Before:fe,Below:ke,Check:ce,Child:Ne,Closed:de,Define:ve,Default:te,Empty:ne,Exact:ae,Func:ee,Key:ie,Max:Ie,Min:$e,Never:re,Len:we,One:ue,Open:pe,Optional:X,Refer:ge,Rename:ye,Required:Q,Skip:Y,Some:se};if(y!==typeof window)for(let Be in Ee)L(Ee[Be],u,{value:Be});Object.assign(U,{Gubu:U,...Ee,...Object.entries(Ee).reduce((e,t)=>e["G"+t[0]]=t[1],{}),G$:De,buildize:Se,makeErr:Ve,stringify:je,truncate:be,nodize:H,isShape:e=>e&&l===e.gubu}),L(U,u,{value:s});const Ce=U;t.Gubu=Ce;const{Gubu:Ge}=t;return Ge}));
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],2:[function(require,module,exports){
 module.exports={
@@ -51,20 +51,21 @@ module.exports={
     "README.md"
   ],
   "devDependencies": {
-    "@types/jest": "^29.5.1",
+    "@types/jest": "^29.5.5",
     "browserify": "^17.0.0",
-    "esbuild": "^0.17.19",
+    "es-jest": "^2.1.0",
+    "esbuild": "^0.19.4",
     "esbuild-jest": "^0.5.0",
-    "jest": "^29.5.0",
+    "jest": "^29.7.0",
     "tinyify": "^4.0.0",
-    "ts-jest": "^29.1.0",
-    "typescript": "^5.0.4"
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.2.2"
   }
 }
 
 },{}],3:[function(require,module,exports){
 "use strict";
-/* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
+/* Copyright (c) 2021-2023 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Bar = exports.Foo = void 0;
 // Handle web (Gubu) versus node ({Gubu}) export.
@@ -75,7 +76,9 @@ if (GubuModule.Gubu) {
 const Gubu = GubuModule;
 const buildize = Gubu.buildize;
 const makeErr = Gubu.makeErr;
-const { Above, After, All, Any, Before, Below, Check, Child, Closed, Default, Define, Empty, Exact, Func, Key, Len, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some, Value, } = Gubu;
+const { Above, After, All, Any, Before, Below, Check, Child, Closed, Default, Define, Empty, Exact, Func, Key, Len, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some,
+// Value,
+ } = Gubu;
 class Foo {
     constructor(a) {
         this.a = -1;
@@ -864,7 +867,7 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
             }
         });
     });
-    test('builder-min', () => {
+    test('builder-min-basic', () => {
         let g0 = Gubu({
             a: Min(10),
             b: Min(2, [String]),
@@ -895,6 +898,15 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
         expect(() => g0({ e: [{ x: 1 }] })).toThrow('Value "{x:1}" for property "e.0" must be a minimum length of 2 (was 1).');
         expect(() => g0({ e: [{}] })).toThrow('Value "{}" for property "e.0" must be a minimum length of 2 (was 0).');
         expect(g0({ e: [] })).toMatchObject({ e: [] });
+    });
+    test('builder-min-example', () => {
+        const { Min } = Gubu;
+        let shape = Gubu({
+            size: Min(2, 4) // Minimum is 2, default is 4, type is Number, optional
+        });
+        expect(shape({})).toEqual({ size: 4 });
+        expect(shape({ size: 3 })).toEqual({ size: 3 });
+        expect(() => shape({ size: 1 })).toThrow('minimum');
     });
     test('builder-max', () => {
         let g0 = Gubu({
@@ -1092,25 +1104,46 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         let g0 = Gubu(Child(Number));
         expect(g0({ a: 1, b: 2 })).toMatchObject({ a: 1, b: 2 });
         expect(() => g0({ a: 1, b: 2, c: 'c' })).toThrow('type');
-    });
-    test('builder-value', () => {
-        let g0 = Gubu(Value(String, { a: 1 }));
-        expect(g0({})).toMatchObject({});
-        expect(g0({ a: 2 })).toMatchObject({ a: 2 });
-        expect(() => g0({ a: 'x' })).toThrow('type');
-        expect(g0({ a: 2, b: 'x' })).toMatchObject({ a: 2, b: 'x' });
-        expect(g0({ a: 2, b: 'x', c: 'y' })).toMatchObject({ a: 2, b: 'x', c: 'y' });
-        expect(() => g0({ a: 2, b: 3 })).toThrow('Validation failed for property "b" with value "3" because the value is not of type string.');
-        expect(() => g0({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for property "c" with value "4" because the value is not of type string.');
-        expect(() => g0({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "true" because the value is not of type number.');
-        expect(() => g0({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "z" because the value is not of type number.');
-        let g1 = Gubu({ a: Required({ b: 1 }).Value({ x: String }) });
-        expect(g1({ a: { b: 2, c: { x: 'x' } } }))
+        let g1 = Gubu(Child(String, { a: 1 }));
+        expect(g1({})).toMatchObject({});
+        expect(g1({ a: 2 })).toMatchObject({ a: 2 });
+        expect(() => g1({ a: 'x' })).toThrow('type');
+        expect(g1({ a: 2, b: 'x' })).toMatchObject({ a: 2, b: 'x' });
+        expect(g1({ a: 2, b: 'x', c: 'y' })).toMatchObject({ a: 2, b: 'x', c: 'y' });
+        expect(() => g1({ a: 2, b: 3 })).toThrow('Validation failed for property "b" with value "3" because the value is not of type string.');
+        expect(() => g1({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for property "c" with value "4" because the value is not of type string.');
+        expect(() => g1({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "true" because the value is not of type number.');
+        expect(() => g1({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "z" because the value is not of type number.');
+        let g2 = Gubu({ a: Required({ b: 1 }).Child({ x: String }) });
+        expect(g2({ a: { b: 2, c: { x: 'x' } } }))
             .toMatchObject({ a: { b: 2, c: { x: 'x' } } });
-        expect(g1({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } }))
+        expect(g2({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } }))
             .toMatchObject({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } });
-        expect(() => g1({ a: { b: 2, c: 3 } })).toThrow('Validation failed for property "a.c" with value "3" because the value is not of type object.');
+        expect(() => g2({ a: { b: 2, c: 3 } })).toThrow('Validation failed for property "a.c" with value "3" because the value is not of type object.');
     });
+    /*
+    test('builder-value', () => {
+      let g1 = Gubu(Value(String, { a: 1 }))
+      expect(g0({})).toMatchObject({})
+      expect(g0({ a: 2 })).toMatchObject({ a: 2 })
+      expect(() => g0({ a: 'x' })).toThrow('type')
+      expect(g0({ a: 2, b: 'x' })).toMatchObject({ a: 2, b: 'x' })
+      expect(g0({ a: 2, b: 'x', c: 'y' })).toMatchObject({ a: 2, b: 'x', c: 'y' })
+      expect(() => g0({ a: 2, b: 3 })).toThrow('Validation failed for property "b" with value "3" because the value is not of type string.')
+      expect(() => g0({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for property "c" with value "4" because the value is not of type string.')
+  
+      expect(() => g0({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "true" because the value is not of type number.')
+  
+      expect(() => g0({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "z" because the value is not of type number.')
+  
+      let g1 = Gubu({ a: Required({ b: 1 }).Value({ x: String }) })
+      expect(g1({ a: { b: 2, c: { x: 'x' } } }))
+        .toMatchObject({ a: { b: 2, c: { x: 'x' } } })
+      expect(g1({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } }))
+        .toMatchObject({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } })
+      expect(() => g1({ a: { b: 2, c: 3 } })).toThrow('Validation failed for property "a.c" with value "3" because the value is not of type object.')
+    })
+    */
     test('builder-void', () => {
         // Skip does not insert, but does check type.
         let t0 = Gubu(Skip());
@@ -1315,7 +1348,7 @@ require('./builder.test.js')
 
 },{"./builder.test.js":3,"./gubu.test.js":5}],5:[function(require,module,exports){
 "use strict";
-/* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
+/* Copyright (c) 2021-2023 Richard Rodger and other contributors, MIT License */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -1334,7 +1367,8 @@ const G$ = Gubu.G$;
 const stringify = Gubu.stringify;
 const truncate = Gubu.truncate;
 const nodize = Gubu.nodize;
-const { Above, After, All, Any, Before, Below, Check, Closed, Define, Empty, Exact, Func, Max, Min, Never, One, Open, Refer, Rename, Required, Skip, Some, Value,
+const { Above, After, All, Any, Before, Below, Check, Closed, Define, Empty, Exact, Func, Max, Min, Never, One, Open, Refer, Rename, Required, Skip, Some, Child,
+// Value,
 // Default,
  } = Gubu;
 class Foo {
@@ -2084,21 +2118,21 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(g3o({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 });
         expect(g3o({ x: 11, y: 22, z: 33, k: 44 }))
             .toEqual({ x: 11, y: 22, z: 33, k: 44 });
-        let g1v = Gubu(Value(Number, { x: 1 }));
+        let g1v = Gubu(Child(Number, { x: 1 }));
         expect(g1v()).toEqual({ x: 1 });
         expect(g1v({})).toEqual({ x: 1 });
         expect(g1v({ x: 11 })).toEqual({ x: 11 });
         expect(g1v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 });
         expect(g1v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 });
         expect(() => g1v({ x: 11, y: true })).toThrow('Validation failed for property "y" with value "true" because the value is not of type number.');
-        let g2v = Gubu(Value(Number, { x: 1, y: 2 }));
+        let g2v = Gubu(Child(Number, { x: 1, y: 2 }));
         expect(g2v()).toEqual({ x: 1, y: 2 });
         expect(g2v({})).toEqual({ x: 1, y: 2 });
         expect(g2v({ x: 11 })).toEqual({ x: 11, y: 2 });
         expect(g2v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 });
         expect(g2v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 });
         expect(() => g2v({ x: 11, y: 22, z: true })).toThrow('Validation failed for property "z" with value "true" because the value is not of type number.');
-        let g3v = Gubu(Value(Number, { x: 1, y: 2, z: 3 }));
+        let g3v = Gubu(Child(Number, { x: 1, y: 2, z: 3 }));
         expect(g3v()).toEqual({ x: 1, y: 2, z: 3 });
         expect(g3v({})).toEqual({ x: 1, y: 2, z: 3 });
         expect(g3v({ x: 11 })).toEqual({ x: 11, y: 2, z: 3 });
@@ -2107,6 +2141,33 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(g3v({ x: 11, y: 22, z: 33, k: 44 }))
             .toEqual({ x: 11, y: 22, z: 33, k: 44 });
         expect(() => g3v({ x: 11, y: 22, z: 33, k: true })).toThrow('Validation failed for property "k" with value "true" because the value is not of type number.');
+        /*
+        let g1v = Gubu(Value(Number, { x: 1 }))
+        expect(g1v()).toEqual({ x: 1 })
+        expect(g1v({})).toEqual({ x: 1 })
+        expect(g1v({ x: 11 })).toEqual({ x: 11 })
+        expect(g1v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 })
+        expect(g1v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 })
+        expect(() => g1v({ x: 11, y: true })).toThrow('Validation failed for property "y" with value "true" because the value is not of type number.')
+    
+        let g2v = Gubu(Value(Number, { x: 1, y: 2 }))
+        expect(g2v()).toEqual({ x: 1, y: 2 })
+        expect(g2v({})).toEqual({ x: 1, y: 2 })
+        expect(g2v({ x: 11 })).toEqual({ x: 11, y: 2 })
+        expect(g2v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 })
+        expect(g2v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 })
+        expect(() => g2v({ x: 11, y: 22, z: true })).toThrow('Validation failed for property "z" with value "true" because the value is not of type number.')
+    
+        let g3v = Gubu(Value(Number, { x: 1, y: 2, z: 3 }))
+        expect(g3v()).toEqual({ x: 1, y: 2, z: 3 })
+        expect(g3v({})).toEqual({ x: 1, y: 2, z: 3 })
+        expect(g3v({ x: 11 })).toEqual({ x: 11, y: 2, z: 3 })
+        expect(g3v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22, z: 3 })
+        expect(g3v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 })
+        expect(g3v({ x: 11, y: 22, z: 33, k: 44 }))
+          .toEqual({ x: 11, y: 22, z: 33, k: 44 })
+        expect(() => g3v({ x: 11, y: 22, z: 33, k: true })).toThrow('Validation failed for property "k" with value "true" because the value is not of type number.')
+        */
         // Empty object is Open
         let g4 = Gubu({});
         expect(g4()).toEqual({});
@@ -2240,7 +2301,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(obj01({ c: {} })).toEqual({ a: { x: 1 }, c: {} });
         expect(obj01({ c: { z: {} } })).toEqual({ a: { x: 1 }, c: { z: { k: 3 } } });
         let obj11 = Gubu({
-            people: Required({}).Value({ name: String, age: Number })
+            people: Required({}).Child({ name: String, age: Number })
         });
         expect(obj11({
             people: {
@@ -2260,6 +2321,31 @@ Validation failed for property "q.b" with value "x" because the value is not of 
             }
         })).toThrow('Validation failed for property "people.bob.age" with value "" because the value is required.');
         expect(() => obj11({})).toThrow('Validation failed for property "people" with value "" because the value is required.');
+        /*
+        let obj11 = Gubu({
+          people: Required({}).Value({ name: String, age: Number })
+        })
+    
+        expect(obj11({
+          people: {
+            alice: { name: 'Alice', age: 99 },
+            bob: { name: 'Bob', age: 98 },
+          }
+        })).toEqual({
+          people: {
+            alice: { name: 'Alice', age: 99 },
+            bob: { name: 'Bob', age: 98 },
+          }
+        })
+    
+        expect(() => obj11({
+          people: {
+            alice: { name: 'Alice', age: 99 },
+            bob: { name: 'Bob' }
+          }
+        })).toThrow('Validation failed for property "people.bob.age" with value "" because the value is required.')
+        expect(() => obj11({})).toThrow('Validation failed for property "people" with value "" because the value is required.')
+        */
         let shape = Gubu({
             foo: Number,
             bar: Required({
@@ -2299,8 +2385,22 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         }));
         expect(shape({ a: { b: 11, c: 22 }, d: 33 }))
             .toEqual({ a: { b: 11, c: 22 }, d: 33 });
-        const { Value } = Gubu;
+        /*
+        const { Value } = Gubu
         shape = Gubu(Value(String, {
+          a: 123,
+        }))
+    
+        // All non-explicit properties must be a String
+        expect(shape({ a: 11, b: 'abc' })).toEqual({ a: 11, b: 'abc' }) // b is a string
+        expect(shape({ c: 'foo', d: 'bar' })).toEqual({ a: 123, c: 'foo', d: 'bar' }) // c and d are strings
+    
+        // These fail
+        expect(() => shape({ a: 'abc' })).toThrow('number') // a must be a number
+        expect(() => shape({ b: { x: 1 } })).toThrow('string') // b must be a string
+        */
+        const { Child } = Gubu;
+        shape = Gubu(Child(String, {
             a: 123,
         }));
         // All non-explicit properties must be a String
@@ -2634,54 +2734,60 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(() => shape_SomeB0({ x: 1, y: true })).toThrow('any of');
         expect(() => shape_SomeB0({ x: true, y: true })).toThrow(`Value "{x:true,y:true}" for property "" does not satisfy any of: {"x":1}, {"y":2}`);
         // TODO: more complex objects
-        let shape_ValueB0 = Gubu(Value(Number, {}));
-        expect(shape_ValueB0({ x: 10 })).toEqual({ x: 10 });
-        expect(shape_ValueB0({ x: 10, y: 11 })).toEqual({ x: 10, y: 11 });
-        expect(() => shape_ValueB0({ x: true })).toThrow('Validation failed for property "x" with value "true" because the value is not of type number.');
+        /*
+        let shape_ValueB0 = Gubu(Value(Number, {}))
+        expect(shape_ValueB0({ x: 10 })).toEqual({ x: 10 })
+        expect(shape_ValueB0({ x: 10, y: 11 })).toEqual({ x: 10, y: 11 })
+        expect(() => shape_ValueB0({ x: true })).toThrow('Validation failed for property "x" with value "true" because the value is not of type number.')
+    
         let shape_ValueB1 = Gubu({
-            page: Value({
-                title: String,
-                template: 'standard'
-            }, {
-                home: {
-                    title: 'Home',
-                    template: 'home'
-                },
-                sitemap: {
-                    title: 'Site Map',
-                    template: 'sitemap'
-                },
-            })
-        });
-        expect(shape_ValueB1({
-            page: {
-                about: {
-                    title: 'About'
-                },
-                contact: {
-                    title: 'Contact'
-                }
-            }
-        })).toEqual({
-            page: {
-                about: {
-                    template: 'standard',
-                    title: 'About',
-                },
-                contact: {
-                    template: 'standard',
-                    title: 'Contact',
-                },
-                home: {
-                    template: 'home',
-                    title: 'Home',
-                },
-                sitemap: {
-                    template: 'sitemap',
-                    title: 'Site Map',
-                },
+          page: Value(
+            {
+              title: String,
+              template: 'standard'
             },
-        });
+            {
+              home: {
+                title: 'Home',
+                template: 'home'
+              },
+              sitemap: {
+                title: 'Site Map',
+                template: 'sitemap'
+              },
+            })
+        })
+    
+        expect(shape_ValueB1({
+          page: {
+            about: {
+              title: 'About'
+            },
+            contact: {
+              title: 'Contact'
+            }
+          }
+        })).toEqual({
+          page: {
+            about: {
+              template: 'standard',
+              title: 'About',
+            },
+            contact: {
+              template: 'standard',
+              title: 'Contact',
+            },
+            home: {
+              template: 'home',
+              title: 'Home',
+            },
+            sitemap: {
+              template: 'sitemap',
+              title: 'Site Map',
+            },
+          },
+        })
+        */
     });
     test('type-default-optional', () => {
         let f0 = () => true;
@@ -2803,25 +2909,29 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(() => g4(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.');
         expect(() => g4([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.');
         expect(() => g4([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.');
-        let g4v = Gubu(Value(Number, []));
-        expect(g4v()).toEqual([]);
-        expect(g4v([])).toEqual([]);
-        expect(g4v([1])).toEqual([1]);
-        expect(g4v([1, 2])).toEqual([1, 2]);
-        expect(g4v([1, 2, 3])).toEqual([1, 2, 3]);
-        expect(() => g4v(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.');
-        expect(() => g4v([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.');
-        expect(() => g4v([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.');
+        /*
+        let g4v = Gubu(Value(Number, []))
+        expect(g4v()).toEqual([])
+        expect(g4v([])).toEqual([])
+        expect(g4v([1])).toEqual([1])
+        expect(g4v([1, 2])).toEqual([1, 2])
+        expect(g4v([1, 2, 3])).toEqual([1, 2, 3])
+        expect(() => g4v(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.')
+        expect(() => g4v([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.')
+        expect(() => g4v([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.')
+    
         // Value overrides single element
-        let g4vo = Gubu(Value(Number, [String]));
-        expect(g4vo()).toEqual([]);
-        expect(g4vo([])).toEqual([]);
-        expect(g4vo([1])).toEqual([1]);
-        expect(g4vo([1, 2])).toEqual([1, 2]);
-        expect(g4vo([1, 2, 3])).toEqual([1, 2, 3]);
-        expect(() => g4vo(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.');
-        expect(() => g4vo([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.');
-        expect(() => g4vo([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.');
+    
+        let g4vo = Gubu(Value(Number, [String]))
+        expect(g4vo()).toEqual([])
+        expect(g4vo([])).toEqual([])
+        expect(g4vo([1])).toEqual([1])
+        expect(g4vo([1, 2])).toEqual([1, 2])
+        expect(g4vo([1, 2, 3])).toEqual([1, 2, 3])
+        expect(() => g4vo(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.')
+        expect(() => g4vo([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.')
+        expect(() => g4vo([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.')
+        */
         // NOTE: array without spec can hold anything.
         let g6 = Gubu([]);
         expect(g6([null, 1, 'x', true])).toEqual([null, 1, 'x', true]);
@@ -3085,12 +3195,14 @@ Validation failed for property "b" with value "B" because the value is not of ty
                         v: 1,
                         p: '',
                         w: 'type',
+                        c: 'none',
+                        a: {},
                         m: 1050,
                         t: 'Validation failed for value "1" because the value is not of type nan.'
                     }
                 ]
             });
-            expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","err":[{"n":{"$":{"v$":"' + package_json_1.default.version + '"},"t":"nan","v":null,"f":null,"n":0,"r":false,"p":false,"d":0,"u":{},"a":[],"b":[]},"v":1,"p":"","w":"type","m":1050,"t":"Validation failed for value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for value \\"1\\" because the value is not of type nan."}');
+            expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","err":[{"n":{"$":{"v$":"' + package_json_1.default.version + '"},"t":"nan","v":null,"f":null,"n":0,"r":false,"p":false,"d":0,"u":{},"a":[],"b":[]},"v":1,"p":"","w":"type","c":"none","a":{},"m":1050,"t":"Validation failed for value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for value \\"1\\" because the value is not of type nan."}');
         }
     });
     test('spec-basic', () => {

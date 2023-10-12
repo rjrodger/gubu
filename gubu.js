@@ -1,8 +1,8 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GKey = exports.GFunc = exports.GExact = exports.GEmpty = exports.GDefault = exports.GDefine = exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Len = exports.Never = exports.Min = exports.Max = exports.Key = exports.Func = exports.Exact = exports.Empty = exports.Default = exports.Define = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.expr = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
-exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GLen = exports.GNever = exports.GMin = exports.GMax = void 0;
+exports.GExact = exports.GEmpty = exports.GDefault = exports.GDefine = exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Some = exports.Ignore = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Len = exports.Never = exports.Min = exports.Max = exports.Key = exports.Func = exports.Exact = exports.Empty = exports.Default = exports.Define = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.MakeArgu = exports.expr = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GSome = exports.GIgnore = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GLen = exports.GNever = exports.GMin = exports.GMax = exports.GKey = exports.GFunc = void 0;
 // FEATURE: regexp in array: [/a/] => all elements must match /a/
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
@@ -75,6 +75,7 @@ const S = {
     Rename: 'Rename',
     Required: 'Required',
     Skip: 'Skip',
+    Ignore: 'Ignore',
     Some: 'Some',
     Value: 'Value',
     forprop: ' for property ',
@@ -104,6 +105,7 @@ class State {
         this.fromDefault = false;
         // NOTE: tri-valued; undefined = soft ignore
         this.ignoreVal = undefined;
+        this.curerr = [];
         this.err = [];
         this.parents = [];
         this.keys = [];
@@ -154,6 +156,7 @@ class State {
         this.type = this.node.t;
         this.path[this.dI] = this.key;
         this.oval = this.val;
+        this.curerr.length = 0;
     }
     updateVal(val) {
         this.val = val;
@@ -165,29 +168,30 @@ class State {
             this.root = this.val;
         }
     }
-    // Uncomment for debugging.
-    printStacks() {
-        var _a;
-        console.log('\nNODE', 'd=' + this.dI, 'c=' + this.cI, 'p=' + this.pI, 'n=' + this.nI, +this.node, this.node.t, this.path, this.err.length);
-        for (let i = 0; i < this.nodes.length ||
-            i < this.vals.length ||
-            i < this.parents.length; i++) {
-            console.log(i, '\t', ('' + (isNaN(+this.nodes[i]) ?
-                this.keys[i] + ':' + ((_a = this.nodes[i]) === null || _a === void 0 ? void 0 : _a.t) :
-                +this.nodes[i])).padEnd(32, ' '), stringify(this.vals[i]).padEnd(32, ' '), stringify(this.parents[i]));
-        }
-    }
 }
 // Custom Error class.
 class GubuError extends TypeError {
-    constructor(code, err, ctx) {
-        super(err.map((e) => e.t).join('\n'));
+    constructor(code, prefix, err, ctx) {
+        var _a;
+        prefix = (null == prefix) ? '' : (prefix + ': ');
+        super(prefix + err.map((e) => e.t).join('\n'));
         this.gubu = true;
         let name = 'GubuError';
         let ge = this;
         ge.name = name;
         this.code = code;
+        this.prefix = prefix;
         this.desc = () => ({ name, code, err, ctx, });
+        this.stack = (_a = this.stack) === null || _a === void 0 ? void 0 : _a.replace(/.*\/gubu\/gubu\.[tj]s.*\n/g, '');
+        this.props = err.map((e) => {
+            var _a;
+            return ({
+                path: e.p,
+                what: e.w,
+                type: (_a = e.n) === null || _a === void 0 ? void 0 : _a.t,
+                value: e.v
+            });
+        });
     }
     toJSON() {
         return {
@@ -344,6 +348,8 @@ function nodize(shape, depth, meta) {
         r,
         p,
         d: null == depth ? -1 : depth,
+        k: [],
+        e: true,
         u,
         a,
         b,
@@ -360,6 +366,7 @@ function make(intop, inopts) {
     opts.name =
         null == opts.name ?
             'G' + (S.MT + Math.random()).substring(2, 8) : S.MT + opts.name;
+    opts.prefix = null == opts.prefix ? undefined : opts.prefix;
     // Meta properties are off by default.
     let optsmeta = opts.meta = opts.meta || {};
     optsmeta.active = (true === optsmeta.active) || false;
@@ -396,18 +403,18 @@ function make(intop, inopts) {
                 let descend = true;
                 let valundef = undefined === s.val;
                 if (S.never === s.type) {
-                    s.err.push(makeErrImpl(S.never, s, 1070));
+                    s.curerr.push(makeErrImpl(S.never, s, 1070));
                 }
                 else if (S.object === s.type) {
                     let val;
                     if (n.r && valundef) {
                         s.ignoreVal = true;
-                        s.err.push(makeErrImpl(S.required, s, 1010));
+                        s.curerr.push(makeErrImpl(S.required, s, 1010));
                     }
                     else if (!valundef && (null === s.val ||
                         S.object !== s.valType ||
                         isarr(s.val))) {
-                        s.err.push(makeErrImpl(S.type, s, 1020));
+                        s.curerr.push(makeErrImpl(S.type, s, 1020));
                         val = isarr(s.val) ? s.val : {};
                     }
                     // Not skippable, use default or create object
@@ -474,6 +481,9 @@ function make(intop, inopts) {
                                     }
                                     let nvs = nodize(ov, 1 + s.dI, meta);
                                     n.v[rk] = nvs;
+                                    if (!n.k.includes(rk)) {
+                                        n.k.push(rk);
+                                    }
                                     s.nodes[s.nI] = nvs;
                                     s.vals[s.nI] = val[rk];
                                     s.parents[s.nI] = val;
@@ -485,7 +495,7 @@ function make(intop, inopts) {
                             if (0 < extra.length) {
                                 if (GUBU$NIL === n.c) {
                                     s.ignoreVal = true;
-                                    s.err.push(makeErrImpl('closed', s, 1100, undefined, { k: extra }));
+                                    s.curerr.push(makeErrImpl('closed', s, 1100, undefined, { k: extra }));
                                 }
                                 else {
                                     hasKeys = true;
@@ -516,10 +526,10 @@ function make(intop, inopts) {
                 else if (S.array === s.type) {
                     if (n.r && valundef) {
                         s.ignoreVal = true;
-                        s.err.push(makeErrImpl(S.required, s, 1030));
+                        s.curerr.push(makeErrImpl(S.required, s, 1030));
                     }
                     else if (!valundef && !isarr(s.val)) {
-                        s.err.push(makeErrImpl(S.type, s, 1040));
+                        s.curerr.push(makeErrImpl(S.type, s, 1040));
                     }
                     else if (!n.p && valundef && undefined !== n.f) {
                         s.updateVal(n.f);
@@ -540,7 +550,7 @@ function make(intop, inopts) {
                             if (hasFixedElements) {
                                 if (elementKeys.length < s.val.length && !hasChildShape) {
                                     s.ignoreVal = true;
-                                    s.err.push(makeErrImpl('closed', s, 1090, undefined, { k: elementKeys.length }));
+                                    s.curerr.push(makeErrImpl('closed', s, 1090, undefined, { k: elementKeys.length }));
                                 }
                                 else {
                                     for (; elementIndex < elementKeys.length; elementIndex++) {
@@ -591,7 +601,7 @@ function make(intop, inopts) {
                     s.type === s.valType ||
                     (S.instance === s.type && n.u.i && s.val instanceof n.u.i) ||
                     (S.null === s.type && null === s.val))) {
-                    s.err.push(makeErrImpl(S.type, s, 1050));
+                    s.curerr.push(makeErrImpl(S.type, s, 1050));
                 }
                 // Value itself, or default.
                 else if (undefined === s.val) {
@@ -599,7 +609,7 @@ function make(intop, inopts) {
                     if (n.r &&
                         (S.undefined !== s.type || !s.parent.hasOwnProperty(parentKey))) {
                         s.ignoreVal = true;
-                        s.err.push(makeErrImpl(S.required, s, 1060));
+                        s.curerr.push(makeErrImpl(S.required, s, 1060));
                     }
                     else if (
                     // undefined !== n.v &&
@@ -618,7 +628,7 @@ function make(intop, inopts) {
                 }
                 // Empty strings fail even if string is optional. Use Empty() to allow.
                 else if (S.string === s.type && S.MT === s.val && !n.u.empty) {
-                    s.err.push(makeErrImpl(S.required, s, 1080));
+                    s.curerr.push(makeErrImpl(S.required, s, 1080));
                     s.ctx.log && s.ctx.log('kv', s);
                 }
                 else {
@@ -644,14 +654,18 @@ function make(intop, inopts) {
             if (s.nextSibling) {
                 s.pI = s.sI;
             }
+            if (s.node.e) {
+                s.err.push(...s.curerr);
+            }
         }
         // console.log(s.printStacks())
+        // s.err = s.err.filter(e => null != e)
         if (0 < s.err.length) {
             if (isarr(s.ctx.err)) {
                 s.ctx.err.push(...s.err);
             }
             else if (!s.match && false !== s.ctx.err) {
-                throw new GubuError('shape', s.err, s.ctx);
+                throw new GubuError('shape', opts.prefix, s.err, s.ctx);
             }
         }
         return s.match ? 0 === s.err.length : s.root;
@@ -816,11 +830,11 @@ function handleValidate(vf, s) {
         let w = update.why || 'check';
         let p = pathstr(s);
         if (S.string === typeof (update.err)) {
-            s.err.push(makeErr(s, update.err));
+            s.curerr.push(makeErr(s, update.err));
         }
         else if (S.object === typeof (update.err)) {
             // Assumes makeErr already called
-            s.err.push(...[update.err].flat().map((e) => {
+            s.curerr.push(...[update.err].flat().filter(e => null != e).map((e) => {
                 e.p = null == e.p ? p : e.p;
                 e.m = null == e.m ? 2010 : e.m;
                 return e;
@@ -831,7 +845,7 @@ function handleValidate(vf, s) {
             if (null == fname || S.MT == fname) {
                 fname = truncate(vf.toString().replace(/[ \t\r\n]+/g, ' '));
             }
-            s.err.push(makeErrImpl(w, s, 1045, undefined, { thrown }, fname));
+            s.curerr.push(makeErrImpl(w, s, 1045, undefined, { thrown }, fname));
         }
         update.done = null == update.done ? true : update.done;
     }
@@ -887,6 +901,22 @@ const Skip = function (shape) {
     return node;
 };
 exports.Skip = Skip;
+const Ignore = function (shape) {
+    let node = buildize(this, shape);
+    node.r = false;
+    // Do not insert empty arrays and objects.
+    node.p = true;
+    node.e = false;
+    node.a.push(function Key(_val, update, state) {
+        if (0 < state.curerr.length) {
+            update.uval = undefined;
+            update.done = false;
+        }
+        return true;
+    });
+    return node;
+};
+exports.Ignore = Ignore;
 const Func = function (shape) {
     let node = buildize(this);
     node.t = S.function;
@@ -1399,7 +1429,7 @@ function buildize(node0, node1) {
         Rename,
         Required,
         Skip,
-        // Value,
+        Ignore,
     });
 }
 exports.buildize = buildize;
@@ -1520,7 +1550,10 @@ exports.stringify = stringify;
 function clone(x) {
     return null == x ? x : S.object !== typeof (x) ? x : JP(JS(x));
 }
-const G$ = (node) => nodize({ ...node, $: { gubu$: true } });
+const G$ = (node) => nodize({
+    ...node,
+    $: { gubu$: true }
+});
 exports.G$ = G$;
 const BuilderMap = {
     Above,
@@ -1549,112 +1582,31 @@ const BuilderMap = {
     Rename,
     Required,
     Skip,
+    Ignore,
     Some,
-    // Value,
 };
 // Fix builder names after terser mangles them.
 /* istanbul ignore next */
 if (S.undefined !== typeof (window)) {
-    let builds = [
-        { b: Above, n: S.Above },
-        { b: After, n: S.After },
-        { b: All, n: S.All },
-        { b: Any, n: S.Any },
-        { b: Before, n: S.Before },
-        { b: Below, n: S.Below },
-        { b: Check, n: S.Check },
-        { b: Child, n: S.Child },
-        { b: Closed, n: S.Closed },
-        { b: Define, n: S.Define },
-        { b: Default, n: S.Default },
-        { b: Empty, n: S.Empty },
-        { b: Exact, n: S.Exact },
-        { b: Func, n: S.Func },
-        { b: Key, n: S.Key },
-        { b: Max, n: S.Max },
-        { b: Min, n: S.Min },
-        { b: Never, n: S.Never },
-        { b: Len, n: S.Len },
-        { b: One, n: S.One },
-        { b: Open, n: S.Open },
-        { b: Optional, n: S.Optional },
-        { b: Refer, n: S.Refer },
-        { b: Rename, n: S.Rename },
-        { b: Required, n: S.Required },
-        { b: Skip, n: S.Skip },
-        { b: Some, n: S.Some },
-        // { b: Value, n: S.Value },
-    ];
-    for (let build of builds) {
-        defprop(build.b, S.name, { value: build.n });
+    for (let builderName in BuilderMap) {
+        defprop(BuilderMap[builderName], S.name, { value: builderName });
     }
 }
 Object.assign(make, {
     Gubu: make,
+    // Builders by name, allows `const { Open } = Gubu`.
     ...BuilderMap,
-    // Above,
-    // After,
-    // All,
-    // Any,
-    // Before,
-    // Below,
-    // Check,
-    // Child,
-    // Closed,
-    // Define,
-    // Default,
-    // Empty,
-    // Exact,
-    // Func,
-    // Key,
-    // Max,
-    // Min,
-    // Never,
-    // Len,
-    // One,
-    // Open,
-    // Optional,
-    // Refer,
-    // Rename,
-    // Required,
-    // Skip,
-    // Some,
-    // Value,
-    GAbove: Above,
-    GAfter: After,
-    GAll: All,
-    GAny: Any,
-    GBefore: Before,
-    GBelow: Below,
-    GCheck: Check,
-    GChild: Child,
-    GClosed: Closed,
-    GDefine: Define,
-    GDefault: Default,
-    GEmpty: Empty,
-    GExact: Exact,
-    GFunc: Func,
-    GKey: Key,
-    GMax: Max,
-    GMin: Min,
-    GNever: Never,
-    GLen: Len,
-    GOne: One,
-    GOpen: Open,
-    GOptional: Optional,
-    GRefer: Refer,
-    GRename: Rename,
-    GRequired: Required,
-    GSkip: Skip,
-    GSome: Some,
-    // GValue: Value,
+    // Builders by alias, allows `const { GOpen } = Gubu`, to avoid naming conflicts.
+    ...(Object.entries(BuilderMap).reduce((a, n) => (a['G' + n[0]] = n[1]), {})),
+    isShape: (v) => (v && GUBU === v.gubu),
     G$,
     buildize,
     makeErr,
     stringify,
     truncate,
     nodize,
-    isShape: (v) => (v && GUBU === v.gubu)
+    expr,
+    MakeArgu,
 });
 defprop(make, S.name, { value: S.gubu });
 // The primary export.
@@ -1713,6 +1665,22 @@ const GRequired = Required;
 exports.GRequired = GRequired;
 const GSkip = Skip;
 exports.GSkip = GSkip;
+const GIgnore = Ignore;
+exports.GIgnore = GIgnore;
 const GSome = Some;
 exports.GSome = GSome;
+function MakeArgu(prefix) {
+    return function Argu(args, whence, spec) {
+        spec = spec || whence;
+        whence = 'string' === typeof whence ? ' (' + whence + ')' : '';
+        let shape = Gubu(spec, { prefix: prefix + whence });
+        let keys = shape.spec().k;
+        let argmap = {};
+        for (let kI = 0; kI < keys.length; kI++) {
+            argmap[keys[kI]] = kI < args.length ? args[kI] : args[args.length - 1];
+        }
+        return shape(argmap);
+    };
+}
+exports.MakeArgu = MakeArgu;
 //# sourceMappingURL=gubu.js.map
