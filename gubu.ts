@@ -87,8 +87,9 @@ type ValType =
 
 
 // A node in the validation tree structure.
-type Node = {
+type Node<V> = {
   $: typeof GUBU         // Special marker to indicate normalized.
+  o: any
   t: ValType             // Value type name.
   d: number              // Depth.
   v: any                 // Defining value.
@@ -97,27 +98,29 @@ type Node = {
   p: boolean             // Value is skippable - can be missing or undefined.
   n: number              // Number of keys in default value
   c: any                 // Default child.
-  k: string[]
-  e: boolean
+  k: string[]            // Final keys of value, in order of appearance.
+  e: boolean             // If false, match failures are not an error.
   u: Record<string, any> // Custom user meta data
   b: Validate[]          // Custom before validation functions.
   a: Validate[]          // Custom after vaidation functions.
   s?: string             // Custom stringification.
+  z?: string             // Custom error message.
   m?: NodeMeta           // Meta data.
-}
+} & { [name: string]: Builder<V> }
 
-type NodeMeta = {
-  short: string // Short description.
-}
+
+type NodeMeta = Record<string, any>
+
+
 
 
 // A validation Node builder.
-type Builder = (
+type Builder<S> = (
   opts?: any,     // Builder options.
   ...vals: any[]  // Values for the builder. 
-) =>
-  Node & // Builders build Nodes.
-  { [name: string]: Builder | any } // Chained builders for convenience.
+) => Node<S>
+//  Node & // Builders build Nodes.
+//  { [name: string]: Builder | any } // Chained builders for convenience.
 
 
 // Validate a given value, potentially updating the value and state.
@@ -176,6 +179,8 @@ const S = {
   Ignore: 'Ignore',
   Some: 'Some',
   Value: 'Value',
+  Fault: 'Fault',
+  Rest: 'Rest',
 
   forprop: ' for property ',
   $PATH: '"$PATH"',
@@ -216,20 +221,20 @@ class State {
 
   curerr: any[] = []
   err: any[] = []
-  parents: Node[] = []
+  parents: Node<any>[] = []
   keys: string[] = []
 
   // NOTE: not "clean"!
   // Actual path is always only path[0,dI+1]
   path: string[] = []
 
-  node: Node
+  node: Node<any>
 
   root: any
 
   val: any
   parent: any
-  nodes: (Node | number)[]
+  nodes: (Node<any> | number)[]
   vals: any[]
   ctx: any
   oval: any
@@ -239,7 +244,7 @@ class State {
 
   constructor(
     root: any,
-    top: Node,
+    top: Node<any>,
     ctx?: Context,
     match?: boolean
   ) {
@@ -284,7 +289,7 @@ class State {
       return
     }
     else {
-      this.node = (nextNode as Node)
+      this.node = (nextNode as Node<any>)
     }
 
     this.updateVal(this.vals[this.pI])
@@ -353,7 +358,7 @@ type Update = {
   done?: boolean
   val?: any
   uval?: any // Use for undefined and NaN
-  node?: Node
+  node?: Node<any>
   type?: ValType
   nI?: number
   sI?: number
@@ -366,7 +371,7 @@ type Update = {
 // Validation error description.
 type ErrDesc = {
   k: string  // Key of failing value.
-  n: Node    // Failing shape node.
+  n: Node<any>    // Failing shape node.
   v: any     // Failing value.
   p: string  // Key path to value.
   w: string  // Error code ("why").
@@ -453,15 +458,15 @@ const EMPTY_VAL: { [name: string]: any } = {
 }
 
 
-// Normalize a value into a Node.
-function nodize(shape?: any, depth?: number, meta?: NodeMeta): Node {
+// Normalize a value into a Node<S>.
+function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
 
   // If using builder as property of Gubu, `this` is just Gubu, not a node.
   if (make === shape) {
     shape = undefined
   }
 
-  // Is this a (possibly incomplete) Node?
+  // Is this a (possibly incomplete) Node<S>?
   else if (null != shape && shape.$?.gubu$) {
 
     // Assume complete if gubu$ has special internal reference.
@@ -470,7 +475,7 @@ function nodize(shape?: any, depth?: number, meta?: NodeMeta): Node {
       return shape
     }
 
-    // Normalize an incomplete Node, avoiding any recursive calls to norm.
+    // Normalize an incomplete Node<S>, avoiding any recursive calls to norm.
     else if (true === shape.$.gubu$) {
       let node = { ...shape }
       node.$ = { v$: VERSION, ...node.$, gubu$: GUBU$ }
@@ -502,7 +507,7 @@ function nodize(shape?: any, depth?: number, meta?: NodeMeta): Node {
     }
   }
 
-  // Not a Node, so build one based on value and its type.
+  // Not a Node<S>, so build one based on value and its type.
   let t: ValType | 'undefined' = (null === shape ? (S.null as ValType) : typeof (shape))
   t = (S.undefined === t ? S.any : t) as ValType
 
@@ -593,8 +598,9 @@ function nodize(shape?: any, depth?: number, meta?: NodeMeta): Node {
 
   let vmap = (null != v && (S.object === t || S.array === t)) ? { ...v } : v
 
-  let node: Node = {
+  let node = ({
     $: GUBU,
+    // o: v,
     t,
     v: vmap,
     f,
@@ -609,14 +615,14 @@ function nodize(shape?: any, depth?: number, meta?: NodeMeta): Node {
     a,
     b,
     m: meta
-  }
+  } as unknown as Node<S>)
 
   return node
 }
 
 
 // Create a GubuShape from a shape specification.
-function make<S>(intop?: S, inopts?: GubuOptions) {
+function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   const opts: GubuOptions = null == inopts ? {} : inopts
 
   // Ironically, we can't Gubu GubuOptions, so we have to set
@@ -639,14 +645,14 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
   optskeyexpr.active = (false !== optskeyexpr.active)
 
 
-  let top: Node = nodize(intop, 0)
+  let top: Node<S> = nodize<S>(intop, 0)
 
   // Lazily execute top against root to see if they match
   function exec(
     root: any,
     ctx?: Context,
     match?: boolean // Suppress errors and return boolean result (true if match)
-  ) {
+  ): any {
     let s = new State(root, top, ctx, match)
 
     // Iterative depth-first traversal of the shape using append-only array stacks.
@@ -873,7 +879,7 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
 
               // Single element array shape means 0 or more elements of shape
               if (hasChildShape && hasValueElements) {
-                let elementShape: Node = n.c = nodize(n.c, 1 + s.dI)
+                let elementShape: Node<S> = n.c = nodize(n.c, 1 + s.dI)
                 for (; elementIndex < s.val.length; elementIndex++) {
                   s.nodes[s.nI] = elementShape
                   s.vals[s.nI] = s.val[elementIndex]
@@ -983,8 +989,6 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
       }
     }
 
-    // console.log(s.printStacks())
-
     // s.err = s.err.filter(e => null != e)
     if (0 < s.err.length) {
       if (isarr(s.ctx.err)) {
@@ -999,12 +1003,15 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
   }
 
 
-  function gubuShape<R>(root?: R, ctx?: Context): R & S {
-    return (exec(root, ctx, false) as R & S)
+  function gubuShape<V>(root?: V, ctx?: Context):
+    V & S {
+    // any {
+    return (exec(root, ctx, false)) // as R & S)
   }
 
 
-  function valid<D>(root?: D, ctx?: Context): root is (D & S) {
+  // function valid<D>(root?: D, ctx?: Context): root is (D & S) {
+  function valid<V>(root?: V, ctx?: Context): root is (V & S) {
     let actx: any = ctx || {}
     actx.err = actx.err || []
     exec(root, actx, false)
@@ -1040,7 +1047,7 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
   }
 
 
-  gubuShape.node = (): Node => {
+  gubuShape.node = (): Node<S> => {
     gubuShape.spec()
     return top
   }
@@ -1062,7 +1069,6 @@ function make<S>(intop?: S, inopts?: GubuOptions) {
   if (inspect && inspect.custom) {
     (gubuShape as any)[inspect.custom] = gubuShape.toString
   }
-
 
   gubuShape.gubu = GUBU
 
@@ -1091,8 +1097,6 @@ function expr(spec: {
   tokens?: string[]
   i?: number
 }) {
-  // console.log('EXPR', spec.src)
-
   let top = false
 
   if (null == spec.tokens) {
@@ -1103,14 +1107,13 @@ function expr(spec: {
     while (t = tre.exec(spec.src)) {
       spec.tokens.push(t[1])
     }
-    // console.log('TOKENS', spec.tokens.join(' '))
   }
 
   spec.i = spec.i || 0
 
   let head = spec.tokens[spec.i]
 
-  let fn = BuilderMap[head]
+  let fn = (BuilderMap as any)[head]
 
   if (')' === spec.tokens[spec.i]) {
     spec.i++
@@ -1159,11 +1162,8 @@ function expr(spec: {
   while (null != (t = spec.tokens[spec.i]) && ')' !== t) {
     let ev = expr(spec)
     args.push(ev)
-    // console.log('ARGS', spec.i, ev, 'A:', args)
   }
   spec.i++
-
-  // console.log('CALL', spec.i, fn.name, args)
 
   spec.val = fn.call(spec.val, ...args)
 
@@ -1260,7 +1260,26 @@ function pathstr(s: State) {
 }
 
 
-const Required: Builder = function(this: Node, shape?: any) {
+function valueLen(val: any) {
+  return S.number === typeof (val) ? val :
+    S.number === typeof (val?.length) ? val.length :
+      null != val && S.object === typeof (val) ? keys(val).length :
+        NaN
+}
+
+
+function truncate(str?: string, len?: number): string {
+  let strval = String(str)
+  let outlen = null == len || isNaN(len) ? 30 : len < 0 ? 0 : ~~len
+  let strlen = null == str ? 0 : strval.length
+  let substr = null == str ? S.MT : strval.substring(0, strlen)
+  substr = outlen < strlen ? substr.substring(0, outlen - 3) + '...' : substr
+  return substr.substring(0, outlen)
+}
+
+
+// Value is required.
+const Required = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
   node.r = true
   node.p = false
@@ -1275,7 +1294,16 @@ const Required: Builder = function(this: Node, shape?: any) {
 }
 
 
-const Optional: Builder = function(this: Node, shape?: any) {
+// Value can contain additional undeclared properties.
+const Open = function <V>(this: any, shape?: Node<V> | V): Node<V> {
+  let node = buildize(this, shape)
+  node.c = Any()
+  return node
+}
+
+
+// Value is optional.
+const Optional = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
   node.r = false
 
@@ -1288,7 +1316,28 @@ const Optional: Builder = function(this: Node, shape?: any) {
 }
 
 
-const Skip: Builder = function(this: Node, shape?: any) {
+// Value can be anything.
+const Any = function <V>(this: any, shape?: Node<V> | V): Node<V> {
+  let node = buildize(this, shape)
+  node.t = (S.any as ValType)
+  if (undefined !== shape) {
+    node.v = shape
+    node.f = shape
+  }
+  return node
+}
+
+
+// Custom error message.
+const Fault = function <V>(this: any, msg: string, shape?: Node<V> | V): Node<V> {
+  let node = buildize(this, shape)
+  node.z = msg
+  return node
+}
+
+
+// Value is skipped if not present (optional, but no default).
+const Skip = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
   node.r = false
 
@@ -1299,7 +1348,8 @@ const Skip: Builder = function(this: Node, shape?: any) {
 }
 
 
-const Ignore: Builder = function(this: Node, shape?: any) {
+// Errors for this value are ignored, and the value is undefined.
+const Ignore = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
   node.r = false
 
@@ -1320,7 +1370,8 @@ const Ignore: Builder = function(this: Node, shape?: any) {
 }
 
 
-const Func: Builder = function(this: Node, shape?: any) {
+// Value must be a function.
+const Func = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this)
   node.t = (S.function as ValType)
   node.v = shape
@@ -1329,7 +1380,8 @@ const Func: Builder = function(this: Node, shape?: any) {
 }
 
 
-const Default: Builder = function(this: Node, dval?: any, shape?: any) {
+// Specify default value.
+const Default = function <V>(this: any, dval?: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, undefined === shape ? dval : shape)
   node.r = false
   node.f = dval
@@ -1347,35 +1399,24 @@ const Default: Builder = function(this: Node, dval?: any, shape?: any) {
 }
 
 
-
-const Empty: Builder = function(this: Node, shape?: any) {
+// String can be empty.
+const Empty = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
   node.u.empty = true
   return node
 }
 
 
-
-// Value provides default.
-const Any: Builder = function(this: Node, shape?: any) {
-  let node = buildize(this, shape)
-  node.t = (S.any as ValType)
-  if (undefined !== shape) {
-    node.v = shape
-    node.f = shape
-  }
-  return node
-}
-
-
-const Never: Builder = function(this: Node, shape?: any) {
+// Value will never match anything.
+const Never = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
   node.t = (S.never as ValType)
   return node
 }
 
 
-const Key: Builder = function(this: Node, depth?: number, join?: string) {
+// Inject the key path of the value.
+const Key = function(this: any, depth?: number | Function, join?: string) {
   let node = buildize(this)
 
   let ascend = 'number' === typeof depth
@@ -1418,7 +1459,7 @@ const Key: Builder = function(this: Node, depth?: number, join?: string) {
 
 
 // Pass only if all match. Does not short circuit (as defaults may be missed).
-const All: Builder = function(this: Node, ...inshapes: any[]) {
+const All = function(this: any, ...inshapes: any[]) {
   let node = buildize()
   node.t = (S.list as ValType)
   node.r = true
@@ -1442,7 +1483,8 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = S.All
       update.err = [
         makeErr(state,
-          S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' does not satisfy all of: ' +
+          S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+          ' does not satisfy all of: ' +
           `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
@@ -1456,7 +1498,7 @@ const All: Builder = function(this: Node, ...inshapes: any[]) {
 
 // Pass if some match.
 // TODO: UDPATE DOC: Does not short circuit (as defaults may be missed).
-const Some: Builder = function(this: Node, ...inshapes: any[]) {
+const Some = function(this: any, ...inshapes: any[]) {
   let node = buildize()
   node.t = (S.list as ValType)
   node.r = true
@@ -1482,7 +1524,8 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = S.Some
       update.err = [
         makeErr(state,
-          S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' does not satisfy any of: ' +
+          S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+          ' does not satisfy any of: ' +
           `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
@@ -1495,7 +1538,7 @@ const Some: Builder = function(this: Node, ...inshapes: any[]) {
 
 
 // Pass if exactly one matches. Does not short circuit (as defaults may be missed).
-const One: Builder = function(this: Node, ...inshapes: any[]) {
+const One = function(this: any, ...inshapes: any[]) {
   let node = buildize()
   node.t = (S.list as ValType)
   node.r = true
@@ -1520,7 +1563,8 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
       update.why = S.One
       update.err = [
         makeErr(state,
-          S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' does not satisfy one of: ' +
+          S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+          ' does not satisfy one of: ' +
           `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
       ]
     }
@@ -1532,7 +1576,8 @@ const One: Builder = function(this: Node, ...inshapes: any[]) {
 }
 
 
-const Exact: Builder = function(this: Node, ...vals: any[]) {
+// Vlaue must match excatly one of the literal values provided.
+const Exact = function(this: any, ...vals: any[]) {
   let node = buildize()
 
   node.b.push(function Exact(val: any, update: Update, state: State) {
@@ -1558,25 +1603,36 @@ const Exact: Builder = function(this: Node, ...vals: any[]) {
 }
 
 
-const Before: Builder = function(this: Node, validate: Validate, shape?: any) {
+// Define a custom operation to run before standard matching.
+const Before = function <V>(
+  this: any,
+  validate: Validate,
+  shape?: Node<V> | V
+): Node<V> {
   let node = buildize(this, shape)
   node.b.push(validate)
   return node
 }
 
 
-const After: Builder = function(this: Node, validate: Validate, shape?: any) {
+// Define a custom operation to run after standard matching.
+const After = function <V>(
+  this: any,
+  validate: Validate,
+  shape?: Node<V> | V
+): Node<V> {
   let node = buildize(this, shape)
   node.a.push(validate)
   return node
 }
 
 
-const Check: Builder = function(
-  this: Node,
+// Define a customer validation function.
+const Check = function <V>(
+  this: any,
   check: Validate | RegExp | string,
-  shape?: any
-) {
+  shape?: Node<V> | V
+): Node<V> {
   let node = buildize(this, shape)
 
   if (S.function === typeof check) {
@@ -1613,14 +1669,8 @@ const Check: Builder = function(
 }
 
 
-const Open: Builder = function(this: Node, shape?: any) {
-  let node = buildize(this, shape)
-  node.c = Any()
-  return node
-}
-
-
-const Closed: Builder = function(this: Node, shape?: any) {
+// Value cannot contain undeclared properties or elements.
+const Closed = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
 
   // Makes one element array fixed.
@@ -1636,7 +1686,8 @@ const Closed: Builder = function(this: Node, shape?: any) {
 }
 
 
-const Define: Builder = function(this: Node, inopts: any, shape?: any): Node {
+// Define a named reference to this value. See Refer.
+const Define = function <V>(this: any, inopts: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
 
   let opts = S.object === typeof inopts ? inopts || {} : {}
@@ -1656,7 +1707,8 @@ const Define: Builder = function(this: Node, inopts: any, shape?: any): Node {
 
 
 // TODO: copy option to copy value instead of node - need index of value in stack
-const Refer: Builder = function(this: Node, inopts: any, shape?: any): Node {
+// Inject a referenced value. See Define.
+const Refer = function <V>(this: any, inopts: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
 
   let opts = S.object === typeof inopts ? inopts || {} : {}
@@ -1690,7 +1742,8 @@ const Refer: Builder = function(this: Node, inopts: any, shape?: any): Node {
 
 
 // TODO: no mutate is State.match
-const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
+// Rename a property.
+const Rename = function <V>(this: any, inopts: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
 
   let opts = S.object === typeof inopts ? inopts || {} : {}
@@ -1791,29 +1844,12 @@ const Rename: Builder = function(this: Node, inopts: any, shape?: any): Node {
 }
 
 
-function valueLen(val: any) {
-  return S.number === typeof (val) ? val :
-    S.number === typeof (val?.length) ? val.length :
-      null != val && S.object === typeof (val) ? keys(val).length :
-        NaN
-}
-
-
-function truncate(str?: string, len?: number): string {
-  let strval = String(str)
-  let outlen = null == len || isNaN(len) ? 30 : len < 0 ? 0 : ~~len
-  let strlen = null == str ? 0 : strval.length
-  let substr = null == str ? S.MT : strval.substring(0, strlen)
-  substr = outlen < strlen ? substr.substring(0, outlen - 3) + '...' : substr
-  return substr.substring(0, outlen)
-}
-
-
-const Min: Builder = function(
-  this: Node,
+// Specific a minimum value or length.
+const Min = function <V>(
+  this: any,
   min: number | string,
-  shape?: any
-): Node {
+  shape?: Node<V> | V
+): Node<V> {
   let node = buildize(this, shape)
 
   node.b.push(function Min(val: any, update: Update, state: State) {
@@ -1839,11 +1875,12 @@ const Min: Builder = function(
 }
 
 
-const Max: Builder = function(
-  this: Node,
+// Specific a maximum value or length.
+const Max = function <V>(
+  this: any,
   max: number | string,
-  shape?: any
-): Node {
+  shape?: Node<V> | V
+): Node<V> {
   let node = buildize(this, shape)
 
   node.b.push(function Max(val: any, update: Update, state: State) {
@@ -1866,11 +1903,12 @@ const Max: Builder = function(
 }
 
 
-const Above: Builder = function(
-  this: Node,
+// Specify a lower bound value or length.
+const Above = function <V>(
+  this: any,
   above: number | string,
-  shape?: any
-): Node {
+  shape?: Node<V> | V
+): Node<V> {
   let node = buildize(this, shape)
 
   node.b.push(function Above(val: any, update: Update, state: State) {
@@ -1893,11 +1931,12 @@ const Above: Builder = function(
 }
 
 
-const Below: Builder = function(
-  this: Node,
+// Specify an upper bound value or length.
+const Below = function <V>(
+  this: any,
   below: number | string,
-  shape?: any
-): Node {
+  shape?: Node<V> | V
+): Node<V> {
   let node = buildize(this, shape)
 
   node.b.push(function Below(val: any, update: Update, state: State) {
@@ -1920,11 +1959,12 @@ const Below: Builder = function(
 }
 
 
-const Len: Builder = function(
-  this: Node,
+// Value must have a specific length.
+const Len = function <V>(
+  this: any,
   len: number,
-  shape?: any
-): Node {
+  shape?: Node<V> | V
+): Node<V> {
   let node = buildize(this, shape || Any())
 
   node.b.push(function Len(val: any, update: Update, state: State) {
@@ -1947,33 +1987,37 @@ const Len: Builder = function(
 }
 
 
-/*
-const Value: Builder = function(
-  this: Node,
-  value?: any,
-  shape?: any
-): Node {
-  let node = undefined == shape ? buildize(this) : buildize(shape)
-  let child = nodize(value)
-  node.c = child
-  return node
-}
-*/
-
-
-// Child shape
-const Child: Builder = function(
-  this: Node,
+// Children must have a specified shape.
+const Child = function <V>(
+  this: any,
   child?: any,
-  shape?: any
-): Node {
+  shape?: Node<V> | V
+): Node<V> {
   let node = buildize(this, shape || {})
   node.c = nodize(child)
   return node
 }
 
 
-function buildize(node0?: any, node1?: any): Node {
+const Rest = function <V>(
+  this: any,
+  child?: any,
+  shape?: Node<V> | V
+): Node<V> {
+  let node = buildize(this, shape || [])
+  node.t = 'array'
+  node.c = nodize(child)
+  node.m = node.m || {}
+  node.m.rest = true
+  // console.log('RN', node)
+  return node
+}
+
+
+
+
+// Make a Node chainable with Builder methods.
+function buildize<V>(node0?: any, node1?: any): Node<V> {
   // Detect chaining. If not chained, ignore `this` if it is the global context.
   let node =
     nodize(null == node0 || node0.window === node0 || node0.global === node0
@@ -1990,19 +2034,21 @@ function buildize(node0?: any, node1?: any): Node {
     Check,
     Child,
     Closed,
-    Open,
     Define,
     Empty,
     Exact,
+    Fault,
+    Ignore,
+    Len,
     Max,
     Min,
     Never,
-    Len,
+    Open,
     Refer,
     Rename,
     Required,
     Skip,
-    Ignore,
+    Rest,
   })
 }
 
@@ -2045,6 +2091,8 @@ function makeErrImpl(
   let jstr = undefined === s.val ? S.MT : stringify(s.val)
   let valstr = truncate(jstr.replace(/"/g, S.MT))
 
+  text = text || s.node.z
+
   if (null == text || S.MT === text) {
     let valkind = valstr.startsWith('[') ? S.array :
       valstr.startsWith('{') ? S.object : 'value'
@@ -2085,7 +2133,7 @@ function makeErrImpl(
 }
 
 
-function node2str(n: Node): string {
+function node2str(n: Node<any>): string {
   return (null != n.s && S.MT !== n.s) ? n.s :
     (!n.r && undefined !== n.v) ? n.v : n.t
 }
@@ -2159,13 +2207,13 @@ function clone(x: any) {
 }
 
 
-const G$ = (node: any): Node => nodize({
+const G$ = (node: any): Node<any> => nodize({
   ...node,
   $: { gubu$: true }
 })
 
 
-const BuilderMap: Record<string, Builder> = {
+const BuilderMap = {
   Above,
   After,
   All,
@@ -2175,16 +2223,18 @@ const BuilderMap: Record<string, Builder> = {
   Check,
   Child,
   Closed,
-  Define,
   Default,
+  Define,
   Empty,
   Exact,
+  Fault,
   Func,
+  Ignore,
   Key,
+  Len,
   Max,
   Min,
   Never,
-  Len,
   One,
   Open,
   Optional,
@@ -2192,15 +2242,15 @@ const BuilderMap: Record<string, Builder> = {
   Rename,
   Required,
   Skip,
-  Ignore,
   Some,
+  Rest,
 }
 
 // Fix builder names after terser mangles them.
 /* istanbul ignore next */
 if (S.undefined !== typeof (window)) {
   for (let builderName in BuilderMap) {
-    defprop(BuilderMap[builderName], S.name, { value: builderName })
+    defprop((BuilderMap as any)[builderName], S.name, { value: builderName })
   }
 }
 
@@ -2233,7 +2283,7 @@ type GubuShape = ReturnType<typeof make> &
   match: (root?: any, ctx?: any) => boolean,
   error: (root?: any, ctx?: Context) => GubuError[],
   spec: () => any,
-  node: () => Node,
+  node: () => Node<any>,
   isShape: (v: any) => boolean,
   gubu: typeof GUBU
 }
@@ -2267,17 +2317,20 @@ const GBefore = Before
 const GBelow = Below
 const GCheck = Check
 const GChild = Child
+const GRest = Rest
 const GClosed = Closed
-const GDefine = Define
 const GDefault = Default
+const GDefine = Define
 const GEmpty = Empty
 const GExact = Exact
+const GFault = Fault
 const GFunc = Func
+const GIgnore = Ignore
 const GKey = Key
+const GLen = Len
 const GMax = Max
 const GMin = Min
 const GNever = Never
-const GLen = Len
 const GOne = One
 const GOpen = Open
 const GOptional = Optional
@@ -2285,14 +2338,13 @@ const GRefer = Refer
 const GRename = Rename
 const GRequired = Required
 const GSkip = Skip
-const GIgnore = Ignore
 const GSome = Some
 
 
 type Argu = (
   args: any[] | IArguments,
   whence: string | Record<string, any>,
-  spec: Record<string, any>
+  spec?: Record<string, any>
 ) => Record<string, any>
 
 
@@ -2300,22 +2352,100 @@ function MakeArgu(prefix: string): Argu {
   return function Argu(
     args: any[] | IArguments,
     whence: string | Record<string, any>,
-    spec: Record<string, any>
+    argSpec?: Record<string, any>
   ) {
-    spec = spec || whence
+    argSpec = argSpec || (whence as Record<string, any>)
     whence = 'string' === typeof whence ? ' (' + whence + ')' : ''
-    let shape = Gubu(spec, { prefix: prefix + whence })
-    let keys = shape.spec().k
+    let shape = Gubu(argSpec, { prefix: prefix + whence })
+    let shapeSpec = shape.spec()
+    // console.log(shapeSpec)
+    let keys = shapeSpec.k
     let argmap: any = {}
-    for (let kI = 0; kI < keys.length; kI++) {
-      argmap[keys[kI]] = kI < args.length ? args[kI] : args[args.length - 1]
+    let kI = 0
+    for (; kI < keys.length; kI++) {
+      if (kI === keys.length - 1 && shapeSpec.v[keys[kI]].m?.rest) {
+        argmap[keys[kI]] = [...args].slice(kI)
+      }
+      else {
+        argmap[keys[kI]] = kI < args.length ? args[kI] : args[args.length - 1]
+      }
     }
+
+    // ONLY if last prop is Rest  - make in meta
+    // if (kI < args.length) {
+    // argmap[keys[kI - 1]] = [...args].slice(kI - 1)
+    // }
+
+    // console.log(argmap)
     return shape(argmap)
   }
 }
 
+/*
+let s0 = { x: Number }
+
+let g0 = Gubu(s0)
+let g1 = Gubu(Required(s0))
+let g2 = Gubu(Open(s0))
+let g3 = Gubu(Required(Open(s0)))
+let g4 = Gubu(Required(Open(Min(2, s0))))
+
+let v0 = { x: 1 }
+
+let o0 = g0(v0)
+let o1 = g1(v0)
+let o2 = g2(v0)
 
 
+
+console.log(o0, o0.x, o1, o1.x, o2, o2.x)
+
+
+let v1 = { x: 1, y: 2 }
+let o3 = g2(v1)
+let o4 = g3(v1)
+let o5 = g4(v1)
+
+console.log(o3, o3.x, o3.y, o4, o4.x, o4.y, o5, o5.x, o5.y)
+
+
+type Pass<Vx> = {
+  foo: number
+  bar: number
+  v: any
+}
+
+
+function buildFinal<Sx>(s: Sx) {
+  return function final<Vx>(p: Pass<Vx>): Vx & Sx {
+    p.v.foo = p.foo
+    p.v.bar = p.bar
+    return p.v
+  }
+}
+
+function Foo<Vx>(p: Pass<Vx>, v?: Vx): Pass<Vx> {
+  p.v = v || p.v
+  p.foo = 1
+  return p
+}
+
+function Bar<Vx>(p: Pass<Vx>, v?: Vx): Pass<Vx> {
+  p.v = v || p.v
+  p.bar = 2
+  return p
+}
+
+
+let a = { x: 1 }
+let s = { x: -1, foo: -1, bar: -1 }
+let final = buildFinal(s)
+
+let p0 = { foo: 0, bar: 0, v: null }
+let f0 = final(Bar(Foo(p0, a)))
+
+console.log(f0.x, f0.foo, f0.bar)
+*/
 
 export type {
   Validate,
@@ -2347,16 +2477,18 @@ export {
   Check,
   Child,
   Closed,
-  Define,
   Default,
+  Define,
   Empty,
   Exact,
+  Fault,
   Func,
+  Ignore,
   Key,
+  Len,
   Max,
   Min,
   Never,
-  Len,
   One,
   Open,
   Optional,
@@ -2364,8 +2496,9 @@ export {
   Rename,
   Required,
   Skip,
-  Ignore,
   Some,
+
+  Rest,
 
   GAbove,
   GAfter,
@@ -2376,16 +2509,18 @@ export {
   GCheck,
   GChild,
   GClosed,
-  GDefine,
   GDefault,
+  GDefine,
   GEmpty,
   GExact,
+  GFault,
   GFunc,
+  GIgnore,
   GKey,
+  GLen,
   GMax,
   GMin,
   GNever,
-  GLen,
   GOne,
   GOpen,
   GOptional,
@@ -2393,7 +2528,8 @@ export {
   GRename,
   GRequired,
   GSkip,
-  GIgnore,
   GSome,
+
+  GRest,
 }
 

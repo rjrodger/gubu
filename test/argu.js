@@ -1,6 +1,7 @@
 
 const {
   MakeArgu,
+  Rest,
 } = require('../gubu')
 
 
@@ -29,7 +30,22 @@ function bar() {
   console.log(arguments, args)
 }
 
-bar('a','b',()=>{})
-bar('a',()=>{})
+
+// bar('a','b',()=>{})
+// bar('a',()=>{})
 // bar({x:1}) // ,'b',()=>{})
 // bar(true) // ,'b',()=>{})
+
+
+function zed() {
+  let args = Argu(arguments, 'bar', {
+    a: String,
+    b: Rest(Number),
+  })
+  console.log(arguments, args)
+}
+
+zed('a')
+zed('a',1)
+zed('a',1,2)
+zed('a',1,2,'x')

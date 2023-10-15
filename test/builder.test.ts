@@ -749,7 +749,7 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
 
 
   test('builder-custom-hyperbole', () => {
-    const Hyperbole: Builder = function(this: Node, shape0?: any) {
+    const Hyperbole = function <V>(this: any, shape0?: Node<V> | V): Node<V> {
       let node = buildize(this, shape0)
 
       node.b.push((v: any, u: Update) => {
@@ -872,8 +872,8 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
 
   test('builder-custom-between', () => {
     const rangeCheck = Gubu([Number, Number])
-    const Between: Builder =
-      function(this: Node, inopts: any, spec?: any): Node {
+    const Between =
+      function(this: any, inopts: any, spec?: any) {
         let vs = buildize(this || spec)
         let range: number[] = rangeCheck(inopts)
 
@@ -1340,11 +1340,11 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
     expect(g0({ a: 2, b: 'x', c: 'y' })).toMatchObject({ a: 2, b: 'x', c: 'y' })
     expect(() => g0({ a: 2, b: 3 })).toThrow('Validation failed for property "b" with value "3" because the value is not of type string.')
     expect(() => g0({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for property "c" with value "4" because the value is not of type string.')
-
+  
     expect(() => g0({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "true" because the value is not of type number.')
-
+  
     expect(() => g0({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "z" because the value is not of type number.')
-
+  
     let g1 = Gubu({ a: Required({ b: 1 }).Value({ x: String }) })
     expect(g1({ a: { b: 2, c: { x: 'x' } } }))
       .toMatchObject({ a: { b: 2, c: { x: 'x' } } })

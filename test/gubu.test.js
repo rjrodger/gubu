@@ -19,7 +19,6 @@ const stringify = Gubu.stringify;
 const truncate = Gubu.truncate;
 const nodize = Gubu.nodize;
 const { Above, After, All, Any, Before, Below, Check, Closed, Define, Empty, Exact, Func, Max, Min, Never, One, Open, Refer, Rename, Required, Skip, Some, Child,
-// Value,
 // Default,
  } = Gubu;
 class Foo {
@@ -52,16 +51,14 @@ describe('gubu', () => {
         expect(g0({ a: 'bar', b: 999 })).toEqual({ a: 'bar', b: 999 });
         expect(() => g0({ a: 'bar', b: 999, c: true })).toThrow('not allowed');
     });
+    // TODO: type support - remove the any's
     test('valid-basic', () => {
         let g0 = Gubu({ x: 1, y: 'Y' });
-        // let d0 = { x: 2, z: true }
         let d0 = { x: 2 };
         if (g0.valid(d0)) {
-            // expect(d0).toEqual({ x: 2, y: 'Y', z: true })
             expect(d0).toEqual({ x: 2, y: 'Y' });
             expect(d0.x).toEqual(2);
             expect(d0.y).toEqual('Y');
-            // expect(d0.z).toEqual(true)
         }
         let v0 = { z: true };
         expect(g0.valid(v0)).toEqual(false);

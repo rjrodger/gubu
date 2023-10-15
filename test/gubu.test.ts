@@ -56,7 +56,6 @@ const {
   Skip,
   Some,
   Child,
-  // Value,
   // Default,
 } = Gubu
 
@@ -106,17 +105,15 @@ describe('gubu', () => {
   })
 
 
+  // TODO: type support - remove the any's
   test('valid-basic', () => {
     let g0 = Gubu({ x: 1, y: 'Y' })
-    // let d0 = { x: 2, z: true }
     let d0 = { x: 2 }
 
     if (g0.valid(d0)) {
-      // expect(d0).toEqual({ x: 2, y: 'Y', z: true })
       expect(d0).toEqual({ x: 2, y: 'Y' })
       expect(d0.x).toEqual(2)
       expect(d0.y).toEqual('Y')
-      // expect(d0.z).toEqual(true)
     }
 
     let v0 = { z: true }
@@ -136,6 +133,7 @@ describe('gubu', () => {
     let v1e = { z: true }
     expect(g0.match(v1e)).toEqual(false)
     expect(v1e).toEqual({ z: true })
+
 
     let g0d = Gubu(Open({ x: 1, y: 'Y' }))
     let d0d = { x: 2, z: true }

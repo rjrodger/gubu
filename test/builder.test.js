@@ -1065,11 +1065,11 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
       expect(g0({ a: 2, b: 'x', c: 'y' })).toMatchObject({ a: 2, b: 'x', c: 'y' })
       expect(() => g0({ a: 2, b: 3 })).toThrow('Validation failed for property "b" with value "3" because the value is not of type string.')
       expect(() => g0({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for property "c" with value "4" because the value is not of type string.')
-  
+    
       expect(() => g0({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "true" because the value is not of type number.')
-  
+    
       expect(() => g0({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "z" because the value is not of type number.')
-  
+    
       let g1 = Gubu({ a: Required({ b: 1 }).Value({ x: String }) })
       expect(g1({ a: { b: 2, c: { x: 'x' } } }))
         .toMatchObject({ a: { b: 2, c: { x: 'x' } } })

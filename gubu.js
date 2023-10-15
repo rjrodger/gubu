@@ -1,8 +1,8 @@
 "use strict";
 /* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GExact = exports.GEmpty = exports.GDefault = exports.GDefine = exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Some = exports.Ignore = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Len = exports.Never = exports.Min = exports.Max = exports.Key = exports.Func = exports.Exact = exports.Empty = exports.Default = exports.Define = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.MakeArgu = exports.expr = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
-exports.GSome = exports.GIgnore = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GLen = exports.GNever = exports.GMin = exports.GMax = exports.GKey = exports.GFunc = void 0;
+exports.GDefine = exports.GDefault = exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Rest = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Never = exports.Min = exports.Max = exports.Len = exports.Key = exports.Ignore = exports.Func = exports.Fault = exports.Exact = exports.Empty = exports.Define = exports.Default = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.MakeArgu = exports.expr = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GRest = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GLen = exports.GKey = exports.GIgnore = exports.GFunc = exports.GFault = exports.GExact = exports.GEmpty = void 0;
 // FEATURE: regexp in array: [/a/] => all elements must match /a/
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
@@ -78,6 +78,8 @@ const S = {
     Ignore: 'Ignore',
     Some: 'Some',
     Value: 'Value',
+    Fault: 'Fault',
+    Rest: 'Rest',
     forprop: ' for property ',
     $PATH: '"$PATH"',
     $VALUE: '"$VALUE"',
@@ -224,21 +226,21 @@ const EMPTY_VAL = {
     bigint: BigInt(0),
     null: null,
 };
-// Normalize a value into a Node.
+// Normalize a value into a Node<S>.
 function nodize(shape, depth, meta) {
     var _a, _b, _c, _d;
     // If using builder as property of Gubu, `this` is just Gubu, not a node.
     if (make === shape) {
         shape = undefined;
     }
-    // Is this a (possibly incomplete) Node?
+    // Is this a (possibly incomplete) Node<S>?
     else if (null != shape && ((_a = shape.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
         // Assume complete if gubu$ has special internal reference.
         if (GUBU$ === shape.$.gubu$) {
             shape.d = null == depth ? shape.d : depth;
             return shape;
         }
-        // Normalize an incomplete Node, avoiding any recursive calls to norm.
+        // Normalize an incomplete Node<S>, avoiding any recursive calls to norm.
         else if (true === shape.$.gubu$) {
             let node = { ...shape };
             node.$ = { v$: VERSION, ...node.$, gubu$: GUBU$ };
@@ -261,7 +263,7 @@ function nodize(shape, depth, meta) {
             return node;
         }
     }
-    // Not a Node, so build one based on value and its type.
+    // Not a Node<S>, so build one based on value and its type.
     let t = (null === shape ? S.null : typeof (shape));
     t = (S.undefined === t ? S.any : t);
     let v = shape;
@@ -340,6 +342,7 @@ function nodize(shape, depth, meta) {
     let vmap = (null != v && (S.object === t || S.array === t)) ? { ...v } : v;
     let node = {
         $: GUBU,
+        // o: v,
         t,
         v: vmap,
         f,
@@ -658,7 +661,6 @@ function make(intop, inopts) {
                 s.err.push(...s.curerr);
             }
         }
-        // console.log(s.printStacks())
         // s.err = s.err.filter(e => null != e)
         if (0 < s.err.length) {
             if (isarr(s.ctx.err)) {
@@ -671,8 +673,10 @@ function make(intop, inopts) {
         return s.match ? 0 === s.err.length : s.root;
     }
     function gubuShape(root, ctx) {
-        return exec(root, ctx, false);
+        // any {
+        return (exec(root, ctx, false)); // as R & S)
     }
+    // function valid<D>(root?: D, ctx?: Context): root is (D & S) {
     function valid(root, ctx) {
         let actx = ctx || {};
         actx.err = actx.err || [];
@@ -735,7 +739,6 @@ function make(intop, inopts) {
 //   'q: Min(1).Below(4)': 3,
 // })
 function expr(spec) {
-    // console.log('EXPR', spec.src)
     let top = false;
     if (null == spec.tokens) {
         top = true;
@@ -745,7 +748,6 @@ function expr(spec) {
         while (t = tre.exec(spec.src)) {
             spec.tokens.push(t[1]);
         }
-        // console.log('TOKENS', spec.tokens.join(' '))
     }
     spec.i = spec.i || 0;
     let head = spec.tokens[spec.i];
@@ -791,10 +793,8 @@ function expr(spec) {
     while (null != (t = spec.tokens[spec.i]) && ')' !== t) {
         let ev = expr(spec);
         args.push(ev);
-        // console.log('ARGS', spec.i, ev, 'A:', args)
     }
     spec.i++;
-    // console.log('CALL', spec.i, fn.name, args)
     spec.val = fn.call(spec.val, ...args);
     // if (!cb && spec.i < spec.tokens.length) {
     if ('.' === spec.tokens[spec.i]) {
@@ -870,6 +870,22 @@ function handleValidate(vf, s) {
 function pathstr(s) {
     return s.path.slice(1, s.dI + 1).filter(p => null != p).join('.');
 }
+function valueLen(val) {
+    return S.number === typeof (val) ? val :
+        S.number === typeof (val === null || val === void 0 ? void 0 : val.length) ? val.length :
+            null != val && S.object === typeof (val) ? keys(val).length :
+                NaN;
+}
+function truncate(str, len) {
+    let strval = String(str);
+    let outlen = null == len || isNaN(len) ? 30 : len < 0 ? 0 : ~~len;
+    let strlen = null == str ? 0 : strval.length;
+    let substr = null == str ? S.MT : strval.substring(0, strlen);
+    substr = outlen < strlen ? substr.substring(0, outlen - 3) + '...' : substr;
+    return substr.substring(0, outlen);
+}
+exports.truncate = truncate;
+// Value is required.
 const Required = function (shape) {
     let node = buildize(this, shape);
     node.r = true;
@@ -882,6 +898,14 @@ const Required = function (shape) {
     return node;
 };
 exports.Required = Required;
+// Value can contain additional undeclared properties.
+const Open = function (shape) {
+    let node = buildize(this, shape);
+    node.c = Any();
+    return node;
+};
+exports.Open = Open;
+// Value is optional.
 const Optional = function (shape) {
     let node = buildize(this, shape);
     node.r = false;
@@ -893,6 +917,25 @@ const Optional = function (shape) {
     return node;
 };
 exports.Optional = Optional;
+// Value can be anything.
+const Any = function (shape) {
+    let node = buildize(this, shape);
+    node.t = S.any;
+    if (undefined !== shape) {
+        node.v = shape;
+        node.f = shape;
+    }
+    return node;
+};
+exports.Any = Any;
+// Custom error message.
+const Fault = function (msg, shape) {
+    let node = buildize(this, shape);
+    node.z = msg;
+    return node;
+};
+exports.Fault = Fault;
+// Value is skipped if not present (optional, but no default).
 const Skip = function (shape) {
     let node = buildize(this, shape);
     node.r = false;
@@ -901,6 +944,7 @@ const Skip = function (shape) {
     return node;
 };
 exports.Skip = Skip;
+// Errors for this value are ignored, and the value is undefined.
 const Ignore = function (shape) {
     let node = buildize(this, shape);
     node.r = false;
@@ -917,6 +961,7 @@ const Ignore = function (shape) {
     return node;
 };
 exports.Ignore = Ignore;
+// Value must be a function.
 const Func = function (shape) {
     let node = buildize(this);
     node.t = S.function;
@@ -925,6 +970,7 @@ const Func = function (shape) {
     return node;
 };
 exports.Func = Func;
+// Specify default value.
 const Default = function (dval, shape) {
     let node = buildize(this, undefined === shape ? dval : shape);
     node.r = false;
@@ -939,29 +985,21 @@ const Default = function (dval, shape) {
     return node;
 };
 exports.Default = Default;
+// String can be empty.
 const Empty = function (shape) {
     let node = buildize(this, shape);
     node.u.empty = true;
     return node;
 };
 exports.Empty = Empty;
-// Value provides default.
-const Any = function (shape) {
-    let node = buildize(this, shape);
-    node.t = S.any;
-    if (undefined !== shape) {
-        node.v = shape;
-        node.f = shape;
-    }
-    return node;
-};
-exports.Any = Any;
+// Value will never match anything.
 const Never = function (shape) {
     let node = buildize(this, shape);
     node.t = S.never;
     return node;
 };
 exports.Never = Never;
+// Inject the key path of the value.
 const Key = function (depth, join) {
     let node = buildize(this);
     let ascend = 'number' === typeof depth;
@@ -1013,7 +1051,8 @@ const All = function (...inshapes) {
         if (!pass) {
             update.why = S.All;
             update.err = [
-                makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' does not satisfy all of: ' +
+                makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+                    ' does not satisfy all of: ' +
                     `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
@@ -1043,7 +1082,8 @@ const Some = function (...inshapes) {
         if (!pass) {
             update.why = S.Some;
             update.err = [
-                makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' does not satisfy any of: ' +
+                makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+                    ' does not satisfy any of: ' +
                     `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
@@ -1073,7 +1113,8 @@ const One = function (...inshapes) {
         if (1 !== passN) {
             update.why = S.One;
             update.err = [
-                makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' does not satisfy one of: ' +
+                makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+                    ' does not satisfy one of: ' +
                     `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
             ];
         }
@@ -1082,6 +1123,7 @@ const One = function (...inshapes) {
     return node;
 };
 exports.One = One;
+// Vlaue must match excatly one of the literal values provided.
 const Exact = function (...vals) {
     let node = buildize();
     node.b.push(function Exact(val, update, state) {
@@ -1100,18 +1142,21 @@ const Exact = function (...vals) {
     return node;
 };
 exports.Exact = Exact;
+// Define a custom operation to run before standard matching.
 const Before = function (validate, shape) {
     let node = buildize(this, shape);
     node.b.push(validate);
     return node;
 };
 exports.Before = Before;
+// Define a custom operation to run after standard matching.
 const After = function (validate, shape) {
     let node = buildize(this, shape);
     node.a.push(validate);
     return node;
 };
 exports.After = After;
+// Define a customer validation function.
 const Check = function (check, shape) {
     let node = buildize(this, shape);
     if (S.function === typeof check) {
@@ -1144,12 +1189,7 @@ const Check = function (check, shape) {
     return node;
 };
 exports.Check = Check;
-const Open = function (shape) {
-    let node = buildize(this, shape);
-    node.c = Any();
-    return node;
-};
-exports.Open = Open;
+// Value cannot contain undeclared properties or elements.
 const Closed = function (shape) {
     let node = buildize(this, shape);
     // Makes one element array fixed.
@@ -1163,6 +1203,7 @@ const Closed = function (shape) {
     return node;
 };
 exports.Closed = Closed;
+// Define a named reference to this value. See Refer.
 const Define = function (inopts, shape) {
     let node = buildize(this, shape);
     let opts = S.object === typeof inopts ? inopts || {} : {};
@@ -1178,6 +1219,7 @@ const Define = function (inopts, shape) {
 };
 exports.Define = Define;
 // TODO: copy option to copy value instead of node - need index of value in stack
+// Inject a referenced value. See Define.
 const Refer = function (inopts, shape) {
     let node = buildize(this, shape);
     let opts = S.object === typeof inopts ? inopts || {} : {};
@@ -1203,6 +1245,7 @@ const Refer = function (inopts, shape) {
 };
 exports.Refer = Refer;
 // TODO: no mutate is State.match
+// Rename a property.
 const Rename = function (inopts, shape) {
     let node = buildize(this, shape);
     let opts = S.object === typeof inopts ? inopts || {} : {};
@@ -1285,21 +1328,7 @@ const Rename = function (inopts, shape) {
     return node;
 };
 exports.Rename = Rename;
-function valueLen(val) {
-    return S.number === typeof (val) ? val :
-        S.number === typeof (val === null || val === void 0 ? void 0 : val.length) ? val.length :
-            null != val && S.object === typeof (val) ? keys(val).length :
-                NaN;
-}
-function truncate(str, len) {
-    let strval = String(str);
-    let outlen = null == len || isNaN(len) ? 30 : len < 0 ? 0 : ~~len;
-    let strlen = null == str ? 0 : strval.length;
-    let substr = null == str ? S.MT : strval.substring(0, strlen);
-    substr = outlen < strlen ? substr.substring(0, outlen - 3) + '...' : substr;
-    return substr.substring(0, outlen);
-}
-exports.truncate = truncate;
+// Specific a minimum value or length.
 const Min = function (min, shape) {
     let node = buildize(this, shape);
     node.b.push(function Min(val, update, state) {
@@ -1319,6 +1348,7 @@ const Min = function (min, shape) {
     return node;
 };
 exports.Min = Min;
+// Specific a maximum value or length.
 const Max = function (max, shape) {
     let node = buildize(this, shape);
     node.b.push(function Max(val, update, state) {
@@ -1335,6 +1365,7 @@ const Max = function (max, shape) {
     return node;
 };
 exports.Max = Max;
+// Specify a lower bound value or length.
 const Above = function (above, shape) {
     let node = buildize(this, shape);
     node.b.push(function Above(val, update, state) {
@@ -1351,6 +1382,7 @@ const Above = function (above, shape) {
     return node;
 };
 exports.Above = Above;
+// Specify an upper bound value or length.
 const Below = function (below, shape) {
     let node = buildize(this, shape);
     node.b.push(function Below(val, update, state) {
@@ -1367,6 +1399,7 @@ const Below = function (below, shape) {
     return node;
 };
 exports.Below = Below;
+// Value must have a specific length.
 const Len = function (len, shape) {
     let node = buildize(this, shape || Any());
     node.b.push(function Len(val, update, state) {
@@ -1383,25 +1416,24 @@ const Len = function (len, shape) {
     return node;
 };
 exports.Len = Len;
-/*
-const Value: Builder = function(
-  this: Node,
-  value?: any,
-  shape?: any
-): Node {
-  let node = undefined == shape ? buildize(this) : buildize(shape)
-  let child = nodize(value)
-  node.c = child
-  return node
-}
-*/
-// Child shape
+// Children must have a specified shape.
 const Child = function (child, shape) {
     let node = buildize(this, shape || {});
     node.c = nodize(child);
     return node;
 };
 exports.Child = Child;
+const Rest = function (child, shape) {
+    let node = buildize(this, shape || []);
+    node.t = 'array';
+    node.c = nodize(child);
+    node.m = node.m || {};
+    node.m.rest = true;
+    // console.log('RN', node)
+    return node;
+};
+exports.Rest = Rest;
+// Make a Node chainable with Builder methods.
 function buildize(node0, node1) {
     // Detect chaining. If not chained, ignore `this` if it is the global context.
     let node = nodize(null == node0 || node0.window === node0 || node0.global === node0
@@ -1417,19 +1449,21 @@ function buildize(node0, node1) {
         Check,
         Child,
         Closed,
-        Open,
         Define,
         Empty,
         Exact,
+        Fault,
+        Ignore,
+        Len,
         Max,
         Min,
         Never,
-        Len,
+        Open,
         Refer,
         Rename,
         Required,
         Skip,
-        Ignore,
+        Rest,
     });
 }
 exports.buildize = buildize;
@@ -1456,6 +1490,7 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     };
     let jstr = undefined === s.val ? S.MT : stringify(s.val);
     let valstr = truncate(jstr.replace(/"/g, S.MT));
+    text = text || s.node.z;
     if (null == text || S.MT === text) {
         let valkind = valstr.startsWith('[') ? S.array :
             valstr.startsWith('{') ? S.object : 'value';
@@ -1565,16 +1600,18 @@ const BuilderMap = {
     Check,
     Child,
     Closed,
-    Define,
     Default,
+    Define,
     Empty,
     Exact,
+    Fault,
     Func,
+    Ignore,
     Key,
+    Len,
     Max,
     Min,
     Never,
-    Len,
     One,
     Open,
     Optional,
@@ -1582,8 +1619,8 @@ const BuilderMap = {
     Rename,
     Required,
     Skip,
-    Ignore,
     Some,
+    Rest,
 };
 // Fix builder names after terser mangles them.
 /* istanbul ignore next */
@@ -1629,28 +1666,34 @@ const GCheck = Check;
 exports.GCheck = GCheck;
 const GChild = Child;
 exports.GChild = GChild;
+const GRest = Rest;
+exports.GRest = GRest;
 const GClosed = Closed;
 exports.GClosed = GClosed;
-const GDefine = Define;
-exports.GDefine = GDefine;
 const GDefault = Default;
 exports.GDefault = GDefault;
+const GDefine = Define;
+exports.GDefine = GDefine;
 const GEmpty = Empty;
 exports.GEmpty = GEmpty;
 const GExact = Exact;
 exports.GExact = GExact;
+const GFault = Fault;
+exports.GFault = GFault;
 const GFunc = Func;
 exports.GFunc = GFunc;
+const GIgnore = Ignore;
+exports.GIgnore = GIgnore;
 const GKey = Key;
 exports.GKey = GKey;
+const GLen = Len;
+exports.GLen = GLen;
 const GMax = Max;
 exports.GMax = GMax;
 const GMin = Min;
 exports.GMin = GMin;
 const GNever = Never;
 exports.GNever = GNever;
-const GLen = Len;
-exports.GLen = GLen;
 const GOne = One;
 exports.GOne = GOne;
 const GOpen = Open;
@@ -1665,20 +1708,32 @@ const GRequired = Required;
 exports.GRequired = GRequired;
 const GSkip = Skip;
 exports.GSkip = GSkip;
-const GIgnore = Ignore;
-exports.GIgnore = GIgnore;
 const GSome = Some;
 exports.GSome = GSome;
 function MakeArgu(prefix) {
-    return function Argu(args, whence, spec) {
-        spec = spec || whence;
+    return function Argu(args, whence, argSpec) {
+        var _a;
+        argSpec = argSpec || whence;
         whence = 'string' === typeof whence ? ' (' + whence + ')' : '';
-        let shape = Gubu(spec, { prefix: prefix + whence });
-        let keys = shape.spec().k;
+        let shape = Gubu(argSpec, { prefix: prefix + whence });
+        let shapeSpec = shape.spec();
+        // console.log(shapeSpec)
+        let keys = shapeSpec.k;
         let argmap = {};
-        for (let kI = 0; kI < keys.length; kI++) {
-            argmap[keys[kI]] = kI < args.length ? args[kI] : args[args.length - 1];
+        let kI = 0;
+        for (; kI < keys.length; kI++) {
+            if (kI === keys.length - 1 && ((_a = shapeSpec.v[keys[kI]].m) === null || _a === void 0 ? void 0 : _a.rest)) {
+                argmap[keys[kI]] = [...args].slice(kI);
+            }
+            else {
+                argmap[keys[kI]] = kI < args.length ? args[kI] : args[args.length - 1];
+            }
         }
+        // ONLY if last prop is Rest  - make in meta
+        // if (kI < args.length) {
+        // argmap[keys[kI - 1]] = [...args].slice(kI - 1)
+        // }
+        // console.log(argmap)
         return shape(argmap);
     };
 }

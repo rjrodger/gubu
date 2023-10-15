@@ -1,4 +1,5 @@
 
+
 const {
   Gubu,
   Args,
@@ -51,7 +52,18 @@ let log = (point,state)=>{
 }
 
 
-let g0 = Gubu(G$({ v: () => null }))
+// let g0 = Gubu(Min(1,{}))
+// console.log(g0.spec())
+// console.log(g0({x:1}))
+
+// let g1 = Gubu({})
+// console.log(g1.spec())
+// console.log(g1({x:1}))
+
+let g2 = Gubu({a:1})
+console.log(g2.spec())
+
+
 
 //let g0 = Gubu({
   // 'a': Open({x:1}),
@@ -75,13 +87,13 @@ let g0 = Gubu(G$({ v: () => null }))
 // FIX: spec is string!
 // REFACTOR: Value(child,val) -> Value(val, child) - consistent
 
-console.log(g0.spec())
-try {
-  console.log(g0('x'))
-}catch(e) {
-  console.log(e)
-  console.dir(e.desc(),{depth:null})
-}
+// console.log(g0.spec())
+// try {
+//   console.log(g0('x'))
+// }catch(e) {
+//   console.log(e)
+//   console.dir(e.desc(),{depth:null})
+// }
 // console.log(g0({x:0}))
 // console.log(g0({x:5}))
 
