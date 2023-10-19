@@ -103,9 +103,9 @@ type Node<V> = {
   u: Record<string, any> // Custom user meta data
   b: Validate[]          // Custom before validation functions.
   a: Validate[]          // Custom after vaidation functions.
+  m: NodeMeta            // Meta data.
   s?: string             // Custom stringification.
   z?: string             // Custom error message.
-  m?: NodeMeta           // Meta data.
 } & { [name: string]: Builder<V> }
 
 
@@ -325,7 +325,7 @@ class State {
 
 
   // Uncomment for debugging.
-  /*
+
   printStacks() {
     console.log('\nNODE',
       'd=' + this.dI,
@@ -349,7 +349,6 @@ class State {
         stringify(this.parents[i]))
     }
   }
-  */
 }
 
 
@@ -501,7 +500,7 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
 
       node.u = node.u || {}
 
-      node.m = node.m || meta
+      node.m = node.m || meta || {}
 
       return node
     }
@@ -614,7 +613,7 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
     u,
     a,
     b,
-    m: meta
+    m: meta || {}
   } as unknown as Node<S>)
 
   return node
@@ -1358,7 +1357,7 @@ const Ignore = function <V>(this: any, shape?: Node<V> | V): Node<V> {
 
   node.e = false
 
-  node.a.push(function Key(_val: any, update: Update, state: State) {
+  node.a.push(function Ignore(_val: any, update: Update, state: State) {
     if (0 < state.curerr.length) {
       update.uval = undefined
       update.done = false
@@ -2262,7 +2261,8 @@ Object.assign(make, {
   ...BuilderMap,
 
   // Builders by alias, allows `const { GOpen } = Gubu`, to avoid naming conflicts.
-  ...(Object.entries(BuilderMap).reduce((a: any, n) => (a['G' + n[0]] = n[1]), {})),
+  ...(Object.entries(BuilderMap).reduce((a: any, n) =>
+    (a['G' + n[0]] = n[1], a), {})),
 
   isShape: (v: any) => (v && GUBU === v.gubu),
 
@@ -2357,19 +2357,62 @@ function MakeArgu(prefix: string): Argu {
     argSpec = argSpec || (whence as Record<string, any>)
     whence = 'string' === typeof whence ? ' (' + whence + ')' : ''
     let shape = Gubu(argSpec, { prefix: prefix + whence })
-    let shapeSpec = shape.spec()
-    // console.log(shapeSpec)
-    let keys = shapeSpec.k
+
+    // let shapeSpec = shape.spec()
+    // console.dir(shapeSpec, { depth: null })
+
+    let top = shape.node()
+    // console.dir(top, { depth: null })
+
+
+    let keys = top.k
     let argmap: any = {}
     let kI = 0
     for (; kI < keys.length; kI++) {
-      if (kI === keys.length - 1 && shapeSpec.v[keys[kI]].m?.rest) {
+      let kn = top.v[keys[kI]]
+
+      if (kn.p) {
+        // if (0 === kI) {
+        kn = top.v[keys[kI]] =
+          ((kI) => After(function Skipper(
+            val: any,
+            update: Update,
+            state: State
+          ) {
+            // console.log('Skipper', state)
+            if (0 < state.curerr.length) {
+
+              // console.log('AMS A', argmap, keys)
+
+              for (let sI = keys.length - 1; sI > kI; sI--) {
+                // console.log('Q', sI, kI, 'S', state.pI, state.pI + sI)
+                // Subtract kI as state.pI has already advanced kI along val list.
+                state.vals[state.pI + sI - kI] = state.vals[state.pI + sI - kI - 1]
+                argmap[keys[sI]] = argmap[keys[sI - 1]]
+              }
+
+              update.uval = undefined
+              update.done = false
+              // console.log('AMS B', argmap)
+            }
+
+            return true
+          }, kn))(kI)
+        kn.e = false
+      }
+
+      if (kI === keys.length - 1 && kn.m.rest) {
         argmap[keys[kI]] = [...args].slice(kI)
       }
       else {
-        argmap[keys[kI]] = kI < args.length ? args[kI] : args[args.length - 1]
+        argmap[keys[kI]] = args[kI]
       }
+      // else {
+      //  argmap[keys[kI]] = kI < args.length ? args[kI] : args[args.length - 1]
+      // }
     }
+
+    // console.dir(shape.node(), { depth: null })
 
     // ONLY if last prop is Rest  - make in meta
     // if (kI < args.length) {

@@ -1517,6 +1517,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
           b: [],
           e: true,
           k: [],
+          m: {},
         }
       },
       n: 1,
@@ -1528,6 +1529,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
       b: [],
       e: true,
       k: ['x'],
+      m: {},
     }
 
     expect(cr0s.spec()).toEqual(s0)
@@ -2361,7 +2363,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
         ]
       })
 
-      expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","prefix":"","props":[{"path":"","what":"type","type":"nan","value":1}],"err":[{"n":{"$":{"v$":"' + Pkg.version + '"},"t":"nan","v":null,"f":null,"n":0,"r":false,"p":false,"d":0,"k":[],"e":true,"u":{},"a":[],"b":[]},"v":1,"p":"","w":"type","c":"none","a":{},"m":1050,"t":"Validation failed for value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for value \\"1\\" because the value is not of type nan."}')
+      expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","prefix":"","props":[{"path":"","what":"type","type":"nan","value":1}],"err":[{"n":{"$":{"v$":"' + Pkg.version + '"},"t":"nan","v":null,"f":null,"n":0,"r":false,"p":false,"d":0,"k":[],"e":true,"u":{},"a":[],"b":[],"m":{}},"v":1,"p":"","w":"type","c":"none","a":{},"m":1050,"t":"Validation failed for value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for value \\"1\\" because the value is not of type nan."}')
     }
   })
 
@@ -2519,6 +2521,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
       n: 1,
       e: true,
       k: ['a'],
+      m: {},
       v: {
         a: {
           $: {
@@ -2537,6 +2540,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
           f: 1,
           v: 1,
           n: 0,
+          m: {},
         },
       },
     }
@@ -2587,6 +2591,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
       n: 1,
       e: true,
       k: ['a'],
+      m: {},
       v: {
         a: {
           $: {
@@ -2604,6 +2609,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
           n: 0,
           e: true,
           k: [],
+          m: {},
           c: {
             $: {
               gubu$: true,
@@ -2621,6 +2627,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
             n: 0,
             e: true,
             k: [],
+            m: {},
           },
         },
       },

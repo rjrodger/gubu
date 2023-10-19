@@ -2,6 +2,9 @@
 const {
   MakeArgu,
   Rest,
+  Skip,
+  Min,
+  Ignore,
 } = require('../gubu')
 
 
@@ -21,31 +24,54 @@ let Argu = MakeArgu('QAZ')
 
 
 
-function bar() {
+// function bar() {
+//   let args = Argu(arguments, 'bar', {
+//     'a: One(String,{})': {},
+//     'b: Ignore(One(String,{}))': {},
+//     c: Function,
+//   })
+//   console.log(arguments, args)
+// }
+
+
+// // bar('a','b',()=>{})
+// // bar('a',()=>{})
+// // bar({x:1}) // ,'b',()=>{})
+// // bar(true) // ,'b',()=>{})
+
+
+// function zed() {
+//   let args = Argu(arguments, 'bar', {
+//     a: String,
+//     b: Rest(Number),
+//   })
+//   console.log(arguments, args)
+// }
+
+// zed('a')
+// zed('a',1)
+// zed('a',1,2)
+// zed('a',1,2,'x')
+
+
+
+function qaz() {
   let args = Argu(arguments, 'bar', {
-    'a: One(String,{})': {},
-    'b: Ignore(One(String,{}))': {},
+    a: Skip(String),
+    // a: String,
+    // b: Skip(Object),
+    b: Skip(Object),
     c: Function,
   })
   console.log(arguments, args)
 }
 
-
-// bar('a','b',()=>{})
-// bar('a',()=>{})
-// bar({x:1}) // ,'b',()=>{})
-// bar(true) // ,'b',()=>{})
+function f0(){}
 
 
-function zed() {
-  let args = Argu(arguments, 'bar', {
-    a: String,
-    b: Rest(Number),
-  })
-  console.log(arguments, args)
-}
-
-zed('a')
-zed('a',1)
-zed('a',1,2)
-zed('a',1,2,'x')
+qaz('s',{b:1},f0)
+qaz({b:1},f0)
+qaz('s',f0)
+qaz(f0)
+// qaz('s',{x:1},f0)
+// qaz({x:1},f0)

@@ -48,9 +48,9 @@ type Node<V> = {
     u: Record<string, any>;
     b: Validate[];
     a: Validate[];
+    m: NodeMeta;
     s?: string;
     z?: string;
-    m?: NodeMeta;
 } & {
     [name: string]: Builder<V>;
 };
@@ -91,6 +91,7 @@ declare class State {
     constructor(root: any, top: Node<any>, ctx?: Context, match?: boolean);
     next(): void;
     updateVal(val: any): void;
+    printStacks(): void;
 }
 type Update = {
     done?: boolean;

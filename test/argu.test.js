@@ -7,7 +7,7 @@ if (GubuModule.Gubu) {
     GubuModule = GubuModule.Gubu;
 }
 const Gubu = GubuModule;
-const { MakeArgu } = Gubu;
+const { MakeArgu, Skip, } = Gubu;
 describe('argu', () => {
     test('basic', () => {
         let Argu = MakeArgu('QAZ');
@@ -25,15 +25,15 @@ describe('argu', () => {
         let Argu = MakeArgu('seneca');
         function bar(...args) {
             let argmap = Argu(args, 'bar', {
-                'a: One(String,{})': {},
-                'b: Ignore(One(String,{}))': {},
+                a: Skip(String),
+                b: Skip(Object),
                 c: Function,
             });
             return argmap;
         }
         const f0 = () => { };
-        expect(bar('a', 'b', f0)).toEqual({ a: 'a', b: 'b', c: f0 });
-        expect(bar('a', {}, f0)).toEqual({ a: 'a', b: {}, c: f0 });
+        expect(bar('a', { x: 1 }, f0)).toEqual({ a: 'a', b: { x: 1 }, c: f0 });
+        expect(bar({ x: 1 }, f0)).toEqual({ a: undefined, b: { x: 1 }, c: f0 });
         expect(bar('a', f0)).toEqual({ a: 'a', b: undefined, c: f0 });
     });
 });

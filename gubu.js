@@ -170,6 +170,18 @@ class State {
             this.root = this.val;
         }
     }
+    // Uncomment for debugging.
+    printStacks() {
+        var _a;
+        console.log('\nNODE', 'd=' + this.dI, 'c=' + this.cI, 'p=' + this.pI, 'n=' + this.nI, +this.node, this.node.t, this.path, this.err.length);
+        for (let i = 0; i < this.nodes.length ||
+            i < this.vals.length ||
+            i < this.parents.length; i++) {
+            console.log(i, '\t', ('' + (isNaN(+this.nodes[i]) ?
+                this.keys[i] + ':' + ((_a = this.nodes[i]) === null || _a === void 0 ? void 0 : _a.t) :
+                +this.nodes[i])).padEnd(32, ' '), stringify(this.vals[i]).padEnd(32, ' '), stringify(this.parents[i]));
+        }
+    }
 }
 // Custom Error class.
 class GubuError extends TypeError {
@@ -259,7 +271,7 @@ function nodize(shape, depth, meta) {
             node.b = node.b || [];
             node.a = node.a || [];
             node.u = node.u || {};
-            node.m = node.m || meta;
+            node.m = node.m || meta || {};
             return node;
         }
     }
@@ -356,7 +368,7 @@ function nodize(shape, depth, meta) {
         u,
         a,
         b,
-        m: meta
+        m: meta || {}
     };
     return node;
 }
@@ -951,7 +963,7 @@ const Ignore = function (shape) {
     // Do not insert empty arrays and objects.
     node.p = true;
     node.e = false;
-    node.a.push(function Key(_val, update, state) {
+    node.a.push(function Ignore(_val, update, state) {
         if (0 < state.curerr.length) {
             update.uval = undefined;
             update.done = false;
@@ -1634,7 +1646,7 @@ Object.assign(make, {
     // Builders by name, allows `const { Open } = Gubu`.
     ...BuilderMap,
     // Builders by alias, allows `const { GOpen } = Gubu`, to avoid naming conflicts.
-    ...(Object.entries(BuilderMap).reduce((a, n) => (a['G' + n[0]] = n[1]), {})),
+    ...(Object.entries(BuilderMap).reduce((a, n) => (a['G' + n[0]] = n[1], a), {})),
     isShape: (v) => (v && GUBU === v.gubu),
     G$,
     buildize,
@@ -1712,23 +1724,50 @@ const GSome = Some;
 exports.GSome = GSome;
 function MakeArgu(prefix) {
     return function Argu(args, whence, argSpec) {
-        var _a;
         argSpec = argSpec || whence;
         whence = 'string' === typeof whence ? ' (' + whence + ')' : '';
         let shape = Gubu(argSpec, { prefix: prefix + whence });
-        let shapeSpec = shape.spec();
-        // console.log(shapeSpec)
-        let keys = shapeSpec.k;
+        // let shapeSpec = shape.spec()
+        // console.dir(shapeSpec, { depth: null })
+        let top = shape.node();
+        // console.dir(top, { depth: null })
+        let keys = top.k;
         let argmap = {};
         let kI = 0;
         for (; kI < keys.length; kI++) {
-            if (kI === keys.length - 1 && ((_a = shapeSpec.v[keys[kI]].m) === null || _a === void 0 ? void 0 : _a.rest)) {
+            let kn = top.v[keys[kI]];
+            if (kn.p) {
+                // if (0 === kI) {
+                kn = top.v[keys[kI]] =
+                    ((kI) => After(function Skipper(val, update, state) {
+                        // console.log('Skipper', state)
+                        if (0 < state.curerr.length) {
+                            // console.log('AMS A', argmap, keys)
+                            for (let sI = keys.length - 1; sI > kI; sI--) {
+                                // console.log('Q', sI, kI, 'S', state.pI, state.pI + sI)
+                                // Subtract kI as state.pI has already advanced kI along val list.
+                                state.vals[state.pI + sI - kI] = state.vals[state.pI + sI - kI - 1];
+                                argmap[keys[sI]] = argmap[keys[sI - 1]];
+                            }
+                            update.uval = undefined;
+                            update.done = false;
+                            // console.log('AMS B', argmap)
+                        }
+                        return true;
+                    }, kn))(kI);
+                kn.e = false;
+            }
+            if (kI === keys.length - 1 && kn.m.rest) {
                 argmap[keys[kI]] = [...args].slice(kI);
             }
             else {
-                argmap[keys[kI]] = kI < args.length ? args[kI] : args[args.length - 1];
+                argmap[keys[kI]] = args[kI];
             }
+            // else {
+            //  argmap[keys[kI]] = kI < args.length ? args[kI] : args[args.length - 1]
+            // }
         }
+        // console.dir(shape.node(), { depth: null })
         // ONLY if last prop is Rest  - make in meta
         // if (kI < args.length) {
         // argmap[keys[kI - 1]] = [...args].slice(kI - 1)

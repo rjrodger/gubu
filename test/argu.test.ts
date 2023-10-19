@@ -20,7 +20,8 @@ if (GubuModule.Gubu) {
 const Gubu: GubuX = GubuModule
 
 const {
-  MakeArgu
+  MakeArgu,
+  Skip,
 } = Gubu
 
 
@@ -50,8 +51,8 @@ describe('argu', () => {
 
     function bar(...args: any[]) {
       let argmap = Argu(args, 'bar', {
-        'a: One(String,{})': {},
-        'b: Ignore(One(String,{}))': {},
+        a: Skip(String),
+        b: Skip(Object),
         c: Function,
       })
       return argmap
@@ -59,8 +60,8 @@ describe('argu', () => {
 
 
     const f0 = () => { }
-    expect(bar('a', 'b', f0)).toEqual({ a: 'a', b: 'b', c: f0 })
-    expect(bar('a', {}, f0)).toEqual({ a: 'a', b: {}, c: f0 })
+    expect(bar('a', { x: 1 }, f0)).toEqual({ a: 'a', b: { x: 1 }, c: f0 })
+    expect(bar({ x: 1 }, f0)).toEqual({ a: undefined, b: { x: 1 }, c: f0 })
     expect(bar('a', f0)).toEqual({ a: 'a', b: undefined, c: f0 })
 
   })
