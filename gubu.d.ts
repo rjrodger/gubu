@@ -276,7 +276,8 @@ declare const GRename: <V>(this: any, inopts: any, shape?: V | Node<V> | undefin
 declare const GRequired: <V>(this: any, shape?: V | Node<V> | undefined) => Node<V>;
 declare const GSkip: <V>(this: any, shape?: V | Node<V> | undefined) => Node<V>;
 declare const GSome: (this: any, ...inshapes: any[]) => Node<unknown>;
-type Argu = (args: any[] | IArguments, whence: string | Record<string, any>, spec?: Record<string, any>) => Record<string, any>;
+type args = any[] | IArguments;
+type Argu = (args: args | string, whence: string | Record<string, any>, spec?: Record<string, any>) => (typeof args extends string ? ((args: args) => Record<string, any>) : Record<string, any>);
 declare function MakeArgu(prefix: string): Argu;
 export type { Validate, Update, Context, Builder, Node, State, GubuShape, };
 export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, expr, MakeArgu, Above, After, All, Any, Before, Below, Check, Child, Closed, Default, Define, Empty, Exact, Fault, Func, Ignore, Key, Len, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some, Rest, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GCheck, GChild, GClosed, GDefault, GDefine, GEmpty, GExact, GFault, GFunc, GIgnore, GKey, GLen, GMax, GMin, GNever, GOne, GOpen, GOptional, GRefer, GRename, GRequired, GSkip, GSome, GRest, };

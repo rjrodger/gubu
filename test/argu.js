@@ -5,6 +5,7 @@ const {
   Skip,
   Min,
   Ignore,
+  Any,
 } = require('../gubu')
 
 
@@ -54,24 +55,34 @@ let Argu = MakeArgu('QAZ')
 // zed('a',1,2,'x')
 
 
+let arguSpec = Argu('qaz', {
+  a: Skip(String),
+  b: Skip(Object),
+  c: Function,
+  d: Rest(Any()),
+})
 
 function qaz() {
-  let args = Argu(arguments, 'bar', {
-    a: Skip(String),
-    // a: String,
-    // b: Skip(Object),
-    b: Skip(Object),
-    c: Function,
-  })
+  let args = arguSpec(arguments)
   console.log(arguments, args)
 }
 
 function f0(){}
 
 
+// qaz(11)
 qaz('s',{b:1},f0)
-qaz({b:1},f0)
-qaz('s',f0)
-qaz(f0)
+// qaz({b:1},f0)
+// qaz('s',f0)
+// qaz(f0)
+// // qaz()
+// qaz('s',{b:1},f0,11)
+// qaz('s',{b:1},f0,11,22)
+// qaz('s',f0,11)
+// qaz({b:1},f0,11)
+// qaz({b:1},f0,11,22)
+// qaz(f0,11,22)
+
+
 // qaz('s',{x:1},f0)
 // qaz({x:1},f0)

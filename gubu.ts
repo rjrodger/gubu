@@ -2087,14 +2087,18 @@ function makeErrImpl(
     u: user || {},
   }
 
-  let jstr = undefined === s.val ? S.MT : stringify(s.val)
+  let jstr = undefined === s.val ? 'undefined' : stringify(s.val)
   let valstr = truncate(jstr.replace(/"/g, S.MT))
 
   text = text || s.node.z
 
   if (null == text || S.MT === text) {
     let valkind = valstr.startsWith('[') ? S.array :
-      valstr.startsWith('{') ? S.object : 'value'
+      valstr.startsWith('{') ? S.object :
+        (null == s.val || isNaN(s.val) ? 'value' : (typeof s.val))
+
+    console.log('MEI', s.val, valkind)
+
     let propkind = (valstr.startsWith('[') || isarr(s.parents[s.pI])) ?
       'index' : 'property'
     let propkindverb = 'is'
@@ -2341,75 +2345,95 @@ const GSkip = Skip
 const GSome = Some
 
 
+type args = any[] | IArguments
+
 type Argu = (
-  args: any[] | IArguments,
+  args: args | string,
   whence: string | Record<string, any>,
   spec?: Record<string, any>
-) => Record<string, any>
+) => (typeof args extends string ? ((args: args) => Record<string, any>) : Record<string, any>)
 
 
 function MakeArgu(prefix: string): Argu {
+
+  // TODO: caching, make arguments optionals
   return function Argu(
-    args: any[] | IArguments,
+    args: args | string,
     whence: string | Record<string, any>,
     argSpec?: Record<string, any>
   ) {
+    let partial = false
+    if ('string' === typeof args) {
+      partial = true
+      argSpec = (whence as Record<string, any>)
+      whence = (args as string | Record<string, any>)
+    }
+
     argSpec = argSpec || (whence as Record<string, any>)
     whence = 'string' === typeof whence ? ' (' + whence + ')' : ''
-    let shape = Gubu(argSpec, { prefix: prefix + whence })
+    const shape = Gubu(argSpec, { prefix: prefix + whence })
 
     // let shapeSpec = shape.spec()
     // console.dir(shapeSpec, { depth: null })
 
-    let top = shape.node()
+    const top = shape.node()
     // console.dir(top, { depth: null })
 
 
-    let keys = top.k
+    const keys = top.k
     let argmap: any = {}
     let kI = 0
+
+    // console.log('KEYS', keys)
+
     for (; kI < keys.length; kI++) {
       let kn = top.v[keys[kI]]
+      // console.log('KEY', kI, keys[kI], kn.m.rest)
 
+      // Skip in arg shape means a literal skip,
+      // shifting all following agument elements down.
       if (kn.p) {
         // if (0 === kI) {
         kn = top.v[keys[kI]] =
           ((kI) => After(function Skipper(
-            val: any,
+            _val: any,
             update: Update,
             state: State
           ) {
-            // console.log('Skipper', state)
+            // console.log('Skipper', kI, keys[kI], state.curerr.length)
             if (0 < state.curerr.length) {
 
               // console.log('AMS A', argmap, keys)
 
-              for (let sI = keys.length - 1; sI > kI; sI--) {
-                // console.log('Q', sI, kI, 'S', state.pI, state.pI + sI)
+              for (let sI = keys.length - 1;
+                sI > kI;
+                sI--) {
+                // console.log('KS', keys[sI], sI, kI, 'S', state.pI, state.pI + sI)
+
                 // Subtract kI as state.pI has already advanced kI along val list.
-                state.vals[state.pI + sI - kI] = state.vals[state.pI + sI - kI - 1]
-                argmap[keys[sI]] = argmap[keys[sI - 1]]
+                // If Rest, append to array at correct position.
+                if (top.v[keys[sI]].m.rest) {
+                  argmap[keys[sI]]
+                    .splice(top.v[keys[sI]].m.rest_pos + kI - sI, 0,
+                      argmap[keys[sI - 1]])
+                }
+                else {
+                  state.vals[state.pI + sI - kI] = state.vals[state.pI + sI - kI - 1]
+                  argmap[keys[sI]] = argmap[keys[sI - 1]]
+                }
+
+                // console.log('AMS S', sI, argmap)
               }
 
               update.uval = undefined
               update.done = false
-              // console.log('AMS B', argmap)
+              // console.log('AMS B', kI, argmap)
             }
 
             return true
           }, kn))(kI)
         kn.e = false
       }
-
-      if (kI === keys.length - 1 && kn.m.rest) {
-        argmap[keys[kI]] = [...args].slice(kI)
-      }
-      else {
-        argmap[keys[kI]] = args[kI]
-      }
-      // else {
-      //  argmap[keys[kI]] = kI < args.length ? args[kI] : args[args.length - 1]
-      // }
     }
 
     // console.dir(shape.node(), { depth: null })
@@ -2419,8 +2443,28 @@ function MakeArgu(prefix: string): Argu {
     // argmap[keys[kI - 1]] = [...args].slice(kI - 1)
     // }
 
-    // console.log(argmap)
-    return shape(argmap)
+    function buildArgMap(args: args) {
+      for (let kI = 0; kI < keys.length; kI++) {
+        let kn = top.v[keys[kI]]
+        if (kn.m.rest) {
+          argmap[keys[kI]] = [...args].slice(kI)
+          kn.m.rest_pos = argmap[keys[kI]].length
+        }
+        else {
+          argmap[keys[kI]] = args[kI]
+        }
+      }
+      // console.log('AM', argmap)
+      return argmap
+    }
+
+    return partial ?
+      function PartialArgu(args: args) {
+        argmap = {}
+        kI = 0
+        return shape(buildArgMap(args))
+      } :
+      shape(buildArgMap((args as args)))
   }
 }
 

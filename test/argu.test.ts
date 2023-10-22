@@ -22,6 +22,8 @@ const Gubu: GubuX = GubuModule
 const {
   MakeArgu,
   Skip,
+  Rest,
+  Any,
 } = Gubu
 
 
@@ -54,15 +56,35 @@ describe('argu', () => {
         a: Skip(String),
         b: Skip(Object),
         c: Function,
+        d: Rest(Any()),
       })
       return argmap
     }
 
 
     const f0 = () => { }
-    expect(bar('a', { x: 1 }, f0)).toEqual({ a: 'a', b: { x: 1 }, c: f0 })
-    expect(bar({ x: 1 }, f0)).toEqual({ a: undefined, b: { x: 1 }, c: f0 })
-    expect(bar('a', f0)).toEqual({ a: 'a', b: undefined, c: f0 })
+    expect(bar('a', { x: 1 }, f0)).toEqual({ a: 'a', b: { x: 1 }, c: f0, d: [] })
+    expect(bar({ x: 1 }, f0)).toEqual({ a: undefined, b: { x: 1 }, c: f0, d: [] })
+    expect(bar('b', f0)).toEqual({ a: 'b', b: undefined, c: f0, d: [] })
+    expect(bar(f0)).toEqual({ a: undefined, b: undefined, c: f0, d: [] })
+
+    expect(bar('a', { x: 1 }, f0, 11))
+      .toEqual({ a: 'a', b: { x: 1 }, c: f0, d: [11] })
+    expect(bar({ x: 1 }, f0, 12))
+      .toEqual({ a: undefined, b: { x: 1 }, c: f0, d: [12] })
+    expect(bar('b', f0, 13))
+      .toEqual({ a: 'b', b: undefined, c: f0, d: [13] })
+    expect(bar(f0, 14))
+      .toEqual({ a: undefined, b: undefined, c: f0, d: [14] })
+
+    expect(bar('a', { x: 1 }, f0, 11, 12))
+      .toEqual({ a: 'a', b: { x: 1 }, c: f0, d: [11, 12] })
+    expect(bar({ x: 1 }, f0, 21, 22))
+      .toEqual({ a: undefined, b: { x: 1 }, c: f0, d: [21, 22] })
+    expect(bar('b', f0, 31, 32))
+      .toEqual({ a: 'b', b: undefined, c: f0, d: [31, 32] })
+    expect(bar(f0, 41, 42))
+      .toEqual({ a: undefined, b: undefined, c: f0, d: [41, 42] })
 
   })
 
