@@ -2095,9 +2095,8 @@ function makeErrImpl(
   if (null == text || S.MT === text) {
     let valkind = valstr.startsWith('[') ? S.array :
       valstr.startsWith('{') ? S.object :
-        (null == s.val || isNaN(s.val) ? 'value' : (typeof s.val))
-
-    console.log('MEI', s.val, valkind)
+        (null == s.val || ('number' === typeof s.val && isNaN(s.val))
+          ? 'value' : (typeof s.val))
 
     let propkind = (valstr.startsWith('[') || isarr(s.parents[s.pI])) ?
       'index' : 'property'

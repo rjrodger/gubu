@@ -37,7 +37,7 @@ describe('extend', () => {
         }); // , { keyexpr: { active: true } })
         // console.log(g0({ x: { y: 2, z: 'Z' } }))
         // expect(g0({ x: { y: 2, z: 'Z' } })).toEqual({ x: { y: 2, z: 'Z' } })
-        expect(() => g0({ x: { y: 'q' } })).toThrow("Validation failed for property \"x.y\" with value \"q\" because the value is not of type number.");
+        expect(() => g0({ x: { y: 'q' } })).toThrow("Validation failed for property \"x.y\" with string \"q\" because the string is not of type number.");
         let g1 = Gubu({
             'x:Min(1 Max(4))': 2,
             'y:Min(1) Max(4)': 2,

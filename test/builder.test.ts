@@ -84,13 +84,13 @@ describe('builder', () => {
   test('builder-required', () => {
     let g0 = Gubu({ a: Required({ x: 1 }) })
     expect(g0({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
-    expect(() => g0({})).toThrow('Validation failed for property "a" with value "" because the value is required.')
-    expect(() => g0()).toThrow('Validation failed for property "a" with value "" because the value is required.')
+    expect(() => g0({})).toThrow('Validation failed for property "a" with value "undefined" because the value is required.')
+    expect(() => g0()).toThrow('Validation failed for property "a" with value "undefined" because the value is required.')
 
     let g1 = Gubu({ a: Required([1]) })
     expect(g1({ a: [11] })).toEqual({ a: [11] })
-    expect(() => g1({})).toThrow('Validation failed for property "a" with value "" because the value is required.')
-    expect(() => g1()).toThrow('Validation failed for property "a" with value "" because the value is required.')
+    expect(() => g1({})).toThrow('Validation failed for property "a" with value "undefined" because the value is required.')
+    expect(() => g1()).toThrow('Validation failed for property "a" with value "undefined" because the value is required.')
 
     let g2 = Gubu(Required(1))
     expect(g2(1)).toEqual(1)
@@ -193,7 +193,7 @@ describe('builder', () => {
   test('builder-check', () => {
     let g0 = Gubu(Check((v: any) => v === "x"))
     expect(g0('x')).toEqual('x')
-    expect(() => g0('y')).toThrow('Validation failed for value "y" because check "(v) => v === "x"" failed.')
+    expect(() => g0('y')).toThrow('Validation failed for string "y" because check "(v) => v === "x"" failed.')
     expect(() => g0(1)).toThrow('Validation failed for number "1" because check "(v) => v === "x"" failed.')
     expect(() => g0()).toThrow('Validation failed for value "undefined" because the value is required.')
     expect(Gubu(Skip(g0))()).toEqual(undefined)
@@ -202,7 +202,7 @@ describe('builder', () => {
     let g1 = Gubu(Check(/a/))
     expect(g1('a')).toEqual('a')
     expect(g1('qaq')).toEqual('qaq')
-    expect(() => g1('q')).toThrow('Validation failed for value "q" because check "/a/" failed.')
+    expect(() => g1('q')).toThrow('Validation failed for string "q" because check "/a/" failed.')
     expect(() => g1()).toThrow('Validation failed for value "undefined" because the value is required.')
 
     let g3 = Gubu(Check('number'))
@@ -301,14 +301,14 @@ describe('builder', () => {
     let g0 = Gubu(One(Number, String))
     expect(g0(1)).toEqual(1)
     expect(g0('x')).toEqual('x')
-    expect(() => g0(true)).toThrow('boolean "true" for property "" does not satisfy one of: Number, String')
-    expect(() => g0()).toThrow('Value "" for property "" does not satisfy one of: Number, String')
+    expect(() => g0(true)).toThrow('Value "true" for property "" does not satisfy one of: Number, String')
+    expect(() => g0()).toThrow('Value "undefined" for property "" does not satisfy one of: Number, String')
 
     let g0o = Gubu(Skip(One(Number, String)))
     expect(g0o(1)).toEqual(1)
     expect(g0o('x')).toEqual('x')
     expect(g0o()).toEqual(undefined)
-    expect(() => g0o(true)).toThrow('boolean "true" for property "" does not satisfy one of: Number, String')
+    expect(() => g0o(true)).toThrow('Value "true" for property "" does not satisfy one of: Number, String')
 
     let g1 = Gubu([One({ x: Number }, { x: String })])
     expect(g1([{ x: 1 }, { x: 'x' }, { x: 2 }, { x: 'y' }]))
@@ -346,14 +346,14 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
     let g0 = Gubu({ a: Some(Number, String) })
     expect(g0({ a: 1 })).toEqual({ a: 1 })
     expect(g0({ a: 'x' })).toEqual({ a: 'x' })
-    expect(() => g0({ a: true })).toThrow(`boolean "true" for property "a" does not satisfy any of: Number, String`)
+    expect(() => g0({ a: true })).toThrow(`Value "true" for property "a" does not satisfy any of: Number, String`)
 
-    expect(() => g0({})).toThrow('Value "" for property "a" does not satisfy any of: Number, String')
+    expect(() => g0({})).toThrow('Value "undefined" for property "a" does not satisfy any of: Number, String')
 
     let g1 = Gubu(Some(Number, String))
     expect(g1(1)).toEqual(1)
     expect(g1('x')).toEqual('x')
-    expect(() => g1(true)).toThrow(`boolean "true" for property "" does not satisfy any of: Number, String`)
+    expect(() => g1(true)).toThrow(`Value "true" for property "" does not satisfy any of: Number, String`)
 
     let g2 = Gubu([Some(Number, String)])
     expect(g2([1])).toEqual([1])
@@ -363,13 +363,13 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
     expect(g2(['x', 1])).toEqual(['x', 1])
     expect(g2(['x', 'y'])).toEqual(['x', 'y'])
     expect(g2(['x', 1, 'y', 2])).toEqual(['x', 1, 'y', 2])
-    expect(() => g2([true])).toThrow(`boolean "true" for property "0" does not satisfy any of: Number, String`)
+    expect(() => g2([true])).toThrow(`Value "true" for property "0" does not satisfy any of: Number, String`)
 
     let g3 = Gubu({ a: [Some(Number, String)] })
     expect(g3({ a: [1] })).toEqual({ a: [1] })
     expect(g3({ a: ['x'] })).toEqual({ a: ['x'] })
     expect(g3({ a: ['x', 1, 'y', 2] })).toEqual({ a: ['x', 1, 'y', 2] })
-    expect(() => g3({ a: [1, 2, true] })).toThrow(`boolean "true" for property "a.2" does not satisfy any of: Number, String`)
+    expect(() => g3({ a: [1, 2, true] })).toThrow(`Value "true" for property "a.2" does not satisfy any of: Number, String`)
 
     let g4 = Gubu({ a: [Some(Open({ x: 1 }), Open({ x: 'X' }))] })
     expect(g4({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] }))
@@ -387,7 +387,7 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
     expect(g0({})).toEqual({ x: 1, y: 'a' })
     expect(() => g0({ x: 'b', y: 'a' })).toThrow(
       `Value "{x:b,y:a}" for property "" does not satisfy all of: {"x":1}, {"y":"a"}`)
-    expect(() => g0()).toThrow('Validation failed for value "" because the value is required.')
+    expect(() => g0()).toThrow('Validation failed for value "undefined" because the value is required.')
 
     let g0s = Gubu(All(Open({ x: 1 }), Open({ y: 'a' })).Skip())
     expect(g0s({ x: 11, y: 'aa' })).toEqual({ x: 11, y: 'aa' })
@@ -590,9 +590,9 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
 
   test('builder-never', () => {
     let g0 = Gubu(Never())
-    expect(() => g0(1)).toThrow('Validation failed for string "1" because no value is allowed.')
+    expect(() => g0(1)).toThrow('Validation failed for number "1" because no value is allowed.')
     let g1 = Gubu({ a: Never() })
-    expect(() => g1({ a: 'x' })).toThrow('Validation failed for property "a" with value "x" because no value is allowed.')
+    expect(() => g1({ a: 'x' })).toThrow('Validation failed for property "a" with string "x" because no value is allowed.')
   })
 
 
@@ -840,8 +840,9 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
     expect(() => a2([1])).toThrow('required')
     expect(a2([1, 'x'])).toMatchObject([1, 'x'])
     expect(() => a2([1, 'x', 'y'])).toThrow('not allowed')
-    expect(() => a2(['x', 1])).toThrow('Validation failed for index "1" with value "1" because the number is not of type string.')
-    expect(() => a2(['x', 'y'])).toThrow('Validation failed for index "0" with value "x" because the value is not of type number.')
+    expect(() => a2(['x', 1])).toThrow(`Validation failed for index "0" with string "x" because the string is not of type number.
+Validation failed for index "1" with number "1" because the number is not of type string.`)
+    expect(() => a2(['x', 'y'])).toThrow('Validation failed for index "0" with string "x" because the string is not of type number.')
 
     let a3 = Gubu([1, 2, 3])
     expect(a3()).toEqual([1, 2, 3])

@@ -43,7 +43,7 @@ describe('argu', () => {
 
 
     expect(foo(2, 'X')).toEqual({ a: 2, b: 'X' })
-    expect(() => foo(2, 3)).toThrow('QAZ (foo): Validation failed for property "b" with value "3" because the value is not of type string.')
+    expect(() => foo(2, 3)).toThrow('QAZ (foo): Validation failed for property "b" with number "3" because the number is not of type string.')
 
   })
 
