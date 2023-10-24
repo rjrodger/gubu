@@ -364,6 +364,7 @@ type Update = {
   pI?: number
   err?: string | ErrDesc | ErrDesc[]
   why?: string
+  fatal?: boolean
 }
 
 
@@ -666,6 +667,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
       let n = s.node
       let done = false
+      let fatal = false
 
       // Call Befores
       if (0 < n.b.length) {
@@ -675,6 +677,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           if (undefined !== update.done) {
             done = update.done
           }
+          fatal = fatal || !!update.fatal
         }
       }
 
@@ -967,6 +970,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           if (undefined !== update.done) {
             done = update.done
           }
+          fatal = fatal || !!update.fatal
         }
       }
 
@@ -983,7 +987,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
         s.pI = s.sI
       }
 
-      if (s.node.e) {
+      if (s.node.e || fatal) {
         s.err.push(...s.curerr)
       }
     }
@@ -2380,9 +2384,10 @@ function MakeArgu(prefix: string): Argu {
 
 
     const keys = top.k
+    let inargs = args
     let argmap: any = {}
     let kI = 0
-
+    let skips = 0
     // console.log('KEYS', keys)
 
     for (; kI < keys.length; kI++) {
@@ -2401,7 +2406,7 @@ function MakeArgu(prefix: string): Argu {
           ) {
             // console.log('Skipper', kI, keys[kI], state.curerr.length)
             if (0 < state.curerr.length) {
-
+              skips++
               // console.log('AMS A', argmap, keys)
 
               for (let sI = keys.length - 1;
@@ -2433,14 +2438,31 @@ function MakeArgu(prefix: string): Argu {
           }, kn))(kI)
         kn.e = false
       }
+
+      if (kI === keys.length - 1 && !top.v[keys[kI]].m.rest) {
+        top.v[keys[kI]] = After(function ArgCounter(
+          _val: any,
+          update: Update,
+          state: State
+        ) {
+          // console.log('AC', keys.length, skips, inargs.length, ((keys.length - skips) < inargs.length))
+          if ((keys.length - skips) < inargs.length) {
+            if (0 === state.curerr.length) {
+              update.err =
+                `Too many arguments for type signature ` +
+                `(was ${inargs.length}, expected ${keys.length - skips})`
+            }
+            // update.done = true
+            update.fatal = true
+            // console.log('U', update)
+            return false
+          }
+          return true
+        }, top.v[keys[kI]])
+      }
     }
 
-    // console.dir(shape.node(), { depth: null })
-
-    // ONLY if last prop is Rest  - make in meta
-    // if (kI < args.length) {
-    // argmap[keys[kI - 1]] = [...args].slice(kI - 1)
-    // }
+    // console.dir(shape.spec(), { depth: null })
 
     function buildArgMap(args: args) {
       for (let kI = 0; kI < keys.length; kI++) {
@@ -2459,8 +2481,10 @@ function MakeArgu(prefix: string): Argu {
 
     return partial ?
       function PartialArgu(args: args) {
+        inargs = args
         argmap = {}
         kI = 0
+        skips = 0
         return shape(buildArgMap(args))
       } :
       shape(buildArgMap((args as args)))

@@ -104,6 +104,7 @@ type Update = {
     pI?: number;
     err?: string | ErrDesc | ErrDesc[];
     why?: string;
+    fatal?: boolean;
 };
 type ErrDesc = {
     k: string;

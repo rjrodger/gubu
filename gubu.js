@@ -404,6 +404,7 @@ function make(intop, inopts) {
             }
             let n = s.node;
             let done = false;
+            let fatal = false;
             // Call Befores
             if (0 < n.b.length) {
                 for (let bI = 0; bI < n.b.length; bI++) {
@@ -412,6 +413,7 @@ function make(intop, inopts) {
                     if (undefined !== update.done) {
                         done = update.done;
                     }
+                    fatal = fatal || !!update.fatal;
                 }
             }
             if (!done) {
@@ -658,6 +660,7 @@ function make(intop, inopts) {
                     if (undefined !== update.done) {
                         done = update.done;
                     }
+                    fatal = fatal || !!update.fatal;
                 }
             }
             // Explicit ignoreVal overrides Skip
@@ -669,7 +672,7 @@ function make(intop, inopts) {
             if (s.nextSibling) {
                 s.pI = s.sI;
             }
-            if (s.node.e) {
+            if (s.node.e || fatal) {
                 s.err.push(...s.curerr);
             }
         }
@@ -1741,8 +1744,10 @@ function MakeArgu(prefix) {
         const top = shape.node();
         // console.dir(top, { depth: null })
         const keys = top.k;
+        let inargs = args;
         let argmap = {};
         let kI = 0;
+        let skips = 0;
         // console.log('KEYS', keys)
         for (; kI < keys.length; kI++) {
             let kn = top.v[keys[kI]];
@@ -1755,6 +1760,7 @@ function MakeArgu(prefix) {
                     ((kI) => After(function Skipper(_val, update, state) {
                         // console.log('Skipper', kI, keys[kI], state.curerr.length)
                         if (0 < state.curerr.length) {
+                            skips++;
                             // console.log('AMS A', argmap, keys)
                             for (let sI = keys.length - 1; sI > kI; sI--) {
                                 // console.log('KS', keys[sI], sI, kI, 'S', state.pI, state.pI + sI)
@@ -1778,12 +1784,25 @@ function MakeArgu(prefix) {
                     }, kn))(kI);
                 kn.e = false;
             }
+            if (kI === keys.length - 1 && !top.v[keys[kI]].m.rest) {
+                top.v[keys[kI]] = After(function ArgCounter(_val, update, state) {
+                    // console.log('AC', keys.length, skips, inargs.length, ((keys.length - skips) < inargs.length))
+                    if ((keys.length - skips) < inargs.length) {
+                        if (0 === state.curerr.length) {
+                            update.err =
+                                `Too many arguments for type signature ` +
+                                    `(was ${inargs.length}, expected ${keys.length - skips})`;
+                        }
+                        // update.done = true
+                        update.fatal = true;
+                        // console.log('U', update)
+                        return false;
+                    }
+                    return true;
+                }, top.v[keys[kI]]);
+            }
         }
-        // console.dir(shape.node(), { depth: null })
-        // ONLY if last prop is Rest  - make in meta
-        // if (kI < args.length) {
-        // argmap[keys[kI - 1]] = [...args].slice(kI - 1)
-        // }
+        // console.dir(shape.spec(), { depth: null })
         function buildArgMap(args) {
             for (let kI = 0; kI < keys.length; kI++) {
                 let kn = top.v[keys[kI]];
@@ -1800,8 +1819,10 @@ function MakeArgu(prefix) {
         }
         return partial ?
             function PartialArgu(args) {
+                inargs = args;
                 argmap = {};
                 kI = 0;
+                skips = 0;
                 return shape(buildArgMap(args));
             } :
             shape(buildArgMap(args));
