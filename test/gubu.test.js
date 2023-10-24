@@ -9,7 +9,7 @@ const package_json_1 = __importDefault(require("../package.json"));
 const Large = require('./large');
 const Long = require('./long');
 // Handle web (Gubu) versus node ({Gubu}) export.
-let GubuModule = require('../');
+let GubuModule = require('../gubu');
 if (GubuModule.Gubu) {
     GubuModule = GubuModule.Gubu;
 }
@@ -632,10 +632,26 @@ Validation failed for property "q.b" with string "x" because the string is not o
             .toThrow(/not of type boolean/);
         expect(() => Gubu({ a: Object })({ a: 'x' }))
             .toThrow(/not of type object/);
+        expect(Gubu([String])([])).toEqual([]);
         expect(Gubu([String])(['x'])).toEqual(['x']);
+        expect(Gubu([String])(['x', 'y'])).toEqual(['x', 'y']);
+        expect(Gubu([Number])([])).toEqual([]);
         expect(Gubu([Number])([1])).toEqual([1]);
+        expect(Gubu([Number])([1, 2])).toEqual([1, 2]);
+        expect(Gubu([Boolean])([])).toEqual([]);
         expect(Gubu([Boolean])([true])).toEqual([true]);
+        expect(Gubu([Boolean])([true, false])).toEqual([true, false]);
+        expect(Gubu([Object])([])).toEqual([]);
         expect(Gubu([Object])([{ x: 1 }])).toEqual([{ x: 1 }]);
+        expect(Gubu([Object])([{ x: 1 }, { y: 2 }])).toEqual([{ x: 1 }, { y: 2 }]);
+        expect(Gubu([RegExp])([])).toEqual([]);
+        expect(Gubu([RegExp])([/a/])).toEqual([/a/]);
+        expect(Gubu([RegExp])([/a/, /b/])).toEqual([/a/, /b/]);
+        expect(Gubu([Date])([])).toEqual([]);
+        let d0 = new Date();
+        expect(Gubu([Date])([d0])).toEqual([d0]);
+        let d1 = new Date();
+        expect(Gubu([Date])([d0, d1])).toEqual([d0, d1]);
         expect(() => Gubu([String])([1]))
             .toThrow(/not of type string/);
         expect(() => Gubu([Number])(['x']))
@@ -644,6 +660,8 @@ Validation failed for property "q.b" with string "x" because the string is not o
             .toThrow(/not of type boolean/);
         expect(() => Gubu([Object])([1]))
             .toThrow(/not of type object/);
+        expect(() => Gubu([RegExp])(['not']))
+            .toThrow(/not an instance of RegExp\./);
     });
     test('shapes-fails', () => {
         let tmp = {};

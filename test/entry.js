@@ -95,5 +95,6 @@ window.expect = function(sval) {
 }
 
 
-require('./gubu.test.js')
-require('./builder.test.js')
+require('./web/gubu.test.js')
+require('./web/builder.test.js')
+require('./web/argu.test.js')

@@ -9,8 +9,8 @@
     "strict": true,
     "target": "es6"
   },
-  "references": [
-    { "path": "./src" },
-    { "path": "./test" }
+  "exclude": [
+    "dist",
+    "node_modules"
   ]
 }

@@ -2,7 +2,7 @@
 /* Copyright (c) 2021-2023 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
 // Handle web (Gubu) versus node ({Gubu}) export.
-let GubuModule = require('../');
+let GubuModule = require('../gubu');
 if (GubuModule.Gubu) {
     GubuModule = GubuModule.Gubu;
 }

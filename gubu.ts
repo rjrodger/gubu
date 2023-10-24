@@ -1023,6 +1023,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
     return (exec(root, ctx, true) as boolean)
   }
 
+  // List the errors from a given root value.
   gubuShape.error = (root?: any, ctx?: Context): GubuError[] => {
     let actx: any = ctx || {}
     actx.err = actx.err || []
@@ -2114,7 +2115,7 @@ function makeErrImpl(
 
       (S.type === why ? (
         S.instance === s.node.t ?
-          `the ${valkind} is not an instance of ${s.node.u.n} ` :
+          `the ${valkind} is not an instance of ${s.node.u.n}` :
           `the ${valkind} is not of type ${s.node.t}`) :
         S.required === why ? (S.MT === s.val ? 'an empty string is not allowed' :
           `the ${valkind} is required`) :

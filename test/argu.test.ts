@@ -3,14 +3,14 @@
 import type {
   State,
   Update,
-} from '../'
+} from '../gubu'
 
 
-import { Gubu as GubuX } from '../'
+import { Gubu as GubuX } from '../gubu'
 
 
 // Handle web (Gubu) versus node ({Gubu}) export.
-let GubuModule = require('../')
+let GubuModule = require('../gubu')
 
 if (GubuModule.Gubu) {
   GubuModule = GubuModule.Gubu

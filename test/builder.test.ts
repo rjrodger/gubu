@@ -5,14 +5,14 @@ import type {
   Node,
   State,
   Update,
-} from '../'
+} from '../gubu'
 
 
-import { Gubu as GubuX } from '../'
+import { Gubu as GubuX } from '../gubu'
 
 
 // Handle web (Gubu) versus node ({Gubu}) export.
-let GubuModule = require('../')
+let GubuModule = require('../gubu')
 
 if (GubuModule.Gubu) {
   GubuModule = GubuModule.Gubu
@@ -240,15 +240,14 @@ describe('builder', () => {
     expect(c0s.error('x')).toMatchObject([{ w: 'check' }])
     expect(c0s.error()).toEqual([])
 
-    // FINISH
-    // let c0d = Gubu(Default('foo', c0))
-    // expect(c0d(1)).toEqual(1)
-    // expect(() => c0d(2)).toThrow('Validation failed for number "2" because check "(v) => v === 1" failed.')
-    // expect(() => c0d('x')).toThrow('check')
-    // expect(c0d()).toEqual('foo')
-    // expect(c0d.error(1)).toEqual([])
-    // expect(c0d.error('x')).toMatchObject([{ w: 'check' }])
-    // expect(c0d.error()).toEqual([])
+    let c0d = Gubu(Default('foo', c0))
+    expect(c0d(1)).toEqual(1)
+    expect(() => c0d(2)).toThrow('Validation failed for number "2" because check "(v) => v === 1" failed.')
+    expect(() => c0d('x')).toThrow('check')
+    expect(c0d()).toEqual('foo')
+    expect(c0d.error(1)).toEqual([])
+    expect(c0d.error('x')).toMatchObject([{ w: 'check' }])
+    expect(c0d.error()).toEqual([])
 
     let c1 = Gubu(Check(/a/))
     expect(c1('qaq')).toEqual('qaq')
@@ -256,13 +255,11 @@ describe('builder', () => {
     expect(() => c1(1)).toThrow('check')
     expect(() => c1()).toThrow('required')
 
-    // FINISH
-    // let c1d = Gubu(Default('a', Check(/a/)))
-    // expect(c1d('qaq')).toEqual('qaq')
-    // expect(() => c1d('qbq')).toThrow('Validation failed for string "qbq" because check "/a/" failed.')
-    // expect(() => c1d(1)).toThrow('check')
-    // expect(c1d()).toEqual('a')
-
+    let c1d = Gubu(Default('a', Check(/a/)))
+    expect(c1d('qaq')).toEqual('qaq')
+    expect(() => c1d('qbq')).toThrow('Validation failed for string "qbq" because check "/a/" failed.')
+    expect(() => c1d(1)).toThrow('check')
+    expect(c1d()).toEqual('a')
 
     let v0 = Gubu(Check((v: any) => !!v, Number))
     expect(v0(1)).toEqual(1)

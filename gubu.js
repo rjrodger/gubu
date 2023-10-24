@@ -697,6 +697,7 @@ function make(intop, inopts) {
         ctx = ctx || {};
         return exec(root, ctx, true);
     };
+    // List the errors from a given root value.
     gubuShape.error = (root, ctx) => {
         let actx = ctx || {};
         actx.err = actx.err || [];
@@ -1518,7 +1519,7 @@ function makeErrImpl(why, s, mark, text, user, fname) {
             (0 < err.p.length ? `${propkind} "${err.p}" with ` : S.MT) +
             `${valkind} "${valstr}" because ` +
             (S.type === why ? (S.instance === s.node.t ?
-                `the ${valkind} is not an instance of ${s.node.u.n} ` :
+                `the ${valkind} is not an instance of ${s.node.u.n}` :
                 `the ${valkind} is not of type ${s.node.t}`) :
                 S.required === why ? (S.MT === s.val ? 'an empty string is not allowed' :
                     `the ${valkind} is required`) :
