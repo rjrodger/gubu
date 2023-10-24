@@ -2,18 +2,17 @@
 
 
 import type {
-  Builder,
   Node,
   State,
   Update,
-} from '../gubu'
+} from '../'
 
 
-import { Gubu as GubuX } from '../gubu'
+import { Gubu as GubuX } from '../'
 
 
 // Handle web (Gubu) versus node ({Gubu}) export.
-let GubuModule = require('../gubu')
+let GubuModule = require('../')
 
 if (GubuModule.Gubu) {
   GubuModule = GubuModule.Gubu

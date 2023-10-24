@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Bar = exports.Foo = void 0;
 // Handle web (Gubu) versus node ({Gubu}) export.
-let GubuModule = require('../gubu');
+let GubuModule = require('../');
 if (GubuModule.Gubu) {
     GubuModule = GubuModule.Gubu;
 }

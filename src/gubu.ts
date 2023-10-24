@@ -109,8 +109,8 @@ type Node<V> = {
 } & { [name: string]: Builder<V> }
 
 
+// Meta data for shape node.
 type NodeMeta = Record<string, any>
-
 
 
 
@@ -119,8 +119,6 @@ type Builder<S> = (
   opts?: any,     // Builder options.
   ...vals: any[]  // Values for the builder. 
 ) => Node<S>
-//  Node & // Builders build Nodes.
-//  { [name: string]: Builder | any } // Chained builders for convenience.
 
 
 // Validate a given value, potentially updating the value and state.
@@ -322,9 +320,6 @@ class State {
     }
   }
 
-
-
-  // Uncomment for debugging.
 
   printStacks() {
     console.log('\nNODE',

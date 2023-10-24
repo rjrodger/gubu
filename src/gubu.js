@@ -170,7 +170,6 @@ class State {
             this.root = this.val;
         }
     }
-    // Uncomment for debugging.
     printStacks() {
         var _a;
         console.log('\nNODE', 'd=' + this.dI, 'c=' + this.cI, 'p=' + this.pI, 'n=' + this.nI, +this.node, this.node.t, this.path, this.err.length);
@@ -208,12 +207,7 @@ class GubuError extends TypeError {
         });
     }
     toJSON() {
-        return {
-            ...this,
-            err: this.desc().err,
-            name: this.name,
-            message: this.message,
-        };
+        return Object.assign(Object.assign({}, this), { err: this.desc().err, name: this.name, message: this.message });
     }
 }
 // Identify JavaScript wrapper types by name.
@@ -254,10 +248,10 @@ function nodize(shape, depth, meta) {
         }
         // Normalize an incomplete Node<S>, avoiding any recursive calls to norm.
         else if (true === shape.$.gubu$) {
-            let node = { ...shape };
-            node.$ = { v$: VERSION, ...node.$, gubu$: GUBU$ };
+            let node = Object.assign({}, shape);
+            node.$ = Object.assign(Object.assign({ v$: VERSION }, node.$), { gubu$: GUBU$ });
             node.v =
-                (null != node.v && S.object === typeof (node.v)) ? { ...node.v } : node.v;
+                (null != node.v && S.object === typeof (node.v)) ? Object.assign({}, node.v) : node.v;
             // Leave as-is: node.c
             node.t = node.t || typeof (node.v);
             if (S.function === node.t && IS_TYPE[node.v.name]) {
@@ -331,7 +325,7 @@ function nodize(shape, depth, meta) {
             v = gs.v;
             f = v;
             r = gs.r;
-            u = { ...gs.u };
+            u = Object.assign({}, gs.u);
             a = [...gs.a];
             b = [...gs.b];
         }
@@ -351,7 +345,7 @@ function nodize(shape, depth, meta) {
     else if (S.string === t && S.MT === v) {
         u.empty = true;
     }
-    let vmap = (null != v && (S.object === t || S.array === t)) ? { ...v } : v;
+    let vmap = (null != v && (S.object === t || S.array === t)) ? Object.assign({}, v) : v;
     let node = {
         $: GUBU,
         // o: v,
@@ -470,7 +464,7 @@ function make(intop, inopts) {
                                             meta.short = n.v[k];
                                         }
                                         else {
-                                            meta = { ...meta, ...n.v[k] };
+                                            meta = Object.assign(Object.assign({}, meta), n.v[k]);
                                         }
                                         delete n.v[k];
                                         kI++;
@@ -606,7 +600,7 @@ function make(intop, inopts) {
                             s.ctx.log &&
                                 hasChildShape &&
                                 undefined == root &&
-                                s.ctx.log('kv', { ...s, key: 0, val: n.c });
+                                s.ctx.log('kv', Object.assign(Object.assign({}, s), { key: 0, val: n.c }));
                             s.ctx.log && s.ctx.log('ea', s);
                         }
                     }
@@ -1057,7 +1051,7 @@ const All = function (...inshapes) {
         let pass = true;
         // let err: any = []
         for (let shape of shapes) {
-            let subctx = { ...state.ctx, err: [] };
+            let subctx = Object.assign(Object.assign({}, state.ctx), { err: [] });
             shape(val, subctx);
             if (0 < subctx.err.length) {
                 pass = false;
@@ -1087,7 +1081,7 @@ const Some = function (...inshapes) {
     node.b.push(function Some(val, update, state) {
         let pass = false;
         for (let shape of shapes) {
-            let subctx = { ...state.ctx, err: [] };
+            let subctx = Object.assign(Object.assign({}, state.ctx), { err: [] });
             let match = shape.match(val, subctx);
             if (match) {
                 update.val = shape(val, subctx);
@@ -1117,7 +1111,7 @@ const One = function (...inshapes) {
     node.b.push(function One(val, update, state) {
         let passN = 0;
         for (let shape of shapes) {
-            let subctx = { ...state.ctx, err: [] };
+            let subctx = Object.assign(Object.assign({}, state.ctx), { err: [] });
             if (shape.match(val, subctx)) {
                 passN++;
                 update.val = shape(val, subctx);
@@ -1246,7 +1240,7 @@ const Refer = function (inopts, shape) {
             if (undefined !== val || fill) {
                 let ref = state.ctx.ref = state.ctx.ref || {};
                 if (undefined !== ref[name]) {
-                    let node = { ...ref[name] };
+                    let node = Object.assign({}, ref[name]);
                     node.t = node.t || S.never;
                     update.node = node;
                     update.type = node.t;
@@ -1602,10 +1596,7 @@ exports.stringify = stringify;
 function clone(x) {
     return null == x ? x : S.object !== typeof (x) ? x : JP(JS(x));
 }
-const G$ = (node) => nodize({
-    ...node,
-    $: { gubu$: true }
-});
+const G$ = (node) => nodize(Object.assign(Object.assign({}, node), { $: { gubu$: true } }));
 exports.G$ = G$;
 const BuilderMap = {
     Above,
@@ -1646,22 +1637,14 @@ if (S.undefined !== typeof (window)) {
         defprop(BuilderMap[builderName], S.name, { value: builderName });
     }
 }
-Object.assign(make, {
-    Gubu: make,
-    // Builders by name, allows `const { Open } = Gubu`.
-    ...BuilderMap,
-    // Builders by alias, allows `const { GOpen } = Gubu`, to avoid naming conflicts.
-    ...(Object.entries(BuilderMap).reduce((a, n) => (a['G' + n[0]] = n[1], a), {})),
-    isShape: (v) => (v && GUBU === v.gubu),
-    G$,
+Object.assign(make, Object.assign(Object.assign(Object.assign({ Gubu: make }, BuilderMap), (Object.entries(BuilderMap).reduce((a, n) => (a['G' + n[0]] = n[1], a), {}))), { isShape: (v) => (v && GUBU === v.gubu), G$,
     buildize,
     makeErr,
     stringify,
     truncate,
     nodize,
     expr,
-    MakeArgu,
-});
+    MakeArgu }));
 defprop(make, S.name, { value: S.gubu });
 // The primary export.
 const Gubu = make;

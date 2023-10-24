@@ -9,17 +9,17 @@ import Pkg from '../package.json'
 import type {
   State,
   Update,
-} from '../gubu'
+} from '../'
 
 
-import { Gubu as GubuX } from '../gubu'
+import { Gubu as GubuX } from '../'
 
 const Large = require('./large')
 const Long = require('./long')
 
 
 // Handle web (Gubu) versus node ({Gubu}) export.
-let GubuModule = require('../gubu')
+let GubuModule = require('../')
 
 if (GubuModule.Gubu) {
   GubuModule = GubuModule.Gubu

@@ -1,16 +1,15 @@
 {
   "compilerOptions": {
+    "composite": true,
     "esModuleInterop": true,
     "isolatedModules": true,
     "module": "nodenext",
     "noEmitOnError": true,
+    "outDir": "../dist",
     "resolveJsonModule": true,
+    "rootDir": ".",
     "sourceMap": true,
     "strict": true,
     "target": "es6"
-  },
-  "references": [
-    { "path": "./src" },
-    { "path": "./test" }
-  ]
+  }
 }

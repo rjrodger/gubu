@@ -1,16 +1,16 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 (function (global){(function (){
-!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{("undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:this).Gubu=e()}}((function(){var e={},t={};Object.defineProperty(t,"__esModule",{value:!0}),t.Gubu=void 0;const n=Symbol.for("gubu$"),l={gubu$:n,v$:"5.0.1"},r=Symbol.for("gubu$nil"),i=/^[A-Z]/,o="",u="gubu",s="name",a="nan",f="never",c="number",h="required",p="array",d="function",v="object",g="string",y="undefined",m="any",b="list",x="instance",$="null",I="type",k="Object",w="Array",N="Above",S="All",V="Below",R="Max",j="Min",O="Len",A="One",D="Some",E="Value",C=" for property ",G='"$PATH"',B='"$VALUE"',M=e=>Object.keys(e),T=(e,t,n)=>Object.defineProperty(e,t,n),L=e=>Array.isArray(e),F=e=>JSON.parse(e),P=(e,t)=>JSON.stringify(e,t);class z{constructor(e,t,n,l){this.match=!1,this.dI=0,this.nI=2,this.cI=-1,this.pI=0,this.sI=-1,this.valType=f,this.isRoot=!1,this.key=o,this.type=f,this.stop=!0,this.nextSibling=!0,this.fromDefault=!1,this.ignoreVal=void 0,this.curerr=[],this.err=[],this.parents=[],this.keys=[],this.path=[],this.root=e,this.vals=[e,-1],this.node=t,this.nodes=[t,-1],this.ctx=n||{},this.match=!!l}next(){this.stop=!1,this.fromDefault=!1,this.ignoreVal=void 0,this.isRoot=0===this.pI,this.check=void 0;let e=this.nodes[this.pI];for(;+e;)this.dI--,this.ctx.log&&-1<this.dI&&this.ctx.log("e"+(Array.isArray(this.parents[this.pI])?"a":"o"),this),this.pI=+e,e=this.nodes[this.pI];e?(this.node=e,this.updateVal(this.vals[this.pI]),this.key=this.keys[this.pI],this.cI=this.pI,this.sI=this.pI+1,this.parent=this.parents[this.pI],this.nextSibling=!0,this.type=this.node.t,this.path[this.dI]=this.key,this.oval=this.val,this.curerr.length=0):this.stop=!0}updateVal(e){this.val=e,this.valType=typeof this.val,c===this.valType&&isNaN(this.val)&&(this.valType=a),this.isRoot&&!this.match&&(this.root=this.val)}printStacks(){var e;console.log("\nNODE","d="+this.dI,"c="+this.cI,"p="+this.pI,"n="+this.nI,+this.node,this.node.t,this.path,this.err.length);for(let t=0;t<this.nodes.length||t<this.vals.length||t<this.parents.length;t++)console.log(t,"\t",(""+(isNaN(+this.nodes[t])?this.keys[t]+":"+(null===(e=this.nodes[t])||void 0===e?void 0:e.t):+this.nodes[t])).padEnd(32," "),Ee(this.vals[t]).padEnd(32," "),Ee(this.parents[t]))}}class q extends TypeError{constructor(e,t,n,l){var r;super((t=null==t?"":t+": ")+n.map(e=>e.t).join("\n")),this.gubu=!0,this.name="GubuError",this.code=e,this.prefix=t,this.desc=()=>({name:"GubuError",code:e,err:n,ctx:l}),this.stack=null===(r=this.stack)||void 0===r?void 0:r.replace(/.*\/gubu\/gubu\.[tj]s.*\n/g,""),this.props=n.map(e=>{var t;return{path:e.p,what:e.w,type:null===(t=e.n)||void 0===t?void 0:t.t,value:e.v}})}toJSON(){return{...this,err:this.desc().err,name:this.name,message:this.message}}}const J={String:!0,Number:!0,Boolean:!0,Object:!0,Array:!0,Function:!0,Symbol:!0,BigInt:!0},W={string:o,number:0,boolean:!1,object:{},array:[],symbol:Symbol(o),bigint:BigInt(0),null:null};function H(e,t,u){var s,f,h,b;if(U===e)e=void 0;else if(null!=e&&(null===(s=e.$)||void 0===s?void 0:s.gubu$)){if(n===e.$.gubu$)return e.d=null==t?e.d:t,e;if(!0===e.$.gubu$){let l={...e};return l.$={v$:"5.0.1",...l.$,gubu$:n},l.v=null!=l.v&&v===typeof l.v?{...l.v}:l.v,l.t=l.t||typeof l.v,d===l.t&&J[l.v.name]&&(l.t=l.v.name.toLowerCase(),l.v=Ce(W[l.t]),l.f=l.v),l.r=!!l.r,l.p=!!l.p,l.d=null==t?null==l.d?-1:l.d:t,l.b=l.b||[],l.a=l.a||[],l.u=l.u||{},l.m=l.m||u||{},l}}let I=null===e?$:typeof e;I=y===I?m:I;let w=e,N=w,S=r,V=!1,R={},j=[],O=[];if(v===I)N=void 0,L(w)?(I=p,1===w.length&&(S=w[0],w=[])):null!=w&&Function!==w.constructor&&Object!==w.constructor&&null!=w.constructor?(I=x,R.n=w.constructor.name,R.i=w.constructor,N=w):0===M(w).length&&(S=ne());else if(d===I)if(J[e.name])I=e.name.toLowerCase(),V=!0,w=Ce(W[I]),N=w,k===e.name&&(S=ne());else if(w.gubu===l||!0===(null===(f=w.$)||void 0===f?void 0:f.gubu)){let e=w.node?w.node():w;I=e.t,w=e.v,N=w,V=e.r,R={...e.u},j=[...e.a],O=[...e.b]}else"Function"===w.constructor.name&&i.test(w.name)&&(I=x,V=!0,R.n=null===(b=null===(h=w.prototype)||void 0===h?void 0:h.constructor)||void 0===b?void 0:b.name,R.i=w);else c===I&&isNaN(w)?I=a:g===I&&o===w&&(R.empty=!0);let A=null==w||v!==I&&p!==I?w:{...w};return{$:l,t:I,v:A,f:N,n:null!=A&&v===typeof A?M(A).length:0,c:S,r:V,p:!1,d:null==t?-1:t,k:[],e:!0,u:R,a:j,b:O,m:u||{}}}function U(t,i){const u=null==i?{}:i;u.name=null==u.name?"G"+(o+Math.random()).substring(2,8):o+u.name,u.prefix=null==u.prefix?void 0:u.prefix;let s=u.meta=u.meta||{};s.active=!0===s.active||!1,s.suffix="string"==typeof s.suffix?s.suffix:"$$";let a=u.keyexpr=u.keyexpr||{};a.active=!1!==a.active;let c=H(t,0);function d(e,t,n){let l=new z(e,c,t,n);for(;l.next(),!l.stop;){let t=l.node,n=!1;if(0<t.b.length)for(let e=0;e<t.b.length;e++){let r=K(t.b[e],l);t=l.node,void 0!==r.done&&(n=r.done)}if(!n){let n=!0,i=void 0===l.val;if(f===l.type)l.curerr.push(Ae(f,l,1070));else if(v===l.type){let e;if(t.r&&i?(l.ignoreVal=!0,l.curerr.push(Ae(h,l,1010))):i||null!==l.val&&v===l.valType&&!L(l.val)?!t.p&&i&&void 0!==t.f?(l.updateVal(t.f),l.fromDefault=!0,e=l.val,n=!1):t.p&&i||(l.updateVal(l.val||(l.fromDefault=!0,{})),e=l.val):(l.curerr.push(Ae(I,l,1020)),e=L(l.val)?l.val:{}),n&&(e=null==e&&!1===l.ctx.err?{}:e,null!=e)){l.ctx.log&&l.ctx.log("so",l);let n=!1,i=M(t.v),o=l.nI;if(0<i.length){n=!0,l.pI=o;for(let n=0;n<i.length;n++){let r,o=i[n];if(s.active&&o.endsWith(s.suffix)){if(r={short:""},"string"==typeof t.v[o]?r.short=t.v[o]:r={...r,...t.v[o]},delete t.v[o],n++,i.length<=n)break;if(i[n]!==o.substring(0,o.length-s.suffix.length))throw new Error("Invalid meta key: "+o);o=i[n]}let u=o,f=t.v[o];if(a.active){let e=/^\s*("(\\.|[^"\\])*"|[^\s]+):\s*(.*?)\s*$/.exec(o);e&&(u=e[1],f=_({src:e[3],val:f}),delete t.v[o])}let c=H(f,1+l.dI,r);t.v[u]=c,t.k.includes(u)||t.k.push(u),l.nodes[l.nI]=c,l.vals[l.nI]=e[u],l.parents[l.nI]=e,l.keys[l.nI]=u,l.nI++}}let u=M(e).filter(e=>void 0===t.v[e]);if(0<u.length)if(r===t.c)l.ignoreVal=!0,l.curerr.push(Ae("closed",l,1100,void 0,{k:u}));else{n=!0,l.pI=o;for(let n of u){let r=t.c=H(t.c,1+l.dI);l.nodes[l.nI]=r,l.vals[l.nI]=e[n],l.parents[l.nI]=e,l.keys[l.nI]=n,l.nI++}}n?(l.dI++,l.nodes[l.nI]=l.sI,l.parents[l.nI]=e,l.nextSibling=!1,l.nI++):l.ctx.log&&l.ctx.log("eo",l)}}else if(p===l.type)if(t.r&&i)l.ignoreVal=!0,l.curerr.push(Ae(h,l,1030));else if(i||L(l.val)){if(!t.p&&i&&void 0!==t.f)l.updateVal(t.f),l.fromDefault=!0;else if(!t.p||null!=l.val){l.updateVal(l.val||(l.fromDefault=!0,[]));let n=r!==t.c,i=0<l.val.length,u=M(t.v).filter(e=>!isNaN(+e)),s=0<u.length;if(l.ctx.log&&l.ctx.log("sa",l),i||s){l.pI=l.nI;let e=0;if(s)if(u.length<l.val.length&&!n)l.ignoreVal=!0,l.curerr.push(Ae("closed",l,1090,void 0,{k:u.length}));else for(;e<u.length;e++){let n=t.v[e]=H(t.v[e],1+l.dI);l.nodes[l.nI]=n,l.vals[l.nI]=l.val[e],l.parents[l.nI]=l.val,l.keys[l.nI]=o+e,l.nI++}if(n&&i){let n=t.c=H(t.c,1+l.dI);for(;e<l.val.length;e++)l.nodes[l.nI]=n,l.vals[l.nI]=l.val[e],l.parents[l.nI]=l.val,l.keys[l.nI]=o+e,l.nI++}l.ignoreVal||(l.dI++,l.nodes[l.nI]=l.sI,l.parents[l.nI]=l.val,l.nextSibling=!1,l.nI++)}else l.ctx.log&&n&&null==e&&l.ctx.log("kv",{...l,key:0,val:t.c}),l.ctx.log&&l.ctx.log("ea",l)}}else l.curerr.push(Ae(I,l,1040));else if(m===l.type||b===l.type||void 0===l.val||l.type===l.valType||x===l.type&&t.u.i&&l.val instanceof t.u.i||$===l.type&&null===l.val)if(void 0===l.val){let e=l.path[l.dI];!t.r||y===l.type&&l.parent.hasOwnProperty(e)?void 0!==t.f&&!t.p||y===l.type?(l.updateVal(t.f),l.fromDefault=!0):m===l.type&&(l.ignoreVal=void 0===l.ignoreVal||l.ignoreVal):(l.ignoreVal=!0,l.curerr.push(Ae(h,l,1060))),l.ctx.log&&l.ctx.log("kv",l)}else g!==l.type||o!==l.val||t.u.empty||l.curerr.push(Ae(h,l,1080)),l.ctx.log&&l.ctx.log("kv",l);else l.curerr.push(Ae(I,l,1050))}if(0<t.a.length)for(let e=0;e<t.a.length;e++){let r=K(t.a[e],l);t=l.node,void 0!==r.done&&(n=r.done)}let i=l.node.p?!1!==l.ignoreVal:!!l.ignoreVal;!l.match&&null!=l.parent&&!n&&!i&&(l.parent[l.key]=l.val),l.nextSibling&&(l.pI=l.sI),l.node.e&&l.err.push(...l.curerr)}if(0<l.err.length)if(L(l.ctx.err))l.ctx.err.push(...l.err);else if(!l.match&&!1!==l.ctx.err)throw new q("shape",u.prefix,l.err,l.ctx);return l.match?0===l.err.length:l.root}function k(e,t){return d(e,t,!1)}k.valid=function(e,t){let n=t||{};return n.err=n.err||[],d(e,n,!1),0===n.err.length},k.match=(e,t)=>d(e,t=t||{},!0),k.error=(e,t)=>{let n=t||{};return n.err=n.err||[],d(e,n,!1),n.err},k.spec=()=>(k(void 0,{err:!1}),F(Ee(c,(e,t)=>n===t||t,!1,!0))),k.node=()=>(k.spec(),c);let w=o;return k.toString=()=>(w=X(o===w?Ee(c&&c.$&&(n===c.$.gubu$||!0===c.$.gubu$)?c.v:c):w),`[Gubu ${u.name} ${w}]`),e.inspect&&e.inspect.custom&&(k[e.inspect.custom]=k.toString),k.gubu=l,k.spec(),k}function _(e){let t=!1;if(null==e.tokens){t=!0,e.tokens=[];let n=/\s*,?\s*([)(\.]|"(\\.|[^"\\])*"|\/(\\.|[^\/\\])*\/[a-z]?|[^)(,\s]+)\s*/g,l=null;for(;l=n.exec(e.src);)e.tokens.push(l[1])}e.i=e.i||0;let n=e.tokens[e.i],l=Be[n];if(")"===e.tokens[e.i])return e.i++,e.val;e.i++;let r={Number:Number,String:String,Boolean:Boolean};if(null==l)try{return r[n]||("undefined"===n?void 0:"NaN"===n?NaN:n.match(/^\/.+\/$/)?new RegExp(n.substring(1,n.length-1)):JSON.parse(n))}catch(u){throw new SyntaxError(`Gubu: unexpected token ${n} in builder expression ${e.src}`)}"("===e.tokens[e.i]&&e.i++;let i=[],o=null;for(;null!=(o=e.tokens[e.i])&&")"!==o;){let t=_(e);i.push(t)}return e.i++,e.val=l.call(e.val,...i),"."===e.tokens[e.i]?(e.i++,_(e)):t&&e.i<e.tokens.length?_(e):e.val}function K(e,t){var n;let l,r={},i=!1;try{i=!(void 0!==t.val||!(null===(n=e.gubu$)||void 0===n?void 0:n.Check))||(t.check=e,e(t.val,r,t))}catch(s){l=s}let u=L(r.err)?0<r.err.length:null!=r.err;if(!i||u){if(void 0===t.val&&(t.node.p||!t.node.r)&&!0!==r.done)return delete r.err,r;let n=r.why||"check",i=Z(t);if(g===typeof r.err)t.curerr.push(Oe(t,r.err));else if(v===typeof r.err)t.curerr.push(...[r.err].flat().filter(e=>null!=e).map(e=>(e.p=null==e.p?i:e.p,e.m=null==e.m?2010:e.m,e)));else{let r=e.name;null!=r&&o!=r||(r=X(e.toString().replace(/[ \t\r\n]+/g," "))),t.curerr.push(Ae(n,t,1045,void 0,{thrown:l},r))}r.done=null==r.done||r.done}return r.hasOwnProperty("uval")?(t.updateVal(r.uval),t.ignoreVal=!1):void 0===r.val||Number.isNaN(r.val)||(t.updateVal(r.val),t.ignoreVal=!1),void 0!==r.node&&(t.node=r.node),void 0!==r.type&&(t.type=r.type),r}function Z(e){return e.path.slice(1,e.dI+1).filter(e=>null!=e).join(".")}function Q(e){return c===typeof e?e:c===typeof(null==e?void 0:e.length)?e.length:null!=e&&v===typeof e?M(e).length:NaN}function X(e,t){let n=String(e),l=null==t||isNaN(t)?30:t<0?0:~~t,r=null==e?0:n.length,i=null==e?o:n.substring(0,r);return i=l<r?i.substring(0,l-3)+"...":i,i.substring(0,l)}const Y=function(e){let t=je(this,e);return t.r=!0,t.p=!1,void 0===e&&1===arguments.length&&(t.t=y,t.v=void 0),t},ee=function(e){let t=je(this,e);return t.c=ne(),t},te=function(e){let t=je(this,e);return t.r=!1,void 0===e&&1===arguments.length&&(t.t=y,t.v=void 0),t},ne=function(e){let t=je(this,e);return t.t=m,void 0!==e&&(t.v=e,t.f=e),t},le=function(e,t){let n=je(this,t);return n.z=e,n},re=function(e){let t=je(this,e);return t.r=!1,t.p=!0,t},ie=function(e){let t=je(this,e);return t.r=!1,t.p=!0,t.e=!1,t.a.push((function(e,t,n){return 0<n.curerr.length&&(t.uval=void 0,t.done=!1),!0})),t},oe=function(e){let t=je(this);return t.t=d,t.v=e,t.f=e,t},ue=function(e,t){let n=je(this,void 0===t?e:t);return n.r=!1,n.f=e,d===typeof e&&J[e.name]&&(n.t=e.name.toLowerCase(),n.f=Ce(W[n.t])),n.p=!1,n},se=function(e){let t=je(this,e);return t.u.empty=!0,t},ae=function(e){let t=je(this,e);return t.t=f,t},fe=function(e,t){let n=je(this),l="number"==typeof e;n.t=g,l&&null==t&&(n=H([]));let r=null;return"function"==typeof e&&(r=e,n=ne()),n.b.push((function(n,i,o){if(r)i.val=r(o.path,o);else if(l){let n=e;i.val=o.path.slice(o.path.length-1-(0<=n?n:0),o.path.length-1+(0<=n?0:1)),"string"==typeof t&&(i.val=i.val.join(t))}else null==e&&(i.val=o.path[o.path.length-2]);return!0})),n},ce=function(...e){let t=je();t.t=b,t.r=!0;let n=e.map(e=>Me(e));return t.u.list=e,t.b.push((function(t,l,r){let i=!0;for(let e of n){let n={...r.ctx,err:[]};e(t,n),0<n.err.length&&(i=!1)}return i||(l.why=S,l.err=[Oe(r,E+" "+B+C+G+" does not satisfy all of: "+e.map(e=>Ee(e,null,!0)).join(", "))]),i})),t},he=function(...e){let t=je();t.t=b,t.r=!0;let n=e.map(e=>Me(e));return t.u.list=e,t.b.push((function(t,l,r){let i=!1;for(let e of n){let n={...r.ctx,err:[]},o=e.match(t,n);o&&(l.val=e(t,n)),i||(i=o)}return i||(l.why=D,l.err=[Oe(r,E+" "+B+C+G+" does not satisfy any of: "+e.map(e=>Ee(e,null,!0)).join(", "))]),i})),t},pe=function(...e){let t=je();t.t=b,t.r=!0;let n=e.map(e=>Me(e));return t.u.list=e,t.b.push((function(t,l,r){let i=0;for(let e of n){let n={...r.ctx,err:[]};if(e.match(t,n)){i++,l.val=e(t,n);break}}return 1!==i&&(l.why=A,l.err=[Oe(r,E+" "+B+C+G+" does not satisfy one of: "+e.map(e=>Ee(e,null,!0)).join(", "))]),!0})),t},de=function(...e){let t=je();return t.b.push((function(t,n,l){for(let r=0;r<e.length;r++)if(t===e[r])return!0;return n.err=Oe(l,E+" "+B+C+G+" must be exactly one of: "+l.node.s+"."),n.done=!0,!1})),t.s=e.map(e=>Ee(e,null,!0)).join(", "),t},ve=function(e,t){let n=je(this,t);return n.b.push(e),n},ge=function(e,t){let n=je(this,t);return n.a.push(e),n},ye=function(e,t){let n=je(this,t);if(d===typeof e){let t=e;t.gubu$=t.gubu$||{},t.gubu$.Check=!0,n.b.push(e),n.s=(null==n.s?o:n.s+";")+Ee(e,null,!0),n.r=!0}else if(v===typeof e){if(Object.prototype.toString.call(e).includes("RegExp")){let t=t=>null!=t&&!Number.isNaN(t)&&!!String(t).match(e);T(t,s,{value:String(e)}),T(t,"gubu$",{value:{Check:!0}}),n.b.push(t),n.s=Ee(e),n.r=!0}}else g===typeof e&&(n.t=e,n.r=!0);return n},me=function(e){let t=je(this,e);return p===t.t&&r!==t.c&&0===t.n?(t.v=[t.c],t.c=r):t.c=r,t},be=function(e,t){let n=je(this,t),l=g===typeof e?e:(v===typeof e&&e||{}).name;return null!=l&&o!=l&&n.b.push((function(e,t,n){return(n.ctx.ref=n.ctx.ref||{})[l]=n.node,!0})),n},xe=function(e,t){let n=je(this,t),l=v===typeof e&&e||{},r=g===typeof e?e:l.name,i=!!l.fill;return null!=r&&o!=r&&n.b.push((function(e,t,n){if(void 0!==e||i){let e=n.ctx.ref=n.ctx.ref||{};if(void 0!==e[r]){let n={...e[r]};n.t=n.t||f,t.node=n,t.type=n.t}}return!0})),n},$e=function(e,t){let n=je(this,t),l=v===typeof e&&e||{},r=g===typeof e?e:l.name,i="boolean"==typeof l.keep?l.keep:void 0,u=L(l.claim)?l.claim:[];if(null!=r&&o!=r){let e=(e,t,n)=>{if(void 0===e&&0<u.length){n.ctx.Rename=n.ctx.Rename||{},n.ctx.Rename.fromDefault=n.ctx.Rename.fromDefault||{};for(let e of u){let l=n.ctx.Rename.fromDefault[e]||{};if(void 0!==n.parent[e]&&!l.yes){t.val=n.parent[e],n.match||(n.parent[r]=t.val),t.node=l.node;for(let e=0;e<n.err.length;e++)n.err[e].k===l.key&&(n.err.splice(e,1),e--);if(i){let t=n.cI+1;n.nodes.splice(t,0,H(l.dval)),n.vals.splice(t,0,void 0),n.parents.splice(t,0,n.parent),n.keys.splice(t,0,e),n.nI++,n.pI++}else delete n.parent[e];break}}void 0===t.val&&(t.val=n.node.v)}return!0};T(e,s,{value:"Rename:"+r}),n.b.push(e);let t=(e,t,n)=>(n.parent[r]=e,n.match||i||n.key===r||L(n.parent)&&!1!==i||(delete n.parent[n.key],t.done=!0),n.ctx.Rename=n.ctx.Rename||{},n.ctx.Rename.fromDefault=n.ctx.Rename.fromDefault||{},n.ctx.Rename.fromDefault[r]={yes:n.fromDefault,key:n.key,dval:n.node.v,node:n.node},!0);T(t,s,{value:"Rename:"+r}),n.a.push(t)}return n},Ie=function(e,t){let n=je(this,t);return n.b.push((function(t,n,l){let r=Q(t);if(e<=r)return!0;l.checkargs={min:1};let i=c===typeof t?o:"length ";return n.err=Oe(l,E+" "+B+C+G+` must be a minimum ${i}of ${e} (was ${r}).`),!1})),n.s=j+"("+e+(null==t?o:","+Ee(t))+")",n},ke=function(e,t){let n=je(this,t);return n.b.push((function(t,n,l){let r=Q(t);if(r<=e)return!0;let i=c===typeof t?o:"length ";return n.err=Oe(l,E+" "+B+C+G+` must be a maximum ${i}of ${e} (was ${r}).`),!1})),n.s=R+"("+e+(null==t?o:","+Ee(t))+")",n},we=function(e,t){let n=je(this,t);return n.b.push((function(t,n,l){let r=Q(t);if(e<r)return!0;let i=c===typeof t?"be":"have length";return n.err=Oe(l,E+" "+B+C+G+` must ${i} above ${e} (was ${r}).`),!1})),n.s=N+"("+e+(null==t?o:","+Ee(t))+")",n},Ne=function(e,t){let n=je(this,t);return n.b.push((function(t,n,l){let r=Q(t);if(r<e)return!0;let i=c===typeof t?"be":"have length";return n.err=Oe(l,E+" "+B+C+G+` must ${i} below ${e} (was ${r}).`),!1})),n.s=V+"("+e+(null==t?o:","+Ee(t))+")",n},Se=function(e,t){let n=je(this,t||ne());return n.b.push((function(t,n,l){let r=Q(t);if(e===r)return!0;let i=c===typeof t?o:" in length";return n.err=Oe(l,E+" "+B+C+G+` must be exactly ${e}${i} (was ${r}).`),!1})),n.s=O+"("+e+(null==t?o:","+Ee(t))+")",n},Ve=function(e,t){let n=je(this,t||{});return n.c=H(e),n},Re=function(e,t){let n=je(this,t||[]);return n.t="array",n.c=H(e),n.m=n.m||{},n.m.rest=!0,n};function je(e,t){let n=H(null==e||e.window===e||e.global===e?t:e);return Object.assign(n,{Above:we,After:ge,Any:ne,Before:ve,Below:Ne,Check:ye,Child:Ve,Closed:me,Define:be,Empty:se,Exact:de,Fault:le,Ignore:ie,Len:Se,Max:ke,Min:Ie,Never:ae,Open:ee,Refer:xe,Rename:$e,Required:Y,Skip:re,Rest:Re})}function Oe(e,t,n,l){return Ae(n||"check",e,4e3,t,l)}function Ae(e,t,n,l,r,i){var u;let s={k:t.key,n:t.node,v:t.val,p:Z(t),w:e,c:(null===(u=t.check)||void 0===u?void 0:u.name)||"none",a:t.checkargs||{},m:n,t:o,u:r||{}},a=X((void 0===t.val?o:Ee(t.val)).replace(/"/g,o));if(null==(l=l||t.node.z)||o===l){let n=a.startsWith("[")?p:a.startsWith("{")?v:"value",l=a.startsWith("[")||L(t.parents[t.pI])?"index":"property",u="is",c=null==r?void 0:r.k;c=L(c)?(l=1<c.length?(u="are","properties"):l,c.join(", ")):c,s.t="Validation failed for "+(0<s.p.length?`${l} "${s.p}" with `:o)+`${n} "${a}" because `+(I===e?x===t.node.t?`the ${n} is not an instance of ${t.node.u.n} `:`the ${n} is not of type ${t.node.t}`:h===e?o===t.val?"an empty string is not allowed":`the ${n} is required`:"closed"===e?`the ${l} "${c}" ${u} not allowed`:f===e?"no value is allowed":`check "${null==i?e:i}" failed`)+(s.u.thrown?" (threw: "+s.u.thrown.message+")":".")}else s.t=l.replace(/\$VALUE/g,a).replace(/\$PATH/g,s.p);return s}function De(e){return null!=e.s&&o!==e.s?e.s:e.r||void 0===e.v?e.t:e.v}function Ee(e,t,l,r){let i;r||!e||!e.$||n!==e.$.gubu$&&!0!==e.$.gubu$||(e=De(e));try{i=P(e,(e,l)=>{var i,u;if(t&&(l=t(e,l)),null!=l&&v===typeof l&&l.constructor&&k!==l.constructor.name&&w!==l.constructor.name)l=d===typeof l.toString?l.toString():l.constructor.name;else if(d===typeof l)l=d===typeof U[l.name]&&isNaN(+e)?void 0:null!=l.name&&o!==l.name?l.name:X(l.toString().replace(/[ \t\r\n]+/g," "));else if("bigint"==typeof l)l=String(l.toString());else{if(Number.isNaN(l))return"NaN";!0===r||!0!==(null===(i=null==l?void 0:l.$)||void 0===i?void 0:i.gubu$)&&n!==(null===(u=null==l?void 0:l.$)||void 0===u?void 0:u.gubu$)||(l=De(l))}return l}),i=String(i)}catch(u){i=P(String(e))}return!0===l&&(i=i.replace(/^"/,o).replace(/"$/,o)),i}function Ce(e){return null==e||v!==typeof e?e:F(P(e))}const Ge=e=>H({...e,$:{gubu$:!0}}),Be={Above:we,After:ge,All:ce,Any:ne,Before:ve,Below:Ne,Check:ye,Child:Ve,Closed:me,Default:ue,Define:be,Empty:se,Exact:de,Fault:le,Func:oe,Ignore:ie,Key:fe,Len:Se,Max:ke,Min:Ie,Never:ae,One:pe,Open:ee,Optional:te,Refer:xe,Rename:$e,Required:Y,Skip:re,Some:he,Rest:Re};if(y!==typeof window)for(let Fe in Be)T(Be[Fe],s,{value:Fe});Object.assign(U,{Gubu:U,...Be,...Object.entries(Be).reduce((e,t)=>(e["G"+t[0]]=t[1],e),{}),isShape:e=>e&&l===e.gubu,G$:Ge,buildize:je,makeErr:Oe,stringify:Ee,truncate:X,nodize:H,expr:_,MakeArgu:Te}),T(U,s,{value:u});const Me=U;t.Gubu=Me;function Te(e){return function(t,n,l){let r=Me(l=l||n,{prefix:e+(n="string"==typeof n?" ("+n+")":"")}),i=r.node(),o=i.k,u={},s=0;for(;s<o.length;s++){let e=i.v[o[s]];e.p&&(e=i.v[o[s]]=(t=>ge((function(e,n,l){if(0<l.curerr.length){for(let e=o.length-1;e>t;e--)l.vals[l.pI+e-t]=l.vals[l.pI+e-t-1],u[o[e]]=u[o[e-1]];n.uval=void 0,n.done=!1}return!0}),e))(s),e.e=!1),s===o.length-1&&e.m.rest?u[o[s]]=[...t].slice(s):u[o[s]]=t[s]}return r(u)}}const{Gubu:Le}=t;return Le}));
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{("undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:this).Gubu=e()}}((function(){var e={},t={};Object.defineProperty(t,"__esModule",{value:!0}),t.Gubu=void 0;const n=Symbol.for("gubu$"),l={gubu$:n,v$:"5.0.1"},r=Symbol.for("gubu$nil"),i=/^[A-Z]/,o="",u="gubu",s="name",a="nan",f="never",c="number",h="required",p="array",v="function",d="object",g="string",m="undefined",y="any",b="list",x="instance",$="null",I="type",k="Object",w="Array",N="Above",S="All",V="Below",R="Max",j="Min",O="Len",A="One",D="Some",E="Value",C=" for property ",G='"$PATH"',B='"$VALUE"',T=e=>Object.keys(e),M=(e,t,n)=>Object.defineProperty(e,t,n),L=e=>Array.isArray(e),F=e=>JSON.parse(e),P=(e,t)=>JSON.stringify(e,t);class z{constructor(e,t,n,l){this.match=!1,this.dI=0,this.nI=2,this.cI=-1,this.pI=0,this.sI=-1,this.valType=f,this.isRoot=!1,this.key=o,this.type=f,this.stop=!0,this.nextSibling=!0,this.fromDefault=!1,this.ignoreVal=void 0,this.curerr=[],this.err=[],this.parents=[],this.keys=[],this.path=[],this.root=e,this.vals=[e,-1],this.node=t,this.nodes=[t,-1],this.ctx=n||{},this.match=!!l}next(){this.stop=!1,this.fromDefault=!1,this.ignoreVal=void 0,this.isRoot=0===this.pI,this.check=void 0;let e=this.nodes[this.pI];for(;+e;)this.dI--,this.ctx.log&&-1<this.dI&&this.ctx.log("e"+(Array.isArray(this.parents[this.pI])?"a":"o"),this),this.pI=+e,e=this.nodes[this.pI];e?(this.node=e,this.updateVal(this.vals[this.pI]),this.key=this.keys[this.pI],this.cI=this.pI,this.sI=this.pI+1,this.parent=this.parents[this.pI],this.nextSibling=!0,this.type=this.node.t,this.path[this.dI]=this.key,this.oval=this.val,this.curerr.length=0):this.stop=!0}updateVal(e){this.val=e,this.valType=typeof this.val,c===this.valType&&isNaN(this.val)&&(this.valType=a),this.isRoot&&!this.match&&(this.root=this.val)}printStacks(){var e;console.log("\nNODE","d="+this.dI,"c="+this.cI,"p="+this.pI,"n="+this.nI,+this.node,this.node.t,this.path,this.err.length);for(let t=0;t<this.nodes.length||t<this.vals.length||t<this.parents.length;t++)console.log(t,"\t",(""+(isNaN(+this.nodes[t])?this.keys[t]+":"+(null===(e=this.nodes[t])||void 0===e?void 0:e.t):+this.nodes[t])).padEnd(32," "),Ee(this.vals[t]).padEnd(32," "),Ee(this.parents[t]))}}class q extends TypeError{constructor(e,t,n,l){var r;super((t=null==t?"":t+": ")+n.map(e=>e.t).join("\n")),this.gubu=!0,this.name="GubuError",this.code=e,this.prefix=t,this.desc=()=>({name:"GubuError",code:e,err:n,ctx:l}),this.stack=null===(r=this.stack)||void 0===r?void 0:r.replace(/.*\/gubu\/gubu\.[tj]s.*\n/g,""),this.props=n.map(e=>{var t;return{path:e.p,what:e.w,type:null===(t=e.n)||void 0===t?void 0:t.t,value:e.v}})}toJSON(){return{...this,err:this.desc().err,name:this.name,message:this.message}}}const J={String:!0,Number:!0,Boolean:!0,Object:!0,Array:!0,Function:!0,Symbol:!0,BigInt:!0},W={string:o,number:0,boolean:!1,object:{},array:[],symbol:Symbol(o),bigint:BigInt(0),null:null};function _(e,t,u){var s,f,h,b;if(H===e)e=void 0;else if(null!=e&&(null===(s=e.$)||void 0===s?void 0:s.gubu$)){if(n===e.$.gubu$)return e.d=null==t?e.d:t,e;if(!0===e.$.gubu$){let l={...e};return l.$={v$:"5.0.1",...l.$,gubu$:n},l.v=null!=l.v&&d===typeof l.v?{...l.v}:l.v,l.t=l.t||typeof l.v,v===l.t&&J[l.v.name]&&(l.t=l.v.name.toLowerCase(),l.v=Ce(W[l.t]),l.f=l.v),l.r=!!l.r,l.p=!!l.p,l.d=null==t?null==l.d?-1:l.d:t,l.b=l.b||[],l.a=l.a||[],l.u=l.u||{},l.m=l.m||u||{},l}}let I=null===e?$:typeof e;I=m===I?y:I;let w=e,N=w,S=r,V=!1,R={},j=[],O=[];if(d===I)N=void 0,L(w)?(I=p,1===w.length&&(S=w[0],w=[])):null!=w&&Function!==w.constructor&&Object!==w.constructor&&null!=w.constructor?(I=x,R.n=w.constructor.name,R.i=w.constructor,N=w):0===T(w).length&&(S=ne());else if(v===I)if(J[e.name])I=e.name.toLowerCase(),V=!0,w=Ce(W[I]),N=w,k===e.name&&(S=ne());else if(w.gubu===l||!0===(null===(f=w.$)||void 0===f?void 0:f.gubu)){let e=w.node?w.node():w;I=e.t,w=e.v,N=w,V=e.r,R={...e.u},j=[...e.a],O=[...e.b]}else"Function"===w.constructor.name&&i.test(w.name)&&(I=x,V=!0,R.n=null===(b=null===(h=w.prototype)||void 0===h?void 0:h.constructor)||void 0===b?void 0:b.name,R.i=w);else c===I&&isNaN(w)?I=a:g===I&&o===w&&(R.empty=!0);let A=null==w||d!==I&&p!==I?w:{...w};return{$:l,t:I,v:A,f:N,n:null!=A&&d===typeof A?T(A).length:0,c:S,r:V,p:!1,d:null==t?-1:t,k:[],e:!0,u:R,a:j,b:O,m:u||{}}}function H(t,i){const u=null==i?{}:i;u.name=null==u.name?"G"+(o+Math.random()).substring(2,8):o+u.name,u.prefix=null==u.prefix?void 0:u.prefix;let s=u.meta=u.meta||{};s.active=!0===s.active||!1,s.suffix="string"==typeof s.suffix?s.suffix:"$$";let a=u.keyexpr=u.keyexpr||{};a.active=!1!==a.active;let c=_(t,0);function v(e,t,n){let l=new z(e,c,t,n);for(;l.next(),!l.stop;){let t=l.node,n=!1,i=!1;if(0<t.b.length)for(let e=0;e<t.b.length;e++){let r=K(t.b[e],l);t=l.node,void 0!==r.done&&(n=r.done),i=i||!!r.fatal}if(!n){let n=!0,i=void 0===l.val;if(f===l.type)l.curerr.push(Ae(f,l,1070));else if(d===l.type){let e;if(t.r&&i?(l.ignoreVal=!0,l.curerr.push(Ae(h,l,1010))):i||null!==l.val&&d===l.valType&&!L(l.val)?!t.p&&i&&void 0!==t.f?(l.updateVal(t.f),l.fromDefault=!0,e=l.val,n=!1):t.p&&i||(l.updateVal(l.val||(l.fromDefault=!0,{})),e=l.val):(l.curerr.push(Ae(I,l,1020)),e=L(l.val)?l.val:{}),n&&(e=null==e&&!1===l.ctx.err?{}:e,null!=e)){l.ctx.log&&l.ctx.log("so",l);let n=!1,i=T(t.v),o=l.nI;if(0<i.length){n=!0,l.pI=o;for(let n=0;n<i.length;n++){let r,o=i[n];if(s.active&&o.endsWith(s.suffix)){if(r={short:""},"string"==typeof t.v[o]?r.short=t.v[o]:r={...r,...t.v[o]},delete t.v[o],n++,i.length<=n)break;if(i[n]!==o.substring(0,o.length-s.suffix.length))throw new Error("Invalid meta key: "+o);o=i[n]}let u=o,f=t.v[o];if(a.active){let e=/^\s*("(\\.|[^"\\])*"|[^\s]+):\s*(.*?)\s*$/.exec(o);e&&(u=e[1],f=U({src:e[3],val:f}),delete t.v[o])}let c=_(f,1+l.dI,r);t.v[u]=c,t.k.includes(u)||t.k.push(u),l.nodes[l.nI]=c,l.vals[l.nI]=e[u],l.parents[l.nI]=e,l.keys[l.nI]=u,l.nI++}}let u=T(e).filter(e=>void 0===t.v[e]);if(0<u.length)if(r===t.c)l.ignoreVal=!0,l.curerr.push(Ae("closed",l,1100,void 0,{k:u}));else{n=!0,l.pI=o;for(let n of u){let r=t.c=_(t.c,1+l.dI);l.nodes[l.nI]=r,l.vals[l.nI]=e[n],l.parents[l.nI]=e,l.keys[l.nI]=n,l.nI++}}n?(l.dI++,l.nodes[l.nI]=l.sI,l.parents[l.nI]=e,l.nextSibling=!1,l.nI++):l.ctx.log&&l.ctx.log("eo",l)}}else if(p===l.type)if(t.r&&i)l.ignoreVal=!0,l.curerr.push(Ae(h,l,1030));else if(i||L(l.val)){if(!t.p&&i&&void 0!==t.f)l.updateVal(t.f),l.fromDefault=!0;else if(!t.p||null!=l.val){l.updateVal(l.val||(l.fromDefault=!0,[]));let n=r!==t.c,i=0<l.val.length,u=T(t.v).filter(e=>!isNaN(+e)),s=0<u.length;if(l.ctx.log&&l.ctx.log("sa",l),i||s){l.pI=l.nI;let e=0;if(s)if(u.length<l.val.length&&!n)l.ignoreVal=!0,l.curerr.push(Ae("closed",l,1090,void 0,{k:u.length}));else for(;e<u.length;e++){let n=t.v[e]=_(t.v[e],1+l.dI);l.nodes[l.nI]=n,l.vals[l.nI]=l.val[e],l.parents[l.nI]=l.val,l.keys[l.nI]=o+e,l.nI++}if(n&&i){let n=t.c=_(t.c,1+l.dI);for(;e<l.val.length;e++)l.nodes[l.nI]=n,l.vals[l.nI]=l.val[e],l.parents[l.nI]=l.val,l.keys[l.nI]=o+e,l.nI++}l.ignoreVal||(l.dI++,l.nodes[l.nI]=l.sI,l.parents[l.nI]=l.val,l.nextSibling=!1,l.nI++)}else l.ctx.log&&n&&null==e&&l.ctx.log("kv",{...l,key:0,val:t.c}),l.ctx.log&&l.ctx.log("ea",l)}}else l.curerr.push(Ae(I,l,1040));else if(y===l.type||b===l.type||void 0===l.val||l.type===l.valType||x===l.type&&t.u.i&&l.val instanceof t.u.i||$===l.type&&null===l.val)if(void 0===l.val){let e=l.path[l.dI];!t.r||m===l.type&&l.parent.hasOwnProperty(e)?void 0!==t.f&&!t.p||m===l.type?(l.updateVal(t.f),l.fromDefault=!0):y===l.type&&(l.ignoreVal=void 0===l.ignoreVal||l.ignoreVal):(l.ignoreVal=!0,l.curerr.push(Ae(h,l,1060))),l.ctx.log&&l.ctx.log("kv",l)}else g!==l.type||o!==l.val||t.u.empty||l.curerr.push(Ae(h,l,1080)),l.ctx.log&&l.ctx.log("kv",l);else l.curerr.push(Ae(I,l,1050))}if(0<t.a.length)for(let e=0;e<t.a.length;e++){let r=K(t.a[e],l);t=l.node,void 0!==r.done&&(n=r.done),i=i||!!r.fatal}let u=l.node.p?!1!==l.ignoreVal:!!l.ignoreVal;!l.match&&null!=l.parent&&!n&&!u&&(l.parent[l.key]=l.val),l.nextSibling&&(l.pI=l.sI),(l.node.e||i)&&l.err.push(...l.curerr)}if(0<l.err.length)if(L(l.ctx.err))l.ctx.err.push(...l.err);else if(!l.match&&!1!==l.ctx.err)throw new q("shape",u.prefix,l.err,l.ctx);return l.match?0===l.err.length:l.root}function k(e,t){return v(e,t,!1)}k.valid=function(e,t){let n=t||{};return n.err=n.err||[],v(e,n,!1),0===n.err.length},k.match=(e,t)=>v(e,t=t||{},!0),k.error=(e,t)=>{let n=t||{};return n.err=n.err||[],v(e,n,!1),n.err},k.spec=()=>(k(void 0,{err:!1}),F(Ee(c,(e,t)=>n===t||t,!1,!0))),k.node=()=>(k.spec(),c);let w=o;return k.toString=()=>(w=X(o===w?Ee(c&&c.$&&(n===c.$.gubu$||!0===c.$.gubu$)?c.v:c):w),`[Gubu ${u.name} ${w}]`),e.inspect&&e.inspect.custom&&(k[e.inspect.custom]=k.toString),k.gubu=l,k.spec(),k}function U(e){let t=!1;if(null==e.tokens){t=!0,e.tokens=[];let n=/\s*,?\s*([)(\.]|"(\\.|[^"\\])*"|\/(\\.|[^\/\\])*\/[a-z]?|[^)(,\s]+)\s*/g,l=null;for(;l=n.exec(e.src);)e.tokens.push(l[1])}e.i=e.i||0;let n=e.tokens[e.i],l=Be[n];if(")"===e.tokens[e.i])return e.i++,e.val;e.i++;let r={Number:Number,String:String,Boolean:Boolean};if(null==l)try{return r[n]||("undefined"===n?void 0:"NaN"===n?NaN:n.match(/^\/.+\/$/)?new RegExp(n.substring(1,n.length-1)):JSON.parse(n))}catch(u){throw new SyntaxError(`Gubu: unexpected token ${n} in builder expression ${e.src}`)}"("===e.tokens[e.i]&&e.i++;let i=[],o=null;for(;null!=(o=e.tokens[e.i])&&")"!==o;){let t=U(e);i.push(t)}return e.i++,e.val=l.call(e.val,...i),"."===e.tokens[e.i]?(e.i++,U(e)):t&&e.i<e.tokens.length?U(e):e.val}function K(e,t){var n;let l,r={},i=!1;try{i=!(void 0!==t.val||!(null===(n=e.gubu$)||void 0===n?void 0:n.Check))||(t.check=e,e(t.val,r,t))}catch(s){l=s}let u=L(r.err)?0<r.err.length:null!=r.err;if(!i||u){if(void 0===t.val&&(t.node.p||!t.node.r)&&!0!==r.done)return delete r.err,r;let n=r.why||"check",i=Z(t);if(g===typeof r.err)t.curerr.push(Oe(t,r.err));else if(d===typeof r.err)t.curerr.push(...[r.err].flat().filter(e=>null!=e).map(e=>(e.p=null==e.p?i:e.p,e.m=null==e.m?2010:e.m,e)));else{let r=e.name;null!=r&&o!=r||(r=X(e.toString().replace(/[ \t\r\n]+/g," "))),t.curerr.push(Ae(n,t,1045,void 0,{thrown:l},r))}r.done=null==r.done||r.done}return r.hasOwnProperty("uval")?(t.updateVal(r.uval),t.ignoreVal=!1):void 0===r.val||Number.isNaN(r.val)||(t.updateVal(r.val),t.ignoreVal=!1),void 0!==r.node&&(t.node=r.node),void 0!==r.type&&(t.type=r.type),r}function Z(e){return e.path.slice(1,e.dI+1).filter(e=>null!=e).join(".")}function Q(e){return c===typeof e?e:c===typeof(null==e?void 0:e.length)?e.length:null!=e&&d===typeof e?T(e).length:NaN}function X(e,t){let n=String(e),l=null==t||isNaN(t)?30:t<0?0:~~t,r=null==e?0:n.length,i=null==e?o:n.substring(0,r);return i=l<r?i.substring(0,l-3)+"...":i,i.substring(0,l)}const Y=function(e){let t=je(this,e);return t.r=!0,t.p=!1,void 0===e&&1===arguments.length&&(t.t=m,t.v=void 0),t},ee=function(e){let t=je(this,e);return t.c=ne(),t},te=function(e){let t=je(this,e);return t.r=!1,void 0===e&&1===arguments.length&&(t.t=m,t.v=void 0),t},ne=function(e){let t=je(this,e);return t.t=y,void 0!==e&&(t.v=e,t.f=e),t},le=function(e,t){let n=je(this,t);return n.z=e,n},re=function(e){let t=je(this,e);return t.r=!1,t.p=!0,t},ie=function(e){let t=je(this,e);return t.r=!1,t.p=!0,t.e=!1,t.a.push((function(e,t,n){return 0<n.curerr.length&&(t.uval=void 0,t.done=!1),!0})),t},oe=function(e){let t=je(this);return t.t=v,t.v=e,t.f=e,t},ue=function(e,t){let n=je(this,void 0===t?e:t);return n.r=!1,n.f=e,v===typeof e&&J[e.name]&&(n.t=e.name.toLowerCase(),n.f=Ce(W[n.t])),n.p=!1,n},se=function(e){let t=je(this,e);return t.u.empty=!0,t},ae=function(e){let t=je(this,e);return t.t=f,t},fe=function(e,t){let n=je(this),l="number"==typeof e;n.t=g,l&&null==t&&(n=_([]));let r=null;return"function"==typeof e&&(r=e,n=ne()),n.b.push((function(n,i,o){if(r)i.val=r(o.path,o);else if(l){let n=e;i.val=o.path.slice(o.path.length-1-(0<=n?n:0),o.path.length-1+(0<=n?0:1)),"string"==typeof t&&(i.val=i.val.join(t))}else null==e&&(i.val=o.path[o.path.length-2]);return!0})),n},ce=function(...e){let t=je();t.t=b,t.r=!0;let n=e.map(e=>Te(e));return t.u.list=e,t.b.push((function(t,l,r){let i=!0;for(let e of n){let n={...r.ctx,err:[]};e(t,n),0<n.err.length&&(i=!1)}return i||(l.why=S,l.err=[Oe(r,E+" "+B+C+G+" does not satisfy all of: "+e.map(e=>Ee(e,null,!0)).join(", "))]),i})),t},he=function(...e){let t=je();t.t=b,t.r=!0;let n=e.map(e=>Te(e));return t.u.list=e,t.b.push((function(t,l,r){let i=!1;for(let e of n){let n={...r.ctx,err:[]},o=e.match(t,n);o&&(l.val=e(t,n)),i||(i=o)}return i||(l.why=D,l.err=[Oe(r,E+" "+B+C+G+" does not satisfy any of: "+e.map(e=>Ee(e,null,!0)).join(", "))]),i})),t},pe=function(...e){let t=je();t.t=b,t.r=!0;let n=e.map(e=>Te(e));return t.u.list=e,t.b.push((function(t,l,r){let i=0;for(let e of n){let n={...r.ctx,err:[]};if(e.match(t,n)){i++,l.val=e(t,n);break}}return 1!==i&&(l.why=A,l.err=[Oe(r,E+" "+B+C+G+" does not satisfy one of: "+e.map(e=>Ee(e,null,!0)).join(", "))]),!0})),t},ve=function(...e){let t=je();return t.b.push((function(t,n,l){for(let r=0;r<e.length;r++)if(t===e[r])return!0;return n.err=Oe(l,E+" "+B+C+G+" must be exactly one of: "+l.node.s+"."),n.done=!0,!1})),t.s=e.map(e=>Ee(e,null,!0)).join(", "),t},de=function(e,t){let n=je(this,t);return n.b.push(e),n},ge=function(e,t){let n=je(this,t);return n.a.push(e),n},me=function(e,t){let n=je(this,t);if(v===typeof e){let t=e;t.gubu$=t.gubu$||{},t.gubu$.Check=!0,n.b.push(e),n.s=(null==n.s?o:n.s+";")+Ee(e,null,!0),n.r=!0}else if(d===typeof e){if(Object.prototype.toString.call(e).includes("RegExp")){let t=t=>null!=t&&!Number.isNaN(t)&&!!String(t).match(e);M(t,s,{value:String(e)}),M(t,"gubu$",{value:{Check:!0}}),n.b.push(t),n.s=Ee(e),n.r=!0}}else g===typeof e&&(n.t=e,n.r=!0);return n},ye=function(e){let t=je(this,e);return p===t.t&&r!==t.c&&0===t.n?(t.v=[t.c],t.c=r):t.c=r,t},be=function(e,t){let n=je(this,t),l=g===typeof e?e:(d===typeof e&&e||{}).name;return null!=l&&o!=l&&n.b.push((function(e,t,n){return(n.ctx.ref=n.ctx.ref||{})[l]=n.node,!0})),n},xe=function(e,t){let n=je(this,t),l=d===typeof e&&e||{},r=g===typeof e?e:l.name,i=!!l.fill;return null!=r&&o!=r&&n.b.push((function(e,t,n){if(void 0!==e||i){let e=n.ctx.ref=n.ctx.ref||{};if(void 0!==e[r]){let n={...e[r]};n.t=n.t||f,t.node=n,t.type=n.t}}return!0})),n},$e=function(e,t){let n=je(this,t),l=d===typeof e&&e||{},r=g===typeof e?e:l.name,i="boolean"==typeof l.keep?l.keep:void 0,u=L(l.claim)?l.claim:[];if(null!=r&&o!=r){let e=(e,t,n)=>{if(void 0===e&&0<u.length){n.ctx.Rename=n.ctx.Rename||{},n.ctx.Rename.fromDefault=n.ctx.Rename.fromDefault||{};for(let e of u){let l=n.ctx.Rename.fromDefault[e]||{};if(void 0!==n.parent[e]&&!l.yes){t.val=n.parent[e],n.match||(n.parent[r]=t.val),t.node=l.node;for(let e=0;e<n.err.length;e++)n.err[e].k===l.key&&(n.err.splice(e,1),e--);if(i){let t=n.cI+1;n.nodes.splice(t,0,_(l.dval)),n.vals.splice(t,0,void 0),n.parents.splice(t,0,n.parent),n.keys.splice(t,0,e),n.nI++,n.pI++}else delete n.parent[e];break}}void 0===t.val&&(t.val=n.node.v)}return!0};M(e,s,{value:"Rename:"+r}),n.b.push(e);let t=(e,t,n)=>(n.parent[r]=e,n.match||i||n.key===r||L(n.parent)&&!1!==i||(delete n.parent[n.key],t.done=!0),n.ctx.Rename=n.ctx.Rename||{},n.ctx.Rename.fromDefault=n.ctx.Rename.fromDefault||{},n.ctx.Rename.fromDefault[r]={yes:n.fromDefault,key:n.key,dval:n.node.v,node:n.node},!0);M(t,s,{value:"Rename:"+r}),n.a.push(t)}return n},Ie=function(e,t){let n=je(this,t);return n.b.push((function(t,n,l){let r=Q(t);if(e<=r)return!0;l.checkargs={min:1};let i=c===typeof t?o:"length ";return n.err=Oe(l,E+" "+B+C+G+` must be a minimum ${i}of ${e} (was ${r}).`),!1})),n.s=j+"("+e+(null==t?o:","+Ee(t))+")",n},ke=function(e,t){let n=je(this,t);return n.b.push((function(t,n,l){let r=Q(t);if(r<=e)return!0;let i=c===typeof t?o:"length ";return n.err=Oe(l,E+" "+B+C+G+` must be a maximum ${i}of ${e} (was ${r}).`),!1})),n.s=R+"("+e+(null==t?o:","+Ee(t))+")",n},we=function(e,t){let n=je(this,t);return n.b.push((function(t,n,l){let r=Q(t);if(e<r)return!0;let i=c===typeof t?"be":"have length";return n.err=Oe(l,E+" "+B+C+G+` must ${i} above ${e} (was ${r}).`),!1})),n.s=N+"("+e+(null==t?o:","+Ee(t))+")",n},Ne=function(e,t){let n=je(this,t);return n.b.push((function(t,n,l){let r=Q(t);if(r<e)return!0;let i=c===typeof t?"be":"have length";return n.err=Oe(l,E+" "+B+C+G+` must ${i} below ${e} (was ${r}).`),!1})),n.s=V+"("+e+(null==t?o:","+Ee(t))+")",n},Se=function(e,t){let n=je(this,t||ne());return n.b.push((function(t,n,l){let r=Q(t);if(e===r)return!0;let i=c===typeof t?o:" in length";return n.err=Oe(l,E+" "+B+C+G+` must be exactly ${e}${i} (was ${r}).`),!1})),n.s=O+"("+e+(null==t?o:","+Ee(t))+")",n},Ve=function(e,t){let n=je(this,t||{});return n.c=_(e),n},Re=function(e,t){let n=je(this,t||[]);return n.t="array",n.c=_(e),n.m=n.m||{},n.m.rest=!0,n};function je(e,t){let n=_(null==e||e.window===e||e.global===e?t:e);return Object.assign(n,{Above:we,After:ge,Any:ne,Before:de,Below:Ne,Check:me,Child:Ve,Closed:ye,Define:be,Empty:se,Exact:ve,Fault:le,Ignore:ie,Len:Se,Max:ke,Min:Ie,Never:ae,Open:ee,Refer:xe,Rename:$e,Required:Y,Skip:re,Rest:Re})}function Oe(e,t,n,l){return Ae(n||"check",e,4e3,t,l)}function Ae(e,t,n,l,r,i){var u;let s={k:t.key,n:t.node,v:t.val,p:Z(t),w:e,c:(null===(u=t.check)||void 0===u?void 0:u.name)||"none",a:t.checkargs||{},m:n,t:o,u:r||{}},a=X((void 0===t.val?"undefined":Ee(t.val)).replace(/"/g,o));if(null==(l=l||t.node.z)||o===l){let n=a.startsWith("[")?p:a.startsWith("{")?d:null==t.val||"number"==typeof t.val&&isNaN(t.val)?"value":typeof t.val,l=a.startsWith("[")||L(t.parents[t.pI])?"index":"property",u="is",c=null==r?void 0:r.k;c=L(c)?(l=1<c.length?(u="are","properties"):l,c.join(", ")):c,s.t="Validation failed for "+(0<s.p.length?`${l} "${s.p}" with `:o)+`${n} "${a}" because `+(I===e?x===t.node.t?`the ${n} is not an instance of ${t.node.u.n} `:`the ${n} is not of type ${t.node.t}`:h===e?o===t.val?"an empty string is not allowed":`the ${n} is required`:"closed"===e?`the ${l} "${c}" ${u} not allowed`:f===e?"no value is allowed":`check "${null==i?e:i}" failed`)+(s.u.thrown?" (threw: "+s.u.thrown.message+")":".")}else s.t=l.replace(/\$VALUE/g,a).replace(/\$PATH/g,s.p);return s}function De(e){return null!=e.s&&o!==e.s?e.s:e.r||void 0===e.v?e.t:e.v}function Ee(e,t,l,r){let i;r||!e||!e.$||n!==e.$.gubu$&&!0!==e.$.gubu$||(e=De(e));try{i=P(e,(e,l)=>{var i,u;if(t&&(l=t(e,l)),null!=l&&d===typeof l&&l.constructor&&k!==l.constructor.name&&w!==l.constructor.name)l=v===typeof l.toString?l.toString():l.constructor.name;else if(v===typeof l)l=v===typeof H[l.name]&&isNaN(+e)?void 0:null!=l.name&&o!==l.name?l.name:X(l.toString().replace(/[ \t\r\n]+/g," "));else if("bigint"==typeof l)l=String(l.toString());else{if(Number.isNaN(l))return"NaN";!0===r||!0!==(null===(i=null==l?void 0:l.$)||void 0===i?void 0:i.gubu$)&&n!==(null===(u=null==l?void 0:l.$)||void 0===u?void 0:u.gubu$)||(l=De(l))}return l}),i=String(i)}catch(u){i=P(String(e))}return!0===l&&(i=i.replace(/^"/,o).replace(/"$/,o)),i}function Ce(e){return null==e||d!==typeof e?e:F(P(e))}const Ge=e=>_({...e,$:{gubu$:!0}}),Be={Above:we,After:ge,All:ce,Any:ne,Before:de,Below:Ne,Check:me,Child:Ve,Closed:ye,Default:ue,Define:be,Empty:se,Exact:ve,Fault:le,Func:oe,Ignore:ie,Key:fe,Len:Se,Max:ke,Min:Ie,Never:ae,One:pe,Open:ee,Optional:te,Refer:xe,Rename:$e,Required:Y,Skip:re,Some:he,Rest:Re};if(m!==typeof window)for(let Fe in Be)M(Be[Fe],s,{value:Fe});Object.assign(H,{Gubu:H,...Be,...Object.entries(Be).reduce((e,t)=>(e["G"+t[0]]=t[1],e),{}),isShape:e=>e&&l===e.gubu,G$:Ge,buildize:je,makeErr:Oe,stringify:Ee,truncate:X,nodize:_,expr:U,MakeArgu:Me}),M(H,s,{value:u});const Te=H;t.Gubu=Te;function Me(e){return function(t,n,l){let r=!1;"string"==typeof t&&(r=!0,l=n,n=t);const i=Te(l=l||n,{prefix:e+(n="string"==typeof n?" ("+n+")":"")}),o=i.node(),u=o.k;let s=t,a={},f=0,c=0;for(;f<u.length;f++){let e=o.v[u[f]];e.p&&(e=o.v[u[f]]=(t=>ge((function(e,n,l){if(0<l.curerr.length){c++;for(let e=u.length-1;e>t;e--)o.v[u[e]].m.rest?a[u[e]].splice(o.v[u[e]].m.rest_pos+t-e,0,a[u[e-1]]):(l.vals[l.pI+e-t]=l.vals[l.pI+e-t-1],a[u[e]]=a[u[e-1]]);n.uval=void 0,n.done=!1}return!0}),e))(f),e.e=!1),f!==u.length-1||o.v[u[f]].m.rest||(o.v[u[f]]=ge((function(e,t,n){return!(u.length-c<s.length&&(0===n.curerr.length&&(t.err=`Too many arguments for type signature (was ${s.length}, expected ${u.length-c})`),t.fatal=!0,1))}),o.v[u[f]]))}function h(e){for(let t=0;t<u.length;t++){let n=o.v[u[t]];n.m.rest?(a[u[t]]=[...e].slice(t),n.m.rest_pos=a[u[t]].length):a[u[t]]=e[t]}return a}return r?function(e){return s=e,a={},f=0,c=0,i(h(e))}:i(h(t))}}const{Gubu:Le}=t;return Le}));
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],2:[function(require,module,exports){
 module.exports={
   "name": "gubu",
   "version": "5.0.1",
   "description": "An object shape validation utility.",
-  "main": "gubu.js",
-  "browser": "gubu.min.js",
+  "main": "dist/gubu.js",
+  "browser": "dist/gubu.min.js",
   "type": "commonjs",
-  "types": "gubu.d.ts",
+  "types": "dist/gubu.d.ts",
   "homepage": "https://github.com/rjrodger/gubu",
   "keywords": [
     "gubu",
@@ -31,9 +31,9 @@ module.exports={
     "test-web": "npm run build && npm run build-web && browserify -i util -o test/web.js -e test/entry.js -im && open test/web.html",
     "watch": "npm run version && tsc -w -d",
     "build": "npm run version && tsc -d",
-    "build-web": "cp gubu.js gubu.min.js && browserify -i util -o gubu.min.js -e gubu.web.js -s Gubu -im -p tinyify",
-    "version": "node -r fs -e \"v=require('./package.json').version;s=fs.readFileSync('./gubu.ts').toString();if(!s.includes('VERSION = \\''+v+'\\'')){s=s.replace(/VERSION = '.*?'/,'VERSION = \\''+v+'\\'');fs.writeFileSync('./gubu.ts',s)}\"",
-    "clean": "rm -rf node_modules yarn.lock package-lock.json",
+    "build-web": "cp dist/gubu.js dist/gubu.min.js && browserify -i util -o dist/gubu.min.js -e gubu.web.js -s Gubu -im -p tinyify",
+    "version": "node -r fs -e \"v=require('./package.json').version;s=fs.readFileSync('./src/gubu.ts').toString();if(!s.includes('VERSION = \\''+v+'\\'')){s=s.replace(/VERSION = '.*?'/,'VERSION = \\''+v+'\\'');fs.writeFileSync('./src/gubu.ts',s)}\"",
+    "clean": "rm -rf node_modules yarn.lock package-lock.json dist",
     "reset": "npm run clean && npm i && npm run build && npm test",
     "repo-tag": "REPO_VERSION=`node -e \"console.log(require('./package').version)\"` && echo TAG: v$REPO_VERSION && git commit -a -m v$REPO_VERSION && git push && git tag v$REPO_VERSION && git push --tags;",
     "repo-publish": "npm run clean && npm i && npm run repo-publish-quick",
@@ -41,20 +41,19 @@ module.exports={
   },
   "license": "MIT",
   "engines": {
-    "node": ">=12"
+    "node": ">=14"
   },
   "files": [
     "*.js",
-    "*.map",
-    "*.ts",
+    "dist",
     "LICENSE",
     "README.md"
   ],
   "devDependencies": {
-    "@types/jest": "^29.5.5",
+    "@types/jest": "^29.5.6",
     "browserify": "^17.0.0",
     "es-jest": "^2.1.0",
-    "esbuild": "^0.19.4",
+    "esbuild": "^0.19.5",
     "esbuild-jest": "^0.5.0",
     "jest": "^29.7.0",
     "tinyify": "^4.0.0",
@@ -69,7 +68,7 @@ module.exports={
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Bar = exports.Foo = void 0;
 // Handle web (Gubu) versus node ({Gubu}) export.
-let GubuModule = require('../gubu');
+let GubuModule = require('../');
 if (GubuModule.Gubu) {
     GubuModule = GubuModule.Gubu;
 }
@@ -97,12 +96,12 @@ describe('builder', () => {
     test('builder-required', () => {
         let g0 = Gubu({ a: Required({ x: 1 }) });
         expect(g0({ a: { x: 1 } })).toEqual({ a: { x: 1 } });
-        expect(() => g0({})).toThrow('Validation failed for property "a" with value "" because the value is required.');
-        expect(() => g0()).toThrow('Validation failed for property "a" with value "" because the value is required.');
+        expect(() => g0({})).toThrow('Validation failed for property "a" with value "undefined" because the value is required.');
+        expect(() => g0()).toThrow('Validation failed for property "a" with value "undefined" because the value is required.');
         let g1 = Gubu({ a: Required([1]) });
         expect(g1({ a: [11] })).toEqual({ a: [11] });
-        expect(() => g1({})).toThrow('Validation failed for property "a" with value "" because the value is required.');
-        expect(() => g1()).toThrow('Validation failed for property "a" with value "" because the value is required.');
+        expect(() => g1({})).toThrow('Validation failed for property "a" with value "undefined" because the value is required.');
+        expect(() => g1()).toThrow('Validation failed for property "a" with value "undefined" because the value is required.');
         let g2 = Gubu(Required(1));
         expect(g2(1)).toEqual(1);
         expect(g2(2)).toEqual(2);
@@ -185,15 +184,15 @@ describe('builder', () => {
     test('builder-check', () => {
         let g0 = Gubu(Check((v) => v === "x"));
         expect(g0('x')).toEqual('x');
-        expect(() => g0('y')).toThrow('Validation failed for value "y" because check "(v) => v === "x"" failed.');
-        expect(() => g0(1)).toThrow('Validation failed for value "1" because check "(v) => v === "x"" failed.');
-        expect(() => g0()).toThrow('Validation failed for value "" because the value is required.');
+        expect(() => g0('y')).toThrow('Validation failed for string "y" because check "(v) => v === "x"" failed.');
+        expect(() => g0(1)).toThrow('Validation failed for number "1" because check "(v) => v === "x"" failed.');
+        expect(() => g0()).toThrow('Validation failed for value "undefined" because the value is required.');
         expect(Gubu(Skip(g0))()).toEqual(undefined);
         let g1 = Gubu(Check(/a/));
         expect(g1('a')).toEqual('a');
         expect(g1('qaq')).toEqual('qaq');
-        expect(() => g1('q')).toThrow('Validation failed for value "q" because check "/a/" failed.');
-        expect(() => g1()).toThrow('Validation failed for value "" because the value is required.');
+        expect(() => g1('q')).toThrow('Validation failed for string "q" because check "/a/" failed.');
+        expect(() => g1()).toThrow('Validation failed for value "undefined" because the value is required.');
         let g3 = Gubu(Check('number'));
         expect(g3(1)).toEqual(1);
         expect(() => g3('a')).toThrow('number');
@@ -211,7 +210,7 @@ describe('builder', () => {
         expect(() => g5(null)).toThrow('check');
         let c0 = Gubu(Check((v) => v === 1));
         expect(c0(1)).toEqual(1);
-        expect(() => c0(2)).toThrow('Validation failed for value "2" because check "(v) => v === 1" failed.');
+        expect(() => c0(2)).toThrow('Validation failed for number "2" because check "(v) => v === 1" failed.');
         expect(() => c0('x')).toThrow('check');
         expect(() => c0()).toThrow('required');
         expect(c0.error(1)).toEqual([]);
@@ -219,7 +218,7 @@ describe('builder', () => {
         expect(c0.error()).toMatchObject([{ w: 'required' }]);
         let c0s = Gubu(Skip(c0));
         expect(c0s(1)).toEqual(1);
-        expect(() => c0s(2)).toThrow('Validation failed for value "2" because check "(v) => v === 1" failed.');
+        expect(() => c0s(2)).toThrow('Validation failed for number "2" because check "(v) => v === 1" failed.');
         expect(() => c0s('x')).toThrow('check');
         expect(c0s()).toEqual(undefined);
         expect(c0s.error(1)).toEqual([]);
@@ -228,7 +227,7 @@ describe('builder', () => {
         // FINISH
         // let c0d = Gubu(Default('foo', c0))
         // expect(c0d(1)).toEqual(1)
-        // expect(() => c0d(2)).toThrow('Validation failed for value "2" because check "(v) => v === 1" failed.')
+        // expect(() => c0d(2)).toThrow('Validation failed for number "2" because check "(v) => v === 1" failed.')
         // expect(() => c0d('x')).toThrow('check')
         // expect(c0d()).toEqual('foo')
         // expect(c0d.error(1)).toEqual([])
@@ -236,13 +235,13 @@ describe('builder', () => {
         // expect(c0d.error()).toEqual([])
         let c1 = Gubu(Check(/a/));
         expect(c1('qaq')).toEqual('qaq');
-        expect(() => c1('qbq')).toThrow('Validation failed for value "qbq" because check "/a/" failed.');
+        expect(() => c1('qbq')).toThrow('Validation failed for string "qbq" because check "/a/" failed.');
         expect(() => c1(1)).toThrow('check');
         expect(() => c1()).toThrow('required');
         // FINISH
         // let c1d = Gubu(Default('a', Check(/a/)))
         // expect(c1d('qaq')).toEqual('qaq')
-        // expect(() => c1d('qbq')).toThrow('Validation failed for value "qbq" because check "/a/" failed.')
+        // expect(() => c1d('qbq')).toThrow('Validation failed for string "qbq" because check "/a/" failed.')
         // expect(() => c1d(1)).toThrow('check')
         // expect(c1d()).toEqual('a')
         let v0 = Gubu(Check((v) => !!v, Number));
@@ -274,7 +273,7 @@ describe('builder', () => {
         expect(g0(1)).toEqual(1);
         expect(g0('x')).toEqual('x');
         expect(() => g0(true)).toThrow('Value "true" for property "" does not satisfy one of: Number, String');
-        expect(() => g0()).toThrow('Value "" for property "" does not satisfy one of: Number, String');
+        expect(() => g0()).toThrow('Value "undefined" for property "" does not satisfy one of: Number, String');
         let g0o = Gubu(Skip(One(Number, String)));
         expect(g0o(1)).toEqual(1);
         expect(g0o('x')).toEqual('x');
@@ -310,7 +309,7 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
         expect(g0({ a: 1 })).toEqual({ a: 1 });
         expect(g0({ a: 'x' })).toEqual({ a: 'x' });
         expect(() => g0({ a: true })).toThrow(`Value "true" for property "a" does not satisfy any of: Number, String`);
-        expect(() => g0({})).toThrow('Value "" for property "a" does not satisfy any of: Number, String');
+        expect(() => g0({})).toThrow('Value "undefined" for property "a" does not satisfy any of: Number, String');
         let g1 = Gubu(Some(Number, String));
         expect(g1(1)).toEqual(1);
         expect(g1('x')).toEqual('x');
@@ -341,7 +340,7 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
         expect(g0({ x: 11, y: 'aa' })).toEqual({ x: 11, y: 'aa' });
         expect(g0({})).toEqual({ x: 1, y: 'a' });
         expect(() => g0({ x: 'b', y: 'a' })).toThrow(`Value "{x:b,y:a}" for property "" does not satisfy all of: {"x":1}, {"y":"a"}`);
-        expect(() => g0()).toThrow('Validation failed for value "" because the value is required.');
+        expect(() => g0()).toThrow('Validation failed for value "undefined" because the value is required.');
         let g0s = Gubu(All(Open({ x: 1 }), Open({ y: 'a' })).Skip());
         expect(g0s({ x: 11, y: 'aa' })).toEqual({ x: 11, y: 'aa' });
         expect(g0s({})).toEqual({ x: 1, y: 'a' });
@@ -506,9 +505,9 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
     });
     test('builder-never', () => {
         let g0 = Gubu(Never());
-        expect(() => g0(1)).toThrow('Validation failed for value "1" because no value is allowed.');
+        expect(() => g0(1)).toThrow('Validation failed for number "1" because no value is allowed.');
         let g1 = Gubu({ a: Never() });
-        expect(() => g1({ a: 'x' })).toThrow('Validation failed for property "a" with value "x" because no value is allowed.');
+        expect(() => g1({ a: 'x' })).toThrow('Validation failed for property "a" with string "x" because no value is allowed.');
     });
     test('builder-rename', () => {
         let g0 = Gubu({ a: Rename('b', { x: 1 }) });
@@ -697,16 +696,17 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
         expect(() => a1([1])).toThrow('required');
         expect(a1([1, 'x'])).toMatchObject([1, 'x']);
         expect(() => a1([1, 'x', 'y'])).toThrow('not allowed');
-        expect(() => a1(['x', 'y'])).toThrow('Validation failed for index "0" with value "x" because the value is not of type number.');
-        expect(() => a1([1, 2])).toThrow('Validation failed for index "1" with value "2" because the value is not of type string.');
+        expect(() => a1(['x', 'y'])).toThrow('Validation failed for index "0" with string "x" because the string is not of type number.');
+        expect(() => a1([1, 2])).toThrow('Validation failed for index "1" with number "2" because the number is not of type string.');
         let a2 = Gubu([9, String]);
         expect(() => a2()).toThrow('required');
         expect(() => a2([])).toThrow('required');
         expect(() => a2([1])).toThrow('required');
         expect(a2([1, 'x'])).toMatchObject([1, 'x']);
         expect(() => a2([1, 'x', 'y'])).toThrow('not allowed');
-        expect(() => a2(['x', 1])).toThrow('Validation failed for index "1" with value "1" because the value is not of type string.');
-        expect(() => a2(['x', 'y'])).toThrow('Validation failed for index "0" with value "x" because the value is not of type number.');
+        expect(() => a2(['x', 1])).toThrow(`Validation failed for index "0" with string "x" because the string is not of type number.
+Validation failed for index "1" with number "1" because the number is not of type string.`);
+        expect(() => a2(['x', 'y'])).toThrow('Validation failed for index "0" with string "x" because the string is not of type number.');
         let a3 = Gubu([1, 2, 3]);
         expect(a3()).toEqual([1, 2, 3]);
         expect(a3([])).toEqual([1, 2, 3]);
@@ -761,7 +761,7 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
         expect(g0({ a: { x: 33 }, b: { x: 44 }, c: { x: 55 } }))
             .toEqual({ a: { x: 33 }, b: { x: 44 }, c: { x: 55 } });
         expect(() => g0({ a: { x: 33 }, b: { x: 'X' } }))
-            .toThrow('Validation failed for property "b.x" with value "X" because the value is not of type number.');
+            .toThrow('Validation failed for property "b.x" with string "X" because the string is not of type number.');
         let g1 = Gubu({
             a: Define('A', { x: 1 }),
             b: Refer('A'),
@@ -832,7 +832,7 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
                     }
                 }
             }
-        })).toThrow('Validation failed for property "a.b.a.b.c" with value "C" because the value is not of type number.');
+        })).toThrow('Validation failed for property "a.b.a.b.c" with string "C" because the string is not of type number.');
         expect(g0({
             a: {
                 b: {
@@ -931,7 +931,7 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
         expect(() => g0({ c: 'barx' }))
             .toThrow(`Value "barx" for property "c" must be a maximum length of 3 (was 4).`);
         expect(() => g0({ c: '' }))
-            .toThrow(`Validation failed for property "c" with value "" because an empty string is not allowed.`);
+            .toThrow(`Validation failed for property "c" with string "" because an empty string is not allowed.`);
         expect(g0({ d: [4, 3, 2, 1, 0, -1] })).toMatchObject({ d: [4, 3, 2, 1, 0, -1] });
         expect(g0({ d: [] })).toMatchObject({ d: [] });
         expect(() => g0({ d: [4, 5] }))
@@ -1015,7 +1015,7 @@ Value "3" for property "d.3" must be above 4 (was 3).`);
         expect(() => g0({ c: 'barx' }))
             .toThrow(`Value "barx" for property "c" must have length below 3 (was 4).`);
         expect(() => g0({ c: '' }))
-            .toThrow(`Validation failed for property "c" with value "" because an empty string is not allowed.`);
+            .toThrow(`Validation failed for property "c" with string "" because an empty string is not allowed.`);
         expect(g0({ d: [3, 2, 1, 0, -1] })).toMatchObject({ d: [3, 2, 1, 0, -1] });
         expect(g0({ d: [] })).toMatchObject({ d: [] });
         expect(() => g0({ d: [4, 5] }))
@@ -1110,16 +1110,16 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         expect(() => g1({ a: 'x' })).toThrow('type');
         expect(g1({ a: 2, b: 'x' })).toMatchObject({ a: 2, b: 'x' });
         expect(g1({ a: 2, b: 'x', c: 'y' })).toMatchObject({ a: 2, b: 'x', c: 'y' });
-        expect(() => g1({ a: 2, b: 3 })).toThrow('Validation failed for property "b" with value "3" because the value is not of type string.');
-        expect(() => g1({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for property "c" with value "4" because the value is not of type string.');
-        expect(() => g1({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "true" because the value is not of type number.');
-        expect(() => g1({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "z" because the value is not of type number.');
+        expect(() => g1({ a: 2, b: 3 })).toThrow('Validation failed for property "b" with number "3" because the number is not of type string.');
+        expect(() => g1({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for property "c" with number "4" because the number is not of type string.');
+        expect(() => g1({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with boolean "true" because the boolean is not of type number.');
+        expect(() => g1({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with string "z" because the string is not of type number.');
         let g2 = Gubu({ a: Required({ b: 1 }).Child({ x: String }) });
         expect(g2({ a: { b: 2, c: { x: 'x' } } }))
             .toMatchObject({ a: { b: 2, c: { x: 'x' } } });
         expect(g2({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } }))
             .toMatchObject({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } });
-        expect(() => g2({ a: { b: 2, c: 3 } })).toThrow('Validation failed for property "a.c" with value "3" because the value is not of type object.');
+        expect(() => g2({ a: { b: 2, c: 3 } })).toThrow('Validation failed for property "a.c" with number "3" because the number is not of type object.');
     });
     /*
     test('builder-value', () => {
@@ -1129,10 +1129,10 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
       expect(() => g0({ a: 'x' })).toThrow('type')
       expect(g0({ a: 2, b: 'x' })).toMatchObject({ a: 2, b: 'x' })
       expect(g0({ a: 2, b: 'x', c: 'y' })).toMatchObject({ a: 2, b: 'x', c: 'y' })
-      expect(() => g0({ a: 2, b: 3 })).toThrow('Validation failed for property "b" with value "3" because the value is not of type string.')
-      expect(() => g0({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for property "c" with value "4" because the value is not of type string.')
+      expect(() => g0({ a: 2, b: 3 })).toThrow('Validation failed for property "b" with number "3" because the number is not of type string.')
+      expect(() => g0({ a: 2, b: 'x', c: 4 })).toThrow('Validation failed for property "c" with number "4" because the number is not of type string.')
     
-      expect(() => g0({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "true" because the value is not of type number.')
+      expect(() => g0({ a: true, b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with boolean "true" because the boolean is not of type number.')
     
       expect(() => g0({ a: 'z', b: 'x', c: 'y' })).toThrow('Validation failed for property "a" with value "z" because the value is not of type number.')
     
@@ -1141,7 +1141,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         .toMatchObject({ a: { b: 2, c: { x: 'x' } } })
       expect(g1({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } }))
         .toMatchObject({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } })
-      expect(() => g1({ a: { b: 2, c: 3 } })).toThrow('Validation failed for property "a.c" with value "3" because the value is not of type object.')
+      expect(() => g1({ a: { b: 2, c: 3 } })).toThrow('Validation failed for property "a.c" with number "3" because the number is not of type object.')
     })
     */
     test('builder-void', () => {
@@ -1245,7 +1245,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
     });
 });
 
-},{"../gubu":1}],4:[function(require,module,exports){
+},{"../":1}],4:[function(require,module,exports){
 // Run: npm run test-web
 
 // A quick and dirty abomination to partially run the unit tests inside an
@@ -1358,7 +1358,7 @@ const package_json_1 = __importDefault(require("../package.json"));
 const Large = require('./large');
 const Long = require('./long');
 // Handle web (Gubu) versus node ({Gubu}) export.
-let GubuModule = require('../gubu');
+let GubuModule = require('../');
 if (GubuModule.Gubu) {
     GubuModule = GubuModule.Gubu;
 }
@@ -1453,7 +1453,7 @@ describe('gubu', () => {
         expect(shape(data).x).toEqual(2);
         expect(shape(data).y).toEqual('Y');
         // CONSOLE-LOG(data.q) // UNCOMMENT TO VERIFY COMPILE FAILS
-        let g3 = Gubu({ ...new Foo(1) });
+        let g3 = Gubu(Object.assign({}, new Foo(1)));
         // let d3 = { a: 11, x: true }
         let d3 = { a: 11 };
         if (g3.valid(d3)) {
@@ -1479,7 +1479,7 @@ describe('gubu', () => {
         // Object shape is also good. Prints `{ a: 1, b: 'foo' }`
         expect(shape({ b: 'foo' })).toEqual({ a: 1, b: 'foo' });
         // Object shape is bad. Throws an exception:
-        expect(() => shape({ a: 'BAD' })).toThrow('Validation failed for property "a" with value "BAD" because the value is not of type number.\nValidation failed for property "b" with value "" because the value is required.');
+        expect(() => shape({ a: 'BAD' })).toThrow('Validation failed for property "a" with string "BAD" because the string is not of type number.\nValidation failed for property "b" with value "undefined" because the value is required.');
         // Object shape is bad. Throws an exception:
         expect(() => shape({ b: 'foo', c: true })).toThrow('Validation failed for object "{b:foo,c:true}" because the property "c" is not allowed.');
     });
@@ -1546,7 +1546,7 @@ describe('gubu', () => {
                 age: Number,
             })
         });
-        expect(() => userShape({})).toThrow('Validation failed for property "person" with value "" because the value is required.');
+        expect(() => userShape({})).toThrow('Validation failed for property "person" with value "undefined" because the value is required.');
         expect(userShape({
             person: {
                 name: 'Alice',
@@ -1589,9 +1589,9 @@ describe('gubu', () => {
     test('readme-regexp', () => {
         let shape = Gubu({ countryCode: Check(/^[A-Z][A-Z]$/) });
         expect(shape({ countryCode: 'IE' })).toEqual({ countryCode: 'IE' });
-        expect(() => shape({ countryCode: 'BAD' })).toThrow('Validation failed for property "countryCode" with value "BAD" because check "/^[A-Z][A-Z]$/" failed.');
-        expect(() => shape({})).toThrow('Validation failed for property "countryCode" with value "" because the value is required.');
-        expect(() => shape({ countryCode: 123 })).toThrow('Validation failed for property "countryCode" with value "123" because check "/^[A-Z][A-Z]$/" failed.');
+        expect(() => shape({ countryCode: 'BAD' })).toThrow('Validation failed for property "countryCode" with string "BAD" because check "/^[A-Z][A-Z]$/" failed.');
+        expect(() => shape({})).toThrow('Validation failed for property "countryCode" with value "undefined" because the value is required.');
+        expect(() => shape({ countryCode: 123 })).toThrow('Validation failed for property "countryCode" with number "123" because check "/^[A-Z][A-Z]$/" failed.');
     });
     test('readme-recursive', () => {
         let tree = Gubu({
@@ -1653,13 +1653,13 @@ describe('gubu', () => {
                     },
                 },
             }
-        })).toThrow('Validation failed for property "root.left.left.left.value" with value "123" because the value is not of type string');
+        })).toThrow('Validation failed for property "root.left.left.left.value" with number "123" because the number is not of type string');
     });
     test('scalar-optional-basic', () => {
         let g0 = Gubu(1);
         expect(g0(2)).toEqual(2);
         expect(g0()).toEqual(1);
-        expect(() => g0('x')).toThrow('Validation failed for value "x" because the value is not of type number.');
+        expect(() => g0('x')).toThrow('Validation failed for string "x" because the string is not of type number.');
     });
     test('object-optional-basic', () => {
         let g0 = Gubu(Open({ x: 1 }));
@@ -1667,8 +1667,8 @@ describe('gubu', () => {
         expect(g0({ x: 2 })).toEqual({ x: 2 });
         expect(g0({})).toEqual({ x: 1 });
         expect(g0()).toEqual({ x: 1 });
-        expect(() => g0('s')).toThrow('Validation failed for value "s" because the value is not of type object.');
-        expect(() => g0({ x: 't' })).toThrow('Validation failed for property "x" with value "t" because the value is not of type number.');
+        expect(() => g0('s')).toThrow('Validation failed for string "s" because the string is not of type object.');
+        expect(() => g0({ x: 't' })).toThrow('Validation failed for property "x" with string "t" because the string is not of type number.');
     });
     test('array-basic-optional', () => {
         let g0 = Gubu([1]);
@@ -1677,19 +1677,19 @@ describe('gubu', () => {
         expect(g0([11])).toEqual([11]);
         expect(g0([])).toEqual([]);
         expect(g0()).toEqual([]);
-        expect(() => g0('s')).toThrow('Validation failed for value "s" because the value is not of type array.');
-        expect(() => g0(['t'])).toThrow('Validation failed for index "0" with value "t" because the value is not of type number.');
-        expect(() => g0(['t', 22])).toThrow('Validation failed for index "0" with value "t" because the value is not of type number.');
-        expect(() => g0(['t', 33])).toThrow('Validation failed for index "0" with value "t" because the value is not of type number.');
-        expect(() => g0([11, 't'])).toThrow('Validation failed for index "1" with value "t" because the value is not of type number.');
-        expect(() => g0([11, 22, 't'])).toThrow('Validation failed for index "2" with value "t" because the value is not of type number.');
+        expect(() => g0('s')).toThrow('Validation failed for string "s" because the string is not of type array.');
+        expect(() => g0(['t'])).toThrow('Validation failed for index "0" with string "t" because the string is not of type number.');
+        expect(() => g0(['t', 22])).toThrow('Validation failed for index "0" with string "t" because the string is not of type number.');
+        expect(() => g0(['t', 33])).toThrow('Validation failed for index "0" with string "t" because the string is not of type number.');
+        expect(() => g0([11, 't'])).toThrow('Validation failed for index "1" with string "t" because the string is not of type number.');
+        expect(() => g0([11, 22, 't'])).toThrow('Validation failed for index "2" with string "t" because the string is not of type number.');
         let g1 = Gubu([]);
         expect(g1([11, 22, 33])).toEqual([11, 22, 33]);
         expect(g1([11, 22])).toEqual([11, 22]);
         expect(g1([11])).toEqual([11]);
         expect(g1([])).toEqual([]);
         expect(g1()).toEqual([]);
-        expect(() => g1('s')).toThrow('Validation failed for value "s" because the value is not of type array.');
+        expect(() => g1('s')).toThrow('Validation failed for string "s" because the string is not of type array.');
         expect(g1(['t'])).toEqual(['t']);
         expect(g1(['t', 22])).toEqual(['t', 22]);
         expect(g1(['t', 33])).toEqual(['t', 33]);
@@ -1736,7 +1736,7 @@ describe('gubu', () => {
         expect(g1([11])).toEqual([11]);
         expect(g1([])).toEqual([]);
         expect(() => g1()).toThrow('required');
-        expect(() => g1('s')).toThrow('Validation failed for value "s" because the value is not of type array.');
+        expect(() => g1('s')).toThrow('Validation failed for string "s" because the string is not of type array.');
         expect(g1(['t'])).toEqual(['t']);
         expect(g1(['t', 22])).toEqual(['t', 22]);
         expect(g1(['t', 33])).toEqual(['t', 33]);
@@ -1748,7 +1748,7 @@ describe('gubu', () => {
         expect(g2([11])).toEqual([11]);
         expect(g2([])).toEqual([]);
         expect(() => g2()).toThrow('required');
-        expect(() => g2('s')).toThrow('Validation failed for value "s" because the value is not of type array.');
+        expect(() => g2('s')).toThrow('Validation failed for string "s" because the string is not of type array.');
         expect(g2(['t'])).toEqual(['t']);
         expect(g2(['t', 22])).toEqual(['t', 22]);
         expect(g2(['t', 33])).toEqual(['t', 33]);
@@ -1787,7 +1787,7 @@ describe('gubu', () => {
     test('error-basic', () => {
         let g0 = Gubu(Number);
         expect(g0(1)).toEqual(1);
-        expect(() => g0('x')).toThrow('Validation failed for value "x" because the value is not of type number.');
+        expect(() => g0('x')).toThrow('Validation failed for string "x" because the string is not of type number.');
         let ctx0 = { err: [] };
         g0('x', ctx0);
         expect(ctx0).toMatchObject({
@@ -1798,7 +1798,7 @@ describe('gubu', () => {
                     p: '',
                     w: 'type',
                     m: 1050,
-                    t: 'Validation failed for value "x" because the value is not of type number.',
+                    t: 'Validation failed for string "x" because the string is not of type number.',
                     u: {},
                 }
             ]
@@ -1807,7 +1807,7 @@ describe('gubu', () => {
             g0('x');
         }
         catch (e) {
-            expect(e.message).toEqual('Validation failed for value "x" because the value is not of type number.');
+            expect(e.message).toEqual('Validation failed for string "x" because the string is not of type number.');
             expect(e).toMatchObject({
                 gubu: true,
                 code: 'shape',
@@ -1823,7 +1823,7 @@ describe('gubu', () => {
                         p: '',
                         w: 'type',
                         m: 1050,
-                        t: 'Validation failed for value "x" because the value is not of type number.',
+                        t: 'Validation failed for string "x" because the string is not of type number.',
                         u: {},
                     }
                 ],
@@ -1842,7 +1842,7 @@ describe('gubu', () => {
                     p: 'q.a',
                     w: 'type',
                     m: 1050,
-                    t: 'Validation failed for property "q.a" with value "1" because the value is not of type string.',
+                    t: 'Validation failed for property "q.a" with number "1" because the number is not of type string.',
                     u: {},
                 },
                 {
@@ -1852,7 +1852,7 @@ describe('gubu', () => {
                     p: 'q.b',
                     w: 'type',
                     m: 1050,
-                    t: 'Validation failed for property "q.b" with value "x" because the value is not of type number.',
+                    t: 'Validation failed for property "q.b" with string "x" because the string is not of type number.',
                     u: {},
                 }
             ]
@@ -1861,8 +1861,8 @@ describe('gubu', () => {
             g1({ q: { a: 1, b: 'x' } });
         }
         catch (e) {
-            expect(e.message).toEqual(`Validation failed for property "q.a" with value "1" because the value is not of type string.
-Validation failed for property "q.b" with value "x" because the value is not of type number.`);
+            expect(e.message).toEqual(`Validation failed for property "q.a" with number "1" because the number is not of type string.
+Validation failed for property "q.b" with string "x" because the string is not of type number.`);
             expect(e).toMatchObject({
                 gubu: true,
                 code: 'shape',
@@ -1878,7 +1878,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
                         p: 'q.a',
                         w: 'type',
                         m: 1050,
-                        t: 'Validation failed for property "q.a" with value "1" because the value is not of type string.',
+                        t: 'Validation failed for property "q.a" with number "1" because the number is not of type string.',
                         u: {},
                     },
                     {
@@ -1888,7 +1888,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
                         p: 'q.b',
                         w: 'type',
                         m: 1050,
-                        t: 'Validation failed for property "q.b" with value "x" because the value is not of type number.',
+                        t: 'Validation failed for property "q.b" with string "x" because the string is not of type number.',
                         u: {},
                     }
                 ],
@@ -1930,7 +1930,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(Gubu(new Bar(6))(tmp.c2 = new Bar(7))).toEqual(tmp.c2);
         expect(Gubu(G$({ v: () => null }))(tmp.f1 = () => false)).toEqual(tmp.f1);
         expect(Gubu(null)(null)).toEqual(null);
-        expect(() => Gubu(null)(1)).toThrow('Validation failed for value "1" because the value is not of type null.');
+        expect(() => Gubu(null)(1)).toThrow('Validation failed for number "1" because the number is not of type null.');
         expect(Gubu(Check((_v, u) => (u.val = 1, true)))(null)).toEqual(1);
         expect(() => Gubu(String)(1)).toThrow(/not of type string/);
         expect(() => Gubu(Number)('x')).toThrow(/not of type number/);
@@ -1999,7 +1999,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         let string0 = Gubu(String);
         expect(string0('x')).toEqual('x');
         expect(string0('xy')).toEqual('xy');
-        expect(() => string0('')).toThrow(/Validation failed for value "" because an empty string is not allowed./);
+        expect(() => string0('')).toThrow(/Validation failed for string "" because an empty string is not allowed./);
         expect(() => string0(1)).toThrow(/not of type string/);
         expect(() => string0(true)).toThrow(/not of type string/);
         expect(() => string0(BigInt(11))).toThrow(/not of type string/);
@@ -2121,14 +2121,14 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(g1v({ x: 11 })).toEqual({ x: 11 });
         expect(g1v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 });
         expect(g1v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 });
-        expect(() => g1v({ x: 11, y: true })).toThrow('Validation failed for property "y" with value "true" because the value is not of type number.');
+        expect(() => g1v({ x: 11, y: true })).toThrow('Validation failed for property "y" with boolean "true" because the boolean is not of type number.');
         let g2v = Gubu(Child(Number, { x: 1, y: 2 }));
         expect(g2v()).toEqual({ x: 1, y: 2 });
         expect(g2v({})).toEqual({ x: 1, y: 2 });
         expect(g2v({ x: 11 })).toEqual({ x: 11, y: 2 });
         expect(g2v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 });
         expect(g2v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 });
-        expect(() => g2v({ x: 11, y: 22, z: true })).toThrow('Validation failed for property "z" with value "true" because the value is not of type number.');
+        expect(() => g2v({ x: 11, y: 22, z: true })).toThrow('Validation failed for property "z" with boolean "true" because the boolean is not of type number.');
         let g3v = Gubu(Child(Number, { x: 1, y: 2, z: 3 }));
         expect(g3v()).toEqual({ x: 1, y: 2, z: 3 });
         expect(g3v({})).toEqual({ x: 1, y: 2, z: 3 });
@@ -2137,7 +2137,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(g3v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 });
         expect(g3v({ x: 11, y: 22, z: 33, k: 44 }))
             .toEqual({ x: 11, y: 22, z: 33, k: 44 });
-        expect(() => g3v({ x: 11, y: 22, z: 33, k: true })).toThrow('Validation failed for property "k" with value "true" because the value is not of type number.');
+        expect(() => g3v({ x: 11, y: 22, z: 33, k: true })).toThrow('Validation failed for property "k" with boolean "true" because the boolean is not of type number.');
         /*
         let g1v = Gubu(Value(Number, { x: 1 }))
         expect(g1v()).toEqual({ x: 1 })
@@ -2145,7 +2145,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(g1v({ x: 11 })).toEqual({ x: 11 })
         expect(g1v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 })
         expect(g1v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 })
-        expect(() => g1v({ x: 11, y: true })).toThrow('Validation failed for property "y" with value "true" because the value is not of type number.')
+        expect(() => g1v({ x: 11, y: true })).toThrow('Validation failed for property "y" with boolean "true" because the boolean is not of type number.')
     
         let g2v = Gubu(Value(Number, { x: 1, y: 2 }))
         expect(g2v()).toEqual({ x: 1, y: 2 })
@@ -2153,7 +2153,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(g2v({ x: 11 })).toEqual({ x: 11, y: 2 })
         expect(g2v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 })
         expect(g2v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 })
-        expect(() => g2v({ x: 11, y: 22, z: true })).toThrow('Validation failed for property "z" with value "true" because the value is not of type number.')
+        expect(() => g2v({ x: 11, y: 22, z: true })).toThrow('Validation failed for property "z" with boolean "true" because the boolean is not of type number.')
     
         let g3v = Gubu(Value(Number, { x: 1, y: 2, z: 3 }))
         expect(g3v()).toEqual({ x: 1, y: 2, z: 3 })
@@ -2163,7 +2163,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(g3v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 })
         expect(g3v({ x: 11, y: 22, z: 33, k: 44 }))
           .toEqual({ x: 11, y: 22, z: 33, k: 44 })
-        expect(() => g3v({ x: 11, y: 22, z: 33, k: true })).toThrow('Validation failed for property "k" with value "true" because the value is not of type number.')
+        expect(() => g3v({ x: 11, y: 22, z: 33, k: true })).toThrow('Validation failed for property "k" with boolean "true" because the boolean is not of type number.')
         */
         // Empty object is Open
         let g4 = Gubu({});
@@ -2205,7 +2205,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         // Empty strings only allowed by Empty() builder.
         const rs0 = Gubu(String);
         expect(rs0('x')).toEqual('x');
-        expect(() => rs0('')).toThrow('Validation failed for value "" because an empty string is not allowed.');
+        expect(() => rs0('')).toThrow('Validation failed for string "" because an empty string is not allowed.');
         const rs0e = Gubu(Empty(String));
         expect(rs0e('x')).toEqual('x');
         expect(rs0e('')).toEqual('');
@@ -2249,7 +2249,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(os1eO({ a: '' })).toEqual({ a: '' });
         expect(os1eO({ a: 'x' })).toEqual({ a: 'x' });
         // Long values are truncated in error descriptions.
-        expect(() => Gubu(Number)('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toThrow('Validation failed for value "aaaaaaaaaaaaaaaaaaaaaaaaaaa..." because the value is not of type number.');
+        expect(() => Gubu(Number)('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toThrow('Validation failed for string "aaaaaaaaaaaaaaaaaaaaaaaaaaa..." because the string is not of type number.');
         // Explicit `undefined` and `null`
         const u0 = Gubu({ a: undefined });
         expect(u0({ a: undefined })).toEqual({ a: undefined });
@@ -2316,8 +2316,8 @@ Validation failed for property "q.b" with value "x" because the value is not of 
                 alice: { name: 'Alice', age: 99 },
                 bob: { name: 'Bob' }
             }
-        })).toThrow('Validation failed for property "people.bob.age" with value "" because the value is required.');
-        expect(() => obj11({})).toThrow('Validation failed for property "people" with value "" because the value is required.');
+        })).toThrow('Validation failed for property "people.bob.age" with value "undefined" because the value is required.');
+        expect(() => obj11({})).toThrow('Validation failed for property "people" with value "undefined" because the value is required.');
         /*
         let obj11 = Gubu({
           people: Required({}).Value({ name: String, age: Number })
@@ -2340,8 +2340,8 @@ Validation failed for property "q.b" with value "x" because the value is not of 
             alice: { name: 'Alice', age: 99 },
             bob: { name: 'Bob' }
           }
-        })).toThrow('Validation failed for property "people.bob.age" with value "" because the value is required.')
-        expect(() => obj11({})).toThrow('Validation failed for property "people" with value "" because the value is required.')
+        })).toThrow('Validation failed for property "people.bob.age" with value "undefined" because the value is required.')
+        expect(() => obj11({})).toThrow('Validation failed for property "people" with value "undefined" because the value is required.')
         */
         let shape = Gubu({
             foo: Number,
@@ -2361,13 +2361,13 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         // Passes
         expect(strictShape({ a: { b: 'ABC' } })).toEqual({ a: { b: 'ABC' } });
         // Fails, even though a is not required, because a.b is required.
-        expect(() => strictShape({})).toThrow('Validation failed for property "a.b" with value "" because the value is required.');
+        expect(() => strictShape({})).toThrow('Validation failed for property "a.b" with value "undefined" because the value is required.');
         let easyShape = Gubu({ a: Skip({ b: String }) });
         // Now both pass
         expect(easyShape({ a: { b: 'ABC' } })).toEqual({ a: { b: 'ABC' } });
         expect(easyShape({})).toEqual({});
         // This still fails, as `a` is now defined, and needs `b`
-        expect(() => easyShape({ a: {} })).toThrow('Validation failed for property "a.b" with value "" because the value is required.');
+        expect(() => easyShape({ a: {} })).toThrow('Validation failed for property "a.b" with value "undefined" because the value is required.');
         const { Open } = Gubu;
         shape = Gubu(Open({
             a: 1
@@ -2494,7 +2494,7 @@ Validation failed for property "q.b" with value "x" because the value is not of 
     test('api-custom', () => {
         let shape = Gubu({ a: Check((v) => 10 < v) });
         expect(shape({ a: 11 })).toEqual({ a: 11 }); // passes, as 10 < 11 is true
-        expect(() => shape({ a: 9 })).toThrow('Validation failed for property "a" with value "9" because check "(v) => 10 < v" failed.'); // fails, as 10 < 9 is false
+        expect(() => shape({ a: 9 })).toThrow('Validation failed for property "a" with number "9" because check "(v) => 10 < v" failed.'); // fails, as 10 < 9 is false
         shape = Gubu({
             a: Check((value, update) => {
                 update.val = value * 2;
@@ -2591,21 +2591,21 @@ Validation failed for property "q.b" with value "x" because the value is not of 
         expect(shape_AboveB3()).toEqual(undefined);
         let shape_AfterB0 = Gubu(After((v) => v > 10, 15));
         expect(shape_AfterB0(11)).toEqual(11);
-        expect(() => shape_AfterB0(10)).toThrow('Validation failed for value "10" because check "(v) => v > 10" failed.');
-        expect(() => shape_AfterB0('x')).toThrow(`Validation failed for value "x" because the value is not of type number.
-Validation failed for value "x" because check "(v) => v > 10" failed.`);
+        expect(() => shape_AfterB0(10)).toThrow('Validation failed for number "10" because check "(v) => v > 10" failed.');
+        expect(() => shape_AfterB0('x')).toThrow(`Validation failed for string "x" because the string is not of type number.
+Validation failed for string "x" because check "(v) => v > 10" failed.`);
         expect(shape_AfterB0()).toEqual(15);
         let shape_AfterB1 = Gubu(Skip(Number).After((v) => v % 2 === 0));
         expect(shape_AfterB1(2)).toEqual(2);
-        expect(() => shape_AfterB1(3)).toThrow('Validation failed for value "3" because check "(v) => v % 2 === 0" failed.');
-        expect(() => shape_AfterB1('x')).toThrow('Validation failed for value "x" because check "(v) => v % 2 === 0" failed.');
+        expect(() => shape_AfterB1(3)).toThrow('Validation failed for number "3" because check "(v) => v % 2 === 0" failed.');
+        expect(() => shape_AfterB1('x')).toThrow('Validation failed for string "x" because check "(v) => v % 2 === 0" failed.');
         expect(shape_AfterB1()).toEqual(undefined);
         let shape_AfterB2 = Gubu(After((v) => v.x % 2 === 0, Required({ x: Number })));
         expect(shape_AfterB2({ x: 2 })).toEqual({ x: 2 });
         expect(() => shape_AfterB2({ x: 3 })).toThrow('Validation failed for object "{x:3}" because check "(v) => v.x % 2 === 0" failed.');
         expect(() => shape_AfterB2({})).toThrow(`Validation failed for object "{}" because check "(v) => v.x % 2 === 0" failed.
-Validation failed for property "x" with value "" because the value is required.`);
-        expect(() => shape_AfterB2()).toThrow(`Validation failed for value "" because the value is required.`);
+Validation failed for property "x" with value "undefined" because the value is required.`);
+        expect(() => shape_AfterB2()).toThrow(`Validation failed for value "undefined" because the value is required.`);
         // TODO: modify value
         let shape_AllB0 = Gubu(All(Number, Check((v) => v > 10)));
         expect(shape_AllB0(11)).toEqual(11);
@@ -2635,7 +2635,7 @@ Validation failed for property "x" with value "" because the value is required.`
         expect(shape_AnyB1()).toEqual({ x: 1 });
         let shape_BeforeB0 = Gubu(Before((v) => v > 10, 10));
         expect(shape_BeforeB0(11)).toEqual(11);
-        expect(() => shape_BeforeB0(10)).toThrow('Validation failed for value "10" because check "(v) => v > 10" failed.');
+        expect(() => shape_BeforeB0(10)).toThrow('Validation failed for number "10" because check "(v) => v > 10" failed.');
         // TODO: modify value
         let shape_BelowB0 = Gubu(Below(10));
         expect(shape_BelowB0(9)).toEqual(9);
@@ -2653,11 +2653,11 @@ Validation failed for property "x" with value "" because the value is required.`
         expect(() => shape_ClosedB0([1, 2])).toThrow('Validation failed for array "[1,2]" because the index "1" is not allowed.');
         let shape_DefineB0 = Gubu({ a: Define('foo', 11), b: Refer('foo') });
         expect(shape_DefineB0({ a: 10, b: 12 })).toEqual({ a: 10, b: 12 });
-        expect(() => shape_DefineB0({ a: 'A', b: 'B' })).toThrow(`Validation failed for property "a" with value "A" because the value is not of type number.
-Validation failed for property "b" with value "B" because the value is not of type number.`);
+        expect(() => shape_DefineB0({ a: 'A', b: 'B' })).toThrow(`Validation failed for property "a" with string "A" because the string is not of type number.
+Validation failed for property "b" with string "B" because the string is not of type number.`);
         let shape_EmptyB0 = Gubu({ a: Empty(String), b: String });
         expect(shape_EmptyB0({ a: '', b: 'ABC' })).toEqual({ a: '', b: 'ABC' });
-        expect(() => shape_EmptyB0({ a: '', b: '' })).toThrow('Validation failed for property "b" with value "" because an empty string is not allowed.');
+        expect(() => shape_EmptyB0({ a: '', b: '' })).toThrow('Validation failed for property "b" with string "" because an empty string is not allowed.');
         let shape_ExactB0 = Gubu(Exact(11, 12, true));
         expect(shape_ExactB0(11)).toEqual(11);
         expect(shape_ExactB0(12)).toEqual(12);
@@ -2673,8 +2673,8 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(shape_MinB0(12)).toEqual(12);
         expect(() => shape_MinB0(10)).toThrow('Value "10" for property "" must be a minimum of 11 (was 10).');
         let shape_NeverB0 = Gubu(Never());
-        expect(() => shape_NeverB0(10)).toThrow('Validation failed for value "10" because no value is allowed.');
-        expect(() => shape_NeverB0(true)).toThrow('Validation failed for value "true" because no value is allowed.');
+        expect(() => shape_NeverB0(10)).toThrow('Validation failed for number "10" because no value is allowed.');
+        expect(() => shape_NeverB0(true)).toThrow('Validation failed for boolean "true" because no value is allowed.');
         let shape_OneB0 = Gubu(One(Exact(10), Exact(11), Exact(true)));
         expect(shape_OneB0(10)).toEqual(10);
         expect(shape_OneB0(11)).toEqual(11);
@@ -2683,8 +2683,8 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(() => shape_OneB0(false)).toThrow('Value "false" for property "" does not satisfy one of: 10, 11, true');
         expect(() => shape_OneB0(null)).toThrow('Value "null" for property "" does not satisfy one of: 10, 11, true');
         expect(() => shape_OneB0(NaN)).toThrow('Value "NaN" for property "" does not satisfy one of: 10, 11, true');
-        expect(() => shape_OneB0(undefined)).toThrow('Value "" for property "" does not satisfy one of: 10, 11, true');
-        expect(() => shape_OneB0()).toThrow('Value "" for property "" does not satisfy one of: 10, 11, true');
+        expect(() => shape_OneB0(undefined)).toThrow('Value "undefined" for property "" does not satisfy one of: 10, 11, true');
+        expect(() => shape_OneB0()).toThrow('Value "undefined" for property "" does not satisfy one of: 10, 11, true');
         let shape_OneB1 = Gubu(One(Number, String));
         expect(shape_OneB1(123)).toEqual(123);
         expect(shape_OneB1('abc')).toEqual('abc');
@@ -2701,33 +2701,33 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(shape_ReferB0({ a: 10 })).toEqual({ a: 10, b: undefined });
         expect(shape_ReferB0({})).toEqual({ a: 11, b: undefined });
         expect(shape_ReferB0({ b: 12 })).toEqual({ a: 11, b: 12 });
-        expect(() => shape_ReferB0({ a: 'A', b: 'B' })).toThrow(`Validation failed for property "a" with value "A" because the value is not of type number.
-Validation failed for property "b" with value "B" because the value is not of type number.`);
+        expect(() => shape_ReferB0({ a: 'A', b: 'B' })).toThrow(`Validation failed for property "a" with string "A" because the string is not of type number.
+Validation failed for property "b" with string "B" because the string is not of type number.`);
         let shape_ReferB1 = Gubu({ a: Define('foo', 11), b: Refer({ name: 'foo', fill: true }) });
         expect(shape_ReferB1({ a: 10, b: 12 })).toEqual({ a: 10, b: 12 });
         expect(shape_ReferB1({ a: 10 })).toEqual({ a: 10, b: 11 });
         expect(shape_ReferB1({})).toEqual({ a: 11, b: 11 });
         expect(shape_ReferB1({ b: 12 })).toEqual({ a: 11, b: 12 });
-        expect(() => shape_ReferB1({ a: 'A', b: 'B' })).toThrow(`Validation failed for property "a" with value "A" because the value is not of type number.
-Validation failed for property "b" with value "B" because the value is not of type number.`);
+        expect(() => shape_ReferB1({ a: 'A', b: 'B' })).toThrow(`Validation failed for property "a" with string "A" because the string is not of type number.
+Validation failed for property "b" with string "B" because the string is not of type number.`);
         // TODO: also recursive
         let shape_RenameB0 = Gubu({ a: Rename('b', Number) });
         expect(shape_RenameB0({ a: 10 })).toEqual({ b: 10 });
-        expect(() => shape_RenameB0({})).toThrow('Validation failed for property "a" with value "" because the value is required.');
+        expect(() => shape_RenameB0({})).toThrow('Validation failed for property "a" with value "undefined" because the value is required.');
         let shape_RenameB1 = Gubu({ a: Rename({ name: 'b', keep: true }, 123) });
         expect(shape_RenameB1({ a: 10 })).toEqual({ a: 10, b: 10 });
         expect(shape_RenameB1({})).toEqual({ a: 123, b: 123 });
         let shape_RequiredB0 = Gubu(Required(11));
         expect(shape_RequiredB0(11)).toEqual(11);
-        expect(() => shape_RequiredB0()).toThrow('Validation failed for value "" because the value is required.');
+        expect(() => shape_RequiredB0()).toThrow('Validation failed for value "undefined" because the value is required.');
         let shape_RequiredB1 = Gubu(Open(Required({ x: 1 })));
         expect(shape_RequiredB1({ x: 2 })).toEqual({ x: 2 });
         expect(shape_RequiredB1({ x: 2, y: 3 })).toEqual({ x: 2, y: 3 });
-        expect(() => shape_RequiredB1()).toThrow('Validation failed for value "" because the value is required.');
+        expect(() => shape_RequiredB1()).toThrow('Validation failed for value "undefined" because the value is required.');
         let shape_RequiredB2 = Gubu(Open({ x: 1 }).Required());
         expect(shape_RequiredB2({ x: 2 })).toEqual({ x: 2 });
         expect(shape_RequiredB2({ x: 2, y: 3 })).toEqual({ x: 2, y: 3 });
-        expect(() => shape_RequiredB2()).toThrow('Validation failed for value "" because the value is required.');
+        expect(() => shape_RequiredB2()).toThrow('Validation failed for value "undefined" because the value is required.');
         // TODO: update docs - need better example where one prop differentiates
         let shape_SomeB0 = Gubu(Some({ x: 1 }, { y: 2 }));
         expect(shape_SomeB0({ x: 1 })).toEqual({ x: 1 });
@@ -2741,7 +2741,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
         let shape_ValueB0 = Gubu(Value(Number, {}))
         expect(shape_ValueB0({ x: 10 })).toEqual({ x: 10 })
         expect(shape_ValueB0({ x: 10, y: 11 })).toEqual({ x: 10, y: 11 })
-        expect(() => shape_ValueB0({ x: true })).toThrow('Validation failed for property "x" with value "true" because the value is not of type number.')
+        expect(() => shape_ValueB0({ x: true })).toThrow('Validation failed for property "x" with boolean "true" because the boolean is not of type number.')
     
         let shape_ValueB1 = Gubu({
           page: Value(
@@ -2844,8 +2844,8 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(g0(o0)).toMatchObject(o0);
         let e0 = Gubu({ s0: String, s1: 'x' });
         expect(e0({ s0: 'a' })).toMatchObject({ s0: 'a', s1: 'x' });
-        expect(() => e0({ s0: 1 })).toThrow(/Validation failed for property "s0" with value "1" because the value is not of type string\./);
-        expect(() => e0({ s1: 1 })).toThrow(/Validation failed for property "s0" with value "" because the value is required\.\nValidation failed for property "s1" with value "1" because the value is not of type string\./);
+        expect(() => e0({ s0: 1 })).toThrow(/Validation failed for property "s0" with number "1" because the number is not of type string\./);
+        expect(() => e0({ s1: 1 })).toThrow(/Validation failed for property "s0" with value "undefined" because the value is required\.\nValidation failed for property "s1" with number "1" because the number is not of type string\./);
     });
     test('type-native-optional', () => {
         let { Skip } = Gubu;
@@ -2869,13 +2869,13 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(g0({ a: ['X', 'Y'] })).toEqual({ a: ['X', 'Y'] });
         expect(g0({ a: ['X', 'Y', 'Z'] })).toEqual({ a: ['X', 'Y', 'Z'] });
         expect(() => g0({ a: [null] })).toThrow(/"a.0".*"null".*type string/);
-        expect(() => g0({ a: [''] })).toThrow('Validation failed for index "a.0" with value "" because an empty string is not allowed.');
+        expect(() => g0({ a: [''] })).toThrow('Validation failed for index "a.0" with string "" because an empty string is not allowed.');
         expect(() => g0({ a: [11] })).toThrow(/"a.0".*"11".*type string/);
         expect(() => g0({ a: ['X', 11] })).toThrow(/"a.1".*"11".*type string/);
         expect(() => g0({ a: ['X', 'Y', 11] })).toThrow(/"a.2".*"11".*type string/);
         expect(() => g0({ a: ['X', 'Y', 'Z', 11] })).toThrow(/"a.3".*"11".*type string/);
         expect(() => g0({ a: ['X', null] })).toThrow(/"a.1".*"null".*type string/);
-        expect(() => g0({ a: ['X', ''] })).toThrow('Validation failed for index "a.1" with value "" because an empty string is not allowed.');
+        expect(() => g0({ a: ['X', ''] })).toThrow('Validation failed for index "a.1" with string "" because an empty string is not allowed.');
         expect(() => g0({ a: [11, 'K'] })).toThrow(/"a.0".*"11".*string/);
         expect(() => g0({ a: ['X', 11, 'K'] })).toThrow(/"a.1".*"11".*string/);
         expect(() => g0({ a: ['X', 'Y', 11, 'K'] })).toThrow(/"a.2".*"11".*string/);
@@ -2885,7 +2885,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
         // Zero or more elements of shape.
         let g1 = Gubu([String]);
         expect(g1(['X', 'Y'])).toEqual(['X', 'Y']);
-        expect(() => g1(['X', 1])).toThrow(/Validation failed for index "1" with value "1" because the value is not of type string\./);
+        expect(() => g1(['X', 1])).toThrow(/Validation failed for index "1" with number "1" because the number is not of type string\./);
         // Empty array means any element
         let g2 = Gubu([]);
         expect(g2()).toEqual([]);
@@ -2909,9 +2909,9 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(g4([1])).toEqual([1]);
         expect(g4([1, 2])).toEqual([1, 2]);
         expect(g4([1, 2, 3])).toEqual([1, 2, 3]);
-        expect(() => g4(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.');
-        expect(() => g4([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.');
-        expect(() => g4([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.');
+        expect(() => g4(['a'])).toThrow('Validation failed for index "0" with string "a" because the string is not of type number.');
+        expect(() => g4([1, 'a'])).toThrow('Validation failed for index "1" with string "a" because the string is not of type number.');
+        expect(() => g4([1, 2, 'a'])).toThrow('Validation failed for index "2" with string "a" because the string is not of type number.');
         /*
         let g4v = Gubu(Value(Number, []))
         expect(g4v()).toEqual([])
@@ -2919,9 +2919,9 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(g4v([1])).toEqual([1])
         expect(g4v([1, 2])).toEqual([1, 2])
         expect(g4v([1, 2, 3])).toEqual([1, 2, 3])
-        expect(() => g4v(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.')
-        expect(() => g4v([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.')
-        expect(() => g4v([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.')
+        expect(() => g4v(['a'])).toThrow('Validation failed for index "0" with string "a" because the string is not of type number.')
+        expect(() => g4v([1, 'a'])).toThrow('Validation failed for index "1" with string "a" because the string is not of type number.')
+        expect(() => g4v([1, 2, 'a'])).toThrow('Validation failed for index "2" with string "a" because the string is not of type number.')
     
         // Value overrides single element
     
@@ -2931,17 +2931,17 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(g4vo([1])).toEqual([1])
         expect(g4vo([1, 2])).toEqual([1, 2])
         expect(g4vo([1, 2, 3])).toEqual([1, 2, 3])
-        expect(() => g4vo(['a'])).toThrow('Validation failed for index "0" with value "a" because the value is not of type number.')
-        expect(() => g4vo([1, 'a'])).toThrow('Validation failed for index "1" with value "a" because the value is not of type number.')
-        expect(() => g4vo([1, 2, 'a'])).toThrow('Validation failed for index "2" with value "a" because the value is not of type number.')
+        expect(() => g4vo(['a'])).toThrow('Validation failed for index "0" with string "a" because the string is not of type number.')
+        expect(() => g4vo([1, 'a'])).toThrow('Validation failed for index "1" with string "a" because the string is not of type number.')
+        expect(() => g4vo([1, 2, 'a'])).toThrow('Validation failed for index "2" with string "a" because the string is not of type number.')
         */
         // NOTE: array without spec can hold anything.
         let g6 = Gubu([]);
         expect(g6([null, 1, 'x', true])).toEqual([null, 1, 'x', true]);
         let g7 = Gubu([Never()]);
         expect(g7([])).toEqual([]);
-        expect(() => g7([1])).toThrow('Validation failed for index "0" with value "1" because no value is allowed.');
-        expect(() => g7(new Array(1))).toThrow('Validation failed for index "0" with value "" because no value is allowed.');
+        expect(() => g7([1])).toThrow('Validation failed for index "0" with number "1" because no value is allowed.');
+        expect(() => g7(new Array(1))).toThrow('Validation failed for index "0" with value "undefined" because no value is allowed.');
         let g8 = Gubu([1]);
         expect(g8(new Array(3))).toEqual([1, 1, 1]);
         let a0 = [11, 22, 33];
@@ -2971,8 +2971,8 @@ Validation failed for property "b" with value "B" because the value is not of ty
         let g2 = Gubu([{ x: 1 }, { y: true }]);
         expect(g2([{ x: 2 }, { y: false }])).toEqual([{ x: 2 }, { y: false }]);
         expect(() => g2([{ x: 2 }, { y: false }, 'Q'])).toThrow('Validation failed for array "[{x:2},{y:false},Q]" because the index "2" is not allowed.');
-        expect(() => g2([{ x: 'X' }, { y: false }])).toThrow('Validation failed for property "0.x" with value "X" because the value is not of type number.');
-        expect(() => g2(['Q', { y: false }])).toThrow('Validation failed for index "0" with value "Q" because the value is not of type object.');
+        expect(() => g2([{ x: 'X' }, { y: false }])).toThrow('Validation failed for property "0.x" with string "X" because the string is not of type number.');
+        expect(() => g2(['Q', { y: false }])).toThrow('Validation failed for index "0" with string "Q" because the string is not of type object.');
         expect(g2([{ x: 2 }])).toEqual([{ x: 2 }, { y: true }]);
         expect(g2([{ x: 2 }, undefined])).toEqual([{ x: 2 }, { y: true }]);
         expect(g2([undefined, { y: false }])).toEqual([{ x: 1 }, { y: false }]);
@@ -3024,24 +3024,24 @@ Validation failed for property "b" with value "B" because the value is not of ty
     test('check-basic', () => {
         let g0 = Gubu({ a: Check((v) => v > 10) });
         expect(g0({ a: 11 })).toMatchObject({ a: 11 });
-        expect(() => g0({ a: 9 })).toThrow('Validation failed for property "a" with value "9" because check "(v) => v > 10" failed.');
+        expect(() => g0({ a: 9 })).toThrow('Validation failed for property "a" with number "9" because check "(v) => v > 10" failed.');
     });
     test('custom-basic', () => {
         let g0 = Gubu({ a: Check((v) => v > 10) });
         expect(g0({ a: 11 })).toMatchObject({ a: 11 });
-        expect(() => g0({ a: 9 })).toThrow('Validation failed for property "a" with value "9" because check "(v) => v > 10" failed.');
+        expect(() => g0({ a: 9 })).toThrow('Validation failed for property "a" with number "9" because check "(v) => v > 10" failed.');
         let g1 = Gubu({ a: Skip(Check((v) => v > 10)) });
         expect(g1({ a: 11 })).toMatchObject({ a: 11 });
-        expect(() => g1({ a: 9 })).toThrow('Validation failed for property "a" with value "9" because check "(v) => v > 10" failed.');
+        expect(() => g1({ a: 9 })).toThrow('Validation failed for property "a" with number "9" because check "(v) => v > 10" failed.');
         expect(g1({})).toMatchObject({});
         let g2 = Gubu({ a: Required(Check((v) => v > 10)) });
         expect(g1({ a: 11 })).toMatchObject({ a: 11 });
-        expect(() => g2({ a: 9 })).toThrow('Validation failed for property "a" with value "9" because check "(v) => v > 10" failed.');
+        expect(() => g2({ a: 9 })).toThrow('Validation failed for property "a" with number "9" because check "(v) => v > 10" failed.');
         expect(() => g2({}))
-            .toThrow('Validation failed for property "a" with value "" because the value is required.');
+            .toThrow('Validation failed for property "a" with value "undefined" because the value is required.');
         let g3 = Gubu(Check((v) => v > 10));
         expect(g3(11)).toEqual(11);
-        expect(() => g3(9)).toThrow('Validation failed for value "9" because check "(v) => v > 10" failed.');
+        expect(() => g3(9)).toThrow('Validation failed for number "9" because check "(v) => v > 10" failed.');
     });
     test('custom-modify', () => {
         let g0 = Gubu({
@@ -3106,16 +3106,17 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(() => a1([1])).toThrow('required');
         expect(a1([1, 'x'])).toMatchObject([1, 'x']);
         expect(() => a1([1, 'x', 'y'])).toThrow('not allowed');
-        expect(() => a1(['x', 'y'])).toThrow('Validation failed for index "0" with value "x" because the value is not of type number.');
-        expect(() => a1([1, 2])).toThrow('Validation failed for index "1" with value "2" because the value is not of type string.');
+        expect(() => a1(['x', 'y'])).toThrow('Validation failed for index "0" with string "x" because the string is not of type number.');
+        expect(() => a1([1, 2])).toThrow('Validation failed for index "1" with number "2" because the number is not of type string.');
         let a2 = Gubu([9, String]);
         expect(() => a2()).toThrow('required');
         expect(() => a2([])).toThrow('required');
         expect(() => a2([1])).toThrow('required');
         expect(a2([1, 'x'])).toMatchObject([1, 'x']);
         expect(() => a2([1, 'x', 'y'])).toThrow('not allowed');
-        expect(() => a2(['x', 1])).toThrow('Validation failed for index "1" with value "1" because the value is not of type string.');
-        expect(() => a2(['x', 'y'])).toThrow('Validation failed for index "0" with value "x" because the value is not of type number.');
+        expect(() => a2(['x', 1])).toThrow(`Validation failed for index "0" with string "x" because the string is not of type number.
+Validation failed for index "1" with number "1" because the number is not of type string.`);
+        expect(() => a2(['x', 'y'])).toThrow('Validation failed for index "0" with string "x" because the string is not of type number.');
         let a3 = Gubu([1, 2, 3]);
         expect(a3()).toEqual([1, 2, 3]);
         expect(a3([])).toEqual([1, 2, 3]);
@@ -3144,7 +3145,7 @@ Validation failed for property "b" with value "B" because the value is not of ty
             a: Check((v, _u, s) => v < s.ctx.max)
         });
         expect(g0({ a: 2 }, c0)).toMatchObject({ a: 2 });
-        expect(() => g0({ a: 11 }, c0)).toThrow('Validation failed for property "a" with value "11" because check "(v, _u, s) => v < s.ctx.max" failed.');
+        expect(() => g0({ a: 11 }, c0)).toThrow('Validation failed for property "a" with number "11" because check "(v, _u, s) => v < s.ctx.max" failed.');
         let g1 = Gubu({
             a: { b: All(Number, Check((v, _u, s) => v < s.ctx.max)) }
         });
@@ -3160,13 +3161,13 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(() => g0({ a: { b: { c: 1 } } })).toThrow('property "a.b"');
         let g1 = Gubu(String);
         expect(g1('x')).toEqual('x');
-        expect(() => g1(1)).toThrow('for value ');
-        expect(() => g1(true)).toThrow('for value ');
+        expect(() => g1(1)).toThrow('for number ');
+        expect(() => g1(true)).toThrow('for boolean ');
         expect(() => g1(null)).toThrow('for value ');
         expect(() => g1(undefined)).toThrow('for value ');
         expect(() => g1([])).toThrow('for array ');
         expect(() => g1({})).toThrow('for object ');
-        expect(() => g1(new Date())).toThrow('for value ');
+        expect(() => g1(new Date())).toThrow('for object ');
     });
     test('error-desc', () => {
         const g0 = Gubu(NaN);
@@ -3179,13 +3180,13 @@ Validation failed for property "b" with value "B" because the value is not of ty
                 p: '',
                 w: 'type',
                 m: 1050,
-                t: 'Validation failed for value "1" because the value is not of type nan.'
+                t: 'Validation failed for number "1" because the number is not of type nan.'
             }]);
         try {
             g0(1, { a: 'A' });
         }
         catch (e) {
-            expect(e.message).toEqual('Validation failed for value "1" because the value is not of type nan.');
+            expect(e.message).toEqual('Validation failed for number "1" because the number is not of type nan.');
             expect(e.code).toEqual('shape');
             expect(e.gubu).toEqual(true);
             expect(e.name).toEqual('GubuError');
@@ -3201,11 +3202,11 @@ Validation failed for property "b" with value "B" because the value is not of ty
                         c: 'none',
                         a: {},
                         m: 1050,
-                        t: 'Validation failed for value "1" because the value is not of type nan.'
+                        t: 'Validation failed for number "1" because the number is not of type nan.'
                     }
                 ]
             });
-            expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","prefix":"","props":[{"path":"","what":"type","type":"nan","value":1}],"err":[{"n":{"$":{"v$":"' + package_json_1.default.version + '"},"t":"nan","v":null,"f":null,"n":0,"r":false,"p":false,"d":0,"k":[],"e":true,"u":{},"a":[],"b":[],"m":{}},"v":1,"p":"","w":"type","c":"none","a":{},"m":1050,"t":"Validation failed for value \\"1\\" because the value is not of type nan.","u":{}}],"message":"Validation failed for value \\"1\\" because the value is not of type nan."}');
+            expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","prefix":"","props":[{"path":"","what":"type","type":"nan","value":1}],"err":[{"n":{"$":{"v$":"' + package_json_1.default.version + '"},"t":"nan","v":null,"f":null,"n":0,"r":false,"p":false,"d":0,"k":[],"e":true,"u":{},"a":[],"b":[],"m":{}},"v":1,"p":"","w":"type","c":"none","a":{},"m":1050,"t":"Validation failed for number \\"1\\" because the number is not of type nan.","u":{}}],"message":"Validation failed for number \\"1\\" because the number is not of type nan."}');
         }
     });
     test('spec-basic', () => {
@@ -3956,9 +3957,17 @@ Validation failed for property "b" with value "B" because the value is not of ty
         expect(() => a1({ x: undefined })).toThrow('required');
         expect(s1({ x: undefined })).toEqual({ x: undefined });
     });
+    test('non-value-fails', () => {
+        let g0 = Gubu({ x: Number });
+        expect(() => g0({ x: null })).toThrow('Validation failed for property "x" with value "null" because the value is not of type number.');
+        expect(() => g0({ x: undefined })).toThrow('Validation failed for property "x" with value "undefined" because the value is required.');
+        expect(() => g0({ x: NaN })).toThrow('Validation failed for property "x" with value "NaN" because the value is not of type number.');
+        expect(() => g0({})).toThrow('Validation failed for property "x" with value "undefined" because the value is required.');
+        expect(() => g0({ x: '' })).toThrow('Validation failed for property "x" with string "" because the string is not of type number.');
+    });
 });
 
-},{"../gubu":1,"../package.json":2,"./large":6,"./long":7}],6:[function(require,module,exports){
+},{"../":1,"../package.json":2,"./large":6,"./long":7}],6:[function(require,module,exports){
 
 module.exports = {
   m0: [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
