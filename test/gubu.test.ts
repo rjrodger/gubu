@@ -52,7 +52,7 @@ const {
   Skip,
   Some,
   Child,
-  // Default,
+  Default,
 } = Gubu
 
 
@@ -1012,36 +1012,6 @@ Validation failed for property "q.b" with string "x" because the string is not o
     expect(() => g3v({ x: 11, y: 22, z: 33, k: true })).toThrow('Validation failed for property "k" with boolean "true" because the boolean is not of type number.')
 
 
-
-    /*
-    let g1v = Gubu(Value(Number, { x: 1 }))
-    expect(g1v()).toEqual({ x: 1 })
-    expect(g1v({})).toEqual({ x: 1 })
-    expect(g1v({ x: 11 })).toEqual({ x: 11 })
-    expect(g1v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 })
-    expect(g1v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 })
-    expect(() => g1v({ x: 11, y: true })).toThrow('Validation failed for property "y" with boolean "true" because the boolean is not of type number.')
-
-    let g2v = Gubu(Value(Number, { x: 1, y: 2 }))
-    expect(g2v()).toEqual({ x: 1, y: 2 })
-    expect(g2v({})).toEqual({ x: 1, y: 2 })
-    expect(g2v({ x: 11 })).toEqual({ x: 11, y: 2 })
-    expect(g2v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 })
-    expect(g2v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 })
-    expect(() => g2v({ x: 11, y: 22, z: true })).toThrow('Validation failed for property "z" with boolean "true" because the boolean is not of type number.')
-
-    let g3v = Gubu(Value(Number, { x: 1, y: 2, z: 3 }))
-    expect(g3v()).toEqual({ x: 1, y: 2, z: 3 })
-    expect(g3v({})).toEqual({ x: 1, y: 2, z: 3 })
-    expect(g3v({ x: 11 })).toEqual({ x: 11, y: 2, z: 3 })
-    expect(g3v({ x: 11, y: 22 })).toEqual({ x: 11, y: 22, z: 3 })
-    expect(g3v({ x: 11, y: 22, z: 33 })).toEqual({ x: 11, y: 22, z: 33 })
-    expect(g3v({ x: 11, y: 22, z: 33, k: 44 }))
-      .toEqual({ x: 11, y: 22, z: 33, k: 44 })
-    expect(() => g3v({ x: 11, y: 22, z: 33, k: true })).toThrow('Validation failed for property "k" with boolean "true" because the boolean is not of type number.')
-    */
-
-
     // Empty object is Open
     let g4 = Gubu({})
     expect(g4()).toEqual({})
@@ -1247,33 +1217,6 @@ Validation failed for property "q.b" with string "x" because the string is not o
     expect(() => obj11({})).toThrow('Validation failed for property "people" with value "undefined" because the value is required.')
 
 
-
-    /*
-    let obj11 = Gubu({
-      people: Required({}).Value({ name: String, age: Number })
-    })
-
-    expect(obj11({
-      people: {
-        alice: { name: 'Alice', age: 99 },
-        bob: { name: 'Bob', age: 98 },
-      }
-    })).toEqual({
-      people: {
-        alice: { name: 'Alice', age: 99 },
-        bob: { name: 'Bob', age: 98 },
-      }
-    })
-
-    expect(() => obj11({
-      people: {
-        alice: { name: 'Alice', age: 99 },
-        bob: { name: 'Bob' }
-      }
-    })).toThrow('Validation failed for property "people.bob.age" with value "undefined" because the value is required.')
-    expect(() => obj11({})).toThrow('Validation failed for property "people" with value "undefined" because the value is required.')
-    */
-
     let shape = Gubu({
       foo: Number,
       bar: Required({
@@ -1332,21 +1275,6 @@ Validation failed for property "q.b" with string "x" because the string is not o
     expect(shape({ a: { b: 11, c: 22 }, d: 33 }))
       .toEqual({ a: { b: 11, c: 22 }, d: 33 })
 
-
-    /*
-    const { Value } = Gubu
-    shape = Gubu(Value(String, {
-      a: 123,
-    }))
-
-    // All non-explicit properties must be a String
-    expect(shape({ a: 11, b: 'abc' })).toEqual({ a: 11, b: 'abc' }) // b is a string
-    expect(shape({ c: 'foo', d: 'bar' })).toEqual({ a: 123, c: 'foo', d: 'bar' }) // c and d are strings
-
-    // These fail
-    expect(() => shape({ a: 'abc' })).toThrow('number') // a must be a number
-    expect(() => shape({ b: { x: 1 } })).toThrow('string') // b must be a string
-    */
 
     const { Child } = Gubu
     shape = Gubu(Child(String, {
@@ -1628,13 +1556,12 @@ Validation failed for property "x" with value "undefined" because the value is r
     expect(shape_AllB1(123)).toEqual(123)
     expect(() => shape_AllB1()).toThrow('required')
 
-    // FINISH
-    // let shape_AllB2 =
-    //   Gubu({ a: Default({ b: 'B' }, All(Open({ b: String }), Max(2))) })
-    // expect(shape_AllB2({ a: { b: 'X' } })).toEqual({ a: { b: 'X' } })
-    // expect(shape_AllB2({ a: { b: 'X', c: 'Y' } })).toEqual({ a: { b: 'X', c: 'Y' } })
-    // expect(() => shape_AllB2({ a: { b: 'X', c: 'Y', d: 'Z' } })).toThrow('Value "{b:X,c:Y,d:Z}" for property "a" does not satisfy all of: {"b":"string"}, Max(2)')
-    // expect(shape_AllB2({})).toEqual({ a: { b: 'B' } })
+    let shape_AllB2 =
+      Gubu({ a: Default({ b: 'B' }, All(Open({ b: String }), Max(2))) })
+    expect(shape_AllB2({ a: { b: 'X' } })).toEqual({ a: { b: 'X' } })
+    expect(shape_AllB2({ a: { b: 'X', c: 'Y' } })).toEqual({ a: { b: 'X', c: 'Y' } })
+    expect(() => shape_AllB2({ a: { b: 'X', c: 'Y', d: 'Z' } })).toThrow('Value "{b:X,c:Y,d:Z}" for property "a" does not satisfy all of: {"b":"string"}, Max(2)')
+    expect(shape_AllB2({})).toEqual({ a: { b: 'B' } })
 
     let shape_AllB3 = Gubu({ a: Skip(All(Open({ b: String }), Max(2))) })
     expect(shape_AllB3({ a: { b: 'X' } })).toEqual({ a: { b: 'X' } })

@@ -91,7 +91,6 @@ declare class State {
     constructor(root: any, top: Node<any>, ctx?: Context, match?: boolean);
     next(): void;
     updateVal(val: any): void;
-    printStacks(): void;
 }
 type Update = {
     done?: boolean;

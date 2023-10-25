@@ -113,7 +113,6 @@ type Node<V> = {
 type NodeMeta = Record<string, any>
 
 
-
 // A validation Node builder.
 type Builder<S> = (
   opts?: any,     // Builder options.
@@ -147,6 +146,7 @@ const S = {
 
   Object: 'Object',
   Array: 'Array',
+  Value: 'Value',
 
   Above: 'Above',
   After: 'After',
@@ -176,7 +176,6 @@ const S = {
   Skip: 'Skip',
   Ignore: 'Ignore',
   Some: 'Some',
-  Value: 'Value',
   Fault: 'Fault',
   Rest: 'Rest',
 
@@ -186,6 +185,7 @@ const S = {
 }
 
 
+// Utility shortcuts.
 const keys = (arg: any) => Object.keys(arg)
 const defprop = (o: any, p: any, a: any) => Object.defineProperty(o, p, a)
 const isarr = (arg: any) => Array.isArray(arg)
@@ -275,7 +275,8 @@ class State {
       this.ctx.log &&
         -1 < this.dI &&
         this.ctx.log('e' +
-          (Array.isArray(this.parents[this.pI]) ? 'a' : 'o'),
+          // (Array.isArray(this.parents[this.pI]) ? 'a' : 'o'),
+          (isarr(this.parents[this.pI]) ? 'a' : 'o'),
           this)
 
       this.pI = +nextNode
@@ -320,7 +321,7 @@ class State {
     }
   }
 
-
+  /* UNCOMMENT TO DEBUG - DO NOT REMOVE
   printStacks() {
     console.log('\nNODE',
       'd=' + this.dI,
@@ -344,6 +345,7 @@ class State {
         stringify(this.parents[i]))
     }
   }
+  */
 }
 
 
@@ -633,12 +635,9 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   optsmeta.active = (true === optsmeta.active) || false
   optsmeta.suffix = 'string' == typeof optsmeta.suffix ? optsmeta.suffix : '$$'
 
-
-
   // Key expressions are on by default.
   let optskeyexpr = opts.keyexpr = opts.keyexpr || ({} as any)
   optskeyexpr.active = (false !== optskeyexpr.active)
-
 
   let top: Node<S> = nodize<S>(intop, 0)
 
@@ -683,6 +682,8 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
         if (S.never === s.type) {
           s.curerr.push(makeErrImpl(S.never, s, 1070))
         }
+
+        // Handle objects.
         else if (S.object === s.type) {
           let val
 
@@ -825,6 +826,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           }
         }
 
+        // Handle arrays.
         else if (S.array === s.type) {
           if (n.r && valundef) {
             s.ignoreVal = true
@@ -1003,12 +1005,10 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
   function gubuShape<V>(root?: V, ctx?: Context):
     V & S {
-    // any {
-    return (exec(root, ctx, false)) // as R & S)
+    return (exec(root, ctx, false))
   }
 
 
-  // function valid<D>(root?: D, ctx?: Context): root is (D & S) {
   function valid<V>(root?: V, ctx?: Context): root is (V & S) {
     let actx: any = ctx || {}
     actx.err = actx.err || []
@@ -1022,6 +1022,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
     ctx = ctx || {}
     return (exec(root, ctx, true) as boolean)
   }
+
 
   // List the errors from a given root value.
   gubuShape.error = (root?: any, ctx?: Context): GubuError[] => {
@@ -1143,7 +1144,7 @@ function expr(spec: {
         return new RegExp(head.substring(1, head.length - 1))
       }
       else {
-        return JSON.parse(head)
+        return JP(head)
       }
     }
     catch (je: any) {
@@ -1166,7 +1167,6 @@ function expr(spec: {
 
   spec.val = fn.call(spec.val, ...args)
 
-  // if (!cb && spec.i < spec.tokens.length) {
   if ('.' === spec.tokens[spec.i]) {
     spec.i++
     return expr(spec)
@@ -1495,8 +1495,8 @@ const All = function(this: any, ...inshapes: any[]) {
 }
 
 
-// Pass if some match.
-// TODO: UDPATE DOC: Does not short circuit (as defaults may be missed).
+// Pass if some match. Note: all are evaluated, does not short circuit. This ensures
+// defaults are not missed.
 const Some = function(this: any, ...inshapes: any[]) {
   let node = buildize()
   node.t = (S.list as ValType)

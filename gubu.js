@@ -49,6 +49,7 @@ const S = {
     type: 'type',
     Object: 'Object',
     Array: 'Array',
+    Value: 'Value',
     Above: 'Above',
     After: 'After',
     All: 'All',
@@ -77,13 +78,13 @@ const S = {
     Skip: 'Skip',
     Ignore: 'Ignore',
     Some: 'Some',
-    Value: 'Value',
     Fault: 'Fault',
     Rest: 'Rest',
     forprop: ' for property ',
     $PATH: '"$PATH"',
     $VALUE: '"$VALUE"',
 };
+// Utility shortcuts.
 const keys = (arg) => Object.keys(arg);
 const defprop = (o, p, a) => Object.defineProperty(o, p, a);
 const isarr = (arg) => Array.isArray(arg);
@@ -138,7 +139,8 @@ class State {
             this.ctx.log &&
                 -1 < this.dI &&
                 this.ctx.log('e' +
-                    (Array.isArray(this.parents[this.pI]) ? 'a' : 'o'), this);
+                    // (Array.isArray(this.parents[this.pI]) ? 'a' : 'o'),
+                    (isarr(this.parents[this.pI]) ? 'a' : 'o'), this);
             this.pI = +nextNode;
             nextNode = this.nodes[this.pI];
         }
@@ -168,17 +170,6 @@ class State {
         }
         if (this.isRoot && !this.match) {
             this.root = this.val;
-        }
-    }
-    printStacks() {
-        var _a;
-        console.log('\nNODE', 'd=' + this.dI, 'c=' + this.cI, 'p=' + this.pI, 'n=' + this.nI, +this.node, this.node.t, this.path, this.err.length);
-        for (let i = 0; i < this.nodes.length ||
-            i < this.vals.length ||
-            i < this.parents.length; i++) {
-            console.log(i, '\t', ('' + (isNaN(+this.nodes[i]) ?
-                this.keys[i] + ':' + ((_a = this.nodes[i]) === null || _a === void 0 ? void 0 : _a.t) :
-                +this.nodes[i])).padEnd(32, ' '), stringify(this.vals[i]).padEnd(32, ' '), stringify(this.parents[i]));
         }
     }
 }
@@ -416,6 +407,7 @@ function make(intop, inopts) {
                 if (S.never === s.type) {
                     s.curerr.push(makeErrImpl(S.never, s, 1070));
                 }
+                // Handle objects.
                 else if (S.object === s.type) {
                     let val;
                     if (n.r && valundef) {
@@ -534,6 +526,7 @@ function make(intop, inopts) {
                         }
                     }
                 }
+                // Handle arrays.
                 else if (S.array === s.type) {
                     if (n.r && valundef) {
                         s.ignoreVal = true;
@@ -682,10 +675,8 @@ function make(intop, inopts) {
         return s.match ? 0 === s.err.length : s.root;
     }
     function gubuShape(root, ctx) {
-        // any {
-        return (exec(root, ctx, false)); // as R & S)
+        return (exec(root, ctx, false));
     }
-    // function valid<D>(root?: D, ctx?: Context): root is (D & S) {
     function valid(root, ctx) {
         let actx = ctx || {};
         actx.err = actx.err || [];
@@ -788,7 +779,7 @@ function expr(spec) {
                 return new RegExp(head.substring(1, head.length - 1));
             }
             else {
-                return JSON.parse(head);
+                return JP(head);
             }
         }
         catch (je) {
@@ -806,7 +797,6 @@ function expr(spec) {
     }
     spec.i++;
     spec.val = fn.call(spec.val, ...args);
-    // if (!cb && spec.i < spec.tokens.length) {
     if ('.' === spec.tokens[spec.i]) {
         spec.i++;
         return expr(spec);
@@ -1071,8 +1061,8 @@ const All = function (...inshapes) {
     return node;
 };
 exports.All = All;
-// Pass if some match.
-// TODO: UDPATE DOC: Does not short circuit (as defaults may be missed).
+// Pass if some match. Note: all are evaluated, does not short circuit. This ensures
+// defaults are not missed.
 const Some = function (...inshapes) {
     let node = buildize();
     node.t = S.list;

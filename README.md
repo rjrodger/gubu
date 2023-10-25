@@ -519,7 +519,9 @@ The built-in shape builders help you match the following shapes:
 
 * Existence:
   * [Required](#required-builder): Make a value required.
+  * [Optional](#optional-builder): Make a value optional.
   * [Skip](#skip-builder): Make a value skippable (no default value is injected if missing).
+  * [Default](#default-builder) Specify a default builder.
 * Value constraints:
   * [Empty](#empty-builder): Allow string values to be empty.
   * [Exact](#exact-builder): The value must match one of an exact list of *literal* values.
@@ -537,7 +539,6 @@ The built-in shape builders help you match the following shapes:
 * General constraints:
   * [Closed](#closed-builder): Allow only explicitly defined elements in an array.
   * [Open](#open-builder): Allow arbitrary properties in an object (no constraint on their value).
-  * [Value](#value-builder): All non-explicit child values of a shape must match this shape.
   * [Child](#child-builder): All non-explicit child values of an object must match this shape.
   * [Func](#func-builder): The value is explicitly a function.
 * Mutations:
@@ -857,12 +858,12 @@ If the object value is present but empty, any default values will be inserted.
 ##### Object Values
 
 You can define a general shape for all non-explicit object values
-using the [Value](#value-builder) shape builder:
+using the [Child](#child-builder) shape builder:
 
 ```js
 const { Value } = Gubu
 
-let shape = Gubu(Value(String, {
+let shape = Gubu(Child(String, {
   a: 123,
 }))
 
@@ -875,7 +876,7 @@ shape({ a: 'abc' }) // a must be a number
 shape({ b: { x: 1 } }) // b must be a string
 ```
 
-Using the [Value](#value-builder) shape builder in this way automatically
+Using the [Child](#child-builder) shape builder in this way automatically
 makes the object open, but constrains the values that can be used for
 non-explicit properties.
 
@@ -1754,6 +1755,9 @@ The built-in shape builders are:
 * [Closed](#closed-builder): 
   Allow only explicitly defined elements in an array.
 
+* [Default](#default-builder): 
+  Specify a default value.
+
 * [Define](#define-builder): 
   Define a name for a value.
 
@@ -1787,6 +1791,9 @@ The built-in shape builders are:
 * [Open](#open-builder): 
   Allow arbitrary properties in an object.
 
+* [Optional](#optional-builder): 
+  Make a value optional.
+
 * [Skip](#skip-builder): 
   Make a value explicitly optional (no default created).
 
@@ -1801,9 +1808,6 @@ The built-in shape builders are:
 
 * [Some](#some-builder): 
   Some shapes (at least one) must match value.
-
-* [Value](#value-builder): 
-  All non-explicit child values of a shape must match this shape.
 
 
 ---
@@ -2709,6 +2713,48 @@ shape = Gubu(Open({ x: 1 }).Required())
 console.log(shape({ x: 2 })) // PASS: prints { x: 2 })
 console.log(shape({ x: 2, y: 3 })) // PASS: prints { x: 2, y: 3 }
 console.log(shape()) // FAIL: object is required
+```
+
+
+---
+#### Optional Builder
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
+
+```ts
+Optional( child?: any )
+```
+
+* **Standalone:** `Optional({x: 1})`
+* **As Parent:** `Optional({x: 1})`
+* **As Child:** `Closed(Optional({x: 1}))`
+* **Chainable:** `Closed({x: 1}).Optional()`
+
+Make the value explicitly optional. TODO
+
+```js
+const { Optional } = Gubu
+TODO
+```
+
+
+---
+#### Default Builder
+<sub><sup>[builders](#shape-builder-reference) [api](#api) [top](#top)</sup></sub>
+
+```ts
+Default( child?: any )
+```
+
+* **Standalone:** `Default({x: 1})`
+* **As Parent:** `Default({x: 1})`
+* **As Child:** `Closed(Default({x: 1}))`
+* **Chainable:** `Closed({x: 1}).Default()`
+
+Specify a default value. TODO
+
+```js
+const { Default } = Gubu
+TODO
 ```
 
 

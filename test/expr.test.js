@@ -7,9 +7,7 @@ if (GubuModule.Gubu) {
     GubuModule = GubuModule.Gubu;
 }
 const Gubu = GubuModule;
-const { Min, Max, 
-// Value,
-Child, Check, } = Gubu;
+const { Child, } = Gubu;
 describe('extend', () => {
     test('meta-basic', () => {
         let g0 = Gubu({
@@ -48,16 +46,12 @@ describe('extend', () => {
         expect(g1({ z: 3 })).toEqual({ x: 2, y: 2, z: 3 });
         expect(() => g1({ x: 0 })).toThrow('Value "0" for property "x" must be a minimum of 1 (was 0)');
         expect(() => g1({ x: 5 })).toThrow('Value "5" for property "x" must be a maximum of 4 (was 5)');
-        // expect(g1({ y: 5 }))
         expect(() => g1({ y: 0 })).toThrow('Value "0" for property "y" must be a minimum of 1 (was 0)');
-        // TODO: FIX: this msg is doubled
         expect(() => g1({ y: 5 })).toThrow('Value "5" for property "y" must be a maximum of 4 (was 5)');
         expect(() => g1({ z: 0 })).toThrow('Value "0" for property "z" must be a minimum of 1 (was 0)');
         // TODO: FIX: this msg is doubled
         expect(() => g1({ z: 5 })).toThrow('Value "5" for property "z" must be a maximum of 4 (was 5)');
     });
-    // TODO: regexps!
-    // TODO: what if builder expr is just a literal?
     test('expr-syntax', () => {
         let GE = (exp, val) => Gubu({ ['x:' + exp]: val });
         expect(() => GE('BadBuilder', 1))

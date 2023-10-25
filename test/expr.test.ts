@@ -20,11 +20,7 @@ if (GubuModule.Gubu) {
 const Gubu: GubuX = GubuModule
 
 const {
-  Min,
-  Max,
-  // Value,
   Child,
-  Check,
 } = Gubu
 
 
@@ -78,9 +74,8 @@ describe('extend', () => {
     expect(() => g1({ x: 0 })).toThrow('Value "0" for property "x" must be a minimum of 1 (was 0)')
     expect(() => g1({ x: 5 })).toThrow('Value "5" for property "x" must be a maximum of 4 (was 5)')
 
-    // expect(g1({ y: 5 }))
     expect(() => g1({ y: 0 })).toThrow('Value "0" for property "y" must be a minimum of 1 (was 0)')
-    // TODO: FIX: this msg is doubled
+
     expect(() => g1({ y: 5 })).toThrow('Value "5" for property "y" must be a maximum of 4 (was 5)')
 
     expect(() => g1({ z: 0 })).toThrow('Value "0" for property "z" must be a minimum of 1 (was 0)')
@@ -89,9 +84,6 @@ describe('extend', () => {
 
   })
 
-
-  // TODO: regexps!
-  // TODO: what if builder expr is just a literal?
 
   test('expr-syntax', () => {
     let GE = (exp: string, val: any) =>
