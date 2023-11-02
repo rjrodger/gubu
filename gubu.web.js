@@ -1,2 +1,2 @@
-const { Gubu } = require('./dist/gubu.js')
+const { Gubu } = require('./gubu.js')
 module.exports = Gubu
