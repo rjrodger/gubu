@@ -2729,11 +2729,20 @@ Optional( child?: any )
 * **As Child:** `Closed(Optional({x: 1}))`
 * **Chainable:** `Closed({x: 1}).Optional()`
 
-Make the value explicitly optional. TODO
+Make the value explicitly optional. 
 
 ```js
 const { Optional } = Gubu
-TODO
+
+let shape = Gubu(Optional(String))
+console.log(shape()) // PASS: prints ""
+console.log(shape('a')) // PASS: prints "a"
+console.log(shape(1)) // FAIL: not a string
+
+shape = Gubu(Optional(Some(String, Number)))
+expect(shape('a')).toEqual('a') // PASS: 'a' is a String
+expect(shape(1)).toEqual(1) // PASS: 1 is a Number
+expect(shape()).toEqual(undefined) // PASS: Overrides Some
 ```
 
 
