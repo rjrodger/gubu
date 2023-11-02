@@ -2757,15 +2757,23 @@ Default( child?: any )
 * **Standalone:** `Default({x: 1})`
 * **As Parent:** `Default({x: 1})`
 * **As Child:** `Closed(Default({x: 1}))`
-* **Chainable:** `Closed({x: 1}).Default()`
+* **Chainable:** `Closed({x: 1}).Default({})`
 
-Specify a default value. TODO
+Specify a default value. This also makes the value optional. 
 
 ```js
 const { Default } = Gubu
-TODO
-```
 
+let shape = Gubu(Default('none', String))
+console.log(shape()) // PASS: prints 'none'
+console.log(shape('a')) // PASS: prints 'a'
+console.log(shape(1)) // FAIL: 1 is not a String
+
+shape = Gubu(Default({ a: null }, { a: Number }))
+console.log(shape({ a: 1 })) // PASS: prints { a: 1 })
+console.log(shape()) // PASS: prints  { a: null })
+console.log(shape({ a: 'x' })) // FAIL: 'x' is not a Number
+```
 
 
 ---

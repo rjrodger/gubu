@@ -73,7 +73,20 @@ describe('readme', () => {
     expect(shape('a')).toEqual('a')
     expect(shape(1)).toEqual(1)
     expect(() => shape()).toThrow('satisfy')
-
   })
+
+
+  test('readme-default', () => {
+    let shape = Gubu(Default('none', String))
+    expect(shape()).toEqual('none')
+    expect(shape('a')).toEqual('a')
+    expect(() => shape(1)).toThrow('type')
+
+    shape = Gubu(Default({ a: null }, { a: Number }))
+    expect(shape({ a: 1 })).toEqual({ a: 1 })
+    expect(shape()).toEqual({ a: null })
+    expect(() => shape({ a: 'x' })).toThrow('type')
+  })
+
 })
 

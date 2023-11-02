@@ -126,7 +126,6 @@ type Validate = (val: any, update: Update, state: State) => boolean
 
 // Help the minifier
 const S = {
-  MT: '',
   gubu: 'gubu',
   name: 'name',
   nan: 'nan',
@@ -137,15 +136,20 @@ const S = {
   function: 'function',
   object: 'object',
   string: 'string',
+  boolean: 'boolean',
   undefined: 'undefined',
   any: 'any',
   list: 'list',
   instance: 'instance',
   null: 'null',
   type: 'type',
+  closed: 'closed',
+  shape: 'shape',
+  check: 'check',
 
   Object: 'Object',
   Array: 'Array',
+  Function: 'Function',
   Value: 'Value',
 
   Above: 'Above',
@@ -206,7 +210,7 @@ class State {
   valType: string = S.never
   isRoot: boolean = false
 
-  key: string = S.MT
+  key: string = ''
   type: string = S.never
 
   stop: boolean = true
@@ -275,7 +279,6 @@ class State {
       this.ctx.log &&
         -1 < this.dI &&
         this.ctx.log('e' +
-          // (Array.isArray(this.parents[this.pI]) ? 'a' : 'o'),
           (isarr(this.parents[this.pI]) ? 'a' : 'o'),
           this)
 
@@ -444,12 +447,12 @@ const IS_TYPE: { [name: string]: boolean } = {
 
 // Empty values for each type.
 const EMPTY_VAL: { [name: string]: any } = {
-  string: S.MT,
+  string: '',
   number: 0,
   boolean: false,
   object: {},
   array: [],
-  symbol: Symbol(S.MT),
+  symbol: Symbol(''),
   bigint: BigInt(0),
   null: null,
 }
@@ -577,7 +580,7 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
     // Instance of a class.
     // Note: uses the convention that a class name is captialized.
     else if (
-      'Function' === v.constructor.name &&
+      S.Function === v.constructor.name &&
       UPPER_CASE_FIRST_RE.test(v.name)
     ) {
       t = (S.instance as ValType)
@@ -589,7 +592,7 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
   else if (S.number === t && isNaN(v)) {
     t = (S.nan as ValType)
   }
-  else if (S.string === t && S.MT === v) {
+  else if (S.string === t && '' === v) {
     u.empty = true
   }
 
@@ -626,14 +629,14 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   // option defaults manually.
   opts.name =
     null == opts.name ?
-      'G' + (S.MT + Math.random()).substring(2, 8) : S.MT + opts.name
+      'G' + ('' + Math.random()).substring(2, 8) : '' + opts.name
 
   opts.prefix = null == opts.prefix ? undefined : opts.prefix
 
   // Meta properties are off by default.
   let optsmeta = opts.meta = opts.meta || ({} as any)
   optsmeta.active = (true === optsmeta.active) || false
-  optsmeta.suffix = 'string' == typeof optsmeta.suffix ? optsmeta.suffix : '$$'
+  optsmeta.suffix = S.string == typeof optsmeta.suffix ? optsmeta.suffix : '$$'
 
   // Key expressions are on by default.
   let optskeyexpr = opts.keyexpr = opts.keyexpr || ({} as any)
@@ -740,7 +743,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
                   // { x$$: <META>, x: 1 }}
                   if (optsmeta.active && k.endsWith(optsmeta.suffix)) {
                     meta = { short: '' }
-                    if ('string' === typeof (n.v[k])) {
+                    if (S.string === typeof (n.v[k])) {
                       meta.short = n.v[k]
                     }
                     else {
@@ -762,7 +765,6 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
                   let ov: any = n.v[k]
 
                   if (optskeyexpr.active) {
-                    // let parts = k.split(' ')
                     let m = /^\s*("(\\.|[^"\\])*"|[^\s]+):\s*(.*?)\s*$/
                       .exec(k)
                     if (m) {
@@ -796,7 +798,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
                 if (GUBU$NIL === n.c) {
                   s.ignoreVal = true
                   s.curerr.push(makeErrImpl(
-                    'closed', s, 1100, undefined, { k: extra }))
+                    S.closed, s, 1100, undefined, { k: extra }))
                 }
                 else {
                   hasKeys = true
@@ -859,7 +861,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
               if (hasFixedElements) {
                 if (elementKeys.length < s.val.length && !hasChildShape) {
                   s.ignoreVal = true
-                  s.curerr.push(makeErrImpl('closed', s, 1090, undefined,
+                  s.curerr.push(makeErrImpl(S.closed, s, 1090, undefined,
                     { k: elementKeys.length }))
                 }
                 else {
@@ -870,7 +872,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
                     s.nodes[s.nI] = elementShape
                     s.vals[s.nI] = s.val[elementIndex]
                     s.parents[s.nI] = s.val
-                    s.keys[s.nI] = S.MT + elementIndex
+                    s.keys[s.nI] = '' + elementIndex
                     s.nI++
                   }
                 }
@@ -883,7 +885,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
                   s.nodes[s.nI] = elementShape
                   s.vals[s.nI] = s.val[elementIndex]
                   s.parents[s.nI] = s.val
-                  s.keys[s.nI] = S.MT + elementIndex
+                  s.keys[s.nI] = '' + elementIndex
                   s.nI++
                 }
               }
@@ -949,7 +951,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
         }
 
         // Empty strings fail even if string is optional. Use Empty() to allow.
-        else if (S.string === s.type && S.MT === s.val && !n.u.empty) {
+        else if (S.string === s.type && '' === s.val && !n.u.empty) {
           s.curerr.push(makeErrImpl(S.required, s, 1080))
           s.ctx.log && s.ctx.log('kv', s)
         }
@@ -995,7 +997,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
         s.ctx.err.push(...s.err)
       }
       else if (!s.match && false !== s.ctx.err) {
-        throw new GubuError('shape', opts.prefix, s.err, s.ctx)
+        throw new GubuError(S.shape, opts.prefix, s.err, s.ctx)
       }
     }
 
@@ -1053,9 +1055,9 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   }
 
 
-  let desc: string = S.MT
+  let desc: string = ''
   gubuShape.toString = () => {
-    desc = truncate(S.MT === desc ?
+    desc = truncate('' === desc ?
       stringify(
         (
           top &&
@@ -1134,7 +1136,7 @@ function expr(spec: {
       if (val) {
         return val
       }
-      else if ('undefined' === head) {
+      else if (S.undefined === head) {
         return undefined
       }
       else if ('NaN' === head) {
@@ -1205,7 +1207,7 @@ function handleValidate(vf: Validate, s: State): Update {
       return update
     }
 
-    let w = update.why || 'check'
+    let w = update.why || S.check
     let p = pathstr(s)
 
     if (S.string === typeof (update.err)) {
@@ -1221,7 +1223,7 @@ function handleValidate(vf: Validate, s: State): Update {
     }
     else {
       let fname = vf.name
-      if (null == fname || S.MT == fname) {
+      if (null == fname || '' == fname) {
         fname = truncate(vf.toString().replace(/[ \t\r\n]+/g, ' '))
       }
       s.curerr.push(makeErrImpl(
@@ -1271,7 +1273,7 @@ function truncate(str?: string, len?: number): string {
   let strval = String(str)
   let outlen = null == len || isNaN(len) ? 30 : len < 0 ? 0 : ~~len
   let strlen = null == str ? 0 : strval.length
-  let substr = null == str ? S.MT : strval.substring(0, strlen)
+  let substr = null == str ? '' : strval.substring(0, strlen)
   substr = outlen < strlen ? substr.substring(0, outlen - 3) + '...' : substr
   return substr.substring(0, outlen)
 }
@@ -1418,7 +1420,7 @@ const Never = function <V>(this: any, shape?: Node<V> | V): Node<V> {
 const Key = function(this: any, depth?: number | Function, join?: string) {
   let node = buildize(this)
 
-  let ascend = 'number' === typeof depth
+  let ascend = S.number === typeof depth
   node.t = (S.string as ValType)
 
   if (ascend && null == join) {
@@ -1426,7 +1428,7 @@ const Key = function(this: any, depth?: number | Function, join?: string) {
   }
 
   let custom: any = null
-  if ('function' === typeof depth) {
+  if (S.function === typeof depth) {
     custom = depth
     node = Any()
   }
@@ -1442,7 +1444,7 @@ const Key = function(this: any, depth?: number | Function, join?: string) {
         state.path.length - 1 + (0 <= d ? 0 : 1),
       )
 
-      if ('string' === typeof join) {
+      if (S.string === typeof join) {
         update.val = update.val.join(join)
       }
     }
@@ -1640,7 +1642,7 @@ const Check = function <V>(
     c$.gubu$.Check = true
 
     node.b.push((check as Validate))
-    node.s = (null == node.s ? S.MT : node.s + ';') + stringify(check, null, true)
+    node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true)
     node.r = true
   }
   else if (S.object === typeof check) {
@@ -1693,7 +1695,7 @@ const Define = function <V>(this: any, inopts: any, shape?: Node<V> | V): Node<V
   let name = S.string === typeof inopts ? inopts : opts.name
 
 
-  if (null != name && S.MT != name) {
+  if (null != name && '' != name) {
     node.b.push(function Define(_val: any, _update: Update, state: State) {
       let ref = state.ctx.ref = state.ctx.ref || {}
       ref[name] = state.node
@@ -1716,7 +1718,7 @@ const Refer = function <V>(this: any, inopts: any, shape?: Node<V> | V): Node<V>
   // Fill should be false (the default) if used recursively, to prevent loops.
   let fill = !!opts.fill
 
-  if (null != name && S.MT != name) {
+  if (null != name && '' != name) {
     node.b.push(function Refer(val: any, update: Update, state: State) {
       if (undefined !== val || fill) {
         let ref = state.ctx.ref = state.ctx.ref || {}
@@ -1747,12 +1749,12 @@ const Rename = function <V>(this: any, inopts: any, shape?: Node<V> | V): Node<V
 
   let opts = S.object === typeof inopts ? inopts || {} : {}
   let name = S.string === typeof inopts ? inopts : opts.name
-  let keep = 'boolean' === typeof opts.keep ? opts.keep : undefined
+  let keep = S.boolean === typeof opts.keep ? opts.keep : undefined
 
   // NOTE: Rename claims are experimental.
   let claim = isarr(opts.claim) ? opts.claim : []
 
-  if (null != name && S.MT != name) {
+  if (null != name && '' != name) {
 
     // If there is a claim, grab the value so that validations
     // can be applied to it.
@@ -1859,7 +1861,7 @@ const Min = function <V>(
     }
 
     state.checkargs = { min: 1 }
-    let errmsgpart = S.number === typeof (val) ? S.MT : 'length '
+    let errmsgpart = S.number === typeof (val) ? '' : 'length '
     update.err =
       makeErr(state,
         S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
@@ -1867,7 +1869,7 @@ const Min = function <V>(
     return false
   })
 
-  node.s = S.Min + '(' + min + (null == shape ? S.MT :
+  node.s = S.Min + '(' + min + (null == shape ? '' :
     (',' + stringify(shape))) + ')'
 
   return node
@@ -1889,14 +1891,14 @@ const Max = function <V>(
       return true
     }
 
-    let errmsgpart = S.number === typeof (val) ? S.MT : 'length '
+    let errmsgpart = S.number === typeof (val) ? '' : 'length '
     update.err =
       makeErr(state,
         S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`)
     return false
   })
 
-  node.s = S.Max + '(' + max + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
+  node.s = S.Max + '(' + max + (null == shape ? '' : (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -1924,7 +1926,7 @@ const Above = function <V>(
     return false
   })
 
-  node.s = S.Above + '(' + above + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
+  node.s = S.Above + '(' + above + (null == shape ? '' : (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -1952,7 +1954,7 @@ const Below = function <V>(
     return false
   })
 
-  node.s = S.Below + '(' + below + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
+  node.s = S.Below + '(' + below + (null == shape ? '' : (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -1973,14 +1975,14 @@ const Len = function <V>(
       return true
     }
 
-    let errmsgpart = S.number === typeof (val) ? S.MT : ' in length'
+    let errmsgpart = S.number === typeof (val) ? '' : ' in length'
     update.err =
       makeErr(state,
         S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be exactly ${len}${errmsgpart} (was ${vlen}).`)
     return false
   })
 
-  node.s = S.Len + '(' + len + (null == shape ? S.MT : (',' + stringify(shape))) + ')'
+  node.s = S.Len + '(' + len + (null == shape ? '' : (',' + stringify(shape))) + ')'
 
   return node
 }
@@ -2008,7 +2010,6 @@ const Rest = function <V>(
   node.c = nodize(child)
   node.m = node.m || {}
   node.m.rest = true
-  // console.log('RN', node)
   return node
 }
 
@@ -2055,7 +2056,7 @@ function buildize<V>(node0?: any, node1?: any): Node<V> {
 // External utility to make ErrDesc objects.
 function makeErr(state: State, text?: string, why?: string, user?: any) {
   return makeErrImpl(
-    why || 'check',
+    why || S.check,
     state,
     4000,
     text,
@@ -2083,19 +2084,19 @@ function makeErrImpl(
     c: s.check?.name || 'none',
     a: s.checkargs || {},
     m: mark,
-    t: S.MT,
+    t: '',
     u: user || {},
   }
 
-  let jstr = undefined === s.val ? 'undefined' : stringify(s.val)
-  let valstr = truncate(jstr.replace(/"/g, S.MT))
+  let jstr = undefined === s.val ? S.undefined : stringify(s.val)
+  let valstr = truncate(jstr.replace(/"/g, ''))
 
   text = text || s.node.z
 
-  if (null == text || S.MT === text) {
+  if (null == text || '' === text) {
     let valkind = valstr.startsWith('[') ? S.array :
       valstr.startsWith('{') ? S.object :
-        (null == s.val || ('number' === typeof s.val && isNaN(s.val))
+        (null == s.val || (S.number === typeof s.val && isNaN(s.val))
           ? 'value' : (typeof s.val))
 
     let propkind = (valstr.startsWith('[') || isarr(s.parents[s.pI])) ?
@@ -2110,14 +2111,14 @@ function makeErrImpl(
       propkey
 
     err.t = `Validation failed for ` +
-      (0 < err.p.length ? `${propkind} "${err.p}" with ` : S.MT) +
+      (0 < err.p.length ? `${propkind} "${err.p}" with ` : '') +
       `${valkind} "${valstr}" because ` +
 
       (S.type === why ? (
         S.instance === s.node.t ?
           `the ${valkind} is not an instance of ${s.node.u.n}` :
           `the ${valkind} is not of type ${s.node.t}`) :
-        S.required === why ? (S.MT === s.val ? 'an empty string is not allowed' :
+        S.required === why ? ('' === s.val ? 'an empty string is not allowed' :
           `the ${valkind} is required`) :
           'closed' === why ?
             `the ${propkind} "${propkey}" ${propkindverb} not allowed` :
@@ -2136,7 +2137,7 @@ function makeErrImpl(
 
 
 function node2str(n: Node<any>): string {
-  return (null != n.s && S.MT !== n.s) ? n.s :
+  return (null != n.s && '' !== n.s) ? n.s :
     (!n.r && undefined !== n.v) ? n.v : n.t
 }
 
@@ -2169,7 +2170,7 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
         if (S.function === typeof ((make as any)[val.name]) && isNaN(+key)) {
           val = undefined
         }
-        else if (null != val.name && S.MT !== val.name) {
+        else if (null != val.name && '' !== val.name) {
           val = val.name
         }
         else {
@@ -2197,7 +2198,7 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
   }
 
   if (true === dequote) {
-    str = str.replace(/^"/, S.MT).replace(/"$/, S.MT)
+    str = str.replace(/^"/, '').replace(/"$/, '')
   }
 
   return str
@@ -2362,33 +2363,26 @@ function MakeArgu(prefix: string): Argu {
     argSpec?: Record<string, any>
   ) {
     let partial = false
-    if ('string' === typeof args) {
+    if (S.string === typeof args) {
       partial = true
       argSpec = (whence as Record<string, any>)
       whence = (args as string | Record<string, any>)
     }
 
     argSpec = argSpec || (whence as Record<string, any>)
-    whence = 'string' === typeof whence ? ' (' + whence + ')' : ''
+    whence = S.string === typeof whence ? ' (' + whence + ')' : ''
     const shape = Gubu(argSpec, { prefix: prefix + whence })
 
-    // let shapeSpec = shape.spec()
-    // console.dir(shapeSpec, { depth: null })
-
     const top = shape.node()
-    // console.dir(top, { depth: null })
-
 
     const keys = top.k
     let inargs = args
     let argmap: any = {}
     let kI = 0
     let skips = 0
-    // console.log('KEYS', keys)
 
     for (; kI < keys.length; kI++) {
       let kn = top.v[keys[kI]]
-      // console.log('KEY', kI, keys[kI], kn.m.rest)
 
       // Skip in arg shape means a literal skip,
       // shifting all following agument elements down.
@@ -2400,15 +2394,12 @@ function MakeArgu(prefix: string): Argu {
             update: Update,
             state: State
           ) {
-            // console.log('Skipper', kI, keys[kI], state.curerr.length)
             if (0 < state.curerr.length) {
               skips++
-              // console.log('AMS A', argmap, keys)
 
               for (let sI = keys.length - 1;
                 sI > kI;
                 sI--) {
-                // console.log('KS', keys[sI], sI, kI, 'S', state.pI, state.pI + sI)
 
                 // Subtract kI as state.pI has already advanced kI along val list.
                 // If Rest, append to array at correct position.
@@ -2422,12 +2413,10 @@ function MakeArgu(prefix: string): Argu {
                   argmap[keys[sI]] = argmap[keys[sI - 1]]
                 }
 
-                // console.log('AMS S', sI, argmap)
               }
 
               update.uval = undefined
               update.done = false
-              // console.log('AMS B', kI, argmap)
             }
 
             return true
@@ -2441,24 +2430,19 @@ function MakeArgu(prefix: string): Argu {
           update: Update,
           state: State
         ) {
-          // console.log('AC', keys.length, skips, inargs.length, ((keys.length - skips) < inargs.length))
           if ((keys.length - skips) < inargs.length) {
             if (0 === state.curerr.length) {
               update.err =
                 `Too many arguments for type signature ` +
                 `(was ${inargs.length}, expected ${keys.length - skips})`
             }
-            // update.done = true
             update.fatal = true
-            // console.log('U', update)
             return false
           }
           return true
         }, top.v[keys[kI]])
       }
     }
-
-    // console.dir(shape.spec(), { depth: null })
 
     function buildArgMap(args: args) {
       for (let kI = 0; kI < keys.length; kI++) {
@@ -2471,7 +2455,6 @@ function MakeArgu(prefix: string): Argu {
           argmap[keys[kI]] = args[kI]
         }
       }
-      // console.log('AM', argmap)
       return argmap
     }
 
