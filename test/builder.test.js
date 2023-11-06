@@ -1053,6 +1053,18 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         expect(g2({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } }))
             .toMatchObject({ a: { b: 2, c: { x: 'x' }, d: { x: 'z' } } });
         expect(() => g2({ a: { b: 2, c: 3 } })).toThrow('Validation failed for property "a.c" with number "3" because the number is not of type object.');
+        let g3 = Gubu({ a: Child({ y: Number, x: Number }) });
+        expect(g3({ a: { b: { y: 11, x: 11 }, c: { x: 22, y: 22 } } }))
+            .toEqual({ a: { b: { x: 11, y: 11 }, c: { x: 22, y: 22 } } });
+        let g4 = Gubu({ a: Child({}) });
+        expect(g4({ a: { b: { y: 11, x: 11 }, c: { x: 22, y: 22 } } }))
+            .toEqual({ a: { b: { x: 11, y: 11 }, c: { x: 22, y: 22 } } });
+        let g5 = Gubu({ a: Child({ b: {} }) });
+        expect(g5({ a: { x: { b: {} }, y: { b: {} } } }))
+            .toEqual({ a: { x: { b: {} }, y: { b: {} } } });
+        let g6 = Gubu({ a: Child({ b: Child({ c: 1 }) }) });
+        expect(g6({ a: { x: { b: { xx: { c: 11 } } }, y: { b: { yy: { c: 22 } } } } }))
+            .toEqual({ a: { x: { b: { xx: { c: 11 } } }, y: { b: { yy: { c: 22 } } } } });
     });
     test('builder-void', () => {
         // Skip does not insert, but does check type.

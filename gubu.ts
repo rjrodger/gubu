@@ -1,4 +1,6 @@
-/* Copyright (c) 2021-2022 Richard Rodger and other contributors, MIT License */
+/* Copyright (c) 2021-2023 Richard Rodger and other contributors, MIT License */
+
+// FIX: does not work if Gubu is inside a Proxy - jest fails
 
 // FEATURE: regexp in array: [/a/] => all elements must match /a/
 // FEATURE: validator on completion of object or array
