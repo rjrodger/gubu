@@ -10,6 +10,7 @@ exports.GRest = exports.GSome = exports.GSkip = exports.GRequired = exports.GRen
 // FEATURE: state should indicate if value was present, not just undefined
 // FEATURE: support custom builder registration so that can chain on builtins
 // FEATURE: merge shapes (allows extending given shape - e.g. adding object props)
+// FEATURE: Key validation by RegExp
 // TODO: Validation of Builder parameters
 // TODO: GubuShape.d is damaged by composition
 // TODO: Better stringifys for builder shapes
@@ -1003,6 +1004,7 @@ const Never = function (shape) {
 };
 exports.Never = Never;
 // Inject the key path of the value.
+// OR: providde validation of Key - depth could also be a RegExp
 const Key = function (depth, join) {
     let node = buildize(this);
     let ascend = S.number === typeof depth;
