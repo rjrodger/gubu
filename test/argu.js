@@ -71,7 +71,9 @@ function f0(){}
 
 
 // qaz(11)
-qaz('s',{b:1},f0)
+qaz('s0',{b:1},f0)
+qaz('s1',{a:'A'},f0)
+
 // qaz({b:1},f0)
 // qaz('s',f0)
 // qaz(f0)

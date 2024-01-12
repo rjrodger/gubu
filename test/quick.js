@@ -64,6 +64,11 @@ let g2 = Gubu({a:1})
 console.log(g2.spec())
 
 
+let g3 = Gubu({})
+console.log('a',g3({a:1}))
+console.log('b',g3({b:2}))
+console.log('c',g3({c:3}))
+
 
 //let g0 = Gubu({
   // 'a': Open({x:1}),

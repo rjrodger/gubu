@@ -8,6 +8,7 @@
 // FEATURE: state should indicate if value was present, not just undefined
 // FEATURE: support custom builder registration so that can chain on builtins
 // FEATURE: merge shapes (allows extending given shape - e.g. adding object props)
+// FEATURE: Key validation by RegExp
 
 // TODO: Validation of Builder parameters
 // TODO: GubuShape.d is damaged by composition
@@ -1419,6 +1420,7 @@ const Never = function <V>(this: any, shape?: Node<V> | V): Node<V> {
 
 
 // Inject the key path of the value.
+// OR: providde validation of Key - depth could also be a RegExp
 const Key = function(this: any, depth?: number | Function, join?: string) {
   let node = buildize(this)
 
