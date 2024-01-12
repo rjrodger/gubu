@@ -18,7 +18,7 @@ const G$ = Gubu.G$;
 const stringify = Gubu.stringify;
 const truncate = Gubu.truncate;
 const nodize = Gubu.nodize;
-const { Above, After, All, Any, Before, Below, Check, Closed, Define, Empty, Exact, Func, Max, Min, Never, One, Open, Refer, Rename, Required, Skip, Some, Child, Default, } = Gubu;
+const { Above, After, All, Any, Before, Below, Check, Closed, Define, Empty, Exact, Func, Max, Min, Never, One, Open, Refer, Rename, Required, Skip, Some, Child, Default, Optional, } = Gubu;
 class Foo {
     constructor(a) {
         this.a = -1;
@@ -574,7 +574,8 @@ Validation failed for property "q.b" with string "x" because the string is not o
         expect(Gubu(Symbol('bar'))(tmp.s0)).toEqual(tmp.s0);
         expect(Gubu(new Error('a'))(tmp.e1 = new Error('b'))).toEqual(tmp.e1);
         expect(Gubu(new Date())(tmp.d1 = new Date(Date.now() - 1111))).toEqual(tmp.d1);
-        expect(Gubu(new RegExp('a'))(tmp.r1 = /b/)).toEqual(tmp.r1);
+        // expect(Gubu(new RegExp('a'))(tmp.r1 = /b/)).toEqual(tmp.r1)
+        expect(Gubu(new RegExp('a'))(tmp.r1 = 'a')).toEqual(tmp.r1);
         expect(Gubu(new Foo(4))(tmp.c1 = new Foo(5))).toEqual(tmp.c1);
         expect(Gubu(new Bar(6))(tmp.c2 = new Bar(7))).toEqual(tmp.c2);
         expect(Gubu(G$({ v: () => null }))(tmp.f1 = () => false)).toEqual(tmp.f1);
@@ -609,7 +610,7 @@ Validation failed for property "q.b" with string "x" because the string is not o
         expect(() => Gubu(new Error('x'))('x')).toThrow(/not an instance of Error/);
         expect(() => Gubu(new Date())('x')).toThrow(/not an instance of Date/);
         expect(() => Gubu(new RegExp('a'))('x'))
-            .toThrow(/not an instance of RegExp/);
+            .toThrow('Validation failed for string \"x\" because the string did not match /a/.');
         expect(() => Gubu(new Foo(4))('a')).toThrow(/not an instance of Foo/);
         expect(() => Gubu(new Bar(6))('a')).toThrow(/not an instance of Bar/);
         expect(() => Gubu(new Foo(10))(new Bar(11)))
@@ -622,6 +623,7 @@ Validation failed for property "q.b" with string "x" because the string is not o
         expect(Gubu({ a: Number })({ a: 1 })).toEqual({ a: 1 });
         expect(Gubu({ a: Boolean })({ a: true })).toEqual({ a: true });
         expect(Gubu({ a: Object })({ a: { x: 1 } })).toEqual({ a: { x: 1 } });
+        expect(Gubu({ a: RegExp })({ a: /x/ })).toEqual({ a: /x/ });
         expect(() => Gubu({ a: String })({ a: 1 }))
             .toThrow(/not of type string/);
         expect(() => Gubu({ a: Number })({ a: 'x' }))
@@ -924,6 +926,22 @@ Validation failed for property "q.b" with string "x" because the string is not o
         expect(g0()).toEqual(Qaz);
         expect(g0(tmp.f0 = () => true)).toEqual(tmp.f0);
     });
+    test('regexp-basic', () => {
+        let g0 = Gubu(/a/);
+        expect(g0('a')).toEqual('a');
+        expect(g0('xax')).toEqual('xax');
+        expect(() => g0('x')).toThrow('Validation failed for string "x" because the string did not match /a/.');
+        let g1 = Gubu({ b: /a/ });
+        expect(g1({ b: 'a' })).toEqual({ b: 'a' });
+        expect(g1({ b: 'xax' })).toEqual({ b: 'xax' });
+        expect(() => g1({ b: 'x' })).toThrow('Validation failed for property "b" with string "x" because the string did not match /a/.');
+        expect(() => g1({})).toThrow('Validation failed for property "b" with value "undefined" because the value is not of type string.');
+        let g2 = Gubu({ b: Optional(/a/) });
+        expect(g2({ b: 'a' })).toEqual({ b: 'a' });
+        expect(g2({ b: 'xax' })).toEqual({ b: 'xax' });
+        expect(g2({})).toEqual({});
+        expect(() => g2({ b: 'x' })).toThrow('Validation failed for property "b" with string "x" because the string did not match /a/.');
+    });
     test('api-object', () => {
         // This is an allowed way to get shape builders
         const { Required } = Gubu;
@@ -1051,12 +1069,18 @@ Validation failed for property "q.b" with string "x" because the string is not o
         expect(gc3([{ x: 2 }, {}])).toEqual([{ x: 2 }, { y: true }]);
         expect(() => gc3([{ x: 2 }, undefined])).toThrow('required');
         expect(() => gc3([{ x: 2 }])).toThrow('required');
-        let gc4 = Gubu({ a: Closed([{ x: 1 }, { y: { z: /a/ } }]) });
-        expect(gc4()).toEqual({ 'a': [{ 'x': 1 }, { 'y': { 'z': /a/ } }] });
-        expect(gc4({})).toEqual({ 'a': [{ 'x': 1 }, { 'y': { 'z': /a/ } }] });
+        let gc4 = Gubu({ a: Closed([{ x: 1 }, { y: { z: 'Z' } }]) });
+        expect(gc4()).toEqual({ 'a': [{ 'x': 1 }, { 'y': { 'z': 'Z' } }] });
+        expect(gc4({})).toEqual({
+            'a': [{ 'x': 1 }, {
+                    'y': {
+                        'z': 'Z'
+                    }
+                }]
+        });
         expect(gc4({ a: undefined }))
-            .toEqual({ 'a': [{ 'x': 1 }, { 'y': { 'z': /a/ } }] });
-        expect(gc4({ a: [] })).toEqual({ 'a': [{ 'x': 1 }, { 'y': { 'z': /a/ } }] });
+            .toEqual({ 'a': [{ 'x': 1 }, { 'y': { 'z': 'Z' } }] });
+        expect(gc4({ a: [] })).toEqual({ 'a': [{ 'x': 1 }, { 'y': { 'z': 'Z' } }] });
         expect(() => gc4({ a: {} })).toThrow('Validation failed for property "a" with object "{}" because the object is not of type array.');
     });
     test('api-length', () => {

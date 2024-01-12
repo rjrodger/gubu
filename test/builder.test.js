@@ -116,6 +116,30 @@ describe('builder', () => {
         expect(Gubu(Optional(undefined))(undefined)).toEqual(undefined);
         expect(() => Gubu(Optional(undefined))('a')).toThrow('type');
     });
+    test('builder-open', () => {
+        expect(Gubu({})()).toEqual({});
+        expect(Gubu(Open({}))()).toEqual({});
+        expect(Gubu({})({})).toEqual({});
+        expect(Gubu(Open({}))({})).toEqual({});
+        expect(Gubu({})({ x: 1 })).toEqual({ x: 1 });
+        expect(Gubu(Open({}))({ x: 1 })).toEqual({ x: 1 });
+        expect(() => Gubu({ y: 2 })({ x: 1 })).toThrow('not allowed');
+        expect(Gubu(Open({ y: 2 }))({ x: 1 })).toEqual({ y: 2, x: 1 });
+        expect(() => Gubu({ y: 2 })({ x: 1, y: 3 })).toThrow('not allowed');
+        expect(Gubu(Open({ y: 2 }))({ x: 1, y: 3 })).toEqual({ y: 3, x: 1 });
+        expect(Gubu({ a: {} })()).toEqual({ a: {} });
+        expect(Gubu({ a: Open({}) })()).toEqual({ a: {} });
+        expect(Gubu({ a: {} })({})).toEqual({ a: {} });
+        expect(Gubu({ a: Open({}) })({})).toEqual({ a: {} });
+        expect(Gubu({ a: {} })({ a: { x: 1 } })).toEqual({ a: { x: 1 } });
+        expect(Gubu({ a: Open({}) })({ a: { x: 1 } })).toEqual({ a: { x: 1 } });
+        expect(() => Gubu({ a: { y: 2 } })({ a: { x: 1 } })).toThrow('not allowed');
+        expect(Gubu({ a: Open({ y: 2 }) })({ a: { x: 1 } })).toEqual({ a: { y: 2, x: 1 } });
+        expect(() => Gubu({ a: { y: 2 } })({ a: { x: 1, y: 3 } })).toThrow('not allowed');
+        expect(Gubu({ a: Open({ y: 2 }) })({ a: { x: 1, y: 3 } })).toEqual({ a: { y: 3, x: 1 } });
+        expect(Gubu({ a: Open({}).Default({ x: 1 }) })()).toEqual({ a: { x: 1 } });
+        // expect(() => Gubu(Optional(1))(true)).toThrow('type')
+    });
     test('builder-check', () => {
         let g0 = Gubu(Check((v) => v === "x"));
         expect(g0('x')).toEqual('x');
@@ -1065,8 +1089,10 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         let g6 = Gubu({ a: Child({ b: Child({ c: 1 }) }) });
         expect(g6({ a: { x: { b: { xx: { c: 11 } } }, y: { b: { yy: { c: 22 } } } } }))
             .toEqual({ a: { x: { b: { xx: { c: 11 } } }, y: { b: { yy: { c: 22 } } } } });
+        let g7 = Gubu({ a: Child({ b: 1 }) });
+        expect(g7.spec().v.a.c.t).toEqual('object');
     });
-    test('builder-void', () => {
+    test('builder-skip', () => {
         // Skip does not insert, but does check type.
         let t0 = Gubu(Skip());
         expect(t0()).toEqual(undefined);

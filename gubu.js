@@ -30,6 +30,7 @@ const GUBU = { gubu$: GUBU$, v$: VERSION };
 const GUBU$NIL = Symbol.for('gubu$nil');
 // RegExp: first letter is upper case
 const UPPER_CASE_FIRST_RE = /^[A-Z]/;
+const { toString } = Object.prototype;
 // Help the minifier
 const S = {
     gubu: 'gubu',
@@ -52,6 +53,7 @@ const S = {
     closed: 'closed',
     shape: 'shape',
     check: 'check',
+    regexp: 'regexp',
     Object: 'Object',
     Array: 'Array',
     Function: 'Function',
@@ -111,7 +113,7 @@ class State {
         this.type = S.never;
         this.stop = true;
         this.nextSibling = true;
-        this.fromDefault = false;
+        this.fromDflt = false;
         // NOTE: tri-valued; undefined = soft ignore
         this.ignoreVal = undefined;
         this.curerr = [];
@@ -132,7 +134,7 @@ class State {
         // Uncomment for debugging (definition below).
         // this.printStacks()
         this.stop = false;
-        this.fromDefault = false;
+        this.fromDflt = false;
         this.ignoreVal = undefined;
         this.isRoot = 0 === this.pI;
         this.check = undefined;
@@ -227,6 +229,7 @@ const EMPTY_VAL = {
     symbol: Symbol(''),
     bigint: BigInt(0),
     null: null,
+    regexp: /.*/,
 };
 // Normalize a value into a Node<S>.
 function nodize(shape, depth, meta) {
@@ -290,13 +293,19 @@ function nodize(shape, depth, meta) {
             Function !== v.constructor &&
             Object !== v.constructor &&
             null != v.constructor) {
-            t = S.instance;
-            u.n = v.constructor.name;
-            u.i = v.constructor;
+            let strdesc = toString.call(v);
+            if ('[object RegExp]' === strdesc) {
+                t = S.regexp;
+                r = true;
+            }
+            else {
+                t = S.instance;
+                u.n = v.constructor.name;
+                u.i = v.constructor;
+            }
             f = v;
         }
         else {
-            // c = GUBU$NIL
             // Empty object "{}" is considered Open
             if (0 === keys(v).length) {
                 c = Any();
@@ -344,7 +353,6 @@ function nodize(shape, depth, meta) {
     let vmap = (null != v && (S.object === t || S.array === t)) ? Object.assign({}, v) : v;
     let node = {
         $: GUBU,
-        // o: v,
         t,
         v: vmap,
         f,
@@ -428,13 +436,13 @@ function make(intop, inopts) {
                     // Not skippable, use default or create object
                     else if (!n.p && valundef && undefined !== n.f) {
                         s.updateVal(n.f);
-                        s.fromDefault = true;
+                        s.fromDflt = true;
                         val = s.val;
                         descend = false;
                     }
                     else if (!n.p || !valundef) {
                         // Descend into object, constructing child defaults
-                        s.updateVal(s.val || (s.fromDefault = true, {}));
+                        s.updateVal(s.val || (s.fromDflt = true, {}));
                         val = s.val;
                     }
                     if (descend) {
@@ -541,10 +549,10 @@ function make(intop, inopts) {
                     }
                     else if (!n.p && valundef && undefined !== n.f) {
                         s.updateVal(n.f);
-                        s.fromDefault = true;
+                        s.fromDflt = true;
                     }
                     else if (!n.p || null != s.val) {
-                        s.updateVal(s.val || (s.fromDefault = true, []));
+                        s.updateVal(s.val || (s.fromDflt = true, []));
                         // n.c set by nodize for array with len=1
                         let hasChildShape = GUBU$NIL !== n.c;
                         let hasValueElements = 0 < s.val.length;
@@ -602,6 +610,20 @@ function make(intop, inopts) {
                         }
                     }
                 }
+                // Handle regexps.
+                else if (S.regexp === s.type) {
+                    if (valundef && !n.r) {
+                        s.ignoreVal = true;
+                    }
+                    else if (S.string !== s.valType) {
+                        s.ignoreVal = true;
+                        s.curerr.push(makeErrImpl(S.type, s, 1045));
+                    }
+                    else if (!s.val.match(n.v)) {
+                        s.ignoreVal = true;
+                        s.curerr.push(makeErrImpl(S.regexp, s, 1045));
+                    }
+                }
                 // Invalid type.
                 else if (!(S.any === s.type ||
                     S.list === s.type ||
@@ -626,7 +648,7 @@ function make(intop, inopts) {
                         S.undefined === s.type) {
                         // Inject default value.
                         s.updateVal(n.f);
-                        s.fromDefault = true;
+                        s.fromDflt = true;
                     }
                     else if (S.any === s.type) {
                         s.ignoreVal = undefined === s.ignoreVal ? true : s.ignoreVal;
@@ -714,10 +736,15 @@ function make(intop, inopts) {
         gubuShape.spec();
         return top;
     };
+    gubuShape.stringify = (shape) => {
+        let n = null == shape ? top : (shape.node && shape.node());
+        n = (null != n && n.$ && (GUBU$ === n.$.gubu$ || true === n.$.gubu$)) ? n.v : n;
+        return Gubu.stringify(n);
+    };
     let desc = '';
     gubuShape.toString = () => {
         desc = truncate('' === desc ?
-            stringify((top &&
+            stringify((null != top &&
                 top.$ &&
                 (GUBU$ === top.$.gubu$ || true === top.$.gubu$)) ? top.v : top) :
             desc);
@@ -1137,6 +1164,16 @@ const Exact = function (...vals) {
                 return true;
             }
         }
+        const hasDftl = state.node.hasOwnProperty('f');
+        // console.log('QQQ', hasDftl, val, state.node.f)
+        if (hasDftl && undefined === val) {
+            const valDftl = state.node.f;
+            for (let i = 0; i < vals.length; i++) {
+                if (valDftl === vals[i]) {
+                    return true;
+                }
+            }
+        }
         update.err =
             makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' must be exactly one of: ' +
                 `${state.node.s}.`);
@@ -1264,19 +1301,19 @@ const Rename = function (inopts, shape) {
         let before = (val, update, s) => {
             if (undefined === val && 0 < claim.length) {
                 s.ctx.Rename = (s.ctx.Rename || {});
-                s.ctx.Rename.fromDefault = (s.ctx.Rename.fromDefault || {});
+                s.ctx.Rename.fromDflt = (s.ctx.Rename.fromDflt || {});
                 for (let cn of claim) {
-                    let fromDefault = s.ctx.Rename.fromDefault[cn] || {};
+                    let fromDflt = s.ctx.Rename.fromDflt[cn] || {};
                     // Only use claim if it was not a default value.
-                    if (undefined !== s.parent[cn] && !fromDefault.yes) {
+                    if (undefined !== s.parent[cn] && !fromDflt.yes) {
                         update.val = s.parent[cn];
                         if (!s.match) {
                             s.parent[name] = update.val;
                         }
-                        update.node = fromDefault.node;
+                        update.node = fromDflt.node;
                         // Old errors on the claimed value are no longer valid.
                         for (let eI = 0; eI < s.err.length; eI++) {
-                            if (s.err[eI].k === fromDefault.key) {
+                            if (s.err[eI].k === fromDflt.key) {
                                 s.err.splice(eI, 1);
                                 eI--;
                             }
@@ -1288,7 +1325,7 @@ const Rename = function (inopts, shape) {
                             let j = s.cI + 1;
                             // Add the default to the end of the node set to ensure it
                             // is properly validated.
-                            s.nodes.splice(j, 0, nodize(fromDefault.dval));
+                            s.nodes.splice(j, 0, nodize(fromDflt.dval));
                             s.vals.splice(j, 0, undefined);
                             s.parents.splice(j, 0, s.parent);
                             s.keys.splice(j, 0, cn);
@@ -1318,9 +1355,9 @@ const Rename = function (inopts, shape) {
                 update.done = true;
             }
             s.ctx.Rename = (s.ctx.Rename || {});
-            s.ctx.Rename.fromDefault = (s.ctx.Rename.fromDefault || {});
-            s.ctx.Rename.fromDefault[name] = {
-                yes: s.fromDefault,
+            s.ctx.Rename.fromDflt = (s.ctx.Rename.fromDflt || {});
+            s.ctx.Rename.fromDflt[name] = {
+                yes: s.fromDflt,
                 key: s.key,
                 dval: s.node.v,
                 node: s.node
@@ -1423,6 +1460,7 @@ const Len = function (len, shape) {
 exports.Len = Len;
 // Children must have a specified shape.
 const Child = function (child, shape) {
+    // Child provides implicit open object if no shape defined.
     let node = buildize(this, shape || {});
     node.c = nodize(child);
     return node;
@@ -1453,6 +1491,7 @@ function buildize(node0, node1) {
         Check,
         Child,
         Closed,
+        Default,
         Define,
         Empty,
         Exact,
@@ -1466,8 +1505,8 @@ function buildize(node0, node1) {
         Refer,
         Rename,
         Required,
-        Skip,
         Rest,
+        Skip,
     });
 }
 exports.buildize = buildize;
@@ -1512,16 +1551,28 @@ function makeErrImpl(why, s, mark, text, user, fname) {
         err.t = `Validation failed for ` +
             (0 < err.p.length ? `${propkind} "${err.p}" with ` : '') +
             `${valkind} "${valstr}" because ` +
-            (S.type === why ? (S.instance === s.node.t ?
-                `the ${valkind} is not an instance of ${s.node.u.n}` :
-                `the ${valkind} is not of type ${s.node.t}`) :
-                S.required === why ? ('' === s.val ? 'an empty string is not allowed' :
-                    `the ${valkind} is required`) :
-                    'closed' === why ?
-                        `the ${propkind} "${propkey}" ${propkindverb} not allowed` :
-                        S.never === why ? 'no value is allowed' :
-                            `check "${null == fname ? why : fname}" failed`) +
-            (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.');
+            (S.type === why ?
+                (S.instance === s.node.t ?
+                    `the ${valkind} is not an instance of ${s.node.u.n}` :
+                    `the ${valkind} is not of type ${S.regexp === s.node.t ? S.string : s.node.t}`)
+                :
+                    S.required === why ?
+                        ('' === s.val ?
+                            'an empty string is not allowed'
+                            :
+                                `the ${valkind} is required`)
+                        :
+                            'closed' === why ?
+                                `the ${propkind} "${propkey}" ${propkindverb} not allowed`
+                                :
+                                    S.regexp === why ?
+                                        'the string did not match ' + s.node.v
+                                        :
+                                            S.never === why ?
+                                                'no value is allowed'
+                                                :
+                                                    `check "${null == fname ? why : fname}" failed`)
+            + (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.');
     }
     else {
         err.t = text
@@ -1532,7 +1583,9 @@ function makeErrImpl(why, s, mark, text, user, fname) {
 }
 function node2str(n) {
     return (null != n.s && '' !== n.s) ? n.s :
-        (!n.r && undefined !== n.v) ? n.v : n.t;
+        (!n.r && undefined !== n.v) ?
+            ('function' === typeof n.v.constructor ? n.v : n.v.toString())
+            : n.t;
 }
 function stringify(src, replacer, dequote, expand) {
     let str;
@@ -1551,8 +1604,14 @@ function stringify(src, replacer, dequote, expand) {
                 val.constructor &&
                 S.Object !== val.constructor.name &&
                 S.Array !== val.constructor.name) {
-                val =
-                    S.function === typeof val.toString ? val.toString() : val.constructor.name;
+                let strdesc = toString.call(val);
+                if ('[object RegExp]' === strdesc) {
+                    val = val.toString();
+                }
+                else {
+                    val =
+                        S.function === typeof val.toString ? val.toString() : val.constructor.name;
+                }
             }
             else if (S.function === typeof (val)) {
                 if (S.function === typeof (make[val.name]) && isNaN(+key)) {
@@ -1575,6 +1634,7 @@ function stringify(src, replacer, dequote, expand) {
                 (true === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$) || GUBU$ === ((_b = val === null || val === void 0 ? void 0 : val.$) === null || _b === void 0 ? void 0 : _b.gubu$))) {
                 val = node2str(val);
             }
+            // console.log('WWW', val, typeof val)
             return val;
         });
         str = String(str);

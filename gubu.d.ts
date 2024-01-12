@@ -31,6 +31,7 @@ type ValType = 'any' | // Any type.
 'object' | // A plain object.
 'string' | // A string (but *not* the empty string).
 'symbol' | // A symbol reference.
+'regexp' | // A regular expression.
 'undefined';
 type Node<V> = {
     $: typeof GUBU;
@@ -71,7 +72,7 @@ declare class State {
     type: string;
     stop: boolean;
     nextSibling: boolean;
-    fromDefault: boolean;
+    fromDflt: boolean;
     ignoreVal: boolean | undefined;
     curerr: any[];
     err: any[];
@@ -147,6 +148,7 @@ declare function make<S>(intop?: S | Node<S>, inopts?: GubuOptions): {
     error(root?: any, ctx?: Context): GubuError[];
     spec(): any;
     node(): Node<S>;
+    stringify(shape?: any): string;
     toString(): string;
     gubu: {
         gubu$: symbol;

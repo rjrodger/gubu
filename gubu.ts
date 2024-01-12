@@ -40,6 +40,9 @@ const GUBU$NIL = Symbol.for('gubu$nil')
 const UPPER_CASE_FIRST_RE = /^[A-Z]/
 
 
+const { toString } = Object.prototype
+
+
 // Options for creating a GubuShape.
 type GubuOptions = {
   name?: string // Name this Gubu shape.
@@ -86,6 +89,7 @@ type ValType =
   'object' |    // A plain object.
   'string' |    // A string (but *not* the empty string).
   'symbol' |    // A symbol reference.
+  'regexp' |    // A regular expression.
   'undefined'   // The `undefined` value.
 
 
@@ -149,6 +153,7 @@ const S = {
   closed: 'closed',
   shape: 'shape',
   check: 'check',
+  regexp: 'regexp',
 
   Object: 'Object',
   Array: 'Array',
@@ -219,7 +224,7 @@ class State {
   stop: boolean = true
   nextSibling: boolean = true
 
-  fromDefault: boolean = false
+  fromDflt: boolean = false
 
   // NOTE: tri-valued; undefined = soft ignore
   ignoreVal: boolean | undefined = undefined
@@ -266,7 +271,7 @@ class State {
     // this.printStacks()
 
     this.stop = false
-    this.fromDefault = false
+    this.fromDflt = false
     this.ignoreVal = undefined
     this.isRoot = 0 === this.pI
     this.check = undefined
@@ -458,6 +463,7 @@ const EMPTY_VAL: { [name: string]: any } = {
   symbol: Symbol(''),
   bigint: BigInt(0),
   null: null,
+  regexp: /.*/,
 }
 
 
@@ -540,15 +546,22 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
       Object !== v.constructor &&
       null != v.constructor
     ) {
-      t = (S.instance as ValType)
-      u.n = v.constructor.name
-      u.i = v.constructor
+      let strdesc = toString.call(v)
+
+      if ('[object RegExp]' === strdesc) {
+        t = (S.regexp as ValType)
+        r = true
+      }
+      else {
+        t = (S.instance as ValType)
+        u.n = v.constructor.name
+        u.i = v.constructor
+      }
+
       f = v
     }
 
     else {
-      // c = GUBU$NIL
-
       // Empty object "{}" is considered Open
       if (0 === keys(v).length) {
         c = Any()
@@ -603,7 +616,6 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
 
   let node = ({
     $: GUBU,
-    // o: v,
     t,
     v: vmap,
     f,
@@ -711,13 +723,13 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           // Not skippable, use default or create object
           else if (!n.p && valundef && undefined !== n.f) {
             s.updateVal(n.f)
-            s.fromDefault = true
+            s.fromDflt = true
             val = s.val
             descend = false
           }
           else if (!n.p || !valundef) {
             // Descend into object, constructing child defaults
-            s.updateVal(s.val || (s.fromDefault = true, {}))
+            s.updateVal(s.val || (s.fromDflt = true, {}))
             val = s.val
           }
 
@@ -842,10 +854,10 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           }
           else if (!n.p && valundef && undefined !== n.f) {
             s.updateVal(n.f)
-            s.fromDefault = true
+            s.fromDflt = true
           }
           else if (!n.p || null != s.val) {
-            s.updateVal(s.val || (s.fromDefault = true, []))
+            s.updateVal(s.val || (s.fromDflt = true, []))
 
             // n.c set by nodize for array with len=1
             let hasChildShape = GUBU$NIL !== n.c
@@ -914,6 +926,21 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           }
         }
 
+        // Handle regexps.
+        else if (S.regexp === s.type) {
+          if (valundef && !n.r) {
+            s.ignoreVal = true
+          }
+          else if (S.string !== s.valType) {
+            s.ignoreVal = true
+            s.curerr.push(makeErrImpl(S.type, s, 1045))
+          }
+          else if (!s.val.match(n.v)) {
+            s.ignoreVal = true
+            s.curerr.push(makeErrImpl(S.regexp, s, 1045))
+          }
+        }
+
         // Invalid type.
         else if (!(
           S.any === s.type ||
@@ -943,7 +970,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           ) {
             // Inject default value.
             s.updateVal(n.f)
-            s.fromDefault = true
+            s.fromDflt = true
           }
           else if (S.any === s.type) {
             s.ignoreVal = undefined === s.ignoreVal ? true : s.ignoreVal
@@ -1058,12 +1085,19 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   }
 
 
+  gubuShape.stringify = (shape?: any) => {
+    let n = null == shape ? top : (shape.node && shape.node())
+    n = (null != n && n.$ && (GUBU$ === n.$.gubu$ || true === (n.$ as any).gubu$)) ? n.v : n
+    return Gubu.stringify(n)
+  }
+
+
   let desc: string = ''
   gubuShape.toString = () => {
     desc = truncate('' === desc ?
       stringify(
         (
-          top &&
+          null != top &&
           top.$ &&
           (GUBU$ === top.$.gubu$ || true === (top.$ as any).gubu$)
         ) ? top.v : top) :
@@ -1592,6 +1626,17 @@ const Exact = function(this: any, ...vals: any[]) {
       }
     }
 
+    const hasDftl = state.node.hasOwnProperty('f')
+    // console.log('QQQ', hasDftl, val, state.node.f)
+    if (hasDftl && undefined === val) {
+      const valDftl = state.node.f
+      for (let i = 0; i < vals.length; i++) {
+        if (valDftl === vals[i]) {
+          return true
+        }
+      }
+    }
+
     update.err =
       makeErr(state,
         S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' must be exactly one of: ' +
@@ -1765,22 +1810,22 @@ const Rename = function <V>(this: any, inopts: any, shape?: Node<V> | V): Node<V
     let before = (val: any, update: Update, s: State) => {
       if (undefined === val && 0 < claim.length) {
         s.ctx.Rename = (s.ctx.Rename || {})
-        s.ctx.Rename.fromDefault = (s.ctx.Rename.fromDefault || {})
+        s.ctx.Rename.fromDflt = (s.ctx.Rename.fromDflt || {})
 
         for (let cn of claim) {
-          let fromDefault = s.ctx.Rename.fromDefault[cn] || {}
+          let fromDflt = s.ctx.Rename.fromDflt[cn] || {}
 
           // Only use claim if it was not a default value.
-          if (undefined !== s.parent[cn] && !fromDefault.yes) {
+          if (undefined !== s.parent[cn] && !fromDflt.yes) {
             update.val = s.parent[cn]
             if (!s.match) {
               s.parent[name] = update.val
             }
-            update.node = fromDefault.node
+            update.node = fromDflt.node
 
             // Old errors on the claimed value are no longer valid.
             for (let eI = 0; eI < s.err.length; eI++) {
-              if (s.err[eI].k === fromDefault.key) {
+              if (s.err[eI].k === fromDflt.key) {
                 s.err.splice(eI, 1)
                 eI--
               }
@@ -1794,7 +1839,7 @@ const Rename = function <V>(this: any, inopts: any, shape?: Node<V> | V): Node<V
 
               // Add the default to the end of the node set to ensure it
               // is properly validated.
-              s.nodes.splice(j, 0, nodize(fromDefault.dval))
+              s.nodes.splice(j, 0, nodize(fromDflt.dval))
               s.vals.splice(j, 0, undefined)
               s.parents.splice(j, 0, s.parent)
               s.keys.splice(j, 0, cn)
@@ -1831,9 +1876,9 @@ const Rename = function <V>(this: any, inopts: any, shape?: Node<V> | V): Node<V
       }
 
       s.ctx.Rename = (s.ctx.Rename || {})
-      s.ctx.Rename.fromDefault = (s.ctx.Rename.fromDefault || {})
-      s.ctx.Rename.fromDefault[name] = {
-        yes: s.fromDefault,
+      s.ctx.Rename.fromDflt = (s.ctx.Rename.fromDflt || {})
+      s.ctx.Rename.fromDflt[name] = {
+        yes: s.fromDflt,
         key: s.key,
         dval: s.node.v,
         node: s.node
@@ -1998,6 +2043,7 @@ const Child = function <V>(
   child?: any,
   shape?: Node<V> | V
 ): Node<V> {
+  // Child provides implicit open object if no shape defined.
   let node = buildize(this, shape || {})
   node.c = nodize(child)
   return node
@@ -2038,6 +2084,7 @@ function buildize<V>(node0?: any, node1?: any): Node<V> {
     Check,
     Child,
     Closed,
+    Default,
     Define,
     Empty,
     Exact,
@@ -2051,8 +2098,8 @@ function buildize<V>(node0?: any, node1?: any): Node<V> {
     Refer,
     Rename,
     Required,
-    Skip,
     Rest,
+    Skip,
   })
 }
 
@@ -2118,17 +2165,35 @@ function makeErrImpl(
       (0 < err.p.length ? `${propkind} "${err.p}" with ` : '') +
       `${valkind} "${valstr}" because ` +
 
-      (S.type === why ? (
-        S.instance === s.node.t ?
-          `the ${valkind} is not an instance of ${s.node.u.n}` :
-          `the ${valkind} is not of type ${s.node.t}`) :
-        S.required === why ? ('' === s.val ? 'an empty string is not allowed' :
-          `the ${valkind} is required`) :
-          'closed' === why ?
-            `the ${propkind} "${propkey}" ${propkindverb} not allowed` :
-            S.never === why ? 'no value is allowed' :
-              `check "${null == fname ? why : fname}" failed`) +
-      (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.')
+      (
+        S.type === why ?
+          (
+            S.instance === s.node.t ?
+              `the ${valkind} is not an instance of ${s.node.u.n}` :
+              `the ${valkind} is not of type ${S.regexp === s.node.t ? S.string : s.node.t}`
+          )
+          :
+          S.required === why ?
+            (
+              '' === s.val ?
+                'an empty string is not allowed'
+                :
+                `the ${valkind} is required`
+            )
+            :
+            'closed' === why ?
+              `the ${propkind} "${propkey}" ${propkindverb} not allowed`
+              :
+              S.regexp === why ?
+                'the string did not match ' + s.node.v
+                :
+                S.never === why ?
+                  'no value is allowed'
+                  :
+                  `check "${null == fname ? why : fname}" failed`
+      )
+
+      + (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.')
   }
   else {
     err.t = text
@@ -2142,7 +2207,9 @@ function makeErrImpl(
 
 function node2str(n: Node<any>): string {
   return (null != n.s && '' !== n.s) ? n.s :
-    (!n.r && undefined !== n.v) ? n.v : n.t
+    (!n.r && undefined !== n.v) ?
+      ('function' === typeof n.v.constructor ? n.v : n.v.toString())
+      : n.t
 }
 
 
@@ -2167,8 +2234,15 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
         S.Object !== val.constructor.name &&
         S.Array !== val.constructor.name
       ) {
-        val =
-          S.function === typeof val.toString ? val.toString() : val.constructor.name
+        let strdesc = toString.call(val)
+        if ('[object RegExp]' === strdesc) {
+          val = val.toString()
+        }
+        else {
+          val =
+            S.function === typeof val.toString ? val.toString() : val.constructor.name
+        }
+
       }
       else if (S.function === typeof (val)) {
         if (S.function === typeof ((make as any)[val.name]) && isNaN(+key)) {
@@ -2192,6 +2266,7 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
         val = node2str(val)
       }
 
+      // console.log('WWW', val, typeof val)
       return val
     })
 
