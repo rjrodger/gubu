@@ -7,7 +7,7 @@ if (GubuModule.Gubu) {
     GubuModule = GubuModule.Gubu;
 }
 const Gubu = GubuModule;
-const { MakeArgu, Skip, Rest, Any, Empty, One, } = Gubu;
+const { MakeArgu, Skip, Rest, Any, Empty, One, Default, } = Gubu;
 describe('argu', () => {
     test('basic', () => {
         let Argu = MakeArgu('QAZ');
@@ -91,6 +91,36 @@ describe('argu', () => {
             .toEqual({ a: 'b', b: undefined, c: f0, d: [31, 32] });
         expect(bar(f0, 41, 42))
             .toEqual({ a: undefined, b: undefined, c: f0, d: [41, 42] });
+    });
+    test('plugin-args', () => {
+        const Argu = MakeArgu('plugin');
+        const argu = Argu('args', {
+            plugin: One(Object, Function, String),
+            options: Default(undefined, One(Object, String)),
+            callback: Skip(Function),
+        });
+        expect(argu([{ x: 11 }]))
+            .toEqual({ plugin: { x: 11 }, options: undefined, callback: undefined });
+        expect(argu([{ x: 11 }, { y: 2 }]))
+            .toEqual({ plugin: { x: 11 }, options: { y: 2 }, callback: undefined });
+        const f0 = () => { };
+        expect(argu([{ x: 11 }, { y: 2 }, f0]))
+            .toEqual({ plugin: { x: 11 }, options: { y: 2 }, callback: f0 });
+        expect(argu([f0]))
+            .toEqual({ plugin: f0, options: undefined, callback: undefined });
+        expect(argu([f0, { x: 1 }]))
+            .toEqual({ plugin: f0, options: { x: 1 }, callback: undefined });
+        const f1 = () => { };
+        expect(argu([f0, { x: 1 }, f1]))
+            .toEqual({ plugin: f0, options: { x: 1 }, callback: f1 });
+        expect(argu([{ x: 1 }, { y: 2 }, f1]))
+            .toEqual({ plugin: { x: 1 }, options: { y: 2 }, callback: f1 });
+        expect(() => argu([f0, f1])).toThrow('plugin (args): Value "f1" for property "options"' +
+            ' does not satisfy one of: Object, String');
+        expect(argu([Object.freeze({ x: 11 })]))
+            .toEqual({ plugin: { x: 11 }, options: undefined, callback: undefined });
+        expect(argu([f0, Object.freeze({ x: 11 })]))
+            .toEqual({ plugin: f0, options: { x: 11 }, callback: undefined });
     });
 });
 //# sourceMappingURL=argu.test.js.map

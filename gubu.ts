@@ -25,7 +25,7 @@ import { inspect } from 'util'
 
 
 // Package version.
-const VERSION = '7.0.0'
+const VERSION = '7.1.0'
 
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$')
@@ -307,6 +307,10 @@ class State {
 
     this.cI = this.pI
     this.sI = this.pI + 1
+
+    if (Object.isFrozen(this.parents[this.pI])) {
+      this.parents[this.pI] = { ...this.parents[this.pI] }
+    }
     this.parent = this.parents[this.pI]
 
     this.nextSibling = true

@@ -2588,5 +2588,10 @@ Validation failed for index "1" with number "1" because the number is not of typ
         expect(() => g0({})).toThrow('Validation failed for property "x" with value "undefined" because the value is required.');
         expect(() => g0({ x: '' })).toThrow('Validation failed for property "x" with string "" because the string is not of type number.');
     });
+    test('frozen', () => {
+        let g0 = Gubu({ x: Object });
+        expect(g0({ x: { y: 1 } })).toEqual({ x: { y: 1 } });
+        expect(g0({ x: Object.freeze({ y: 1 }) })).toEqual({ x: { y: 1 } });
+    });
 });
 //# sourceMappingURL=gubu.test.js.map
