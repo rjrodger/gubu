@@ -157,7 +157,7 @@ declare function make<S>(intop?: S | Node<S>, inopts?: GubuOptions): {
 };
 declare function expr(spec: {
     src: string;
-    val: any;
+    val?: any;
     tokens?: string[];
     i?: number;
 }): any;

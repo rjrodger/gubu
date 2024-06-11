@@ -25,7 +25,7 @@ import { inspect } from 'util'
 
 
 // Package version.
-const VERSION = '7.1.0'
+const VERSION = '7.1.1'
 
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$')
@@ -444,16 +444,17 @@ class GubuError extends TypeError {
 }
 
 
+// TODO: There are a lot more!!! Error, Blob, etc
 // Identify JavaScript wrapper types by name.
 const IS_TYPE: { [name: string]: boolean } = {
-  String: true,
-  Number: true,
-  Boolean: true,
-  Object: true,
   Array: true,
-  Function: true,
-  Symbol: true,
   BigInt: true,
+  Boolean: true,
+  Function: true,
+  Number: true,
+  Object: true,
+  String: true,
+  Symbol: true,
 }
 
 
@@ -1136,7 +1137,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 // })
 function expr(spec: {
   src: string
-  val: any
+  val?: any
   tokens?: string[]
   i?: number
 }) {

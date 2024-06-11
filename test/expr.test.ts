@@ -21,6 +21,7 @@ const Gubu: GubuX = GubuModule
 
 const {
   Child,
+  expr,
 } = Gubu
 
 
@@ -33,6 +34,18 @@ describe('extend', () => {
     }, { meta: { active: true } })
 
     expect(g0.spec().v.x.m).toEqual({ short: '', foo: 99 })
+  })
+
+
+  test('expr-direct', () => {
+    const p0 = expr({ src: 'String' })
+    expect(p0).toEqual(String)
+
+    expect(() => expr({ src: 'Bad' })).toThrow('unexpected token Bad')
+
+    const p1 = expr({ src: 'Max(2,String)' })
+    expect(p1.t).toEqual('string')
+    expect(p1.s).toEqual('Max(2,"String")')
   })
 
 

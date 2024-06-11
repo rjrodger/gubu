@@ -21,7 +21,7 @@ exports.GRest = exports.GSome = exports.GSkip = exports.GRequired = exports.GRen
 // DOC: Optional
 const util_1 = require("util");
 // Package version.
-const VERSION = '7.1.0';
+const VERSION = '7.1.1';
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$');
 // A singleton for fast equality checks.
@@ -211,16 +211,17 @@ class GubuError extends TypeError {
         return Object.assign(Object.assign({}, this), { err: this.desc().err, name: this.name, message: this.message });
     }
 }
+// TODO: There are a lot more!!! Error, Blob, etc
 // Identify JavaScript wrapper types by name.
 const IS_TYPE = {
-    String: true,
-    Number: true,
-    Boolean: true,
-    Object: true,
     Array: true,
-    Function: true,
-    Symbol: true,
     BigInt: true,
+    Boolean: true,
+    Function: true,
+    Number: true,
+    Object: true,
+    String: true,
+    Symbol: true,
 };
 // Empty values for each type.
 const EMPTY_VAL = {
