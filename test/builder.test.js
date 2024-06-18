@@ -10,9 +10,7 @@ if (GubuModule.Gubu) {
 const Gubu = GubuModule;
 const buildize = Gubu.buildize;
 const makeErr = Gubu.makeErr;
-const { Above, After, All, Any, Before, Below, Check, Child, Closed, Default, Define, Empty, Exact, Func, Key, Len, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some,
-// Value,
- } = Gubu;
+const { Above, After, All, Any, Before, Below, Check, Child, Closed, Default, Define, Empty, Exact, Func, Key, Len, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some, Type, } = Gubu;
 class Foo {
     constructor(a) {
         this.a = -1;
@@ -1190,6 +1188,14 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         expect(d7({ a: [1, 2] })).toEqual({ a: [1, 2] });
         expect(d7()).toEqual({ a: null });
         expect(() => d7({ a: 'x' })).toThrow('type');
+    });
+    test('builder-type', () => {
+        let d0 = Gubu({
+            a: Type('Number')
+        });
+        expect(d0.stringify(null, true)).toEqual('{"a":"Number()"}');
+        expect(d0({ a: 1 })).toEqual({ a: 1 });
+        expect(() => d0({ a: 'A' })).toThrow('not of type number');
     });
 });
 //# sourceMappingURL=builder.test.js.map

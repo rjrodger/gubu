@@ -49,13 +49,24 @@ type GubuOptions = {
 
   // Meta properties
   meta?: {
-    active?: boolean // If true, recognize meta properties.
-    suffix?: string // Key suffix to mark meta properties
+    active?: boolean // If true, recognize meta properties. Default: false.
+    suffix?: string // Key suffix to mark meta properties. Default: '$$'
   }
 
   // Key expressions
   keyexpr?: {
-    active?: boolean // If true, recognize key expressions.
+    active?: boolean // If true, recognize key expressions. Default: true.
+  }
+
+  // Value expressions
+  valexpr?: {
+    active?: boolean // If true, recognize value expressions. Default: false.
+  }
+
+  // Special keys to define value expr for parent object or array.
+  keyspec?: {
+    active?: boolean // If true, recognize keyspec in object. Default: false.
+    keymark: string // Special key to mark parent object expr. Default: meta.suffix.
   }
 
   prefix?: string // custom prefix for error messages.
@@ -111,7 +122,7 @@ type Node<V> = {
   b: Validate[]          // Custom before validation functions.
   a: Validate[]          // Custom after vaidation functions.
   m: NodeMeta            // Meta data.
-  s?: string             // Custom stringification.
+  s?: string | Function  // Custom stringification.
   z?: string             // Custom error message.
 } & { [name: string]: Builder<V> }
 
@@ -155,8 +166,12 @@ const S = {
   check: 'check',
   regexp: 'regexp',
 
+  String: 'String',
+  Number: 'Number',
+  Boolean: 'Boolean',
   Object: 'Object',
   Array: 'Array',
+  Symbol: 'Symbol',
   Function: 'Function',
   Value: 'Value',
 
@@ -197,6 +212,17 @@ const S = {
 }
 
 
+const TNAT = {
+  [S.String]: String,
+  [S.Number]: Number,
+  [S.Boolean]: Boolean,
+  [S.Object]: Object,
+  [S.Array]: Array,
+  [S.Symbol]: Symbol,
+  [S.Function]: Function,
+}
+
+
 // Utility shortcuts.
 const keys = (arg: any) => Object.keys(arg)
 const defprop = (o: any, p: any, a: any) => Object.defineProperty(o, p, a)
@@ -231,8 +257,13 @@ class State {
 
   curerr: any[] = []
   err: any[] = []
+
+  // TODO: is this needed - try using ancestors instead
   parents: Node<any>[] = []
+
   keys: string[] = []
+
+  ancestors: Node<any>[] = []
 
   // NOTE: not "clean"!
   // Actual path is always only path[0,dI+1]
@@ -267,7 +298,7 @@ class State {
   }
 
   next() {
-    // Uncomment for debugging (definition below).
+    // Uncomment for debugging (definition below). DO NOT REMOVE.
     // this.printStacks()
 
     this.stop = false
@@ -280,6 +311,9 @@ class State {
     // Only objects|arrays can be nodes, so a number is a back pointer.
     // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
     let nextNode = this.nodes[this.pI]
+
+    // See note for path below.
+    this.ancestors[this.dI] = this.node
 
     while (+nextNode) {
       this.dI--
@@ -308,6 +342,7 @@ class State {
     this.cI = this.pI
     this.sI = this.pI + 1
 
+    // TODO: remove and use ancestors?
     if (Object.isFrozen(this.parents[this.pI])) {
       this.parents[this.pI] = { ...this.parents[this.pI] }
     }
@@ -317,6 +352,9 @@ class State {
 
     this.type = this.node.t
 
+    // NOTE: this is always correct for the current node, up to dI, because
+    // previous values at dI get overwritten. Avoids need to duplicate on each descent.
+    // ancestors uses same approach.
     this.path[this.dI] = this.key
 
     this.oval = this.val
@@ -336,7 +374,8 @@ class State {
     }
   }
 
-  /* UNCOMMENT TO DEBUG - DO NOT REMOVE
+  // UNCOMMENT TO DEBUG - DO NOT REMOVE
+  /*
   printStacks() {
     console.log('\nNODE',
       'd=' + this.dI,
@@ -347,20 +386,25 @@ class State {
       this.node.t,
       this.path,
       this.err.length)
+    console.log('A:' + this.ancestors
+      .map((a: any, i: number) => i + '=' + stringify(a)).join('  '))
     for (let i = 0;
       i < this.nodes.length ||
       i < this.vals.length ||
-      i < this.parents.length;
+      i < this.parents.length
+      ;
       i++) {
       console.log(i, '\t',
         ('' + (isNaN(+this.nodes[i]) ?
           this.keys[i] + ':' + (this.nodes[i] as any)?.t :
           +this.nodes[i])).padEnd(32, ' '),
         stringify(this.vals[i]).padEnd(32, ' '),
-        stringify(this.parents[i]))
+        stringify(this.parents[i]),
+      )
     }
   }
   */
+
 }
 
 
@@ -645,6 +689,8 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
 function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   const opts: GubuOptions = null == inopts ? {} : inopts
 
+  // TODO: move to prepopts utility function
+
   // Ironically, we can't Gubu GubuOptions, so we have to set
   // option defaults manually.
   opts.name =
@@ -661,6 +707,15 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   // Key expressions are on by default.
   let optskeyexpr = opts.keyexpr = opts.keyexpr || ({} as any)
   optskeyexpr.active = (false !== optskeyexpr.active)
+
+  // Key specs are off by default.
+  let optskeyspec = opts.keyspec = (opts.keyspec || ({} as any))
+  optskeyspec.active = (true === optskeyspec.active)
+  optskeyspec.keymark =
+    S.string == typeof optskeyspec.keymark ? optskeyspec.keymark : optsmeta.suffix
+
+
+  // console.log('OKS', optskeyspec)
 
   let top: Node<S> = nodize<S>(intop, 0)
 
@@ -739,6 +794,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           }
 
           if (descend) {
+            // console.log('DESCEND', s.node)
             val = null == val && false === s.ctx.err ? {} : val
 
             if (null != val) {
@@ -754,6 +810,8 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
                 //for (let k of vkeys) {
                 for (let kI = 0; kI < vkeys.length; kI++) {
                   let k = vkeys[kI]
+                  // console.log('KEY', k, kI)
+
                   let meta: NodeMeta | undefined = undefined
 
                   // TODO: make optional, needs tests
@@ -791,12 +849,30 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
                       rk = m[1]
                       let src = m[3]
 
-                      ov = expr({ src, val: ov })
+                      ov = expr({ src, d: 1 + s.dI, meta }, ov)
                       delete n.v[k]
                     }
                   }
 
+                  if (optskeyspec.active && k.startsWith(optskeyspec.keymark)) {
+                    if (k === optskeyspec.keymark) {
+                      // console.log('KEYSPEC', k)
+                      // console.dir(s, { depth: null })
+                      expr({
+                        src: ov, d: 1 + s.dI, meta,
+                        parent: (s.ancestors[s.dI - 1] as any)?.m?.$$
+                      }, n)
+                    }
+                    // console.log('DELETE', k, s)
+                    n.m.$$ = (n.m.$$ || {})
+                    n.m.$$[k.substring(optskeyspec.keymark.length)] = n.v[k]
+                    delete n.v[k]
+                    continue
+                  }
+
+
                   let nvs = nodize(ov, 1 + s.dI, meta)
+                  // console.log('NVS', k, ov, nvs)
 
                   n.v[rk] = nvs
 
@@ -1072,6 +1148,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
   gubuShape.spec = () => {
     // TODO: when c is GUBU$NIL it is not present, should have some indicator value
+    // console.dir(top, { depth: null })
 
     // Normalize spec, discard errors.
     gubuShape(undefined, { err: false })
@@ -1090,10 +1167,17 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   }
 
 
-  gubuShape.stringify = (shape?: any) => {
-    let n = null == shape ? top : (shape.node && shape.node())
-    n = (null != n && n.$ && (GUBU$ === n.$.gubu$ || true === (n.$ as any).gubu$)) ? n.v : n
-    return Gubu.stringify(n)
+  gubuShape.stringify = (...rest: any) => {
+    let n = top
+    n = (null != n && n.$ && (GUBU$ === n.$.gubu$ || true === (n.$ as any).gubu$)) ?
+      ('array' === n.t ? [n.c] :
+        (null == n.s ? n.v : ('function' === typeof n.s ? (n.s = n.s()) : n.s))) : n
+    // console.log('STR', n, top, rest)
+
+    let str = Gubu.stringify(n, ...rest)
+    str = str.replace(/^"/, '').replace(/"$/, '')
+
+    return str
   }
 
 
@@ -1135,48 +1219,89 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 //   'z: Required(Min(1))': 2,
 //   'q: Min(1).Below(4)': 3,
 // })
-function expr(spec: {
-  src: string
-  val?: any
-  tokens?: string[]
-  i?: number
-}) {
-  let top = false
+function expr(
+  spec: {
+    src: string
+    val?: any
+    d?: number
+    meta?: NodeMeta
+    parent?: any
+    tokens?: string[]
+    i?: number
+  } | string,
+  current?: any
+) {
+  // FIRST NODIZE VAL, THEN ADD EXPR BUILDERS
+  // if ('string' != typeof spec) {
+  //   console.log('EXPR', spec.i, spec.tokens && spec.tokens.slice(spec.i))
+  // }
+
+  let g: any = undefined
+
+  // let top = false
+
+  if ('string' === typeof spec) {
+    spec = { src: spec }
+  }
+
 
   if (null == spec.tokens) {
-    top = true
+    g = undefined != spec.val ? nodize(spec.val, (spec.d || 0) + 1, spec.meta) : undefined
+
+    // top = true
     spec.tokens = []
-    let tre = /\s*,?\s*([)(\.]|"(\\.|[^"\\])*"|\/(\\.|[^\/\\])*\/[a-z]?|[^)(,\s]+)\s*/g
+
+    //         A       BC      D L   E         F  M   H        N        I        JK
+    let tre = /\s*,?\s*([)(\.]|"(\\.|[^"\\])*"|\/(\\.|[^\/\\])*\/[a-z]?|[^)(,.\s]+)\s*/g
+    // A: prefixing space and/or comma
+    // B-J: the next token is submatch 1, containing a set of alternates
+    // C: class parens-dot
+    // D: quoted string
+    // L: backslash escape within string
+    // E: unescaped chat (not a quote or backslash)
+    // F: regexp
+    // M: literal dot
+    // H: not a regexp escape or end slash
+    // N: regexp end and flags
+    // I: not a char token (thus a builder name)
+    // K: suffix space
+
     let t = null
     while (t = tre.exec(spec.src)) {
       spec.tokens.push(t[1])
     }
+
+    // console.log('TOKENS', spec.tokens)
   }
 
   spec.i = spec.i || 0
 
   let head = spec.tokens[spec.i]
+  // console.log('HEAD', head, spec.i)
 
   let fn = (BuilderMap as any)[head]
 
+  // console.log('FN', head, fn)
+
   if (')' === spec.tokens[spec.i]) {
     spec.i++
-    return spec.val
+    return current
   }
 
   spec.i++
 
-  let fixed: Record<string, any> = {
-    Number: Number,
-    String: String,
-    Boolean: Boolean,
-  }
+
+  let args = []
+
 
   if (null == fn) {
     try {
-      let val = fixed[head]
-      if (val) {
-        return val
+      let m
+
+      // let val = TNAT[head]
+      if (TNAT[head]) {
+        fn = Type
+        args.unshift(head)
       }
       else if (S.undefined === head) {
         return undefined
@@ -1186,6 +1311,10 @@ function expr(spec: {
       }
       else if (head.match(/^\/.+\/$/)) {
         return new RegExp(head.substring(1, head.length - 1))
+      }
+      else if (m = head.match(/^\$\$([^$]+)$/)) {
+        // console.log('REF-A', m, spec, current)
+        return spec.parent ? spec.parent[m[1]] : undefined
       }
       else {
         return JP(head)
@@ -1197,29 +1326,63 @@ function expr(spec: {
     }
   }
 
+
   if ('(' === spec.tokens[spec.i]) {
     spec.i++
+
+    let t = null
+    while (null != (t = spec.tokens[spec.i]) && ')' !== t) {
+      // console.log('ARG', spec.i, t)
+      let ev = expr(spec)
+      // console.log('ARG-RES', spec.i, t, ev)
+      args.push(ev)
+    }
+    spec.i++
   }
 
-  let args = []
-  let t = null
-  while (null != (t = spec.tokens[spec.i]) && ')' !== t) {
-    let ev = expr(spec)
-    args.push(ev)
-  }
-  spec.i++
-
-  spec.val = fn.call(spec.val, ...args)
+  // console.log('CALL', fn.name, stringify(current), args)
+  // spec.val = fn.call(spec.val, ...args)
+  g = fn.call(current, ...args)
+  // console.log('RES', stringify(g), g)
 
   if ('.' === spec.tokens[spec.i]) {
+    // spec.g.m.ti$ = spec.i - 1
     spec.i++
-    return expr(spec)
+    // console.log('DOWN-DOT')
+    g = expr(spec, g)
   }
-  else if (top && spec.i < spec.tokens.length) {
-    return expr(spec)
+  // else if (top && spec.i < spec.tokens.length) {
+  else if (spec.i < spec.tokens.length) {
+    // spec.g.m.ti$ = spec.i - 1
+    // console.log('DOWN-LEN')
+    g = expr(spec, g)
   }
 
-  return spec.val
+  // if (top) {
+  //   spec.g.v = nodize(spec.val, (spec.d || 0) + 1, spec.meta)
+  // }
+
+  // console.log('RES-OUT', stringify(g), g)
+
+  return g
+}
+
+
+function build(v: any, top = true) {
+  let out: any
+  const t = Array.isArray(v) ? 'array' : null === v ? 'null' : typeof v
+
+  if ('string' === t) {
+    out = expr(v)
+  }
+  else if ('object' === t) {
+    out = Object.entries(v).reduce((a: any, n: any[]) => (a[n[0]] = build(n[1], false), a), {})
+  }
+  else if ('array' === t) {
+    out = v.map((n: any) => build(n, false))
+  }
+
+  return top ? Gubu(out) : out
 }
 
 
@@ -1321,6 +1484,8 @@ function truncate(str?: string, len?: number): string {
 }
 
 
+
+
 // Value is required.
 const Required = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
@@ -1333,6 +1498,8 @@ const Required = function <V>(this: any, shape?: Node<V> | V): Node<V> {
     node.v = undefined
   }
 
+  node.s = descBuilder(node, undefined, S.Required, [])
+
   return node
 }
 
@@ -1341,6 +1508,7 @@ const Required = function <V>(this: any, shape?: Node<V> | V): Node<V> {
 const Open = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
   node.c = Any()
+  node.s = descBuilder(node, undefined, S.Open, [node.v])
   return node
 }
 
@@ -1437,6 +1605,8 @@ const Default = function <V>(this: any, dval?: any, shape?: Node<V> | V): Node<V
 
   // Always insert default.
   node.p = false
+
+  node.s = descBuilder(node, undefined, S.Default, undefined === dval ? [] : [dval])
 
   return node
 }
@@ -1709,7 +1879,7 @@ const Check = function <V>(
       })
       defprop(refn, 'gubu$', { value: { Check: true } })
       node.b.push(refn)
-      node.s = stringify(check)
+      node.s = stringify(check, null, true)
       node.r = true
     }
   }
@@ -1923,8 +2093,7 @@ const Min = function <V>(
     return false
   })
 
-  node.s = S.Min + '(' + min + (null == shape ? '' :
-    (',' + stringify(shape))) + ')'
+  node.s = descBuilder(node, undefined, S.Min, [min])
 
   return node
 }
@@ -1948,11 +2117,12 @@ const Max = function <V>(
     let errmsgpart = S.number === typeof (val) ? '' : 'length '
     update.err =
       makeErr(state,
-        S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`)
+        S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+        ` must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`)
     return false
   })
 
-  node.s = S.Max + '(' + max + (null == shape ? '' : (',' + stringify(shape))) + ')'
+  node.s = descBuilder(node, undefined, S.Max, [max])
 
   return node
 }
@@ -1980,7 +2150,8 @@ const Above = function <V>(
     return false
   })
 
-  node.s = S.Above + '(' + above + (null == shape ? '' : (',' + stringify(shape))) + ')'
+  node.s = S.Above + '(' + above + (null == shape ? '' :
+    (',' + stringify(shape, null, true))) + ')'
 
   return node
 }
@@ -2008,7 +2179,8 @@ const Below = function <V>(
     return false
   })
 
-  node.s = S.Below + '(' + below + (null == shape ? '' : (',' + stringify(shape))) + ')'
+  node.s = S.Below + '(' + below + (null == shape ? '' :
+    (',' + stringify(shape, null, true))) + ')'
 
   return node
 }
@@ -2036,7 +2208,8 @@ const Len = function <V>(
     return false
   })
 
-  node.s = S.Len + '(' + len + (null == shape ? '' : (',' + stringify(shape))) + ')'
+  node.s = S.Len + '(' + len + (null == shape ? '' :
+    (',' + stringify(shape, null, true))) + ')'
 
   return node
 }
@@ -2048,11 +2221,21 @@ const Child = function <V>(
   child?: any,
   shape?: Node<V> | V
 ): Node<V> {
+  // console.log('NEW CHILD', this, child, shape)
+
   // Child provides implicit open object if no shape defined.
   let node = buildize(this, shape || {})
+  // console.log('CHILD A', node, child, shape)
   node.c = nodize(child)
+  // console.log('CHILD B', node)
+
+  node.s = descBuilder(node, shape, S.Child, [node.c])
+
   return node
 }
+
+
+
 
 
 const Rest = function <V>(
@@ -2069,18 +2252,47 @@ const Rest = function <V>(
 }
 
 
+const Type = function <V>(
+  this: any,
+  tname: string,
+  shape?: Node<V> | V
+): Node<V> {
+  let tnat = TNAT[tname]
+  let node = buildize(this, tnat)
+  node = buildize(node, shape)
+
+  // console.log('TNAME', tname)
+  node.s = descBuilder(node, undefined, tname, [])
+
+  return node
+}
+
+
 
 
 // Make a Node chainable with Builder methods.
 function buildize<V>(node0?: any, node1?: any): Node<V> {
   // Detect chaining. If not chained, ignore `this` if it is the global context.
-  let node =
-    nodize(null == node0 || node0.window === node0 || node0.global === node0
-      ? node1 : node0)
+
+  let base = (null == node0 || node0.window === node0 || node0.global === node0) ? node1 : node0
+  // let over = (null == node1 || base === node1) ? undefined : node1
+
+  // console.log('BZ', base, over)
+
+  let node = nodize(base)
+
+  // if (undefined !== over) {
+  //   let onode = nodize(over)
+  //   node.t = onode.t
+  //   node.v = onode.v
+  //   node.f = onode.f
+  // }
+
+  // console.log('BZ out', node)
 
   // Only add chainable Builders.
   // NOTE: One, Some, All not chainable.
-  return Object.assign(node, {
+  return node.Above ? node : Object.assign(node, {
     Above,
     After,
     Any,
@@ -2105,6 +2317,7 @@ function buildize<V>(node0?: any, node1?: any): Node<V> {
     Required,
     Rest,
     Skip,
+    Type,
   })
 }
 
@@ -2211,20 +2424,49 @@ function makeErrImpl(
 
 
 function node2str(n: Node<any>): string {
-  return (null != n.s && '' !== n.s) ? n.s :
+  return (null != n.s && '' !== n.s) ? ('function' === typeof n.s ? (n.s = n.s()) : n.s) :
     (!n.r && undefined !== n.v) ?
       ('function' === typeof n.v.constructor ? n.v : n.v.toString())
-      : n.t
+      : (n.s = n.t[0].toUpperCase() + n.t.slice(1))
+}
+
+
+function descBuilder(node: Node<any>, shape: any, name: string, args: any[]) {
+  // console.log('DB', node.m, node.s, name)
+  const ns = null != node.s
+  const op = ns ? '.' : ''
+  const pre = true // null != node.m.ti$
+  const tnat = null != TNAT[name]
+
+  const desc =
+    (ns && pre ? node.s + op : '')
+    + name
+    + (!tnat ? ('(' + args.map((a: any) => stringify(a, null, true)).join(',')
+      + (null == shape ? '' : (',' + stringify(shape, null, true)))
+      + ')') : '')
+    + (ns && !pre ? op + node.s : '')
+
+  // console.log('DESC', desc, name, TNAT[name], tnat)
+
+  return desc
 }
 
 
 function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean) {
   let str: string
 
-  if (!expand &&
-    src && src.$ && (GUBU$ === src.$.gubu$ || true === (src.$ as any).gubu$)) {
+  const use_node2str = !expand &&
+    !!(src && src.$) && (GUBU$ === src.$.gubu$ || true === (src.$ as any).gubu$)
+
+  // console.log('SRC-A', use_node2str, !expand, !!(src && src.$), GUBU$ === src?.$?.gubu$)
+  // console.trace()
+
+  if (use_node2str) {
     src = node2str(src)
+    // console.log('SRC-B', src)
   }
+
+  // console.log('SRC-C', src)
 
   try {
     str = JS(src, (key: any, val: any) => {
@@ -2239,6 +2481,8 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
         S.Object !== val.constructor.name &&
         S.Array !== val.constructor.name
       ) {
+        // console.log('AAA', key, val)
+
         let strdesc = toString.call(val)
         if ('[object RegExp]' === strdesc) {
           val = val.toString()
@@ -2250,6 +2494,8 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
 
       }
       else if (S.function === typeof (val)) {
+        // console.log('BBB', key, val)
+
         if (S.function === typeof ((make as any)[val.name]) && isNaN(+key)) {
           val = undefined
         }
@@ -2261,13 +2507,16 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
         }
       }
       else if ('bigint' === typeof (val)) {
+        // console.log('CCC', key, val)
         val = String(val.toString())
       }
       else if (Number.isNaN(val)) {
+        // console.log('DDD', key, val)
         return 'NaN'
       }
       else if (true !== expand &&
         (true === val?.$?.gubu$ || GUBU$ === val?.$?.gubu$)) {
+        // console.log('EEE', key, val)
         val = node2str(val)
       }
 
@@ -2331,6 +2580,7 @@ const BuilderMap = {
   Skip,
   Some,
   Rest,
+  Type,
 }
 
 // Fix builder names after terser mangles them.
@@ -2361,6 +2611,7 @@ Object.assign(make, {
   truncate,
   nodize,
   expr,
+  build,
   MakeArgu,
 })
 
@@ -2386,6 +2637,7 @@ type Gubu = typeof make & typeof BuilderMap & {
   truncate: typeof truncate,
   nodize: typeof nodize,
   expr: typeof expr,
+  build: typeof build,
   MakeArgu: typeof MakeArgu,
 }
 
@@ -2427,6 +2679,7 @@ const GRename = Rename
 const GRequired = Required
 const GSkip = Skip
 const GSome = Some
+const GType = Type
 
 
 type args = any[] | IArguments
@@ -2554,7 +2807,8 @@ function MakeArgu(prefix: string): Argu {
   }
 }
 
-/*
+
+/* Type inference test
 let s0 = { x: Number }
 
 let g0 = Gubu(s0)
@@ -2640,6 +2894,7 @@ export {
   truncate,
   expr,
   MakeArgu,
+  build,
 
   Above,
   After,
@@ -2670,7 +2925,7 @@ export {
   Required,
   Skip,
   Some,
-
+  Type,
   Rest,
 
   GAbove,
@@ -2702,7 +2957,7 @@ export {
   GRequired,
   GSkip,
   GSome,
-
+  GType,
   GRest,
 }
 

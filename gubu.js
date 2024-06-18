@@ -1,8 +1,8 @@
 "use strict";
 /* Copyright (c) 2021-2023 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GDefine = exports.GDefault = exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Rest = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Never = exports.Min = exports.Max = exports.Len = exports.Key = exports.Ignore = exports.Func = exports.Fault = exports.Exact = exports.Empty = exports.Define = exports.Default = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.MakeArgu = exports.expr = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
-exports.GRest = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GLen = exports.GKey = exports.GIgnore = exports.GFunc = exports.GFault = exports.GExact = exports.GEmpty = void 0;
+exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Rest = exports.Type = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Never = exports.Min = exports.Max = exports.Len = exports.Key = exports.Ignore = exports.Func = exports.Fault = exports.Exact = exports.Empty = exports.Define = exports.Default = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.build = exports.MakeArgu = exports.expr = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
+exports.GRest = exports.GType = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GLen = exports.GKey = exports.GIgnore = exports.GFunc = exports.GFault = exports.GExact = exports.GEmpty = exports.GDefine = exports.GDefault = void 0;
 // FIX: does not work if Gubu is inside a Proxy - jest fails
 // FEATURE: regexp in array: [/a/] => all elements must match /a/
 // FEATURE: validator on completion of object or array
@@ -54,8 +54,12 @@ const S = {
     shape: 'shape',
     check: 'check',
     regexp: 'regexp',
+    String: 'String',
+    Number: 'Number',
+    Boolean: 'Boolean',
     Object: 'Object',
     Array: 'Array',
+    Symbol: 'Symbol',
     Function: 'Function',
     Value: 'Value',
     Above: 'Above',
@@ -92,6 +96,15 @@ const S = {
     $PATH: '"$PATH"',
     $VALUE: '"$VALUE"',
 };
+const TNAT = {
+    [S.String]: String,
+    [S.Number]: Number,
+    [S.Boolean]: Boolean,
+    [S.Object]: Object,
+    [S.Array]: Array,
+    [S.Symbol]: Symbol,
+    [S.Function]: Function,
+};
 // Utility shortcuts.
 const keys = (arg) => Object.keys(arg);
 const defprop = (o, p, a) => Object.defineProperty(o, p, a);
@@ -118,8 +131,10 @@ class State {
         this.ignoreVal = undefined;
         this.curerr = [];
         this.err = [];
+        // TODO: is this needed - try using ancestors instead
         this.parents = [];
         this.keys = [];
+        this.ancestors = [];
         // NOTE: not "clean"!
         // Actual path is always only path[0,dI+1]
         this.path = [];
@@ -131,7 +146,7 @@ class State {
         this.match = !!match;
     }
     next() {
-        // Uncomment for debugging (definition below).
+        // Uncomment for debugging (definition below). DO NOT REMOVE.
         // this.printStacks()
         this.stop = false;
         this.fromDflt = false;
@@ -142,6 +157,8 @@ class State {
         // Only objects|arrays can be nodes, so a number is a back pointer.
         // NOTE: terminates because (+{...} -> NaN, +[] -> 0) -> false (JS wat FTW!)
         let nextNode = this.nodes[this.pI];
+        // See note for path below.
+        this.ancestors[this.dI] = this.node;
         while (+nextNode) {
             this.dI--;
             this.ctx.log &&
@@ -162,12 +179,16 @@ class State {
         this.key = this.keys[this.pI];
         this.cI = this.pI;
         this.sI = this.pI + 1;
+        // TODO: remove and use ancestors?
         if (Object.isFrozen(this.parents[this.pI])) {
             this.parents[this.pI] = Object.assign({}, this.parents[this.pI]);
         }
         this.parent = this.parents[this.pI];
         this.nextSibling = true;
         this.type = this.node.t;
+        // NOTE: this is always correct for the current node, up to dI, because
+        // previous values at dI get overwritten. Avoids need to duplicate on each descent.
+        // ancestors uses same approach.
         this.path[this.dI] = this.key;
         this.oval = this.val;
         this.curerr.length = 0;
@@ -378,6 +399,7 @@ exports.nodize = nodize;
 // Create a GubuShape from a shape specification.
 function make(intop, inopts) {
     const opts = null == inopts ? {} : inopts;
+    // TODO: move to prepopts utility function
     // Ironically, we can't Gubu GubuOptions, so we have to set
     // option defaults manually.
     opts.name =
@@ -391,10 +413,17 @@ function make(intop, inopts) {
     // Key expressions are on by default.
     let optskeyexpr = opts.keyexpr = opts.keyexpr || {};
     optskeyexpr.active = (false !== optskeyexpr.active);
+    // Key specs are off by default.
+    let optskeyspec = opts.keyspec = (opts.keyspec || {});
+    optskeyspec.active = (true === optskeyspec.active);
+    optskeyspec.keymark =
+        S.string == typeof optskeyspec.keymark ? optskeyspec.keymark : optsmeta.suffix;
+    // console.log('OKS', optskeyspec)
     let top = nodize(intop, 0);
     // Lazily execute top against root to see if they match
     function exec(root, ctx, match // Suppress errors and return boolean result (true if match)
     ) {
+        var _a, _b;
         let s = new State(root, top, ctx, match);
         // Iterative depth-first traversal of the shape using append-only array stacks.
         // Stack entries are either sub-nodes to validate, or back pointers to
@@ -450,6 +479,7 @@ function make(intop, inopts) {
                         val = s.val;
                     }
                     if (descend) {
+                        // console.log('DESCEND', s.node)
                         val = null == val && false === s.ctx.err ? {} : val;
                         if (null != val) {
                             s.ctx.log && s.ctx.log('so', s);
@@ -462,6 +492,7 @@ function make(intop, inopts) {
                                 //for (let k of vkeys) {
                                 for (let kI = 0; kI < vkeys.length; kI++) {
                                     let k = vkeys[kI];
+                                    // console.log('KEY', k, kI)
                                     let meta = undefined;
                                     // TODO: make optional, needs tests
                                     // Experimental feature for jsonic docs
@@ -494,11 +525,27 @@ function make(intop, inopts) {
                                         if (m) {
                                             rk = m[1];
                                             let src = m[3];
-                                            ov = expr({ src, val: ov });
+                                            ov = expr({ src, d: 1 + s.dI, meta }, ov);
                                             delete n.v[k];
                                         }
                                     }
+                                    if (optskeyspec.active && k.startsWith(optskeyspec.keymark)) {
+                                        if (k === optskeyspec.keymark) {
+                                            // console.log('KEYSPEC', k)
+                                            // console.dir(s, { depth: null })
+                                            expr({
+                                                src: ov, d: 1 + s.dI, meta,
+                                                parent: (_b = (_a = s.ancestors[s.dI - 1]) === null || _a === void 0 ? void 0 : _a.m) === null || _b === void 0 ? void 0 : _b.$$
+                                            }, n);
+                                        }
+                                        // console.log('DELETE', k, s)
+                                        n.m.$$ = (n.m.$$ || {});
+                                        n.m.$$[k.substring(optskeyspec.keymark.length)] = n.v[k];
+                                        delete n.v[k];
+                                        continue;
+                                    }
                                     let nvs = nodize(ov, 1 + s.dI, meta);
+                                    // console.log('NVS', k, ov, nvs)
                                     n.v[rk] = nvs;
                                     if (!n.k.includes(rk)) {
                                         n.k.push(rk);
@@ -727,6 +774,7 @@ function make(intop, inopts) {
     };
     gubuShape.spec = () => {
         // TODO: when c is GUBU$NIL it is not present, should have some indicator value
+        // console.dir(top, { depth: null })
         // Normalize spec, discard errors.
         gubuShape(undefined, { err: false });
         return JP(stringify(top, (_key, val) => {
@@ -740,10 +788,15 @@ function make(intop, inopts) {
         gubuShape.spec();
         return top;
     };
-    gubuShape.stringify = (shape) => {
-        let n = null == shape ? top : (shape.node && shape.node());
-        n = (null != n && n.$ && (GUBU$ === n.$.gubu$ || true === n.$.gubu$)) ? n.v : n;
-        return Gubu.stringify(n);
+    gubuShape.stringify = (...rest) => {
+        let n = top;
+        n = (null != n && n.$ && (GUBU$ === n.$.gubu$ || true === n.$.gubu$)) ?
+            ('array' === n.t ? [n.c] :
+                (null == n.s ? n.v : ('function' === typeof n.s ? (n.s = n.s()) : n.s))) : n;
+        // console.log('STR', n, top, rest)
+        let str = Gubu.stringify(n, ...rest);
+        str = str.replace(/^"/, '').replace(/"$/, '');
+        return str;
     };
     let desc = '';
     gubuShape.toString = () => {
@@ -774,35 +827,58 @@ function make(intop, inopts) {
 //   'z: Required(Min(1))': 2,
 //   'q: Min(1).Below(4)': 3,
 // })
-function expr(spec) {
-    let top = false;
+function expr(spec, current) {
+    // FIRST NODIZE VAL, THEN ADD EXPR BUILDERS
+    // if ('string' != typeof spec) {
+    //   console.log('EXPR', spec.i, spec.tokens && spec.tokens.slice(spec.i))
+    // }
+    let g = undefined;
+    // let top = false
+    if ('string' === typeof spec) {
+        spec = { src: spec };
+    }
     if (null == spec.tokens) {
-        top = true;
+        g = undefined != spec.val ? nodize(spec.val, (spec.d || 0) + 1, spec.meta) : undefined;
+        // top = true
         spec.tokens = [];
-        let tre = /\s*,?\s*([)(\.]|"(\\.|[^"\\])*"|\/(\\.|[^\/\\])*\/[a-z]?|[^)(,\s]+)\s*/g;
+        //         A       BC      D L   E         F  M   H        N        I        JK
+        let tre = /\s*,?\s*([)(\.]|"(\\.|[^"\\])*"|\/(\\.|[^\/\\])*\/[a-z]?|[^)(,.\s]+)\s*/g;
+        // A: prefixing space and/or comma
+        // B-J: the next token is submatch 1, containing a set of alternates
+        // C: class parens-dot
+        // D: quoted string
+        // L: backslash escape within string
+        // E: unescaped chat (not a quote or backslash)
+        // F: regexp
+        // M: literal dot
+        // H: not a regexp escape or end slash
+        // N: regexp end and flags
+        // I: not a char token (thus a builder name)
+        // K: suffix space
         let t = null;
         while (t = tre.exec(spec.src)) {
             spec.tokens.push(t[1]);
         }
+        // console.log('TOKENS', spec.tokens)
     }
     spec.i = spec.i || 0;
     let head = spec.tokens[spec.i];
+    // console.log('HEAD', head, spec.i)
     let fn = BuilderMap[head];
+    // console.log('FN', head, fn)
     if (')' === spec.tokens[spec.i]) {
         spec.i++;
-        return spec.val;
+        return current;
     }
     spec.i++;
-    let fixed = {
-        Number: Number,
-        String: String,
-        Boolean: Boolean,
-    };
+    let args = [];
     if (null == fn) {
         try {
-            let val = fixed[head];
-            if (val) {
-                return val;
+            let m;
+            // let val = TNAT[head]
+            if (TNAT[head]) {
+                fn = Type;
+                args.unshift(head);
             }
             else if (S.undefined === head) {
                 return undefined;
@@ -812,6 +888,10 @@ function expr(spec) {
             }
             else if (head.match(/^\/.+\/$/)) {
                 return new RegExp(head.substring(1, head.length - 1));
+            }
+            else if (m = head.match(/^\$\$([^$]+)$/)) {
+                // console.log('REF-A', m, spec, current)
+                return spec.parent ? spec.parent[m[1]] : undefined;
             }
             else {
                 return JP(head);
@@ -823,25 +903,53 @@ function expr(spec) {
     }
     if ('(' === spec.tokens[spec.i]) {
         spec.i++;
-    }
-    let args = [];
-    let t = null;
-    while (null != (t = spec.tokens[spec.i]) && ')' !== t) {
-        let ev = expr(spec);
-        args.push(ev);
-    }
-    spec.i++;
-    spec.val = fn.call(spec.val, ...args);
-    if ('.' === spec.tokens[spec.i]) {
+        let t = null;
+        while (null != (t = spec.tokens[spec.i]) && ')' !== t) {
+            // console.log('ARG', spec.i, t)
+            let ev = expr(spec);
+            // console.log('ARG-RES', spec.i, t, ev)
+            args.push(ev);
+        }
         spec.i++;
-        return expr(spec);
     }
-    else if (top && spec.i < spec.tokens.length) {
-        return expr(spec);
+    // console.log('CALL', fn.name, stringify(current), args)
+    // spec.val = fn.call(spec.val, ...args)
+    g = fn.call(current, ...args);
+    // console.log('RES', stringify(g), g)
+    if ('.' === spec.tokens[spec.i]) {
+        // spec.g.m.ti$ = spec.i - 1
+        spec.i++;
+        // console.log('DOWN-DOT')
+        g = expr(spec, g);
     }
-    return spec.val;
+    // else if (top && spec.i < spec.tokens.length) {
+    else if (spec.i < spec.tokens.length) {
+        // spec.g.m.ti$ = spec.i - 1
+        // console.log('DOWN-LEN')
+        g = expr(spec, g);
+    }
+    // if (top) {
+    //   spec.g.v = nodize(spec.val, (spec.d || 0) + 1, spec.meta)
+    // }
+    // console.log('RES-OUT', stringify(g), g)
+    return g;
 }
 exports.expr = expr;
+function build(v, top = true) {
+    let out;
+    const t = Array.isArray(v) ? 'array' : null === v ? 'null' : typeof v;
+    if ('string' === t) {
+        out = expr(v);
+    }
+    else if ('object' === t) {
+        out = Object.entries(v).reduce((a, n) => (a[n[0]] = build(n[1], false), a), {});
+    }
+    else if ('array' === t) {
+        out = v.map((n) => build(n, false));
+    }
+    return top ? Gubu(out) : out;
+}
+exports.build = build;
 function handleValidate(vf, s) {
     var _a;
     let update = {};
@@ -930,6 +1038,7 @@ const Required = function (shape) {
         node.t = S.undefined;
         node.v = undefined;
     }
+    node.s = descBuilder(node, undefined, S.Required, []);
     return node;
 };
 exports.Required = Required;
@@ -937,6 +1046,7 @@ exports.Required = Required;
 const Open = function (shape) {
     let node = buildize(this, shape);
     node.c = Any();
+    node.s = descBuilder(node, undefined, S.Open, [node.v]);
     return node;
 };
 exports.Open = Open;
@@ -1017,6 +1127,7 @@ const Default = function (dval, shape) {
     }
     // Always insert default.
     node.p = false;
+    node.s = descBuilder(node, undefined, S.Default, undefined === dval ? [] : [dval]);
     return node;
 };
 exports.Default = Default;
@@ -1222,7 +1333,7 @@ const Check = function (check, shape) {
             });
             defprop(refn, 'gubu$', { value: { Check: true } });
             node.b.push(refn);
-            node.s = stringify(check);
+            node.s = stringify(check, null, true);
             node.r = true;
         }
     }
@@ -1389,8 +1500,7 @@ const Min = function (min, shape) {
                 ` must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
         return false;
     });
-    node.s = S.Min + '(' + min + (null == shape ? '' :
-        (',' + stringify(shape))) + ')';
+    node.s = descBuilder(node, undefined, S.Min, [min]);
     return node;
 };
 exports.Min = Min;
@@ -1404,10 +1514,11 @@ const Max = function (max, shape) {
         }
         let errmsgpart = S.number === typeof (val) ? '' : 'length ';
         update.err =
-            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`);
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+                ` must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`);
         return false;
     });
-    node.s = S.Max + '(' + max + (null == shape ? '' : (',' + stringify(shape))) + ')';
+    node.s = descBuilder(node, undefined, S.Max, [max]);
     return node;
 };
 exports.Max = Max;
@@ -1424,7 +1535,8 @@ const Above = function (above, shape) {
             makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must ${errmsgpart} above ${above} (was ${vlen}).`);
         return false;
     });
-    node.s = S.Above + '(' + above + (null == shape ? '' : (',' + stringify(shape))) + ')';
+    node.s = S.Above + '(' + above + (null == shape ? '' :
+        (',' + stringify(shape, null, true))) + ')';
     return node;
 };
 exports.Above = Above;
@@ -1441,7 +1553,8 @@ const Below = function (below, shape) {
             makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must ${errmsgpart} below ${below} (was ${vlen}).`);
         return false;
     });
-    node.s = S.Below + '(' + below + (null == shape ? '' : (',' + stringify(shape))) + ')';
+    node.s = S.Below + '(' + below + (null == shape ? '' :
+        (',' + stringify(shape, null, true))) + ')';
     return node;
 };
 exports.Below = Below;
@@ -1458,15 +1571,20 @@ const Len = function (len, shape) {
             makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be exactly ${len}${errmsgpart} (was ${vlen}).`);
         return false;
     });
-    node.s = S.Len + '(' + len + (null == shape ? '' : (',' + stringify(shape))) + ')';
+    node.s = S.Len + '(' + len + (null == shape ? '' :
+        (',' + stringify(shape, null, true))) + ')';
     return node;
 };
 exports.Len = Len;
 // Children must have a specified shape.
 const Child = function (child, shape) {
+    // console.log('NEW CHILD', this, child, shape)
     // Child provides implicit open object if no shape defined.
     let node = buildize(this, shape || {});
+    // console.log('CHILD A', node, child, shape)
     node.c = nodize(child);
+    // console.log('CHILD B', node)
+    node.s = descBuilder(node, shape, S.Child, [node.c]);
     return node;
 };
 exports.Child = Child;
@@ -1479,14 +1597,32 @@ const Rest = function (child, shape) {
     return node;
 };
 exports.Rest = Rest;
+const Type = function (tname, shape) {
+    let tnat = TNAT[tname];
+    let node = buildize(this, tnat);
+    node = buildize(node, shape);
+    // console.log('TNAME', tname)
+    node.s = descBuilder(node, undefined, tname, []);
+    return node;
+};
+exports.Type = Type;
 // Make a Node chainable with Builder methods.
 function buildize(node0, node1) {
     // Detect chaining. If not chained, ignore `this` if it is the global context.
-    let node = nodize(null == node0 || node0.window === node0 || node0.global === node0
-        ? node1 : node0);
+    let base = (null == node0 || node0.window === node0 || node0.global === node0) ? node1 : node0;
+    // let over = (null == node1 || base === node1) ? undefined : node1
+    // console.log('BZ', base, over)
+    let node = nodize(base);
+    // if (undefined !== over) {
+    //   let onode = nodize(over)
+    //   node.t = onode.t
+    //   node.v = onode.v
+    //   node.f = onode.f
+    // }
+    // console.log('BZ out', node)
     // Only add chainable Builders.
     // NOTE: One, Some, All not chainable.
-    return Object.assign(node, {
+    return node.Above ? node : Object.assign(node, {
         Above,
         After,
         Any,
@@ -1511,6 +1647,7 @@ function buildize(node0, node1) {
         Required,
         Rest,
         Skip,
+        Type,
     });
 }
 exports.buildize = buildize;
@@ -1586,17 +1723,37 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     return err;
 }
 function node2str(n) {
-    return (null != n.s && '' !== n.s) ? n.s :
+    return (null != n.s && '' !== n.s) ? ('function' === typeof n.s ? (n.s = n.s()) : n.s) :
         (!n.r && undefined !== n.v) ?
             ('function' === typeof n.v.constructor ? n.v : n.v.toString())
-            : n.t;
+            : (n.s = n.t[0].toUpperCase() + n.t.slice(1));
+}
+function descBuilder(node, shape, name, args) {
+    // console.log('DB', node.m, node.s, name)
+    const ns = null != node.s;
+    const op = ns ? '.' : '';
+    const pre = true; // null != node.m.ti$
+    const tnat = null != TNAT[name];
+    const desc = (ns && pre ? node.s + op : '')
+        + name
+        + (!tnat ? ('(' + args.map((a) => stringify(a, null, true)).join(',')
+            + (null == shape ? '' : (',' + stringify(shape, null, true)))
+            + ')') : '')
+        + (ns && !pre ? op + node.s : '');
+    // console.log('DESC', desc, name, TNAT[name], tnat)
+    return desc;
 }
 function stringify(src, replacer, dequote, expand) {
     let str;
-    if (!expand &&
-        src && src.$ && (GUBU$ === src.$.gubu$ || true === src.$.gubu$)) {
+    const use_node2str = !expand &&
+        !!(src && src.$) && (GUBU$ === src.$.gubu$ || true === src.$.gubu$);
+    // console.log('SRC-A', use_node2str, !expand, !!(src && src.$), GUBU$ === src?.$?.gubu$)
+    // console.trace()
+    if (use_node2str) {
         src = node2str(src);
+        // console.log('SRC-B', src)
     }
+    // console.log('SRC-C', src)
     try {
         str = JS(src, (key, val) => {
             var _a, _b;
@@ -1608,6 +1765,7 @@ function stringify(src, replacer, dequote, expand) {
                 val.constructor &&
                 S.Object !== val.constructor.name &&
                 S.Array !== val.constructor.name) {
+                // console.log('AAA', key, val)
                 let strdesc = toString.call(val);
                 if ('[object RegExp]' === strdesc) {
                     val = val.toString();
@@ -1618,6 +1776,7 @@ function stringify(src, replacer, dequote, expand) {
                 }
             }
             else if (S.function === typeof (val)) {
+                // console.log('BBB', key, val)
                 if (S.function === typeof (make[val.name]) && isNaN(+key)) {
                     val = undefined;
                 }
@@ -1629,13 +1788,16 @@ function stringify(src, replacer, dequote, expand) {
                 }
             }
             else if ('bigint' === typeof (val)) {
+                // console.log('CCC', key, val)
                 val = String(val.toString());
             }
             else if (Number.isNaN(val)) {
+                // console.log('DDD', key, val)
                 return 'NaN';
             }
             else if (true !== expand &&
                 (true === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$) || GUBU$ === ((_b = val === null || val === void 0 ? void 0 : val.$) === null || _b === void 0 ? void 0 : _b.gubu$))) {
+                // console.log('EEE', key, val)
                 val = node2str(val);
             }
             // console.log('WWW', val, typeof val)
@@ -1688,6 +1850,7 @@ const BuilderMap = {
     Skip,
     Some,
     Rest,
+    Type,
 };
 // Fix builder names after terser mangles them.
 /* istanbul ignore next */
@@ -1703,6 +1866,7 @@ Object.assign(make, Object.assign(Object.assign(Object.assign({ Gubu: make }, Bu
     truncate,
     nodize,
     expr,
+    build,
     MakeArgu }));
 defprop(make, S.name, { value: S.gubu });
 // The primary export.
@@ -1769,6 +1933,8 @@ const GSkip = Skip;
 exports.GSkip = GSkip;
 const GSome = Some;
 exports.GSome = GSome;
+const GType = Type;
+exports.GType = GType;
 function MakeArgu(prefix) {
     // TODO: caching, make arguments optionals
     return function Argu(args, whence, argSpec) {
