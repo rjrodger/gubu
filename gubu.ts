@@ -718,6 +718,9 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   // console.log('OKS', optskeyspec)
 
   let top: Node<S> = nodize<S>(intop, 0)
+  let desc: string = ''
+  let json: any = undefined
+
 
   // Lazily execute top against root to see if they match
   function exec(
@@ -1167,6 +1170,16 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   }
 
 
+  gubuShape.stringify = (...rest: any[]) => {
+    return '' === desc ? (desc = (JSON.stringify(gubuShape.jsonify(), ...rest))) : desc
+  }
+
+  gubuShape.jsonify = () => {
+    return null == json ? (json = node2json(gubuShape.node())) : json
+  }
+
+
+  /*
   gubuShape.stringify = (...rest: any) => {
     let n = top
     n = (null != n && n.$ && (GUBU$ === n.$.gubu$ || true === (n.$ as any).gubu$)) ?
@@ -1179,9 +1192,9 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
     return str
   }
+  */
 
 
-  let desc: string = ''
   gubuShape.toString = () => {
     desc = truncate('' === desc ?
       stringify(
@@ -1225,6 +1238,7 @@ function expr(
     val?: any
     d?: number
     meta?: NodeMeta
+    // TODO: just pass in ancestors
     parent?: any
     tokens?: string[]
     i?: number
@@ -1238,7 +1252,7 @@ function expr(
 
   let g: any = undefined
 
-  // let top = false
+  let top = false
 
   if ('string' === typeof spec) {
     spec = { src: spec }
@@ -1248,7 +1262,7 @@ function expr(
   if (null == spec.tokens) {
     g = undefined != spec.val ? nodize(spec.val, (spec.d || 0) + 1, spec.meta) : undefined
 
-    // top = true
+    top = true
     spec.tokens = []
 
     //         A       BC      D L   E         F  M   H        N        I        JK
@@ -1317,7 +1331,14 @@ function expr(
         return spec.parent ? spec.parent[m[1]] : undefined
       }
       else {
-        return JP(head)
+        let val = JP(head)
+        if (top) {
+          fn = Default
+          args.unshift(val)
+        }
+        else {
+          return val
+        }
       }
     }
     catch (je: any) {
@@ -2076,8 +2097,9 @@ const Min = function <V>(
   shape?: Node<V> | V
 ): Node<V> {
   let node = buildize(this, shape)
+  min = +min
 
-  node.b.push(function Min(val: any, update: Update, state: State) {
+  let valid: any = function Min(val: any, update: Update, state: State) {
     let vlen = valueLen(val)
 
     if (min <= vlen) {
@@ -2091,7 +2113,11 @@ const Min = function <V>(
         S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
         ` must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`)
     return false
-  })
+  }
+
+  valid.s = () => 'Min(' + min + ')'
+
+  node.b.push(valid)
 
   node.s = descBuilder(node, undefined, S.Min, [min])
 
@@ -2107,7 +2133,7 @@ const Max = function <V>(
 ): Node<V> {
   let node = buildize(this, shape)
 
-  node.b.push(function Max(val: any, update: Update, state: State) {
+  let valid: any = function Max(val: any, update: Update, state: State) {
     let vlen = valueLen(val)
 
     if (vlen <= max) {
@@ -2120,7 +2146,12 @@ const Max = function <V>(
         S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
         ` must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`)
     return false
-  })
+  }
+
+  valid.s = () => S.Max + '(' + max + ')'
+
+  node.b.push(valid)
+
 
   node.s = descBuilder(node, undefined, S.Max, [max])
 
@@ -2424,11 +2455,45 @@ function makeErrImpl(
 
 
 function node2str(n: Node<any>): string {
+  /*
   return (null != n.s && '' !== n.s) ? ('function' === typeof n.s ? (n.s = n.s()) : n.s) :
     (!n.r && undefined !== n.v) ?
       ('function' === typeof n.v.constructor ? n.v : n.v.toString())
       : (n.s = n.t[0].toUpperCase() + n.t.slice(1))
+  */
+
+
+  return 'N'
 }
+
+
+function node2json(n: Node<any>): any {
+  let t = n.t
+
+  if ('number' === t) {
+    let s = ''
+
+    if (n.r) {
+      s += 'Number'
+    }
+
+    if ('' === s) {
+      s = JSON.stringify(n.v)
+    }
+
+    s += n.b.map((v: any) => '.' + v.s()).join('')
+
+    return s
+  }
+  else if ('object' === t) {
+    let o: any = {}
+    for (let k in n.v) {
+      o[k] = node2json(n.v[k])
+    }
+    return o
+  }
+}
+
 
 
 function descBuilder(node: Node<any>, shape: any, name: string, args: any[]) {

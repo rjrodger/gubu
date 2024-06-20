@@ -191,6 +191,7 @@ let log = (point,state)=>{
 // console.dir(g1.spec(),{depth:null})
 // // console.log(g1({ a: { x: 1 } }))
 
+/*
 let g1 =
     // Gubu(Open({
     //   a: 1,
@@ -201,8 +202,12 @@ let g1 =
       // $$: 'Open',
       b: 2,
       // 'd:Child($$z)':0,
-      d:{$$:'Child($$z)',e:3},
+      d:{
+      $$:'Child($$z)',
       $$z: {x:Number},
+      e:3
+      },
+
     }, {keyspec:{active:true}})
 
 // console.dir(g1,{depth:null})
@@ -211,4 +216,8 @@ console.log(g1.stringify())
 console.log(g1({ a: 11 }))
 console.log(g1({ a: 11, d: {f:{x:22}} }))
 console.log(g1({ a: 11, d: {f:{x:'X'}} }))
+*/
 
+
+let gx = Gubu.expr('2.Min(1)')
+console.log(gx)

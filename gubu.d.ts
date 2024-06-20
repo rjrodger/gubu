@@ -156,7 +156,8 @@ declare function make<S>(intop?: S | Node<S>, inopts?: GubuOptions): {
     error(root?: any, ctx?: Context): GubuError[];
     spec(): any;
     node(): Node<S>;
-    stringify(...rest: any): string;
+    stringify(...rest: any[]): string;
+    jsonify(): any;
     toString(): string;
     gubu: {
         gubu$: symbol;

@@ -9,6 +9,7 @@ if (GubuModule.Gubu) {
 }
 const Gubu = GubuModule;
 const { Child, Min, Max, Required, Default, Above, Below, expr, build, } = Gubu;
+const D = (x) => console.dir(x, { depth: null });
 describe('expr', () => {
     test('meta-basic', () => {
         let g0 = Gubu({
@@ -274,6 +275,27 @@ describe('expr', () => {
         // console.log(s5)
         const g5 = Gubu(s5);
         expect(g5.stringify()).toEqual('["String.Min(1)"]');
+    });
+    test('desc-basic', () => {
+        let g0 = Gubu({ a: 1 });
+        expect(g0.jsonify()).toEqual({ a: "1" });
+        expect(g0.stringify()).toEqual('{"a":"1"}');
+        g0 = Gubu({ a: Number });
+        // D(g0.node())
+        // D(g0.jsonify())
+        expect(g0.jsonify()).toEqual({ a: "Number" });
+        expect(g0.stringify()).toEqual('{"a":"Number"}');
+        g0 = Gubu({ a: Min(1, Number) });
+        // D(g0.node())
+        // D(g0.jsonify())
+        expect(g0.jsonify()).toEqual({ a: "Number.Min(1)" });
+        expect(g0.stringify()).toEqual('{"a":"Number.Min(1)"}');
+        g0 = Gubu({ a: Min(1, 2) });
+        expect(g0.jsonify()).toEqual({ a: "2.Min(1)" });
+        expect(g0.stringify()).toEqual('{"a":"2.Min(1)"}');
+        g0 = Gubu({ a: Min(1, Max(3, 2)) });
+        expect(g0.jsonify()).toEqual({ a: "2.Max(3).Min(1)" });
+        expect(g0.stringify()).toEqual('{"a":"2.Max(3).Min(1)"}');
     });
 });
 //# sourceMappingURL=expr.test.js.map

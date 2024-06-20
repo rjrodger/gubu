@@ -420,6 +420,8 @@ function make(intop, inopts) {
         S.string == typeof optskeyspec.keymark ? optskeyspec.keymark : optsmeta.suffix;
     // console.log('OKS', optskeyspec)
     let top = nodize(intop, 0);
+    let desc = '';
+    let json = undefined;
     // Lazily execute top against root to see if they match
     function exec(root, ctx, match // Suppress errors and return boolean result (true if match)
     ) {
@@ -789,16 +791,25 @@ function make(intop, inopts) {
         return top;
     };
     gubuShape.stringify = (...rest) => {
-        let n = top;
-        n = (null != n && n.$ && (GUBU$ === n.$.gubu$ || true === n.$.gubu$)) ?
-            ('array' === n.t ? [n.c] :
-                (null == n.s ? n.v : ('function' === typeof n.s ? (n.s = n.s()) : n.s))) : n;
-        // console.log('STR', n, top, rest)
-        let str = Gubu.stringify(n, ...rest);
-        str = str.replace(/^"/, '').replace(/"$/, '');
-        return str;
+        return '' === desc ? (desc = (JSON.stringify(gubuShape.jsonify(), ...rest))) : desc;
     };
-    let desc = '';
+    gubuShape.jsonify = () => {
+        return null == json ? (json = node2json(gubuShape.node())) : json;
+    };
+    /*
+    gubuShape.stringify = (...rest: any) => {
+      let n = top
+      n = (null != n && n.$ && (GUBU$ === n.$.gubu$ || true === (n.$ as any).gubu$)) ?
+        ('array' === n.t ? [n.c] :
+          (null == n.s ? n.v : ('function' === typeof n.s ? (n.s = n.s()) : n.s))) : n
+      // console.log('STR', n, top, rest)
+  
+      let str = Gubu.stringify(n, ...rest)
+      str = str.replace(/^"/, '').replace(/"$/, '')
+  
+      return str
+    }
+    */
     gubuShape.toString = () => {
         desc = truncate('' === desc ?
             stringify((null != top &&
@@ -833,13 +844,13 @@ function expr(spec, current) {
     //   console.log('EXPR', spec.i, spec.tokens && spec.tokens.slice(spec.i))
     // }
     let g = undefined;
-    // let top = false
+    let top = false;
     if ('string' === typeof spec) {
         spec = { src: spec };
     }
     if (null == spec.tokens) {
         g = undefined != spec.val ? nodize(spec.val, (spec.d || 0) + 1, spec.meta) : undefined;
-        // top = true
+        top = true;
         spec.tokens = [];
         //         A       BC      D L   E         F  M   H        N        I        JK
         let tre = /\s*,?\s*([)(\.]|"(\\.|[^"\\])*"|\/(\\.|[^\/\\])*\/[a-z]?|[^)(,.\s]+)\s*/g;
@@ -894,7 +905,14 @@ function expr(spec, current) {
                 return spec.parent ? spec.parent[m[1]] : undefined;
             }
             else {
-                return JP(head);
+                let val = JP(head);
+                if (top) {
+                    fn = Default;
+                    args.unshift(val);
+                }
+                else {
+                    return val;
+                }
             }
         }
         catch (je) {
@@ -1488,7 +1506,8 @@ exports.Rename = Rename;
 // Specific a minimum value or length.
 const Min = function (min, shape) {
     let node = buildize(this, shape);
-    node.b.push(function Min(val, update, state) {
+    min = +min;
+    let valid = function Min(val, update, state) {
         let vlen = valueLen(val);
         if (min <= vlen) {
             return true;
@@ -1499,7 +1518,9 @@ const Min = function (min, shape) {
             makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
                 ` must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
         return false;
-    });
+    };
+    valid.s = () => 'Min(' + min + ')';
+    node.b.push(valid);
     node.s = descBuilder(node, undefined, S.Min, [min]);
     return node;
 };
@@ -1507,7 +1528,7 @@ exports.Min = Min;
 // Specific a maximum value or length.
 const Max = function (max, shape) {
     let node = buildize(this, shape);
-    node.b.push(function Max(val, update, state) {
+    let valid = function Max(val, update, state) {
         let vlen = valueLen(val);
         if (vlen <= max) {
             return true;
@@ -1517,7 +1538,9 @@ const Max = function (max, shape) {
             makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
                 ` must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`);
         return false;
-    });
+    };
+    valid.s = () => S.Max + '(' + max + ')';
+    node.b.push(valid);
     node.s = descBuilder(node, undefined, S.Max, [max]);
     return node;
 };
@@ -1723,10 +1746,34 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     return err;
 }
 function node2str(n) {
+    /*
     return (null != n.s && '' !== n.s) ? ('function' === typeof n.s ? (n.s = n.s()) : n.s) :
-        (!n.r && undefined !== n.v) ?
-            ('function' === typeof n.v.constructor ? n.v : n.v.toString())
-            : (n.s = n.t[0].toUpperCase() + n.t.slice(1));
+      (!n.r && undefined !== n.v) ?
+        ('function' === typeof n.v.constructor ? n.v : n.v.toString())
+        : (n.s = n.t[0].toUpperCase() + n.t.slice(1))
+    */
+    return 'N';
+}
+function node2json(n) {
+    let t = n.t;
+    if ('number' === t) {
+        let s = '';
+        if (n.r) {
+            s += 'Number';
+        }
+        if ('' === s) {
+            s = JSON.stringify(n.v);
+        }
+        s += n.b.map((v) => '.' + v.s()).join('');
+        return s;
+    }
+    else if ('object' === t) {
+        let o = {};
+        for (let k in n.v) {
+            o[k] = node2json(n.v[k]);
+        }
+        return o;
+    }
 }
 function descBuilder(node, shape, name, args) {
     // console.log('DB', node.m, node.s, name)
