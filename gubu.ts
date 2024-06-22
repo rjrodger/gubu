@@ -63,10 +63,11 @@ type GubuOptions = {
     active?: boolean // If true, recognize value expressions. Default: false.
   }
 
+  // TODO: should be valexpr
   // Special keys to define value expr for parent object or array.
   keyspec?: {
     active?: boolean // If true, recognize keyspec in object. Default: false.
-    keymark: string // Special key to mark parent object expr. Default: meta.suffix.
+    keymark?: string // Special key to mark parent object expr. Default: meta.suffix.
   }
 
   prefix?: string // custom prefix for error messages.
@@ -121,6 +122,7 @@ type Node<V> = {
   u: Record<string, any> // Custom user meta data
   b: Validate[]          // Custom before validation functions.
   a: Validate[]          // Custom after vaidation functions.
+  // TODO: use u
   m: NodeMeta            // Meta data.
   s?: string | Function  // Custom stringification.
   z?: string             // Custom error message.
@@ -859,16 +861,19 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
                   if (optskeyspec.active && k.startsWith(optskeyspec.keymark)) {
                     if (k === optskeyspec.keymark) {
-                      // console.log('KEYSPEC', k)
+                      // console.log('KEYSPEC', k, ov)
                       // console.dir(s, { depth: null })
                       expr({
                         src: ov, d: 1 + s.dI, meta,
-                        parent: (s.ancestors[s.dI - 1] as any)?.m?.$$
+                        ancestors: s.ancestors,
+                        node: n,
                       }, n)
                     }
-                    // console.log('DELETE', k, s)
-                    n.m.$$ = (n.m.$$ || {})
-                    n.m.$$[k.substring(optskeyspec.keymark.length)] = n.v[k]
+                    else {
+                      // console.log('DELETE', k, s)
+                      n.m.$$ = (n.m.$$ || {})
+                      n.m.$$[k.substring(optskeyspec.keymark.length)] = n.v[k]
+                    }
                     delete n.v[k]
                     continue
                   }
@@ -1238,8 +1243,8 @@ function expr(
     val?: any
     d?: number
     meta?: NodeMeta
-    // TODO: just pass in ancestors
-    parent?: any
+    ancestors?: Node<any>[],
+    node?: Node<any>,
     tokens?: string[]
     i?: number
   } | string,
@@ -1327,8 +1332,12 @@ function expr(
         return new RegExp(head.substring(1, head.length - 1))
       }
       else if (m = head.match(/^\$\$([^$]+)$/)) {
-        // console.log('REF-A', m, spec, current)
-        return spec.parent ? spec.parent[m[1]] : undefined
+        // console.log('REF-A', m)
+        // console.dir(spec, { depth: null })
+        // return spec.ancestors ? (((spec.ancestors[(spec.d || 0) - 1])?.m?.$$[m[1]]) : undefined
+        return spec.node ?
+          ((spec.node.m?.$$ || {})[m[1]] || spec.node.v['$$' + m[1]])
+          : undefined
       }
       else {
         let val = JP(head)
@@ -1342,6 +1351,7 @@ function expr(
       }
     }
     catch (je: any) {
+      console.log(je)
       throw new SyntaxError(
         `Gubu: unexpected token ${head} in builder expression ${spec.src}`)
     }
@@ -1361,10 +1371,9 @@ function expr(
     spec.i++
   }
 
-  // console.log('CALL', fn.name, stringify(current), args)
-  // spec.val = fn.call(spec.val, ...args)
+  console.log('CALL', fn.name, current, args)
   g = fn.call(current, ...args)
-  // console.log('RES', stringify(g), g)
+  console.log('RES', g)
 
   if ('.' === spec.tokens[spec.i]) {
     // spec.g.m.ti$ = spec.i - 1
@@ -1373,9 +1382,9 @@ function expr(
     g = expr(spec, g)
   }
   // else if (top && spec.i < spec.tokens.length) {
-  else if (spec.i < spec.tokens.length) {
+  else if (top && spec.i < spec.tokens.length) {
     // spec.g.m.ti$ = spec.i - 1
-    // console.log('DOWN-LEN')
+    // console.log('DOWN-LEN', spec.i, spec.tokens[spec.i])
     g = expr(spec, g)
   }
 
@@ -1397,13 +1406,25 @@ function build(v: any, top = true) {
     out = expr(v)
   }
   else if ('object' === t) {
-    out = Object.entries(v).reduce((a: any, n: any[]) => (a[n[0]] = build(n[1], false), a), {})
+    out = Object.entries(v).reduce((a: any, n: any[]) => {
+      a[n[0]] = '$$' === n[0] ? n[1] : build(n[1], false)
+      return a
+    }, {})
   }
   else if ('array' === t) {
     out = v.map((n: any) => build(n, false))
   }
 
-  return top ? Gubu(out) : out
+  if (top) {
+    console.log('BUILD OUT')
+    console.dir(out, { depth: null })
+
+    let opts = { keyspec: { active: true } }
+    let g = Gubu(out, opts)
+    return g
+  }
+
+  return out
 }
 
 
@@ -1779,7 +1800,8 @@ const One = function(this: any, ...inshapes: any[]) {
   node.r = true
 
   let shapes = inshapes.map(s => Gubu(s))
-  node.u.list = inshapes
+  // node.u.list = inshapes
+  node.u.list = shapes.map(g => g.node())
 
   node.b.push(function One(val: any, update: Update, state: State) {
     let passN = 0
@@ -2115,6 +2137,7 @@ const Min = function <V>(
     return false
   }
 
+  valid.a = [min]
   valid.s = () => 'Min(' + min + ')'
 
   node.b.push(valid)
@@ -2148,6 +2171,7 @@ const Max = function <V>(
     return false
   }
 
+  valid.a = [max]
   valid.s = () => S.Max + '(' + max + ')'
 
   node.b.push(valid)
@@ -2470,11 +2494,18 @@ function node2str(n: Node<any>): string {
 function node2json(n: Node<any>): any {
   let t = n.t
 
-  if ('number' === t) {
+  const fixed: any = {
+    number: S.Number,
+    string: S.String,
+    boolean: S.Boolean,
+  }
+
+
+  if (fixed[t]) {
     let s = ''
 
     if (n.r) {
-      s += 'Number'
+      s += fixed[t]
     }
 
     if ('' === s) {
@@ -2490,7 +2521,37 @@ function node2json(n: Node<any>): any {
     for (let k in n.v) {
       o[k] = node2json(n.v[k])
     }
+    if (GUBU$NIL !== n.c) {
+      if (fixed[n.c.t]) {
+        o.$$ = 'Child(' + fixed[n.c.t] + ')'
+      }
+      else {
+        o.$$ = 'Child($$child)'
+        o.$$child = node2json(n.c)
+      }
+    }
+
+    // naturalize, since `Child(Number)` implies `Child(Number,{})`
+    if (o.$$ && 1 === Object.keys(o).length && o.$$.startsWith('Child')) {
+      return o.$$
+    }
     return o
+  }
+  else if ('list' === t) {
+    // TODO: fix for refs in main loop when validating
+    // make this work: build({ a: { '$$': 'One(Number,$$ref0)', '$$ref0': { x: '1' } } })
+
+
+    let refs: any = {}
+    let rI = 0
+    let list = n.u.list
+      .map((n: any) => node2json(n))
+      .map((n: any, _: any) => 'object' === typeof n ? (refs[_ = '$$ref' + (rI++)] = n, _) : n)
+    let s = n.b[0].name + '(' + list.join(',') + ')'
+    return 0 === rI ? s : { $$: s, ...refs }
+  }
+  else if ('array' === t) {
+    // TODO
   }
 }
 

@@ -8,7 +8,7 @@ if (GubuModule.Gubu) {
     GubuModule = GubuModule.Gubu;
 }
 const Gubu = GubuModule;
-const { Child, Min, Max, Required, Default, Above, Below, expr, build, } = Gubu;
+const { Child, Min, Max, Required, Default, Above, Below, One, expr, build, } = Gubu;
 const D = (x) => console.dir(x, { depth: null });
 describe('expr', () => {
     test('meta-basic', () => {
@@ -277,25 +277,38 @@ describe('expr', () => {
         expect(g5.stringify()).toEqual('["String.Min(1)"]');
     });
     test('desc-basic', () => {
-        let g0 = Gubu({ a: 1 });
-        expect(g0.jsonify()).toEqual({ a: "1" });
-        expect(g0.stringify()).toEqual('{"a":"1"}');
-        g0 = Gubu({ a: Number });
-        // D(g0.node())
-        // D(g0.jsonify())
-        expect(g0.jsonify()).toEqual({ a: "Number" });
-        expect(g0.stringify()).toEqual('{"a":"Number"}');
-        g0 = Gubu({ a: Min(1, Number) });
-        // D(g0.node())
-        // D(g0.jsonify())
-        expect(g0.jsonify()).toEqual({ a: "Number.Min(1)" });
-        expect(g0.stringify()).toEqual('{"a":"Number.Min(1)"}');
-        g0 = Gubu({ a: Min(1, 2) });
-        expect(g0.jsonify()).toEqual({ a: "2.Min(1)" });
-        expect(g0.stringify()).toEqual('{"a":"2.Min(1)"}');
-        g0 = Gubu({ a: Min(1, Max(3, 2)) });
-        expect(g0.jsonify()).toEqual({ a: "2.Max(3).Min(1)" });
-        expect(g0.stringify()).toEqual('{"a":"2.Max(3).Min(1)"}');
+        function pass(shape, json, str, pass, fail) {
+            let g0 = Gubu(shape);
+            let j0 = g0.jsonify();
+            expect(j0).toEqual(json);
+            let s0 = g0.stringify();
+            expect(s0).toEqual(str);
+            let b0 = Gubu.build(j0);
+            expect(b0.stringify()).toEqual(s0);
+            expect(b0(pass)).toEqual(pass);
+            expect(() => b0(fail)).toThrow();
+        }
+        pass({ a: 1 }, { a: "1" }, '{"a":"1"}', { a: 2 }, { a: 'A' });
+        pass({ a: Number }, { a: "Number" }, '{"a":"Number"}', { a: 2 }, { a: 'A' });
+        pass({ a: Min(1, Number) }, { a: "Number.Min(1)" }, '{"a":"Number.Min(1)"}', { a: 2 }, { a: 0 });
+        pass({ a: Min(1, 2) }, { a: "2.Min(1)" }, '{"a":"2.Min(1)"}', { a: 3 }, { a: 0 });
+        pass({ a: Min(1, Max(3, 2)) }, { a: "2.Max(3).Min(1)" }, '{"a":"2.Max(3).Min(1)"}', { a: 3 }, { a: 4 });
+        pass({ a: Child(Number) }, { a: "Child(Number)" }, '{"a":"Child(Number)"}', { a: { x: 1 } }, { a: { x: 'X' } });
+        pass({ a: One(Number, String) }, { a: "One(Number,String)" }, '{"a":"One(Number,String)"}', { a: 1 }, { a: true });
+        pass({ a: One(Number, { x: String }) }, { a: { $$: 'One(Number,$$ref0)', $$ref0: { x: 'String' } } }, '{"a":{"$$":"One(Number,$$ref0)","$$ref0":{"x":"String"}}}', { a: { x: 'X' } }, { a: { x: 1 } });
+    });
+    test('desc-child', () => {
+        let d0 = { a: { '$$': 'Child($$child)', '$$child': { x: Number } } };
+        let g0 = Gubu(d0, { keyspec: { active: true } });
+        let v0 = g0({ a: { b: { x: 1 } } });
+        expect(v0).toEqual({ a: { b: { x: 1 } } });
+        expect(() => g0({ a: { b: { x: 'B' } } })).toThrow('not of type number');
+        let j0 = g0.jsonify();
+        expect(j0).toEqual({ a: { '$$': 'Child($$child)', '$$child': { x: 'Number' } } });
+        let b0 = Gubu.build(j0);
+        let bv0 = b0({ a: { b: { x: 1 } } });
+        expect(bv0).toEqual({ a: { b: { x: 1 } } });
+        expect(b0.stringify()).toEqual('{"a":{"$$":"Child($$child)","$$child":{"x":"Number"}}}');
     });
 });
 //# sourceMappingURL=expr.test.js.map

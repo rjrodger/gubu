@@ -16,7 +16,7 @@ type GubuOptions = {
     };
     keyspec?: {
         active?: boolean;
-        keymark: string;
+        keymark?: string;
     };
     prefix?: string;
 };
@@ -169,7 +169,8 @@ declare function expr(spec: {
     val?: any;
     d?: number;
     meta?: NodeMeta;
-    parent?: any;
+    ancestors?: Node<any>[];
+    node?: Node<any>;
     tokens?: string[];
     i?: number;
 } | string, current?: any): any;

@@ -425,7 +425,6 @@ function make(intop, inopts) {
     // Lazily execute top against root to see if they match
     function exec(root, ctx, match // Suppress errors and return boolean result (true if match)
     ) {
-        var _a, _b;
         let s = new State(root, top, ctx, match);
         // Iterative depth-first traversal of the shape using append-only array stacks.
         // Stack entries are either sub-nodes to validate, or back pointers to
@@ -533,16 +532,19 @@ function make(intop, inopts) {
                                     }
                                     if (optskeyspec.active && k.startsWith(optskeyspec.keymark)) {
                                         if (k === optskeyspec.keymark) {
-                                            // console.log('KEYSPEC', k)
+                                            // console.log('KEYSPEC', k, ov)
                                             // console.dir(s, { depth: null })
                                             expr({
                                                 src: ov, d: 1 + s.dI, meta,
-                                                parent: (_b = (_a = s.ancestors[s.dI - 1]) === null || _a === void 0 ? void 0 : _a.m) === null || _b === void 0 ? void 0 : _b.$$
+                                                ancestors: s.ancestors,
+                                                node: n,
                                             }, n);
                                         }
-                                        // console.log('DELETE', k, s)
-                                        n.m.$$ = (n.m.$$ || {});
-                                        n.m.$$[k.substring(optskeyspec.keymark.length)] = n.v[k];
+                                        else {
+                                            // console.log('DELETE', k, s)
+                                            n.m.$$ = (n.m.$$ || {});
+                                            n.m.$$[k.substring(optskeyspec.keymark.length)] = n.v[k];
+                                        }
                                         delete n.v[k];
                                         continue;
                                     }
@@ -843,6 +845,7 @@ function expr(spec, current) {
     // if ('string' != typeof spec) {
     //   console.log('EXPR', spec.i, spec.tokens && spec.tokens.slice(spec.i))
     // }
+    var _a;
     let g = undefined;
     let top = false;
     if ('string' === typeof spec) {
@@ -901,8 +904,12 @@ function expr(spec, current) {
                 return new RegExp(head.substring(1, head.length - 1));
             }
             else if (m = head.match(/^\$\$([^$]+)$/)) {
-                // console.log('REF-A', m, spec, current)
-                return spec.parent ? spec.parent[m[1]] : undefined;
+                // console.log('REF-A', m)
+                // console.dir(spec, { depth: null })
+                // return spec.ancestors ? (((spec.ancestors[(spec.d || 0) - 1])?.m?.$$[m[1]]) : undefined
+                return spec.node ?
+                    ((((_a = spec.node.m) === null || _a === void 0 ? void 0 : _a.$$) || {})[m[1]] || spec.node.v['$$' + m[1]])
+                    : undefined;
             }
             else {
                 let val = JP(head);
@@ -916,6 +923,7 @@ function expr(spec, current) {
             }
         }
         catch (je) {
+            console.log(je);
             throw new SyntaxError(`Gubu: unexpected token ${head} in builder expression ${spec.src}`);
         }
     }
@@ -930,10 +938,9 @@ function expr(spec, current) {
         }
         spec.i++;
     }
-    // console.log('CALL', fn.name, stringify(current), args)
-    // spec.val = fn.call(spec.val, ...args)
+    console.log('CALL', fn.name, current, args);
     g = fn.call(current, ...args);
-    // console.log('RES', stringify(g), g)
+    console.log('RES', g);
     if ('.' === spec.tokens[spec.i]) {
         // spec.g.m.ti$ = spec.i - 1
         spec.i++;
@@ -941,9 +948,9 @@ function expr(spec, current) {
         g = expr(spec, g);
     }
     // else if (top && spec.i < spec.tokens.length) {
-    else if (spec.i < spec.tokens.length) {
+    else if (top && spec.i < spec.tokens.length) {
         // spec.g.m.ti$ = spec.i - 1
-        // console.log('DOWN-LEN')
+        // console.log('DOWN-LEN', spec.i, spec.tokens[spec.i])
         g = expr(spec, g);
     }
     // if (top) {
@@ -960,12 +967,22 @@ function build(v, top = true) {
         out = expr(v);
     }
     else if ('object' === t) {
-        out = Object.entries(v).reduce((a, n) => (a[n[0]] = build(n[1], false), a), {});
+        out = Object.entries(v).reduce((a, n) => {
+            a[n[0]] = '$$' === n[0] ? n[1] : build(n[1], false);
+            return a;
+        }, {});
     }
     else if ('array' === t) {
         out = v.map((n) => build(n, false));
     }
-    return top ? Gubu(out) : out;
+    if (top) {
+        console.log('BUILD OUT');
+        console.dir(out, { depth: null });
+        let opts = { keyspec: { active: true } };
+        let g = Gubu(out, opts);
+        return g;
+    }
+    return out;
 }
 exports.build = build;
 function handleValidate(vf, s) {
@@ -1263,7 +1280,8 @@ const One = function (...inshapes) {
     node.t = S.list;
     node.r = true;
     let shapes = inshapes.map(s => Gubu(s));
-    node.u.list = inshapes;
+    // node.u.list = inshapes
+    node.u.list = shapes.map(g => g.node());
     node.b.push(function One(val, update, state) {
         let passN = 0;
         for (let shape of shapes) {
@@ -1519,6 +1537,7 @@ const Min = function (min, shape) {
                 ` must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
         return false;
     };
+    valid.a = [min];
     valid.s = () => 'Min(' + min + ')';
     node.b.push(valid);
     node.s = descBuilder(node, undefined, S.Min, [min]);
@@ -1539,6 +1558,7 @@ const Max = function (max, shape) {
                 ` must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`);
         return false;
     };
+    valid.a = [max];
     valid.s = () => S.Max + '(' + max + ')';
     node.b.push(valid);
     node.s = descBuilder(node, undefined, S.Max, [max]);
@@ -1756,10 +1776,15 @@ function node2str(n) {
 }
 function node2json(n) {
     let t = n.t;
-    if ('number' === t) {
+    const fixed = {
+        number: S.Number,
+        string: S.String,
+        boolean: S.Boolean,
+    };
+    if (fixed[t]) {
         let s = '';
         if (n.r) {
-            s += 'Number';
+            s += fixed[t];
         }
         if ('' === s) {
             s = JSON.stringify(n.v);
@@ -1772,7 +1797,34 @@ function node2json(n) {
         for (let k in n.v) {
             o[k] = node2json(n.v[k]);
         }
+        if (GUBU$NIL !== n.c) {
+            if (fixed[n.c.t]) {
+                o.$$ = 'Child(' + fixed[n.c.t] + ')';
+            }
+            else {
+                o.$$ = 'Child($$child)';
+                o.$$child = node2json(n.c);
+            }
+        }
+        // naturalize, since `Child(Number)` implies `Child(Number,{})`
+        if (o.$$ && 1 === Object.keys(o).length && o.$$.startsWith('Child')) {
+            return o.$$;
+        }
         return o;
+    }
+    else if ('list' === t) {
+        // TODO: fix for refs in main loop when validating
+        // make this work: build({ a: { '$$': 'One(Number,$$ref0)', '$$ref0': { x: '1' } } })
+        let refs = {};
+        let rI = 0;
+        let list = n.u.list
+            .map((n) => node2json(n))
+            .map((n, _) => 'object' === typeof n ? (refs[_ = '$$ref' + (rI++)] = n, _) : n);
+        let s = n.b[0].name + '(' + list.join(',') + ')';
+        return 0 === rI ? s : Object.assign({ $$: s }, refs);
+    }
+    else if ('array' === t) {
+        // TODO
     }
 }
 function descBuilder(node, shape, name, args) {

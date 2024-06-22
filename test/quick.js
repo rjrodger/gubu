@@ -218,6 +218,19 @@ console.log(g1({ a: 11, d: {f:{x:22}} }))
 console.log(g1({ a: 11, d: {f:{x:'X'}} }))
 */
 
-
-let gx = Gubu.expr('2.Min(1)')
-console.log(gx)
+let m0 =
+    // Child(Number)
+    // Max(2,Number)
+    // One(Number,String)
+    One(Number,{x:1})
+let g0 = Gubu({a:m0})
+console.dir(g0.spec(),{depth:null})
+console.dir(g0.node(),{depth:null})
+// console.dir(g0.node().v.a.b,{depth:null})
+let j0 = g0.jsonify()
+console.log(j0)
+//let s0 = g0.stringify()
+//console.log(s0)
+let b0 = Gubu.build(j0)
+console.dir(b0.spec(),{depth:null})
+console.log(b0.jsonify())
