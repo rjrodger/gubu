@@ -687,6 +687,28 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
 }
 
 
+function nodizeDeep(n: any, depth?: number) {
+  // console.log('ND-in', n)
+
+  if (null == n?.$?.gubu$) {
+    n = nodizeDeep(nodize(n, depth), depth)
+  }
+  else {
+    if (GUBU$NIL !== n.c) {
+      n.c = nodizeDeep(n.c, n.d + 1)
+    }
+
+    let vt = typeof n.v
+    if ('object' === vt && null != n.v) {
+      Object.entries(n.v).map((m: any[]) => (n.v[m[0]] = nodizeDeep(m[1], n.d + 1)))
+    }
+  }
+
+  // console.log('ND-out', n)
+  return n
+}
+
+
 // Create a GubuShape from a shape specification.
 function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   const opts: GubuOptions = null == inopts ? {} : inopts
@@ -861,13 +883,14 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
                   if (optskeyspec.active && k.startsWith(optskeyspec.keymark)) {
                     if (k === optskeyspec.keymark) {
-                      // console.log('KEYSPEC', k, ov)
+                      // console.log('KEYSPEC-A', k, ov, n)
                       // console.dir(s, { depth: null })
                       expr({
                         src: ov, d: 1 + s.dI, meta,
                         ancestors: s.ancestors,
                         node: n,
                       }, n)
+                      // console.log('KEYSPEC-B', k, ov, n)
                     }
                     else {
                       // console.log('DELETE', k, s)
@@ -954,6 +977,10 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
             let elementKeys = keys(n.v).filter(k => !isNaN(+k))
             let hasFixedElements = 0 < elementKeys.length
 
+            if (hasChildShape) {
+              n.c = nodizeDeep(n.c, 1 + s.dI)
+            }
+
             s.ctx.log && s.ctx.log('sa', s)
 
             if (hasValueElements || hasFixedElements) {
@@ -984,7 +1011,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
               // Single element array shape means 0 or more elements of shape
               if (hasChildShape && hasValueElements) {
-                let elementShape: Node<S> = n.c = nodize(n.c, 1 + s.dI)
+                let elementShape: Node<S> = n.c // = nodize(n.c, 1 + s.dI)
                 for (; elementIndex < s.val.length; elementIndex++) {
                   s.nodes[s.nI] = elementShape
                   s.vals[s.nI] = s.val[elementIndex]
@@ -1351,7 +1378,7 @@ function expr(
       }
     }
     catch (je: any) {
-      console.log(je)
+      // console.log(je)
       throw new SyntaxError(
         `Gubu: unexpected token ${head} in builder expression ${spec.src}`)
     }
@@ -1371,9 +1398,9 @@ function expr(
     spec.i++
   }
 
-  console.log('CALL', fn.name, current, args)
+  // console.log('CALL', fn.name, current, args)
   g = fn.call(current, ...args)
-  console.log('RES', g)
+  // console.log('CALL-RES', g)
 
   if ('.' === spec.tokens[spec.i]) {
     // spec.g.m.ti$ = spec.i - 1
@@ -1387,10 +1414,6 @@ function expr(
     // console.log('DOWN-LEN', spec.i, spec.tokens[spec.i])
     g = expr(spec, g)
   }
-
-  // if (top) {
-  //   spec.g.v = nodize(spec.val, (spec.d || 0) + 1, spec.meta)
-  // }
 
   // console.log('RES-OUT', stringify(g), g)
 
@@ -1416,8 +1439,8 @@ function build(v: any, top = true) {
   }
 
   if (top) {
-    console.log('BUILD OUT')
-    console.dir(out, { depth: null })
+    // console.log('BUILD OUT')
+    // console.dir(out, { depth: null })
 
     let opts = { keyspec: { active: true } }
     let g = Gubu(out, opts)
@@ -1795,7 +1818,7 @@ const Some = function(this: any, ...inshapes: any[]) {
 
 // Pass if exactly one matches. Does not short circuit (as defaults may be missed).
 const One = function(this: any, ...inshapes: any[]) {
-  let node = buildize()
+  let node = buildize(this)
   node.t = (S.list as ValType)
   node.r = true
 
@@ -2551,7 +2574,16 @@ function node2json(n: Node<any>): any {
     return 0 === rI ? s : { $$: s, ...refs }
   }
   else if ('array' === t) {
-    // TODO
+    let a: any[] = []
+    if (GUBU$NIL !== n.c) {
+      a[0] = node2json(n.c)
+    }
+    else {
+      a = Object.keys(n.v)
+        .reduce((a: any[], i: any) => (a[+i] = n.v[i], a), [])
+        .map((n: any) => node2json(n))
+    }
+    return a
   }
 }
 
