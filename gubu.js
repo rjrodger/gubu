@@ -1,5 +1,5 @@
 "use strict";
-/* Copyright (c) 2021-2023 Richard Rodger and other contributors, MIT License */
+/* Copyright (c) 2021-2024 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Rest = exports.Type = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Never = exports.Min = exports.Max = exports.Len = exports.Key = exports.Ignore = exports.Func = exports.Fault = exports.Exact = exports.Empty = exports.Define = exports.Default = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.build = exports.MakeArgu = exports.expr = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
 exports.GRest = exports.GType = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GLen = exports.GKey = exports.GIgnore = exports.GFunc = exports.GFault = exports.GExact = exports.GEmpty = exports.GDefine = exports.GDefault = void 0;
@@ -1082,6 +1082,8 @@ function truncate(str, len) {
     return substr.substring(0, outlen);
 }
 exports.truncate = truncate;
+// Builder Definitions
+// ===================
 // Value is required.
 const Required = function (shape) {
     let node = buildize(this, shape);
@@ -1092,7 +1094,6 @@ const Required = function (shape) {
         node.t = S.undefined;
         node.v = undefined;
     }
-    node.s = descBuilder(node, undefined, S.Required, []);
     return node;
 };
 exports.Required = Required;
@@ -1100,7 +1101,6 @@ exports.Required = Required;
 const Open = function (shape) {
     let node = buildize(this, shape);
     node.c = Any();
-    node.s = descBuilder(node, undefined, S.Open, [node.v]);
     return node;
 };
 exports.Open = Open;
@@ -1171,7 +1171,11 @@ const Func = function (shape) {
 exports.Func = Func;
 // Specify default value.
 const Default = function (dval, shape) {
-    let node = buildize(this, undefined === shape ? dval : shape);
+    // let node = buildize(this, undefined === shape ? dval : shape)
+    let node = buildize(this, dval);
+    if (undefined !== shape) {
+        node = buildize(node, shape);
+    }
     node.r = false;
     node.f = dval;
     let t = typeof dval;
@@ -1181,7 +1185,7 @@ const Default = function (dval, shape) {
     }
     // Always insert default.
     node.p = false;
-    node.s = descBuilder(node, undefined, S.Default, undefined === dval ? [] : [dval]);
+    // node.s = descBuilder(node, undefined, S.Default, undefined === dval ? [] : [dval])
     return node;
 };
 exports.Default = Default;
@@ -1200,7 +1204,7 @@ const Never = function (shape) {
 };
 exports.Never = Never;
 // Inject the key path of the value.
-// OR: providde validation of Key - depth could also be a RegExp
+// OR: provide validation of Key - depth could also be a RegExp
 const Key = function (depth, join) {
     let node = buildize(this);
     let ascend = S.number === typeof depth;
@@ -1234,7 +1238,7 @@ const Key = function (depth, join) {
 exports.Key = Key;
 // Pass only if all match. Does not short circuit (as defaults may be missed).
 const All = function (...inshapes) {
-    let node = buildize();
+    let node = buildize(this);
     node.t = S.list;
     node.r = true;
     let shapes = inshapes.map(s => Gubu(s));
@@ -1265,7 +1269,7 @@ exports.All = All;
 // Pass if some match. Note: all are evaluated, does not short circuit. This ensures
 // defaults are not missed.
 const Some = function (...inshapes) {
-    let node = buildize();
+    let node = buildize(this);
     node.t = S.list;
     node.r = true;
     let shapes = inshapes.map(s => Gubu(s));
@@ -1325,9 +1329,9 @@ const One = function (...inshapes) {
     return node;
 };
 exports.One = One;
-// Vlaue must match excatly one of the literal values provided.
+// Value must match excatly one of the literal values provided.
 const Exact = function (...vals) {
-    let node = buildize();
+    let node = buildize(this);
     node.b.push(function Exact(val, update, state) {
         for (let i = 0; i < vals.length; i++) {
             if (val === vals[i]) {
@@ -1350,7 +1354,6 @@ const Exact = function (...vals) {
         update.done = true;
         return false;
     });
-    node.s = vals.map(v => stringify(v, null, true)).join(', ');
     return node;
 };
 exports.Exact = Exact;
@@ -1376,7 +1379,7 @@ const Check = function (check, shape) {
         c$.gubu$ = c$.gubu$ || {};
         c$.gubu$.Check = true;
         node.b.push(check);
-        node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true);
+        // node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true)
         node.r = true;
     }
     else if (S.object === typeof check) {
@@ -1388,7 +1391,7 @@ const Check = function (check, shape) {
             });
             defprop(refn, 'gubu$', { value: { Check: true } });
             node.b.push(refn);
-            node.s = stringify(check, null, true);
+            // node.s = stringify(check, null, true)
             node.r = true;
         }
     }
@@ -1407,11 +1410,8 @@ const Closed = function (shape) {
     // Makes one element array fixed.
     if (S.array === node.t && GUBU$NIL !== node.c && 0 === node.n) {
         node.v = [node.c];
-        node.c = GUBU$NIL;
     }
-    else {
-        node.c = GUBU$NIL;
-    }
+    node.c = GUBU$NIL;
     return node;
 };
 exports.Closed = Closed;
@@ -1540,104 +1540,6 @@ const Rename = function (inopts, shape) {
     return node;
 };
 exports.Rename = Rename;
-// Specific a minimum value or length.
-const Min = function (min, shape) {
-    let node = buildize(this, shape);
-    min = +min;
-    let valid = function Min(val, update, state) {
-        let vlen = valueLen(val);
-        if (min <= vlen) {
-            return true;
-        }
-        state.checkargs = { min: 1 };
-        let errmsgpart = S.number === typeof (val) ? '' : 'length ';
-        update.err =
-            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
-                ` must be a minimum ${errmsgpart}of ${min} (was ${vlen}).`);
-        return false;
-    };
-    valid.a = [min];
-    valid.s = () => 'Min(' + min + ')';
-    node.b.push(valid);
-    node.s = descBuilder(node, undefined, S.Min, [min]);
-    return node;
-};
-exports.Min = Min;
-// Specific a maximum value or length.
-const Max = function (max, shape) {
-    let node = buildize(this, shape);
-    let valid = function Max(val, update, state) {
-        let vlen = valueLen(val);
-        if (vlen <= max) {
-            return true;
-        }
-        let errmsgpart = S.number === typeof (val) ? '' : 'length ';
-        update.err =
-            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
-                ` must be a maximum ${errmsgpart}of ${max} (was ${vlen}).`);
-        return false;
-    };
-    valid.a = [max];
-    valid.s = () => S.Max + '(' + max + ')';
-    node.b.push(valid);
-    node.s = descBuilder(node, undefined, S.Max, [max]);
-    return node;
-};
-exports.Max = Max;
-// Specify a lower bound value or length.
-const Above = function (above, shape) {
-    let node = buildize(this, shape);
-    node.b.push(function Above(val, update, state) {
-        let vlen = valueLen(val);
-        if (above < vlen) {
-            return true;
-        }
-        let errmsgpart = S.number === typeof (val) ? 'be' : 'have length';
-        update.err =
-            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must ${errmsgpart} above ${above} (was ${vlen}).`);
-        return false;
-    });
-    node.s = S.Above + '(' + above + (null == shape ? '' :
-        (',' + stringify(shape, null, true))) + ')';
-    return node;
-};
-exports.Above = Above;
-// Specify an upper bound value or length.
-const Below = function (below, shape) {
-    let node = buildize(this, shape);
-    node.b.push(function Below(val, update, state) {
-        let vlen = valueLen(val);
-        if (vlen < below) {
-            return true;
-        }
-        let errmsgpart = S.number === typeof (val) ? 'be' : 'have length';
-        update.err =
-            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must ${errmsgpart} below ${below} (was ${vlen}).`);
-        return false;
-    });
-    node.s = S.Below + '(' + below + (null == shape ? '' :
-        (',' + stringify(shape, null, true))) + ')';
-    return node;
-};
-exports.Below = Below;
-// Value must have a specific length.
-const Len = function (len, shape) {
-    let node = buildize(this, shape || Any());
-    node.b.push(function Len(val, update, state) {
-        let vlen = valueLen(val);
-        if (len === vlen) {
-            return true;
-        }
-        let errmsgpart = S.number === typeof (val) ? '' : ' in length';
-        update.err =
-            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ` must be exactly ${len}${errmsgpart} (was ${vlen}).`);
-        return false;
-    });
-    node.s = S.Len + '(' + len + (null == shape ? '' :
-        (',' + stringify(shape, null, true))) + ')';
-    return node;
-};
-exports.Len = Len;
 // Children must have a specified shape.
 const Child = function (child, shape) {
     // console.log('NEW CHILD', this, child, shape)
@@ -1646,7 +1548,7 @@ const Child = function (child, shape) {
     // console.log('CHILD A', node, child, shape)
     node.c = nodize(child);
     // console.log('CHILD B', node)
-    node.s = descBuilder(node, shape, S.Child, [node.c]);
+    // node.s = descBuilder(node, shape, S.Child, [node.c])
     return node;
 };
 exports.Child = Child;
@@ -1664,10 +1566,95 @@ const Type = function (tname, shape) {
     let node = buildize(this, tnat);
     node = buildize(node, shape);
     // console.log('TNAME', tname)
-    node.s = descBuilder(node, undefined, tname, []);
+    // node.s = descBuilder(node, undefined, tname, [])
     return node;
 };
 exports.Type = Type;
+// Size Builders: Min, Max, Above, Below, Len
+// ==========================================
+function makeSizeBuilder(self, size, shape, name, valid) {
+    let node = buildize(self, shape);
+    size = +size;
+    let validator = function (val, update, state) {
+        return valid(valueLen(val), size, val, update, state);
+    };
+    Object.defineProperty(validator, S.name, { value: name });
+    validator.a = [size];
+    validator.s = () => name + '(' + size + ')';
+    node.b.push(validator);
+    return node;
+}
+// Specific a minimum value or length.
+const Min = function (min, shape) {
+    return makeSizeBuilder(this, min, shape, S.Min, (vsize, min, val, update, state) => {
+        if (min <= vsize) {
+            return true;
+        }
+        state.checkargs = { min: 1 };
+        let errmsgpart = S.number === typeof (val) ? '' : 'length ';
+        update.err =
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+                ` must be a minimum ${errmsgpart}of ${min} (was ${vsize}).`);
+        return false;
+    });
+};
+exports.Min = Min;
+// Specific a maximum value or length.
+const Max = function (max, shape) {
+    return makeSizeBuilder(this, max, shape, S.Max, (vsize, max, val, update, state) => {
+        if (vsize <= max) {
+            return true;
+        }
+        let errmsgpart = S.number === typeof (val) ? '' : 'length ';
+        update.err =
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+                ` must be a maximum ${errmsgpart}of ${max} (was ${vsize}).`);
+        return false;
+    });
+};
+exports.Max = Max;
+// Specify a lower bound value or length.
+const Above = function (above, shape) {
+    return makeSizeBuilder(this, above, shape, S.Above, (vsize, above, val, update, state) => {
+        if (above < vsize) {
+            return true;
+        }
+        let errmsgpart = S.number === typeof (val) ? 'be' : 'have length';
+        update.err =
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+                ` must ${errmsgpart} above ${above} (was ${vsize}).`);
+        return false;
+    });
+};
+exports.Above = Above;
+// Specify an upper bound value or length.
+const Below = function (below, shape) {
+    return makeSizeBuilder(this, below, shape, S.Below, (vsize, below, val, update, state) => {
+        if (vsize < below) {
+            return true;
+        }
+        let errmsgpart = S.number === typeof (val) ? 'be' : 'have length';
+        update.err =
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+                ` must ${errmsgpart} below ${below} (was ${vsize}).`);
+        return false;
+    });
+};
+exports.Below = Below;
+// Value must have a specific length.
+const Len = function (len, shape) {
+    return makeSizeBuilder(this, len, shape, S.Below, (vsize, len, val, update, state) => {
+        if (len === vsize) {
+            return true;
+        }
+        let errmsgpart = S.number === typeof (val) ? '' : ' in length';
+        update.err =
+            makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
+                ` must be exactly ${len}${errmsgpart} (was ${vsize}).`);
+        return false;
+    });
+};
+exports.Len = Len;
 // Make a Node chainable with Builder methods.
 function buildize(node0, node1) {
     // Detect chaining. If not chained, ignore `this` if it is the global context.
@@ -1784,15 +1771,15 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     }
     return err;
 }
-function node2str(n) {
-    /*
-    return (null != n.s && '' !== n.s) ? ('function' === typeof n.s ? (n.s = n.s()) : n.s) :
-      (!n.r && undefined !== n.v) ?
-        ('function' === typeof n.v.constructor ? n.v : n.v.toString())
-        : (n.s = n.t[0].toUpperCase() + n.t.slice(1))
-    */
-    return 'N';
-}
+// function node2str(n: Node<any>): string {
+//   /*
+//   return (null != n.s && '' !== n.s) ? ('function' === typeof n.s ? (n.s = n.s()) : n.s) :
+//     (!n.r && undefined !== n.v) ?
+//       ('function' === typeof n.v.constructor ? n.v : n.v.toString())
+//       : (n.s = n.t[0].toUpperCase() + n.t.slice(1))
+//   */
+//   return 'N'
+// }
 function node2json(n) {
     let t = n.t;
     const fixed = {
@@ -1808,7 +1795,18 @@ function node2json(n) {
         if ('' === s) {
             s = JSON.stringify(n.v);
         }
-        s += n.b.map((v) => '.' + v.s()).join('');
+        s += n.b.map((v) => '.' + v.s(n)).join('');
+        return s;
+    }
+    else if ('any' === t) {
+        let s = '';
+        if (n.r) {
+            s += 'Required()';
+        }
+        s += n.b.map((v) => '.' + v.s(n)).join('');
+        if (s.startsWith('.')) {
+            s = s.slice(1);
+        }
         return s;
     }
     else if ('object' === t) {
@@ -1877,7 +1875,8 @@ function stringify(src, replacer, dequote, expand) {
     // console.log('SRC-A', use_node2str, !expand, !!(src && src.$), GUBU$ === src?.$?.gubu$)
     // console.trace()
     if (use_node2str) {
-        src = node2str(src);
+        // src = node2str(src)
+        src = JSON.stringify(node2json(src));
         // console.log('SRC-B', src)
     }
     // console.log('SRC-C', src)
@@ -1925,7 +1924,8 @@ function stringify(src, replacer, dequote, expand) {
             else if (true !== expand &&
                 (true === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$) || GUBU$ === ((_b = val === null || val === void 0 ? void 0 : val.$) === null || _b === void 0 ? void 0 : _b.gubu$))) {
                 // console.log('EEE', key, val)
-                val = node2str(val);
+                // val = node2str(val)
+                val = JSON.stringify(node2json(val));
             }
             // console.log('WWW', val, typeof val)
             return val;

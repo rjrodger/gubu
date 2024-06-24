@@ -1511,7 +1511,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
       a: Type('Number')
     })
 
-    expect(d0.stringify(null, true)).toEqual('{"a":"Number()"}')
+    expect(d0.stringify(null, true)).toEqual('{"a":"Number"}')
     expect(d0({ a: 1 })).toEqual({ a: 1 })
     expect(() => d0({ a: 'A' })).toThrow('not of type number')
 

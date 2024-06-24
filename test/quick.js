@@ -219,17 +219,21 @@ console.log(g1({ a: 11, d: {f:{x:'X'}} }))
 */
 
 let m0 =
+    // Max(3, Min(1, Default(2)))
+    // Max(3, Min(1, Required(Default(2))))
+    Max(3, Min(1, Default(2, Required())))
+    // Min(2)
     // Child(Number)
     // Max(2,Number)
     // One(Number,String)
-    One(Number,{x:1}) // FIX
+    // One(Number,{x:1}) // FIX
     // [Number]
     // [Number,String]
     // [{x:1}]
     // [{x:1},{y:Number}]
 let g0 = Gubu({a:m0})
-// console.dir(g0.spec(),{depth:null})
-//console.log(g0({a:[1,2]}))
+console.dir(g0.spec(),{depth:null})
+console.log(g0({a:3}))
 //console.dir(g0.spec(),{depth:null})
 //console.dir(g0.node(),{depth:null})
 // console.dir(g0.node().v.a.b,{depth:null})
@@ -237,7 +241,7 @@ let j0 = g0.jsonify()
 console.log(j0)
 // let s0 = g0.stringify()
 //console.log(s0)
-let b0 = Gubu.build(j0)
-console.log('======')
+// let b0 = Gubu.build(j0)
+// console.log('======')
 // console.dir(b0.spec(),{depth:null})
-console.log(b0.jsonify())
+// console.log(b0.jsonify())

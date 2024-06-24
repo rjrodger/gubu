@@ -42,7 +42,6 @@ type ValType = 'any' | // Any type.
 'undefined';
 type Node<V> = {
     $: typeof GUBU;
-    o: any;
     t: ValType;
     d: number;
     v: any;
@@ -57,7 +56,6 @@ type Node<V> = {
     b: Validate[];
     a: Validate[];
     m: NodeMeta;
-    s?: string | Function;
     z?: string;
 } & {
     [name: string]: Builder<V>;
@@ -65,7 +63,10 @@ type Node<V> = {
 type NodeMeta = Record<string, any>;
 type Builder<S> = (opts?: any, // Builder options.
 ...vals: any[]) => Node<S>;
-type Validate = (val: any, update: Update, state: State) => boolean;
+type Validate = ((val: any, update: Update, state: State) => boolean) & {
+    s?: (n: Node<any>) => string;
+    a?: any[];
+};
 declare class State {
     match: boolean;
     dI: number;
@@ -199,14 +200,14 @@ declare const Closed: <V>(this: any, shape?: Node<V> | V) => Node<V>;
 declare const Define: <V>(this: any, inopts: any, shape?: Node<V> | V) => Node<V>;
 declare const Refer: <V>(this: any, inopts: any, shape?: Node<V> | V) => Node<V>;
 declare const Rename: <V>(this: any, inopts: any, shape?: Node<V> | V) => Node<V>;
+declare const Child: <V>(this: any, child?: any, shape?: Node<V> | V) => Node<V>;
+declare const Rest: <V>(this: any, child?: any, shape?: Node<V> | V) => Node<V>;
+declare const Type: <V>(this: any, tname: string, shape?: Node<V> | V) => Node<V>;
 declare const Min: <V>(this: any, min: number | string, shape?: Node<V> | V) => Node<V>;
 declare const Max: <V>(this: any, max: number | string, shape?: Node<V> | V) => Node<V>;
 declare const Above: <V>(this: any, above: number | string, shape?: Node<V> | V) => Node<V>;
 declare const Below: <V>(this: any, below: number | string, shape?: Node<V> | V) => Node<V>;
 declare const Len: <V>(this: any, len: number, shape?: Node<V> | V) => Node<V>;
-declare const Child: <V>(this: any, child?: any, shape?: Node<V> | V) => Node<V>;
-declare const Rest: <V>(this: any, child?: any, shape?: Node<V> | V) => Node<V>;
-declare const Type: <V>(this: any, tname: string, shape?: Node<V> | V) => Node<V>;
 declare function buildize<V>(node0?: any, node1?: any): Node<V>;
 declare function makeErr(state: State, text?: string, why?: string, user?: any): ErrDesc;
 declare function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean): string;
