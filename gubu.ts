@@ -16,6 +16,7 @@
 // TODO: Error messages should state property is missing, not `value ""`
 // TODO: node.s can be a lazy function to avoid unnecessary string building
 // TODO: Finish Default shape-builder
+// FIX: Gubu(Gubu(..)) should work
 
 // DOC: Skip also makes value optional - thus Skip() means any value, or nonexistent
 // DOC: Optional
@@ -1208,7 +1209,10 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
 
   gubuShape.stringify = (...rest: any[]) => {
-    return '' === desc ? (desc = (JSON.stringify(gubuShape.jsonify(), ...rest))) : desc
+    const json = gubuShape.jsonify()
+    return '' === desc ?
+      (desc = ('string' === typeof json ? json.replace(/^"(.*)"$/, '$1') :
+        JSON.stringify(json, ...rest))) : desc
   }
 
   gubuShape.jsonify = () => {
@@ -2184,12 +2188,25 @@ const Type = function <V>(
   tname: string,
   shape?: Node<V> | V
 ): Node<V> {
-  let tnat = TNAT[tname]
-  let node = buildize(this, tnat)
-  node = buildize(node, shape)
+  let tnat = nodize(TNAT[tname])
+  // console.log('TYPE', tname, tnat)
 
+  let node = buildize(this, shape)
+  node = buildize(node, tnat)
+
+  // node = buildize(node, shape)
   // console.log('TNAME', tname)
   // node.s = descBuilder(node, undefined, tname, [])
+
+  //node.t = (tname.toLowerCase() as ValType)
+  //node.r = true
+
+  if (node !== tnat) {
+    node.t = tnat.t
+    node.r = tnat.r
+    node.p = tnat.p
+    node.v = tnat.v
+  }
 
   return node
 }

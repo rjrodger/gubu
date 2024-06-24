@@ -17,6 +17,7 @@ exports.GRest = exports.GType = exports.GSome = exports.GSkip = exports.GRequire
 // TODO: Error messages should state property is missing, not `value ""`
 // TODO: node.s can be a lazy function to avoid unnecessary string building
 // TODO: Finish Default shape-builder
+// FIX: Gubu(Gubu(..)) should work
 // DOC: Skip also makes value optional - thus Skip() means any value, or nonexistent
 // DOC: Optional
 const util_1 = require("util");
@@ -815,7 +816,10 @@ function make(intop, inopts) {
         return top;
     };
     gubuShape.stringify = (...rest) => {
-        return '' === desc ? (desc = (JSON.stringify(gubuShape.jsonify(), ...rest))) : desc;
+        const json = gubuShape.jsonify();
+        return '' === desc ?
+            (desc = ('string' === typeof json ? json.replace(/^"(.*)"$/, '$1') :
+                JSON.stringify(json, ...rest))) : desc;
     };
     gubuShape.jsonify = () => {
         return null == json ? (json = node2json(gubuShape.node())) : json;
@@ -1562,11 +1566,21 @@ const Rest = function (child, shape) {
 };
 exports.Rest = Rest;
 const Type = function (tname, shape) {
-    let tnat = TNAT[tname];
-    let node = buildize(this, tnat);
-    node = buildize(node, shape);
+    let tnat = nodize(TNAT[tname]);
+    // console.log('TYPE', tname, tnat)
+    let node = buildize(this, shape);
+    node = buildize(node, tnat);
+    // node = buildize(node, shape)
     // console.log('TNAME', tname)
     // node.s = descBuilder(node, undefined, tname, [])
+    //node.t = (tname.toLowerCase() as ValType)
+    //node.r = true
+    if (node !== tnat) {
+        node.t = tnat.t;
+        node.r = tnat.r;
+        node.p = tnat.p;
+        node.v = tnat.v;
+    }
     return node;
 };
 exports.Type = Type;

@@ -218,42 +218,24 @@ describe('expr', () => {
         expect(gr.t).toEqual('number');
     });
     test('expr-define', () => {
-        const s0 = build('"Min(1)"');
-        // console.log(s0)
-        const g0 = Gubu(s0);
-        expect(g0.stringify()).toEqual('"Min(1)"');
-        const s1 = build('Min(1).Max(3)');
-        // console.log(s1)
-        const g1 = Gubu(s1);
-        expect(g1.stringify()).toEqual('"Min(1).Max(3)"');
-        const s2 = build({ a: 'Min(1)' });
-        // console.log(s2)
-        const g2 = Gubu(s2);
+        const g0 = build('"Min(1)"');
+        expect(g0.jsonify()).toEqual('"Min(1)"');
+        expect(g0.stringify()).toEqual('Min(1)');
+        const g1 = build('Min(1).Max(3)');
+        expect(g1.stringify()).toEqual('Min(1).Max(3)');
+        const g2 = build({ a: 'Min(1)' });
         expect(g2.stringify()).toEqual('{"a":"Min(1)"}');
-        const s3 = build({ a: 'String().Min(1)' });
-        // console.log(s3)
-        const g3 = Gubu(s3);
+        const g3 = build({ a: 'String().Min(1)' });
         expect(g3.stringify()).toEqual('{"a":"String.Min(1)"}');
-        const s3a = build({ a: 'String.Min(1)' });
-        // console.log(s3a)
-        const g3a = Gubu(s3a);
+        const g3a = build({ a: 'String.Min(1)' });
         expect(g3a.stringify()).toEqual('{"a":"String.Min(1)"}');
-        const s3b = build({ a: 'Min(1).String()' });
-        // console.log(s3b)
-        const g3b = Gubu(s3b);
-        expect(g3b.stringify()).toEqual('{"a":"Min(1).String"}');
-        const s3c = build({ a: 'Min(1).String' });
-        // console.log(s3c)
-        const g3c = Gubu(s3c);
-        expect(g3c.stringify()).toEqual('{"a":"Min(1).String"}');
-        const s4 = build(['String().Min(1)']);
-        // console.log(s4)
-        const g4 = Gubu(s4);
-        // expect(g4.spec())
+        const g3b = build({ a: 'Min(1).String()' });
+        expect(g3b.stringify()).toEqual('{"a":"String.Min(1)"}');
+        const g3c = build({ a: 'Min(1).String' });
+        expect(g3c.stringify()).toEqual('{"a":"String.Min(1)"}');
+        const g4 = build(['String().Min(1)']);
         expect(g4.stringify()).toEqual('["String.Min(1)"]');
-        const s5 = build(['String.Min(1)']);
-        // console.log(s5)
-        const g5 = Gubu(s5);
+        const g5 = build(['String.Min(1)']);
         expect(g5.stringify()).toEqual('["String.Min(1)"]');
     });
     test('desc-basic', () => {
