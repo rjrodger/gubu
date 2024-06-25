@@ -686,7 +686,12 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
     u,
     a,
     b,
-    m: meta || {}
+    m: meta || {},
+    [Symbol.for('nodejs.util.inspect.custom')]() {
+      const nd: any = { ...this }
+      delete nd.$
+      return JSON.stringify(nd).replace(/"/g, '').replace(/,/g, ' ')
+    }
   } as unknown as Node<S>)
 
   return node
@@ -1283,6 +1288,7 @@ function expr(
     node?: Node<any>,
     tokens?: string[]
     i?: number
+    refs?: any
   } | string,
   current?: any
 ) {
@@ -1299,6 +1305,9 @@ function expr(
     spec = { src: spec }
   }
 
+  const currentIsNode = current?.$?.gubu$
+
+  spec.i = spec.i || 0
 
   if (null == spec.tokens) {
     g = undefined != spec.val ? nodize(spec.val, (spec.d || 0) + 1, spec.meta) : undefined
@@ -1326,10 +1335,42 @@ function expr(
       spec.tokens.push(t[1])
     }
 
-    // console.log('TOKENS', spec.tokens)
+    // console.log('TOKENS-A', spec, current)//.join(' '))
+
+    // Append current into leftmost deepest Builder args
+    if (!currentIsNode) {
+      let tI = 0
+      let paren = false
+      // for (; tI < spec.tokens.length && ')' !== spec.tokens[tI]; tI++);
+      for (; tI < spec.tokens.length; tI++) {
+        if (')' == spec.tokens[tI]) {
+          paren = true
+          break
+        }
+      }
+      if (paren || tI === spec.tokens.length) {
+        //let ctj = JSON.stringify(current)
+        // if (undefined !== ctj) {
+        if (undefined !== current) {
+          let refname = 'token_' + spec.d + '_' + spec.i
+          spec.refs = (spec.refs || {})
+          spec.refs[refname] = current
+
+          if (paren) {
+            // spec.tokens.splice(tI, 0, ctj)
+            spec.tokens.splice(tI, 0, '$$' + refname)
+          }
+          else {
+            // spec.tokens.push('(', ctj, ')')
+            spec.tokens.push('(', '$$' + refname, ')')
+          }
+        }
+      }
+    }
+
+    // console.log('TOKENS-B', spec.tokens.join(' '), spec.refs)
   }
 
-  spec.i = spec.i || 0
 
   let head = spec.tokens[spec.i]
   // console.log('HEAD', head, spec.i)
@@ -1368,12 +1409,9 @@ function expr(
         return new RegExp(head.substring(1, head.length - 1))
       }
       else if (m = head.match(/^\$\$([^$]+)$/)) {
-        // console.log('REF-A', m)
-        // console.dir(spec, { depth: null })
-        // return spec.ancestors ? (((spec.ancestors[(spec.d || 0) - 1])?.m?.$$[m[1]]) : undefined
         return spec.node ?
           ((spec.node.m?.$$ || {})[m[1]] || spec.node.v['$$' + m[1]])
-          : undefined
+          : (spec.refs ? spec.refs[m[1]] : undefined)
       }
       else {
         let val = JP(head)
@@ -1407,9 +1445,19 @@ function expr(
     spec.i++
   }
 
+
   // console.log('CALL', fn.name, current, args)
-  g = fn.call(current, ...args)
+  // g = fn.call(current, ...args)
   // console.log('CALL-RES', g)
+
+
+  if (!currentIsNode) {
+    g = fn.call(undefined, ...args)
+  }
+  else {
+    g = fn.call(current, ...args)
+  }
+
 
   if ('.' === spec.tokens[spec.i]) {
     // spec.g.m.ti$ = spec.i - 1
@@ -2222,7 +2270,7 @@ function makeSizeBuilder(
   name: string,
   valid: (vsize: number, size: number, val: any, update: Update, state: State) => boolean
 ) {
-
+  // console.log('SIZE', self, size, shape, name)
   let node = buildize(self, shape)
   size = +size
 
@@ -2235,7 +2283,12 @@ function makeSizeBuilder(
   validator.a = [size]
   validator.s = () => name + '(' + size + ')'
 
+  validator[Symbol.for('nodejs.util.inspect.custom')] = validator.s()
+  validator.toJSON = () => validator.s()
+
   node.b.push(validator)
+
+  // console.log('NODE', node)
 
   return node
 }
@@ -2247,6 +2300,7 @@ const Min = function <V>(
   min: number | string,
   shape?: Node<V> | V
 ): Node<V> {
+  // console.log('MIN', this, min, shape)
   return makeSizeBuilder(this, min, shape, S.Min,
     (vsize: number, min: number, val: any, update: Update, state: State) => {
       if (min <= vsize) {
@@ -2270,6 +2324,7 @@ const Max = function <V>(
   max: number | string,
   shape?: Node<V> | V
 ): Node<V> {
+  // console.log('MAX', this, max, shape)
   return makeSizeBuilder(this, max, shape, S.Max,
     (vsize: number, max: number, val: any, update: Update, state: State) => {
       if (vsize <= max) {
@@ -2554,6 +2609,10 @@ function node2json(n: Node<any>): any {
       s += 'Required()'
     }
 
+    if ('any' == n.c?.t) {
+      s += ('' === s ? '' : '.') + 'Open()'
+    }
+
     s += n.b.map((v: any) => '.' + v.s(n)).join('')
 
     if (s.startsWith('.')) {
@@ -2570,6 +2629,9 @@ function node2json(n: Node<any>): any {
     if (GUBU$NIL !== n.c) {
       if (fixed[n.c.t]) {
         o.$$ = 'Child(' + fixed[n.c.t] + ')'
+      }
+      else if ('any' === n.c.t) {
+        o.$$ = 'Open()'
       }
       else {
         o.$$ = 'Child($$child)'

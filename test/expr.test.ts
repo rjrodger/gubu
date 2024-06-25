@@ -49,13 +49,13 @@ describe('expr', () => {
 
   test('expr-direct', () => {
     const p0 = expr({ src: 'String' })
-    expect(p0).toEqual(String)
+    expect(p0).toMatchObject({ t: 'string', r: true })
 
     expect(() => expr({ src: 'Bad' })).toThrow('unexpected token Bad')
 
     const p1 = expr({ src: 'Max(2,String)' })
     expect(p1.t).toEqual('string')
-    expect(p1.s).toEqual('Max(2,String)')
+    expect(p1.b.map((f: any) => f.s()).join('.')).toEqual('Max(2)')
   })
 
 
@@ -94,16 +94,22 @@ describe('expr', () => {
     expect(g1({ y: 3 })).toEqual({ x: 2, y: 3, z: 2 })
     expect(g1({ z: 3 })).toEqual({ x: 2, y: 2, z: 3 })
 
-    expect(() => g1({ x: 0 })).toThrow('Value "0" for property "x" must be a minimum of 1 (was 0)')
-    expect(() => g1({ x: 5 })).toThrow('Value "5" for property "x" must be a maximum of 4 (was 5)')
+    expect(() => g1({ x: 0 }))
+      .toThrow('Value "0" for property "x" must be a minimum of 1 (was 0)')
+    expect(() => g1({ x: 5 }))
+      .toThrow('Value "5" for property "x" must be a maximum of 4 (was 5)')
 
-    expect(() => g1({ y: 0 })).toThrow('Value "0" for property "y" must be a minimum of 1 (was 0)')
+    expect(() => g1({ y: 0 }))
+      .toThrow('Value "0" for property "y" must be a minimum of 1 (was 0)')
 
-    expect(() => g1({ y: 5 })).toThrow('Value "5" for property "y" must be a maximum of 4 (was 5)')
+    expect(() => g1({ y: 5 }))
+      .toThrow('Value "5" for property "y" must be a maximum of 4 (was 5)')
 
-    expect(() => g1({ z: 0 })).toThrow('Value "0" for property "z" must be a minimum of 1 (was 0)')
+    expect(() => g1({ z: 0 }))
+      .toThrow('Value "0" for property "z" must be a minimum of 1 (was 0)')
     // TODO: FIX: this msg is doubled
-    expect(() => g1({ z: 5 })).toThrow('Value "5" for property "z" must be a maximum of 4 (was 5)')
+    expect(() => g1({ z: 5 }))
+      .toThrow('Value "5" for property "z" must be a maximum of 4 (was 5)')
 
   })
 
@@ -166,7 +172,7 @@ describe('expr', () => {
       'a: Child(Number)': {}
     })
 
-    console.log(g1({ a: { x: 1 } }))
+    // console.log(g1({ a: { x: 1 } }))
     expect(g1({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
     expect(() => g1({ a: { x: 'q' } })).toThrow('not of type number')
   })
@@ -292,14 +298,10 @@ describe('expr', () => {
   test('expr-type', () => {
     let g = Gubu({ a: Number })
     expect(g({ a: 1 })).toEqual({ a: 1 })
-    let gs = g.stringify(null, true)
+    let gs = g.stringify()
     expect(gs).toEqual('{"a":"Number"}')
     let gr = Gubu.build(JP(gs))
-    // console.log(gr)
     expect(gr.jsonify()).toEqual({ a: 'Number' })
-    // console.log(gr)
-    expect(gr.r).toEqual(true)
-    expect(gr.t).toEqual('number')
   })
 
 

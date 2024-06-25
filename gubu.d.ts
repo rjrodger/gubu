@@ -174,6 +174,7 @@ declare function expr(spec: {
     node?: Node<any>;
     tokens?: string[];
     i?: number;
+    refs?: any;
 } | string, current?: any): any;
 declare function build(v: any, top?: boolean): any;
 declare function truncate(str?: string, len?: number): string;

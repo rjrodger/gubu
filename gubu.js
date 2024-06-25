@@ -392,7 +392,12 @@ function nodize(shape, depth, meta) {
         u,
         a,
         b,
-        m: meta || {}
+        m: meta || {},
+        [Symbol.for('nodejs.util.inspect.custom')]() {
+            const nd = Object.assign({}, this);
+            delete nd.$;
+            return JSON.stringify(nd).replace(/"/g, '').replace(/,/g, ' ');
+        }
     };
     return node;
 }
@@ -871,12 +876,14 @@ function expr(spec, current) {
     // if ('string' != typeof spec) {
     //   console.log('EXPR', spec.i, spec.tokens && spec.tokens.slice(spec.i))
     // }
-    var _a;
+    var _a, _b;
     let g = undefined;
     let top = false;
     if ('string' === typeof spec) {
         spec = { src: spec };
     }
+    const currentIsNode = (_a = current === null || current === void 0 ? void 0 : current.$) === null || _a === void 0 ? void 0 : _a.gubu$;
+    spec.i = spec.i || 0;
     if (null == spec.tokens) {
         g = undefined != spec.val ? nodize(spec.val, (spec.d || 0) + 1, spec.meta) : undefined;
         top = true;
@@ -899,9 +906,38 @@ function expr(spec, current) {
         while (t = tre.exec(spec.src)) {
             spec.tokens.push(t[1]);
         }
-        // console.log('TOKENS', spec.tokens)
+        // console.log('TOKENS-A', spec, current)//.join(' '))
+        // Append current into leftmost deepest Builder args
+        if (!currentIsNode) {
+            let tI = 0;
+            let paren = false;
+            // for (; tI < spec.tokens.length && ')' !== spec.tokens[tI]; tI++);
+            for (; tI < spec.tokens.length; tI++) {
+                if (')' == spec.tokens[tI]) {
+                    paren = true;
+                    break;
+                }
+            }
+            if (paren || tI === spec.tokens.length) {
+                //let ctj = JSON.stringify(current)
+                // if (undefined !== ctj) {
+                if (undefined !== current) {
+                    let refname = 'token_' + spec.d + '_' + spec.i;
+                    spec.refs = (spec.refs || {});
+                    spec.refs[refname] = current;
+                    if (paren) {
+                        // spec.tokens.splice(tI, 0, ctj)
+                        spec.tokens.splice(tI, 0, '$$' + refname);
+                    }
+                    else {
+                        // spec.tokens.push('(', ctj, ')')
+                        spec.tokens.push('(', '$$' + refname, ')');
+                    }
+                }
+            }
+        }
+        // console.log('TOKENS-B', spec.tokens.join(' '), spec.refs)
     }
-    spec.i = spec.i || 0;
     let head = spec.tokens[spec.i];
     // console.log('HEAD', head, spec.i)
     let fn = BuilderMap[head];
@@ -930,12 +966,9 @@ function expr(spec, current) {
                 return new RegExp(head.substring(1, head.length - 1));
             }
             else if (m = head.match(/^\$\$([^$]+)$/)) {
-                // console.log('REF-A', m)
-                // console.dir(spec, { depth: null })
-                // return spec.ancestors ? (((spec.ancestors[(spec.d || 0) - 1])?.m?.$$[m[1]]) : undefined
                 return spec.node ?
-                    ((((_a = spec.node.m) === null || _a === void 0 ? void 0 : _a.$$) || {})[m[1]] || spec.node.v['$$' + m[1]])
-                    : undefined;
+                    ((((_b = spec.node.m) === null || _b === void 0 ? void 0 : _b.$$) || {})[m[1]] || spec.node.v['$$' + m[1]])
+                    : (spec.refs ? spec.refs[m[1]] : undefined);
             }
             else {
                 let val = JP(head);
@@ -965,8 +998,14 @@ function expr(spec, current) {
         spec.i++;
     }
     // console.log('CALL', fn.name, current, args)
-    g = fn.call(current, ...args);
+    // g = fn.call(current, ...args)
     // console.log('CALL-RES', g)
+    if (!currentIsNode) {
+        g = fn.call(undefined, ...args);
+    }
+    else {
+        g = fn.call(current, ...args);
+    }
     if ('.' === spec.tokens[spec.i]) {
         // spec.g.m.ti$ = spec.i - 1
         spec.i++;
@@ -1587,6 +1626,7 @@ exports.Type = Type;
 // Size Builders: Min, Max, Above, Below, Len
 // ==========================================
 function makeSizeBuilder(self, size, shape, name, valid) {
+    // console.log('SIZE', self, size, shape, name)
     let node = buildize(self, shape);
     size = +size;
     let validator = function (val, update, state) {
@@ -1595,11 +1635,15 @@ function makeSizeBuilder(self, size, shape, name, valid) {
     Object.defineProperty(validator, S.name, { value: name });
     validator.a = [size];
     validator.s = () => name + '(' + size + ')';
+    validator[Symbol.for('nodejs.util.inspect.custom')] = validator.s();
+    validator.toJSON = () => validator.s();
     node.b.push(validator);
+    // console.log('NODE', node)
     return node;
 }
 // Specific a minimum value or length.
 const Min = function (min, shape) {
+    // console.log('MIN', this, min, shape)
     return makeSizeBuilder(this, min, shape, S.Min, (vsize, min, val, update, state) => {
         if (min <= vsize) {
             return true;
@@ -1615,6 +1659,7 @@ const Min = function (min, shape) {
 exports.Min = Min;
 // Specific a maximum value or length.
 const Max = function (max, shape) {
+    // console.log('MAX', this, max, shape)
     return makeSizeBuilder(this, max, shape, S.Max, (vsize, max, val, update, state) => {
         if (vsize <= max) {
             return true;
@@ -1795,6 +1840,7 @@ function makeErrImpl(why, s, mark, text, user, fname) {
 //   return 'N'
 // }
 function node2json(n) {
+    var _a;
     let t = n.t;
     const fixed = {
         number: S.Number,
@@ -1817,6 +1863,9 @@ function node2json(n) {
         if (n.r) {
             s += 'Required()';
         }
+        if ('any' == ((_a = n.c) === null || _a === void 0 ? void 0 : _a.t)) {
+            s += ('' === s ? '' : '.') + 'Open()';
+        }
         s += n.b.map((v) => '.' + v.s(n)).join('');
         if (s.startsWith('.')) {
             s = s.slice(1);
@@ -1831,6 +1880,9 @@ function node2json(n) {
         if (GUBU$NIL !== n.c) {
             if (fixed[n.c.t]) {
                 o.$$ = 'Child(' + fixed[n.c.t] + ')';
+            }
+            else if ('any' === n.c.t) {
+                o.$$ = 'Open()';
             }
             else {
                 o.$$ = 'Child($$child)';
