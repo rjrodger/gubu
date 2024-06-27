@@ -250,18 +250,19 @@ console.log(j0)
 // let j0 = { a: 'String().Min(1)' }
 // let j0 = ['String.Min(1)']
 // let j0 = {a:'Open({})'}
+*/
 
 console.log('======')
-let b0 = Gubu.build(j0)
+let b0 = Gubu.build({"x":"11","$$":"Min(1).Max(3)"})
 console.dir(b0.spec(),{depth:null})
 console.log(b0.jsonify())
 
 // console.log(Gubu(b0).spec())
-*/
 
 
 
 
+/*
 let g1 = Gubu({
   // 'x:Min(1,Max(4))': 2,
   // 'x:Min(1).Max(4)': 2,
@@ -275,9 +276,37 @@ let g1 = Gubu({
 
 D(g1.spec())
 console.log(g1({a:{x:3}}))
-
+*/
 
 
 
 //console.log(Min(1,Max(4)))
 
+
+
+/*
+let d5 = Gubu(
+  // Min(1,{z:11}).Max(2,{y:22})
+  // Min(1).Max(2,{y:22})
+  // Max(2)
+  // Max(2,{x:11,y:22})
+  // Max(2,{x:11,y:22}).Min(1)
+  Min(1).Max(2,{x:11,y:22})
+  // Min(1, Max(2,{x:11,y:22}))
+  
+  // Object
+  // Default(Object)
+  // Default({ a: null }, { a: Number })
+  // Max(2).Min(1,{x:2})
+  )
+
+// let d5 = Gubu.build('String')
+console.log('===========')
+console.log(d5.spec())
+// console.dir(d5.node())
+
+
+console.log(d5({x:1,y:2}))
+
+// console.log(d5.spec())
+*/

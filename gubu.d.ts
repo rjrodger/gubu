@@ -209,7 +209,7 @@ declare const Max: <V>(this: any, max: number | string, shape?: Node<V> | V) => 
 declare const Above: <V>(this: any, above: number | string, shape?: Node<V> | V) => Node<V>;
 declare const Below: <V>(this: any, below: number | string, shape?: Node<V> | V) => Node<V>;
 declare const Len: <V>(this: any, len: number, shape?: Node<V> | V) => Node<V>;
-declare function buildize<V>(node0?: any, node1?: any): Node<V>;
+declare function buildize<V>(self?: any, shape?: any): Node<V>;
 declare function makeErr(state: State, text?: string, why?: string, user?: any): ErrDesc;
 declare function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean): string;
 declare const G$: (node: any) => Node<any>;

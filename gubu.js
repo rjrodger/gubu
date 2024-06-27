@@ -27,6 +27,7 @@ const VERSION = '7.1.1';
 const GUBU$ = Symbol.for('gubu$');
 // A singleton for fast equality checks.
 const GUBU = { gubu$: GUBU$, v$: VERSION };
+// TODO GUBU$UNDEF for explicit undefined
 // A special marker for property abscence.
 const GUBU$NIL = Symbol.for('gubu$nil');
 // RegExp: first letter is upper case
@@ -936,7 +937,7 @@ function expr(spec, current) {
                 }
             }
         }
-        // console.log('TOKENS-B', spec.tokens.join(' '), spec.refs)
+        console.log('TOKENS-B', spec.tokens.join(' '), spec.refs);
     }
     let head = spec.tokens[spec.i];
     // console.log('HEAD', head, spec.i)
@@ -997,7 +998,7 @@ function expr(spec, current) {
         }
         spec.i++;
     }
-    // console.log('CALL', fn.name, current, args)
+    console.log('CALL', fn.name, current, args);
     // g = fn.call(current, ...args)
     // console.log('CALL-RES', g)
     if (!currentIsNode) {
@@ -1215,10 +1216,12 @@ exports.Func = Func;
 // Specify default value.
 const Default = function (dval, shape) {
     // let node = buildize(this, undefined === shape ? dval : shape)
-    let node = buildize(this, dval);
-    if (undefined !== shape) {
-        node = buildize(node, shape);
-    }
+    // let node = buildize(this, dval)
+    // if (undefined !== shape) {
+    //   node.v = buildize(shape)
+    // }
+    // let node = buildize(this, shape)
+    let node = buildize(this, undefined === shape ? dval : shape);
     node.r = false;
     node.f = dval;
     let t = typeof dval;
@@ -1608,7 +1611,7 @@ const Type = function (tname, shape) {
     let tnat = nodize(TNAT[tname]);
     // console.log('TYPE', tname, tnat)
     let node = buildize(this, shape);
-    node = buildize(node, tnat);
+    // node = buildize(node, tnat)
     // node = buildize(node, shape)
     // console.log('TNAME', tname)
     // node.s = descBuilder(node, undefined, tname, [])
@@ -1626,8 +1629,9 @@ exports.Type = Type;
 // Size Builders: Min, Max, Above, Below, Len
 // ==========================================
 function makeSizeBuilder(self, size, shape, name, valid) {
-    // console.log('SIZE', self, size, shape, name)
+    console.log('SIZE', self, size, shape, name);
     let node = buildize(self, shape);
+    console.log('SB', node);
     size = +size;
     let validator = function (val, update, state) {
         return valid(valueLen(val), size, val, update, state);
@@ -1715,12 +1719,45 @@ const Len = function (len, shape) {
 };
 exports.Len = Len;
 // Make a Node chainable with Builder methods.
-function buildize(node0, node1) {
+function buildize(self, shape) {
     // Detect chaining. If not chained, ignore `this` if it is the global context.
-    let base = (null == node0 || node0.window === node0 || node0.global === node0) ? node1 : node0;
+    let globalNode = null != self && (self.window === self || self.global === self);
+    /*
+    if (!globalNode && undefined !== node0 && undefined !== node1) {
+      // TODO: standardize error
+      throw new Error('Cannot reset base value in chain: ' +
+        stringify(node0) + ' ' + stringify(node1))
+    }
+    */
+    let node;
+    if ((undefined === self || globalNode) && undefined !== shape) {
+        console.log('BUILDIZE-SHAPE', shape);
+        node = nodize(shape);
+    }
+    else if (undefined !== self && !globalNode) {
+        console.log('BUILDIZE-NODE', self, shape);
+        if (undefined !== shape) {
+            node = nodize(shape);
+            let selfNode = nodize(self);
+            console.log('SN', selfNode);
+            ['f', 'r', 'p', 'c', 'e', 'z'].map((pn) => node[pn] = undefined !== selfNode[pn] ? selfNode[pn] : node[pn]);
+            node.u = Object.assign(Object.assign({}, selfNode.u), node.u);
+            node.m = Object.assign(Object.assign({}, selfNode.m), node.m);
+            node.a = selfNode.a.concat(node.a);
+            node.b = selfNode.b.concat(node.b);
+        }
+        else {
+            node = nodize(self);
+        }
+    }
+    else {
+        node = nodize(undefined);
+    }
+    console.log('BUILDIZE-OUT', node);
+    // let base = (null == self || globalNode) ? shape : self
     // let over = (null == node1 || base === node1) ? undefined : node1
     // console.log('BZ', base, over)
-    let node = nodize(base);
+    // let node = nodize(base)
     // if (undefined !== over) {
     //   let onode = nodize(over)
     //   node.t = onode.t
@@ -1888,6 +1925,13 @@ function node2json(n) {
                 o.$$ = 'Child($$child)';
                 o.$$child = node2json(n.c);
             }
+        }
+        if (undefined === o.$$ && 0 < n.b.length) {
+            o.$$ = '';
+        }
+        o.$$ += n.b.map((v) => '.' + v.s(n)).join('');
+        if (o.$$.startsWith('.')) {
+            o.$$ = o.$$.slice(1);
         }
         // naturalize, since `Child(Number)` implies `Child(Number,{})`
         if (o.$$ && 1 === Object.keys(o).length && o.$$.startsWith('Child')) {

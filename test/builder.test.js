@@ -1197,5 +1197,56 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         expect(d0({ a: 1 })).toEqual({ a: 1 });
         expect(() => d0({ a: 'A' })).toThrow('not of type number');
     });
+    test('compose', () => {
+        let cs = Symbol.for('nodejs.util.inspect.custom');
+        let g0 = Gubu(Min(1, Max(3)));
+        expect(g0(2)).toEqual(2);
+        expect(g0.stringify()).toEqual('Max(3).Min(1)');
+        expect((g0.node()[cs]()))
+            .toEqual('{t:any n:0 r:false p:false d:0 k:[] e:true u:{} a:[] b:[Max(3) Min(1)] m:{}}');
+        let g1 = Gubu(Max(3, Min(1)));
+        expect(g1(2)).toEqual(2);
+        expect(g1.stringify()).toEqual('Min(1).Max(3)');
+        expect((g1.node()[cs]()))
+            .toEqual('{t:any n:0 r:false p:false d:0 k:[] e:true u:{} a:[] b:[Min(1) Max(3)] m:{}}');
+        let g2 = Gubu(Min(1, Max(3, 2)));
+        expect(g2(2)).toEqual(2);
+        expect(g2.stringify()).toEqual('2.Max(3).Min(1)');
+        expect((g2.node()[cs]()))
+            .toEqual('{t:number v:2 f:2 n:0 r:false p:false d:0 k:[] e:true' +
+            ' u:{} a:[] b:[Max(3) Min(1)] m:{}}');
+        let g3 = Gubu(Max(3).Min(1));
+        expect(g3(2)).toEqual(2);
+        expect(g3.stringify()).toEqual('Max(3).Min(1)');
+        expect((g3.node()[cs]()))
+            .toEqual('{t:any n:0 r:false p:false d:0 k:[] e:true' +
+            ' u:{} a:[] b:[Max(3) Min(1)] m:{}}');
+        let g4 = Gubu(Max(3, 2).Min(1));
+        expect(g4(2)).toEqual(2);
+        expect(g4.stringify()).toEqual('2.Max(3).Min(1)');
+        expect((g4.node()[cs]()))
+            .toEqual('{t:number v:2 f:2 n:0 r:false p:false d:0 k:[] e:true' +
+            ' u:{} a:[] b:[Max(3) Min(1)] m:{}}');
+        let g5 = Gubu(Min(1, 2).Max(3));
+        expect(g5(2)).toEqual(2);
+        expect(g5.stringify()).toEqual('2.Min(1).Max(3)');
+        expect(g5.node()[cs]())
+            .toEqual('{t:number v:2 f:2 n:0 r:false p:false d:0 k:[] e:true' +
+            ' u:{} a:[] b:[Min(1) Max(3)] m:{}}');
+        let g6 = Gubu(Min(1, { x: 11 }).Max(3));
+        expect(g6({ x: 22 })).toEqual({ x: 22 });
+        expect(g6.stringify()).toEqual('{"x":"11","$$":"Min(1).Max(3)"}');
+        expect((g6.node()[cs]()))
+            .toEqual('{t:object v:{x:{$:{v$:7.1.1} t:number v:11 f:11 n:0 r:false p:false d:1 k:[]' +
+            ' e:true u:{} a:[] b:[] m:{}}} n:1 r:false p:false d:0 k:[x] e:true u:{} a:[]' +
+            ' b:[Min(1) Max(3)] m:{}}');
+        let g7 = Gubu(Min(1).Max(3, { x: 11 }));
+        expect(g7({ x: 22 })).toEqual({ x: 22 });
+        expect(g7.stringify()).toEqual('{"x":"11","$$":"Min(1).Max(3)"}');
+        expect((g7.node()[cs]()))
+            .toEqual('{t:object v:{x:{$:{v$:7.1.1} t:number v:11 f:11 n:0 r:false p:false d:1 k:[]' +
+            ' e:true u:{} a:[] b:[] m:{}}} n:1 r:false p:false d:0 k:[x] e:true u:{} a:[]' +
+            ' b:[Min(1) Max(3)] m:{}}');
+    });
 });
 //# sourceMappingURL=builder.test.js.map

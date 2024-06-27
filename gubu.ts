@@ -34,6 +34,7 @@ const GUBU$ = Symbol.for('gubu$')
 // A singleton for fast equality checks.
 const GUBU = { gubu$: GUBU$, v$: VERSION }
 
+// TODO GUBU$UNDEF for explicit undefined
 // A special marker for property abscence.
 const GUBU$NIL = Symbol.for('gubu$nil')
 
@@ -1368,7 +1369,7 @@ function expr(
       }
     }
 
-    // console.log('TOKENS-B', spec.tokens.join(' '), spec.refs)
+    console.log('TOKENS-B', spec.tokens.join(' '), spec.refs)
   }
 
 
@@ -1446,7 +1447,7 @@ function expr(
   }
 
 
-  // console.log('CALL', fn.name, current, args)
+  console.log('CALL', fn.name, current, args)
   // g = fn.call(current, ...args)
   // console.log('CALL-RES', g)
 
@@ -1716,10 +1717,13 @@ const Func = function <V>(this: any, shape?: Node<V> | V): Node<V> {
 // Specify default value.
 const Default = function <V>(this: any, dval?: any, shape?: Node<V> | V): Node<V> {
   // let node = buildize(this, undefined === shape ? dval : shape)
-  let node = buildize(this, dval)
-  if (undefined !== shape) {
-    node = buildize(node, shape)
-  }
+  // let node = buildize(this, dval)
+  // if (undefined !== shape) {
+  //   node.v = buildize(shape)
+  // }
+  // let node = buildize(this, shape)
+
+  let node = buildize(this, undefined === shape ? dval : shape)
 
   node.r = false
   node.f = dval
@@ -2240,7 +2244,7 @@ const Type = function <V>(
   // console.log('TYPE', tname, tnat)
 
   let node = buildize(this, shape)
-  node = buildize(node, tnat)
+  // node = buildize(node, tnat)
 
   // node = buildize(node, shape)
   // console.log('TNAME', tname)
@@ -2270,8 +2274,10 @@ function makeSizeBuilder(
   name: string,
   valid: (vsize: number, size: number, val: any, update: Update, state: State) => boolean
 ) {
-  // console.log('SIZE', self, size, shape, name)
+  console.log('SIZE', self, size, shape, name)
   let node = buildize(self, shape)
+  console.log('SB', node)
+
   size = +size
 
   let validator: any = function(val: any, update: Update, state: State) {
@@ -2412,15 +2418,58 @@ const Len = function <V>(
 
 
 // Make a Node chainable with Builder methods.
-function buildize<V>(node0?: any, node1?: any): Node<V> {
+function buildize<V>(self?: any, shape?: any): Node<V> {
   // Detect chaining. If not chained, ignore `this` if it is the global context.
 
-  let base = (null == node0 || node0.window === node0 || node0.global === node0) ? node1 : node0
+  let globalNode = null != self && (self.window === self || self.global === self)
+
+  /*
+  if (!globalNode && undefined !== node0 && undefined !== node1) {
+    // TODO: standardize error
+    throw new Error('Cannot reset base value in chain: ' +
+      stringify(node0) + ' ' + stringify(node1))
+  }
+  */
+
+
+  let node: Node<V>
+
+  if ((undefined === self || globalNode) && undefined !== shape) {
+    console.log('BUILDIZE-SHAPE', shape)
+    node = nodize(shape)
+  }
+  else if (undefined !== self && !globalNode) {
+    console.log('BUILDIZE-NODE', self, shape)
+
+    if (undefined !== shape) {
+      node = nodize(shape)
+      let selfNode = nodize(self)
+
+      console.log('SN', selfNode)
+
+        ;['f', 'r', 'p', 'c', 'e', 'z'].map((pn: string) =>
+          node[pn] = undefined !== selfNode[pn] ? selfNode[pn] : node[pn])
+      node.u = Object.assign({ ...selfNode.u }, node.u)
+      node.m = Object.assign({ ...selfNode.m }, node.m)
+      node.a = selfNode.a.concat(node.a)
+      node.b = selfNode.b.concat(node.b)
+    }
+    else {
+      node = nodize(self)
+    }
+  }
+  else {
+    node = nodize(undefined)
+  }
+
+  console.log('BUILDIZE-OUT', node)
+
+  // let base = (null == self || globalNode) ? shape : self
   // let over = (null == node1 || base === node1) ? undefined : node1
 
   // console.log('BZ', base, over)
 
-  let node = nodize(base)
+  // let node = nodize(base)
 
   // if (undefined !== over) {
   //   let onode = nodize(over)
@@ -2626,6 +2675,7 @@ function node2json(n: Node<any>): any {
     for (let k in n.v) {
       o[k] = node2json(n.v[k])
     }
+
     if (GUBU$NIL !== n.c) {
       if (fixed[n.c.t]) {
         o.$$ = 'Child(' + fixed[n.c.t] + ')'
@@ -2637,6 +2687,15 @@ function node2json(n: Node<any>): any {
         o.$$ = 'Child($$child)'
         o.$$child = node2json(n.c)
       }
+    }
+
+    if (undefined === o.$$ && 0 < n.b.length) {
+      o.$$ = ''
+    }
+    o.$$ += n.b.map((v: any) => '.' + v.s(n)).join('')
+
+    if (o.$$.startsWith('.')) {
+      o.$$ = o.$$.slice(1)
     }
 
     // naturalize, since `Child(Number)` implies `Child(Number,{})`
