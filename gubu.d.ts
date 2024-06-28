@@ -11,9 +11,6 @@ type GubuOptions = {
     keyexpr?: {
         active?: boolean;
     };
-    valexpr?: {
-        active?: boolean;
-    };
     keyspec?: {
         active?: boolean;
         keymark?: string;

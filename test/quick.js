@@ -252,10 +252,10 @@ console.log(j0)
 // let j0 = {a:'Open({})'}
 */
 
-console.log('======')
-let b0 = Gubu.build({"x":"11","$$":"Min(1).Max(3)"})
-console.dir(b0.spec(),{depth:null})
-console.log(b0.jsonify())
+// console.log('======')
+// let b0 = Gubu.build({"x":"11","$$":"Min(1).Max(3)"})
+// console.dir(b0.spec(),{depth:null})
+// console.log(b0.jsonify())
 
 // console.log(Gubu(b0).spec())
 
@@ -286,12 +286,18 @@ console.log(g1({a:{x:3}}))
 
 /*
 let d5 = Gubu(
+  //2
+  // Default(2)
+  // Default(2, Required())
+  Max(3, Min(1, Default(2, Required())))
+
+  
   // Min(1,{z:11}).Max(2,{y:22})
   // Min(1).Max(2,{y:22})
   // Max(2)
   // Max(2,{x:11,y:22})
   // Max(2,{x:11,y:22}).Min(1)
-  Min(1).Max(2,{x:11,y:22})
+  // Min(1).Max(2,{x:11,y:22})
   // Min(1, Max(2,{x:11,y:22}))
   
   // Object
@@ -303,10 +309,48 @@ let d5 = Gubu(
 // let d5 = Gubu.build('String')
 console.log('===========')
 console.log(d5.spec())
+console.log('QQQ',d5.stringify())
 // console.dir(d5.node())
 
 
-console.log(d5({x:1,y:2}))
+// console.log(d5({x:1,y:2}))
 
 // console.log(d5.spec())
 */
+
+
+//console.log(nodize({x:Number}))
+//console.log(nodize({x:1}))
+
+// D(Child({ x: String }))
+// D(Required({ b: 1 }).Child({ x: String }))
+// D( Child({ x: String }).Required({b:1}) )
+
+/*
+let g0 = Gubu({ a: Required({ b: 1 }).Child({ x: String }) })
+// let g0 = Gubu({ a: Required({ b: 1 })})
+// let g0 = Gubu({ a: Child({ x: String },{b:1})})
+// let g0 = Gubu({ a: Child({ x: String },Required({b:1}))})
+// let g0 = Gubu({ a: Required(Child({ x: String },{b:1}))})
+// let g0 = Gubu({ a: Child({ x: String },{b:1}).Required() })
+// let g0 = Gubu({ a: Child({ x: String }).Required({b:1}) })
+// let g0 = Gubu({ a: Required().Child({ x: String },{b:1}) })
+*/
+
+
+let g0 = Gubu({ a: Child({ x: String }).Required({ b: 1 }) })    
+// let g0 = Gubu(Child(Number))
+//let g= Gubu({a:Child({x:Number})})
+D(g0.node())
+D(g0.spec())
+console.log(g0.stringify())
+//console.log(g0({ a: 1, b: 2 }))
+//console.log(g0({ c:'C' }))
+//D(g.node())
+//D(g.spec())
+// console.log(g.stringify())
+//let j0 = g.jsonify()
+//console.log(j0)
+// let g1= Gubu.build(j0)
+// console.log(g1.stringify())
+

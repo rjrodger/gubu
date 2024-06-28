@@ -29,7 +29,8 @@ const GUBU$ = Symbol.for('gubu$');
 const GUBU = { gubu$: GUBU$, v$: VERSION };
 // TODO GUBU$UNDEF for explicit undefined
 // A special marker for property abscence.
-const GUBU$NIL = Symbol.for('gubu$nil');
+const GUBU$NIL = undefined; // Symbol.for('gubu$nil')
+// const GUBU$NIL = Symbol.for('gubu$nil')
 // RegExp: first letter is upper case
 const UPPER_CASE_FIRST_RE = /^[A-Z]/;
 const { toString } = Object.prototype;
@@ -397,9 +398,10 @@ function nodize(shape, depth, meta) {
         [Symbol.for('nodejs.util.inspect.custom')]() {
             const nd = Object.assign({}, this);
             delete nd.$;
-            return JSON.stringify(nd).replace(/"/g, '').replace(/,/g, ' ');
+            return JSON.stringify(nd, (_k, v) => 'function' === typeof v && !BuilderMap[v.name] ? v.name : v).replace(/"/g, '').replace(/,/g, ' ');
         }
     };
+    // console.log('NODIZE', shape, node)
     return node;
 }
 exports.nodize = nodize;
@@ -414,7 +416,7 @@ function nodizeDeep(n, depth) {
             n.c = nodizeDeep(n.c, n.d + 1);
         }
         let vt = typeof n.v;
-        if ('object' === vt && null != n.v) {
+        if (S.object === vt && null != n.v) {
             Object.entries(n.v).map((m) => (n.v[m[0]] = nodizeDeep(m[1], n.d + 1)));
         }
     }
@@ -482,6 +484,9 @@ function make(intop, inopts) {
                 // Handle objects.
                 else if (S.object === s.type) {
                     let val;
+                    if (undefined !== n.c) {
+                        n.c = nodizeDeep(n.c, 1 + s.dI);
+                    }
                     if (n.r && valundef) {
                         s.ignoreVal = true;
                         s.curerr.push(makeErrImpl(S.required, s, 1010));
@@ -559,12 +564,13 @@ function make(intop, inopts) {
                                         if (k === optskeyspec.keymark) {
                                             // console.log('KEYSPEC-A', k, ov, n)
                                             // console.dir(s, { depth: null })
-                                            expr({
+                                            let outn = expr({
                                                 src: ov, d: 1 + s.dI, meta,
                                                 ancestors: s.ancestors,
                                                 node: n,
                                             }, n);
-                                            // console.log('KEYSPEC-B', k, ov, n)
+                                            // console.log('KEYSPEC-B', k, ov, '\nN   =', n, '\nOUTN=', outn)
+                                            Object.assign(n, outn);
                                         }
                                         else {
                                             // console.log('DELETE', k, s)
@@ -588,6 +594,7 @@ function make(intop, inopts) {
                                 }
                             }
                             let extra = keys(val).filter(k => undefined === n.v[k]);
+                            // console.log('OBJECT EXTRA', val, extra, n.c, GUBU$NIL)
                             if (0 < extra.length) {
                                 if (GUBU$NIL === n.c) {
                                     s.ignoreVal = true;
@@ -937,7 +944,7 @@ function expr(spec, current) {
                 }
             }
         }
-        console.log('TOKENS-B', spec.tokens.join(' '), spec.refs);
+        // console.log('TOKENS-B', spec.tokens.join(' '), spec.refs)
     }
     let head = spec.tokens[spec.i];
     // console.log('HEAD', head, spec.i)
@@ -998,15 +1005,15 @@ function expr(spec, current) {
         }
         spec.i++;
     }
-    console.log('CALL', fn.name, current, args);
+    // console.log('CALL', currentIsNode, fn.name, current, args)
     // g = fn.call(current, ...args)
-    // console.log('CALL-RES', g)
     if (!currentIsNode) {
         g = fn.call(undefined, ...args);
     }
     else {
         g = fn.call(current, ...args);
     }
+    // console.log('CALL-RES', g)
     if ('.' === spec.tokens[spec.i]) {
         // spec.g.m.ti$ = spec.i - 1
         spec.i++;
@@ -1029,13 +1036,13 @@ function build(v, top = true) {
     if ('string' === t) {
         out = expr(v);
     }
-    else if ('object' === t) {
+    else if (S.object === t) {
         out = Object.entries(v).reduce((a, n) => {
             a[n[0]] = '$$' === n[0] ? n[1] : build(n[1], false);
             return a;
         }, {});
     }
-    else if ('array' === t) {
+    else if (S.array === t) {
         out = v.map((n) => build(n, false));
     }
     if (top) {
@@ -1133,6 +1140,7 @@ const Required = function (shape) {
     let node = buildize(this, shape);
     node.r = true;
     node.p = false;
+    node.f = undefined;
     // Handle an explicit undefined.
     if (undefined === shape && 1 === arguments.length) {
         node.t = S.undefined;
@@ -1221,7 +1229,11 @@ const Default = function (dval, shape) {
     //   node.v = buildize(shape)
     // }
     // let node = buildize(this, shape)
-    let node = buildize(this, undefined === shape ? dval : shape);
+    // let node = buildize(this, undefined === shape ? dval : shape)
+    let node = buildize(this, dval);
+    if (undefined !== shape) {
+        node = buildize(node, shape);
+    }
     node.r = false;
     node.f = dval;
     let t = typeof dval;
@@ -1590,11 +1602,16 @@ exports.Rename = Rename;
 const Child = function (child, shape) {
     // console.log('NEW CHILD', this, child, shape)
     // Child provides implicit open object if no shape defined.
-    let node = buildize(this, shape || {});
+    let node = buildize(this, shape);
     // console.log('CHILD A', node, child, shape)
     node.c = nodize(child);
     // console.log('CHILD B', node)
-    // node.s = descBuilder(node, shape, S.Child, [node.c])
+    if (undefined === node.v) {
+        node.t = 'object';
+        node.v = {};
+        node.f = {};
+    }
+    // console.log('CHILD OUT', node)
     return node;
 };
 exports.Child = Child;
@@ -1629,9 +1646,9 @@ exports.Type = Type;
 // Size Builders: Min, Max, Above, Below, Len
 // ==========================================
 function makeSizeBuilder(self, size, shape, name, valid) {
-    console.log('SIZE', self, size, shape, name);
+    // console.log('SIZE', self, size, shape, name)
     let node = buildize(self, shape);
-    console.log('SB', node);
+    // console.log('SB', node)
     size = +size;
     let validator = function (val, update, state) {
         return valid(valueLen(val), size, val, update, state);
@@ -1731,20 +1748,27 @@ function buildize(self, shape) {
     */
     let node;
     if ((undefined === self || globalNode) && undefined !== shape) {
-        console.log('BUILDIZE-SHAPE', shape);
+        // console.log('BUILDIZE-SHAPE', shape)
         node = nodize(shape);
     }
     else if (undefined !== self && !globalNode) {
-        console.log('BUILDIZE-NODE', self, shape);
+        // console.log('BUILDIZE-NODE', self, shape)
+        // Merge self into shape, retaining previous chained builders.
         if (undefined !== shape) {
             node = nodize(shape);
             let selfNode = nodize(self);
-            console.log('SN', selfNode);
+            // console.log('BUILDER-MERGE', node, selfNode)
+            if (undefined === node.v) {
+                node.v = selfNode.v;
+                node.t = selfNode.t;
+            }
+            ;
             ['f', 'r', 'p', 'c', 'e', 'z'].map((pn) => node[pn] = undefined !== selfNode[pn] ? selfNode[pn] : node[pn]);
             node.u = Object.assign(Object.assign({}, selfNode.u), node.u);
             node.m = Object.assign(Object.assign({}, selfNode.m), node.m);
             node.a = selfNode.a.concat(node.a);
             node.b = selfNode.b.concat(node.b);
+            // console.log('BUILDER-DONE', node)
         }
         else {
             node = nodize(self);
@@ -1753,7 +1777,7 @@ function buildize(self, shape) {
     else {
         node = nodize(undefined);
     }
-    console.log('BUILDIZE-OUT', node);
+    // console.log('BUILDIZE-OUT', node)
     // let base = (null == self || globalNode) ? shape : self
     // let over = (null == node1 || base === node1) ? undefined : node1
     // console.log('BZ', base, over)
@@ -1892,6 +1916,7 @@ function node2json(n) {
         if ('' === s) {
             s = JSON.stringify(n.v);
         }
+        // console.log('N2J b', n.b)
         s += n.b.map((v) => '.' + v.s(n)).join('');
         return s;
     }
@@ -1909,7 +1934,7 @@ function node2json(n) {
         }
         return s;
     }
-    else if ('object' === t) {
+    else if (S.object === t) {
         let o = {};
         for (let k in n.v) {
             o[k] = node2json(n.v[k]);
@@ -1926,12 +1951,14 @@ function node2json(n) {
                 o.$$child = node2json(n.c);
             }
         }
-        if (undefined === o.$$ && 0 < n.b.length) {
-            o.$$ = '';
-        }
-        o.$$ += n.b.map((v) => '.' + v.s(n)).join('');
-        if (o.$$.startsWith('.')) {
-            o.$$ = o.$$.slice(1);
+        if (0 < n.b.length) {
+            if (undefined === o.$$) {
+                o.$$ = '';
+            }
+            o.$$ += n.b.map((v) => '.' + v.s(n)).join('');
+            if (o.$$.startsWith('.')) {
+                o.$$ = o.$$.slice(1);
+            }
         }
         // naturalize, since `Child(Number)` implies `Child(Number,{})`
         if (o.$$ && 1 === Object.keys(o).length && o.$$.startsWith('Child')) {
@@ -1946,7 +1973,7 @@ function node2json(n) {
         let rI = 0;
         let list = n.u.list
             .map((n) => node2json(n))
-            .map((n, _) => 'object' === typeof n ? (refs[_ = '$$ref' + (rI++)] = n, _) : n);
+            .map((n, _) => S.object === typeof n ? (refs[_ = '$$ref' + (rI++)] = n, _) : n);
         let s = n.b[0].name + '(' + list.join(',') + ')';
         return 0 === rI ? s : Object.assign({ $$: s }, refs);
     }
@@ -1963,21 +1990,27 @@ function node2json(n) {
         return a;
     }
 }
-function descBuilder(node, shape, name, args) {
-    // console.log('DB', node.m, node.s, name)
-    const ns = null != node.s;
-    const op = ns ? '.' : '';
-    const pre = true; // null != node.m.ti$
-    const tnat = null != TNAT[name];
-    const desc = (ns && pre ? node.s + op : '')
-        + name
-        + (!tnat ? ('(' + args.map((a) => stringify(a, null, true)).join(',')
-            + (null == shape ? '' : (',' + stringify(shape, null, true)))
-            + ')') : '')
-        + (ns && !pre ? op + node.s : '');
-    // console.log('DESC', desc, name, TNAT[name], tnat)
-    return desc;
+/*
+function descBuilder(node: Node<any>, shape: any, name: string, args: any[]) {
+  // console.log('DB', node.m, node.s, name)
+  const ns = null != node.s
+  const op = ns ? '.' : ''
+  const pre = true // null != node.m.ti$
+  const tnat = null != TNAT[name]
+
+  const desc =
+    (ns && pre ? node.s + op : '')
+    + name
+    + (!tnat ? ('(' + args.map((a: any) => stringify(a, null, true)).join(',')
+      + (null == shape ? '' : (',' + stringify(shape, null, true)))
+      + ')') : '')
+    + (ns && !pre ? op + node.s : '')
+
+  // console.log('DESC', desc, name, TNAT[name], tnat)
+
+  return desc
 }
+*/
 function stringify(src, replacer, dequote, expand) {
     let str;
     const use_node2str = !expand &&

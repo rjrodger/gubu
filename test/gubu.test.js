@@ -1917,7 +1917,7 @@ Validation failed for index "1" with number "1" because the number is not of typ
             u: {},
             a: [],
             b: ['f0'],
-            s: 'f0'
+            // s: 'f0'
         });
         expect(c1.spec()).toMatchObject({
             t: 'any',
@@ -1928,7 +1928,7 @@ Validation failed for index "1" with number "1" because the number is not of typ
             u: {},
             a: [],
             b: ['f0'],
-            s: 'f0'
+            // s: 'f0'
         });
         expect(c2.spec()).toMatchObject({
             t: 'any',

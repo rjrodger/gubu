@@ -1,7 +1,11 @@
 "use strict";
 /* Copyright (c) 2021-2023 Richard Rodger and other contributors, MIT License */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Bar = exports.Foo = void 0;
+const package_json_1 = __importDefault(require("../package.json"));
 // Handle web (Gubu) versus node ({Gubu}) export.
 let GubuModule = require('../gubu');
 if (GubuModule.Gubu) {
@@ -1197,7 +1201,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
         expect(d0({ a: 1 })).toEqual({ a: 1 });
         expect(() => d0({ a: 'A' })).toThrow('not of type number');
     });
-    test('compose', () => {
+    test('compose-minmax', () => {
         let cs = Symbol.for('nodejs.util.inspect.custom');
         let g0 = Gubu(Min(1, Max(3)));
         expect(g0(2)).toEqual(2);
@@ -1247,6 +1251,103 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
             .toEqual('{t:object v:{x:{$:{v$:7.1.1} t:number v:11 f:11 n:0 r:false p:false d:1 k:[]' +
             ' e:true u:{} a:[] b:[] m:{}}} n:1 r:false p:false d:0 k:[x] e:true u:{} a:[]' +
             ' b:[Min(1) Max(3)] m:{}}');
+    });
+    test('compose-equiv-childreq', () => {
+        let g0 = Gubu({ a: Required(Child({ x: String }, { b: 1 })) });
+        let g1 = Gubu({ a: Required({ b: 1 }).Child({ x: String }) });
+        let g4 = Gubu({ a: Child({ x: String }, Required({ b: 1 })) });
+        let g5 = Gubu({ a: Child({ x: String }, { b: 1 }).Required() });
+        let g6 = Gubu({ a: Child({ x: String }).Required({ b: 1 }) });
+        let g7 = Gubu({ a: Required().Child({ x: String }, { b: 1 }) });
+        // console.dir(g0.spec(), { depth: null })
+        let VERSION = package_json_1.default.version;
+        let spec = {
+            '$': { 'gubu$': true, 'v$': VERSION },
+            t: 'object',
+            v: {
+                a: {
+                    '$': { 'gubu$': true, 'v$': VERSION },
+                    t: 'object',
+                    v: {
+                        b: {
+                            '$': { 'gubu$': true, 'v$': VERSION },
+                            t: 'number',
+                            v: 1,
+                            f: 1,
+                            n: 0,
+                            r: false,
+                            p: false,
+                            d: 2,
+                            k: [],
+                            e: true,
+                            u: {},
+                            a: [],
+                            b: [],
+                            m: {}
+                        }
+                    },
+                    n: 1,
+                    c: {
+                        '$': { 'gubu$': true, 'v$': VERSION },
+                        t: 'object',
+                        v: {
+                            x: {
+                                '$': { 'gubu$': true, 'v$': VERSION },
+                                t: 'string',
+                                v: '',
+                                f: '',
+                                n: 0,
+                                r: true,
+                                p: false,
+                                d: 0,
+                                k: [],
+                                e: true,
+                                u: {},
+                                a: [],
+                                b: [],
+                                m: {}
+                            }
+                        },
+                        n: 1,
+                        r: false,
+                        p: false,
+                        d: -1,
+                        k: [],
+                        e: true,
+                        u: {},
+                        a: [],
+                        b: [],
+                        m: {}
+                    },
+                    r: true,
+                    p: false,
+                    d: 1,
+                    k: ['b'],
+                    e: true,
+                    u: {},
+                    a: [],
+                    b: [],
+                    m: {}
+                }
+            },
+            n: 1,
+            r: false,
+            p: false,
+            d: 0,
+            k: ['a'],
+            e: true,
+            u: {},
+            a: [],
+            b: [],
+            m: {}
+        };
+        const g0spec = g0.spec();
+        expect(g0spec).toEqual(spec);
+        expect(g1.spec()).toEqual(g0spec);
+        expect(g4.spec()).toEqual(g0spec);
+        expect(g5.spec()).toEqual(g0spec);
+        expect(g6.spec()).toEqual(g0spec);
+        expect(g7.spec()).toEqual(g0spec);
     });
 });
 //# sourceMappingURL=builder.test.js.map

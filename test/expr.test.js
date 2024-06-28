@@ -265,12 +265,15 @@ describe('expr', () => {
     test('desc-child', () => {
         let d0 = { a: { '$$': 'Child($$child)', '$$child': { x: Number } } };
         let g0 = Gubu(d0, { keyspec: { active: true } });
+        //let g0 = Gubu({ a: Child({ x: Number }) })
+        //console.dir(g0.spec(), { depth: null })
         let v0 = g0({ a: { b: { x: 1 } } });
         expect(v0).toEqual({ a: { b: { x: 1 } } });
         expect(() => g0({ a: { b: { x: 'B' } } })).toThrow('not of type number');
         let j0 = g0.jsonify();
         expect(j0).toEqual({ a: { '$$': 'Child($$child)', '$$child': { x: 'Number' } } });
         let b0 = Gubu.build(j0);
+        // console.dir(b0.spec(), { depth: null })
         let bv0 = b0({ a: { b: { x: 1 } } });
         expect(bv0).toEqual({ a: { b: { x: 1 } } });
         expect(b0.stringify()).toEqual('{"a":{"$$":"Child($$child)","$$child":{"x":"Number"}}}');

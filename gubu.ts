@@ -36,7 +36,8 @@ const GUBU = { gubu$: GUBU$, v$: VERSION }
 
 // TODO GUBU$UNDEF for explicit undefined
 // A special marker for property abscence.
-const GUBU$NIL = Symbol.for('gubu$nil')
+const GUBU$NIL = undefined // Symbol.for('gubu$nil')
+// const GUBU$NIL = Symbol.for('gubu$nil')
 
 // RegExp: first letter is upper case
 const UPPER_CASE_FIRST_RE = /^[A-Z]/
@@ -61,9 +62,9 @@ type GubuOptions = {
   }
 
   // Value expressions
-  valexpr?: {
-    active?: boolean // If true, recognize value expressions. Default: false.
-  }
+  // valexpr?: {
+  //   active?: boolean // If true, recognize value expressions. Default: false.
+  // }
 
   // TODO: should be valexpr
   // Special keys to define value expr for parent object or array.
@@ -691,9 +692,14 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
     [Symbol.for('nodejs.util.inspect.custom')]() {
       const nd: any = { ...this }
       delete nd.$
-      return JSON.stringify(nd).replace(/"/g, '').replace(/,/g, ' ')
+      return JSON.stringify(
+        nd,
+        (_k, v) => 'function' === typeof v && !(BuilderMap as any)[v.name] ? v.name : v
+      ).replace(/"/g, '').replace(/,/g, ' ')
     }
   } as unknown as Node<S>)
+
+  // console.log('NODIZE', shape, node)
 
   return node
 }
@@ -711,7 +717,7 @@ function nodizeDeep(n: any, depth?: number) {
     }
 
     let vt = typeof n.v
-    if ('object' === vt && null != n.v) {
+    if (S.object === vt && null != n.v) {
       Object.entries(n.v).map((m: any[]) => (n.v[m[0]] = nodizeDeep(m[1], n.d + 1)))
     }
   }
@@ -803,6 +809,10 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
         // Handle objects.
         else if (S.object === s.type) {
           let val
+
+          if (undefined !== n.c) {
+            n.c = nodizeDeep(n.c, 1 + s.dI)
+          }
 
           if (n.r && valundef) {
             s.ignoreVal = true
@@ -897,12 +907,13 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
                     if (k === optskeyspec.keymark) {
                       // console.log('KEYSPEC-A', k, ov, n)
                       // console.dir(s, { depth: null })
-                      expr({
+                      let outn = expr({
                         src: ov, d: 1 + s.dI, meta,
                         ancestors: s.ancestors,
                         node: n,
                       }, n)
-                      // console.log('KEYSPEC-B', k, ov, n)
+                      // console.log('KEYSPEC-B', k, ov, '\nN   =', n, '\nOUTN=', outn)
+                      Object.assign(n, outn)
                     }
                     else {
                       // console.log('DELETE', k, s)
@@ -932,6 +943,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
               }
 
               let extra = keys(val).filter(k => undefined === n.v[k])
+              // console.log('OBJECT EXTRA', val, extra, n.c, GUBU$NIL)
 
               if (0 < extra.length) {
                 if (GUBU$NIL === n.c) {
@@ -1369,7 +1381,7 @@ function expr(
       }
     }
 
-    console.log('TOKENS-B', spec.tokens.join(' '), spec.refs)
+    // console.log('TOKENS-B', spec.tokens.join(' '), spec.refs)
   }
 
 
@@ -1447,9 +1459,9 @@ function expr(
   }
 
 
-  console.log('CALL', fn.name, current, args)
+  // console.log('CALL', currentIsNode, fn.name, current, args)
   // g = fn.call(current, ...args)
-  // console.log('CALL-RES', g)
+
 
 
   if (!currentIsNode) {
@@ -1458,6 +1470,7 @@ function expr(
   else {
     g = fn.call(current, ...args)
   }
+  // console.log('CALL-RES', g)
 
 
   if ('.' === spec.tokens[spec.i]) {
@@ -1486,13 +1499,13 @@ function build(v: any, top = true) {
   if ('string' === t) {
     out = expr(v)
   }
-  else if ('object' === t) {
+  else if (S.object === t) {
     out = Object.entries(v).reduce((a: any, n: any[]) => {
       a[n[0]] = '$$' === n[0] ? n[1] : build(n[1], false)
       return a
     }, {})
   }
-  else if ('array' === t) {
+  else if (S.array === t) {
     out = v.map((n: any) => build(n, false))
   }
 
@@ -1617,6 +1630,7 @@ const Required = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
   node.r = true
   node.p = false
+  node.f = undefined
 
   // Handle an explicit undefined.
   if (undefined === shape && 1 === arguments.length) {
@@ -1723,7 +1737,13 @@ const Default = function <V>(this: any, dval?: any, shape?: Node<V> | V): Node<V
   // }
   // let node = buildize(this, shape)
 
-  let node = buildize(this, undefined === shape ? dval : shape)
+  // let node = buildize(this, undefined === shape ? dval : shape)
+
+  let node = buildize(this, dval)
+
+  if (undefined !== shape) {
+    node = buildize(node, shape)
+  }
 
   node.r = false
   node.f = dval
@@ -2207,13 +2227,18 @@ const Child = function <V>(
   // console.log('NEW CHILD', this, child, shape)
 
   // Child provides implicit open object if no shape defined.
-  let node = buildize(this, shape || {})
+  let node = buildize(this, shape)
   // console.log('CHILD A', node, child, shape)
   node.c = nodize(child)
   // console.log('CHILD B', node)
 
-  // node.s = descBuilder(node, shape, S.Child, [node.c])
+  if (undefined === node.v) {
+    node.t = 'object'
+    node.v = {}
+    node.f = {}
+  }
 
+  // console.log('CHILD OUT', node)
   return node
 }
 
@@ -2274,9 +2299,9 @@ function makeSizeBuilder(
   name: string,
   valid: (vsize: number, size: number, val: any, update: Update, state: State) => boolean
 ) {
-  console.log('SIZE', self, size, shape, name)
+  // console.log('SIZE', self, size, shape, name)
   let node = buildize(self, shape)
-  console.log('SB', node)
+  // console.log('SB', node)
 
   size = +size
 
@@ -2435,24 +2460,33 @@ function buildize<V>(self?: any, shape?: any): Node<V> {
   let node: Node<V>
 
   if ((undefined === self || globalNode) && undefined !== shape) {
-    console.log('BUILDIZE-SHAPE', shape)
+    // console.log('BUILDIZE-SHAPE', shape)
     node = nodize(shape)
   }
   else if (undefined !== self && !globalNode) {
-    console.log('BUILDIZE-NODE', self, shape)
+    // console.log('BUILDIZE-NODE', self, shape)
 
+    // Merge self into shape, retaining previous chained builders.
     if (undefined !== shape) {
       node = nodize(shape)
       let selfNode = nodize(self)
 
-      console.log('SN', selfNode)
+      // console.log('BUILDER-MERGE', node, selfNode)
 
-        ;['f', 'r', 'p', 'c', 'e', 'z'].map((pn: string) =>
-          node[pn] = undefined !== selfNode[pn] ? selfNode[pn] : node[pn])
+      if (undefined === node.v) {
+        node.v = selfNode.v
+        node.t = selfNode.t
+      }
+
+      ;['f', 'r', 'p', 'c', 'e', 'z'].map((pn: string) =>
+        node[pn] = undefined !== selfNode[pn] ? selfNode[pn] : node[pn])
+
       node.u = Object.assign({ ...selfNode.u }, node.u)
       node.m = Object.assign({ ...selfNode.m }, node.m)
       node.a = selfNode.a.concat(node.a)
       node.b = selfNode.b.concat(node.b)
+
+      // console.log('BUILDER-DONE', node)
     }
     else {
       node = nodize(self)
@@ -2462,7 +2496,7 @@ function buildize<V>(self?: any, shape?: any): Node<V> {
     node = nodize(undefined)
   }
 
-  console.log('BUILDIZE-OUT', node)
+  // console.log('BUILDIZE-OUT', node)
 
   // let base = (null == self || globalNode) ? shape : self
   // let over = (null == node1 || base === node1) ? undefined : node1
@@ -2647,6 +2681,7 @@ function node2json(n: Node<any>): any {
       s = JSON.stringify(n.v)
     }
 
+    // console.log('N2J b', n.b)
     s += n.b.map((v: any) => '.' + v.s(n)).join('')
 
     return s
@@ -2670,7 +2705,7 @@ function node2json(n: Node<any>): any {
 
     return s
   }
-  else if ('object' === t) {
+  else if (S.object === t) {
     let o: any = {}
     for (let k in n.v) {
       o[k] = node2json(n.v[k])
@@ -2689,13 +2724,14 @@ function node2json(n: Node<any>): any {
       }
     }
 
-    if (undefined === o.$$ && 0 < n.b.length) {
-      o.$$ = ''
-    }
-    o.$$ += n.b.map((v: any) => '.' + v.s(n)).join('')
-
-    if (o.$$.startsWith('.')) {
-      o.$$ = o.$$.slice(1)
+    if (0 < n.b.length) {
+      if (undefined === o.$$) {
+        o.$$ = ''
+      }
+      o.$$ += n.b.map((v: any) => '.' + v.s(n)).join('')
+      if (o.$$.startsWith('.')) {
+        o.$$ = o.$$.slice(1)
+      }
     }
 
     // naturalize, since `Child(Number)` implies `Child(Number,{})`
@@ -2713,7 +2749,7 @@ function node2json(n: Node<any>): any {
     let rI = 0
     let list = n.u.list
       .map((n: any) => node2json(n))
-      .map((n: any, _: any) => 'object' === typeof n ? (refs[_ = '$$ref' + (rI++)] = n, _) : n)
+      .map((n: any, _: any) => S.object === typeof n ? (refs[_ = '$$ref' + (rI++)] = n, _) : n)
     let s = n.b[0].name + '(' + list.join(',') + ')'
     return 0 === rI ? s : { $$: s, ...refs }
   }
@@ -2732,7 +2768,7 @@ function node2json(n: Node<any>): any {
 }
 
 
-
+/*
 function descBuilder(node: Node<any>, shape: any, name: string, args: any[]) {
   // console.log('DB', node.m, node.s, name)
   const ns = null != node.s
@@ -2752,6 +2788,7 @@ function descBuilder(node: Node<any>, shape: any, name: string, args: any[]) {
 
   return desc
 }
+*/
 
 
 function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean) {
