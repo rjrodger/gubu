@@ -718,6 +718,7 @@ function make(intop, inopts) {
                 // Invalid type.
                 else if (!(S.any === s.type ||
                     S.list === s.type ||
+                    S.check === s.type ||
                     undefined === s.val ||
                     s.type === s.valType ||
                     (S.instance === s.type && n.u.i && s.val instanceof n.u.i) ||
@@ -817,12 +818,14 @@ function make(intop, inopts) {
         // console.dir(top, { depth: null })
         // Normalize spec, discard errors.
         gubuShape(undefined, { err: false });
-        return JP(stringify(top, (_key, val) => {
+        const str = stringify(top, (_key, val) => {
             if (GUBU$ === val) {
                 return true;
             }
             return val;
-        }, false, true));
+        }, false, true);
+        // console.log('STR', str)
+        return JP(str);
     };
     gubuShape.node = () => {
         gubuShape.spec();
@@ -1296,12 +1299,12 @@ const Key = function (depth, join) {
 exports.Key = Key;
 // Pass only if all match. Does not short circuit (as defaults may be missed).
 const All = function (...inshapes) {
-    let node = buildize(this);
+    const node = buildize(this);
     node.t = S.list;
     node.r = true;
-    let shapes = inshapes.map(s => Gubu(s));
-    node.u.list = inshapes;
-    node.b.push(function All(val, update, state) {
+    const shapes = inshapes.map(s => Gubu(s));
+    node.u.list = shapes.map(g => g.node());
+    const validator = function All(val, update, state) {
         let pass = true;
         // let err: any = []
         for (let shape of shapes) {
@@ -1320,7 +1323,10 @@ const All = function (...inshapes) {
             ];
         }
         return pass;
-    });
+    };
+    validator.a = inshapes;
+    // validator.s = () => S.All + '(' + inshapes.map((s: any) => stringify(s)).join(',') + ')'
+    node.b.push(validator);
     return node;
 };
 exports.All = All;
@@ -1331,7 +1337,8 @@ const Some = function (...inshapes) {
     node.t = S.list;
     node.r = true;
     let shapes = inshapes.map(s => Gubu(s));
-    node.u.list = inshapes;
+    // node.u.list = inshapes
+    node.u.list = shapes.map(g => g.node());
     node.b.push(function Some(val, update, state) {
         let pass = false;
         for (let shape of shapes) {
@@ -1436,8 +1443,10 @@ const Check = function (check, shape) {
         let c$ = check;
         c$.gubu$ = c$.gubu$ || {};
         c$.gubu$.Check = true;
+        c$.s = () => S.Check + '(' + stringify(check, null, true) + ')';
         node.b.push(check);
         // node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true)
+        node.t = S.check;
         node.r = true;
     }
     else if (S.object === typeof check) {
@@ -1448,8 +1457,9 @@ const Check = function (check, shape) {
                 value: String(check)
             });
             defprop(refn, 'gubu$', { value: { Check: true } });
+            refn.s = () => S.Check + '(' + stringify(check, null, true) + ')';
             node.b.push(refn);
-            // node.s = stringify(check, null, true)
+            node.t = S.check;
             node.r = true;
         }
     }
@@ -1891,15 +1901,7 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     }
     return err;
 }
-// function node2str(n: Node<any>): string {
-//   /*
-//   return (null != n.s && '' !== n.s) ? ('function' === typeof n.s ? (n.s = n.s()) : n.s) :
-//     (!n.r && undefined !== n.v) ?
-//       ('function' === typeof n.v.constructor ? n.v : n.v.toString())
-//       : (n.s = n.t[0].toUpperCase() + n.t.slice(1))
-//   */
-//   return 'N'
-// }
+// Convert Node to JSON suitable for Gubu.build.
 function node2json(n) {
     var _a;
     let t = n.t;
@@ -1916,11 +1918,10 @@ function node2json(n) {
         if ('' === s) {
             s = JSON.stringify(n.v);
         }
-        // console.log('N2J b', n.b)
-        s += n.b.map((v) => '.' + v.s(n)).join('');
+        s += n.b.map((v) => v.s ? ('.' + v.s(n)) : '').join('');
         return s;
     }
-    else if ('any' === t) {
+    else if (S.any === t) {
         let s = '';
         if (n.r) {
             s += 'Required()';
@@ -1928,10 +1929,23 @@ function node2json(n) {
         if ('any' == ((_a = n.c) === null || _a === void 0 ? void 0 : _a.t)) {
             s += ('' === s ? '' : '.') + 'Open()';
         }
-        s += n.b.map((v) => '.' + v.s(n)).join('');
+        s += n.b.map((v) => v.s ? ('.' + v.s(n)) : '').join('');
         if (s.startsWith('.')) {
             s = s.slice(1);
         }
+        if ('' === s) {
+            s = 'Any()';
+        }
+        return s;
+    }
+    else if (S.check === t) {
+        let s = '';
+        // Required is implicit with Check
+        s += n.b.map((v) => v.s ? ('.' + v.s(n)) : '').join('');
+        if (s.startsWith('.')) {
+            s = s.slice(1);
+        }
+        // console.log('N2J CHECK', n, s)
         return s;
     }
     else if (S.object === t) {
@@ -1955,7 +1969,7 @@ function node2json(n) {
             if (undefined === o.$$) {
                 o.$$ = '';
             }
-            o.$$ += n.b.map((v) => '.' + v.s(n)).join('');
+            o.$$ += n.b.map((v) => v.s ? ('.' + v.s(n)) : '').join('');
             if (o.$$.startsWith('.')) {
                 o.$$ = o.$$.slice(1);
             }
@@ -1990,27 +2004,6 @@ function node2json(n) {
         return a;
     }
 }
-/*
-function descBuilder(node: Node<any>, shape: any, name: string, args: any[]) {
-  // console.log('DB', node.m, node.s, name)
-  const ns = null != node.s
-  const op = ns ? '.' : ''
-  const pre = true // null != node.m.ti$
-  const tnat = null != TNAT[name]
-
-  const desc =
-    (ns && pre ? node.s + op : '')
-    + name
-    + (!tnat ? ('(' + args.map((a: any) => stringify(a, null, true)).join(',')
-      + (null == shape ? '' : (',' + stringify(shape, null, true)))
-      + ')') : '')
-    + (ns && !pre ? op + node.s : '')
-
-  // console.log('DESC', desc, name, TNAT[name], tnat)
-
-  return desc
-}
-*/
 function stringify(src, replacer, dequote, expand) {
     let str;
     const use_node2str = !expand &&
@@ -2021,11 +2014,15 @@ function stringify(src, replacer, dequote, expand) {
         // src = node2str(src)
         src = JSON.stringify(node2json(src));
         // console.log('SRC-B', src)
+        if (dequote) {
+            src = 'string' === typeof src ? src.replace(/\\/g, '').replace(/"/g, '') : '';
+        }
+        return src;
     }
     // console.log('SRC-C', src)
     try {
         str = JS(src, (key, val) => {
-            var _a, _b;
+            var _a, _b, _c;
             if (replacer) {
                 val = replacer(key, val);
             }
@@ -2042,6 +2039,12 @@ function stringify(src, replacer, dequote, expand) {
                 else {
                     val =
                         S.function === typeof val.toString ? val.toString() : val.constructor.name;
+                }
+            }
+            else if (!expand && GUBU$ === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
+                val = JSON.stringify(node2json(val));
+                if (dequote) {
+                    val = 'string' === typeof val ? val.replace(/\\/g, '').replace(/"/g, '') : '';
                 }
             }
             else if (S.function === typeof (val)) {
@@ -2065,7 +2068,7 @@ function stringify(src, replacer, dequote, expand) {
                 return 'NaN';
             }
             else if (true !== expand &&
-                (true === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$) || GUBU$ === ((_b = val === null || val === void 0 ? void 0 : val.$) === null || _b === void 0 ? void 0 : _b.gubu$))) {
+                (true === ((_b = val === null || val === void 0 ? void 0 : val.$) === null || _b === void 0 ? void 0 : _b.gubu$) || GUBU$ === ((_c = val === null || val === void 0 ? void 0 : val.$) === null || _c === void 0 ? void 0 : _c.gubu$))) {
                 // console.log('EEE', key, val)
                 // val = node2str(val)
                 val = JSON.stringify(node2json(val));
@@ -2081,6 +2084,7 @@ function stringify(src, replacer, dequote, expand) {
     if (true === dequote) {
         str = str.replace(/^"/, '').replace(/"$/, '');
     }
+    // console.log('STR', str)
     return str;
 }
 exports.stringify = stringify;

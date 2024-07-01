@@ -36,6 +36,7 @@ type ValType = 'any' | // Any type.
 'string' | // A string (but *not* the empty string).
 'symbol' | // A symbol reference.
 'regexp' | // A regular expression.
+'check' | // A check function.
 'undefined';
 type Node<V> = {
     $: typeof GUBU;
@@ -208,7 +209,7 @@ declare const Below: <V>(this: any, below: number | string, shape?: Node<V> | V)
 declare const Len: <V>(this: any, len: number, shape?: Node<V> | V) => Node<V>;
 declare function buildize<V>(self?: any, shape?: any): Node<V>;
 declare function makeErr(state: State, text?: string, why?: string, user?: any): ErrDesc;
-declare function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean): string;
+declare function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean): any;
 declare const G$: (node: any) => Node<any>;
 declare const BuilderMap: {
     Above: <V>(this: any, above: number | string, shape?: Node<V> | V) => Node<V>;

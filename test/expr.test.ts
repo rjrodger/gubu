@@ -26,6 +26,8 @@ const {
   Above,
   Below,
   One,
+  Some,
+  All,
   expr,
   build,
 } = Gubu
@@ -305,6 +307,61 @@ describe('expr', () => {
   })
 
 
+  test('expr-list', () => {
+    let g = Gubu({ a: One(Number, String) })
+    expect(g({ a: 1 })).toEqual({ a: 1 })
+    let gs = g.stringify()
+    expect(gs).toEqual('{"a":"One(Number,String)"}')
+    let gr = Gubu.build(JP(gs))
+    expect(gr.jsonify()).toEqual({ a: 'One(Number,String)' })
+
+    g = Gubu({ a: All(Number, 1) })
+    expect(g({ a: 1 })).toEqual({ a: 1 })
+    gs = g.stringify()
+    expect(gs).toEqual('{"a":"All(Number,1)"}')
+    gr = Gubu.build(JP(gs))
+    expect(gr.jsonify()).toEqual({ a: 'All(Number,1)' })
+
+    g = Gubu({ a: Some(Number, String) })
+    expect(g({ a: 1 })).toEqual({ a: 1 })
+    gs = g.stringify()
+    expect(gs).toEqual('{"a":"Some(Number,String)"}')
+    gr = Gubu.build(JP(gs))
+    expect(gr.jsonify()).toEqual({ a: 'Some(Number,String)' })
+
+    let listBuilders = [One, All, Some]
+    for (let lb of listBuilders) {
+      g = Gubu({ a: lb({ x: Number }, [String]) })
+      if (One === lb || Some === lb) {
+        expect(g({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
+        expect(g({ a: ['A', 'B'] })).toEqual({ a: ['A', 'B'] })
+      }
+
+      gs = g.stringify()
+      expect(gs).toEqual('{"a":{"$$":"' + lb.name + '($$ref0,$$ref1)",' +
+        '"$$ref0":{"x":"Number"},"$$ref1":["String"]}}')
+      gr = Gubu.build(JP(gs))
+
+      if (One === lb || Some === lb) {
+        expect(gr({ a: { x: 1 } })).toEqual({ a: { x: 1 } })
+        expect(gr({ a: ['A', 'B'] })).toEqual({ a: ['A', 'B'] })
+      }
+
+      expect(gr.jsonify()).toEqual({
+        a: {
+          "$$": lb.name + "($$ref0,$$ref1)",
+          "$$ref0": {
+            "x": "Number",
+          },
+          "$$ref1": [
+            "String",
+          ],
+        }
+      })
+    }
+  })
+
+
   test('expr-define', () => {
     const g0 = build('"Min(1)"')
     expect(g0.jsonify()).toEqual('"Min(1)"')
@@ -394,6 +451,13 @@ describe('expr', () => {
     let bv0 = b0({ a: { b: { x: 1 } } })
     expect(bv0).toEqual({ a: { b: { x: 1 } } })
     expect(b0.stringify()).toEqual('{"a":{"$$":"Child($$child)","$$child":{"x":"Number"}}}')
+  })
+
+
+  test('desc-list', () => {
+    expect(Gubu({ a: One(Number, String) }).stringify()).toEqual('{"a":"One(Number,String)"}')
+    expect(Gubu({ a: Some(Number, String) }).stringify()).toEqual('{"a":"Some(Number,String)"}')
+    expect(Gubu({ a: All(Number, String) }).stringify()).toEqual('{"a":"All(Number,String)"}')
   })
 })
 

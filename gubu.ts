@@ -105,6 +105,7 @@ type ValType =
   'string' |    // A string (but *not* the empty string).
   'symbol' |    // A symbol reference.
   'regexp' |    // A regular expression.
+  'check' |     // A check function.
   'undefined'   // The `undefined` value.
 
 
@@ -1085,6 +1086,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
         else if (!(
           S.any === s.type ||
           S.list === s.type ||
+          S.check === s.type ||
           undefined === s.val ||
           s.type === s.valType ||
           (S.instance === s.type && n.u.i && s.val instanceof n.u.i) ||
@@ -1211,12 +1213,14 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
     // Normalize spec, discard errors.
     gubuShape(undefined, { err: false })
-    return JP(stringify(top, (_key: string, val: any) => {
+    const str = stringify(top, (_key: string, val: any) => {
       if (GUBU$ === val) {
         return true
       }
       return val
-    }, false, true))
+    }, false, true)
+    // console.log('STR', str)
+    return JP(str)
   }
 
 
@@ -1825,14 +1829,14 @@ const Key = function(this: any, depth?: number | Function, join?: string) {
 
 // Pass only if all match. Does not short circuit (as defaults may be missed).
 const All = function(this: any, ...inshapes: any[]) {
-  let node = buildize(this)
+  const node = buildize(this)
   node.t = (S.list as ValType)
   node.r = true
 
-  let shapes = inshapes.map(s => Gubu(s))
-  node.u.list = inshapes
+  const shapes = inshapes.map(s => Gubu(s))
+  node.u.list = shapes.map(g => g.node())
 
-  node.b.push(function All(val: any, update: Update, state: State) {
+  const validator = function All(val: any, update: Update, state: State) {
     let pass = true
 
     // let err: any = []
@@ -1855,7 +1859,12 @@ const All = function(this: any, ...inshapes: any[]) {
     }
 
     return pass
-  })
+  }
+
+  validator.a = inshapes
+  // validator.s = () => S.All + '(' + inshapes.map((s: any) => stringify(s)).join(',') + ')'
+
+  node.b.push(validator)
 
   return node
 }
@@ -1869,7 +1878,9 @@ const Some = function(this: any, ...inshapes: any[]) {
   node.r = true
 
   let shapes = inshapes.map(s => Gubu(s))
-  node.u.list = inshapes
+  // node.u.list = inshapes
+  node.u.list = shapes.map(g => g.node())
+
 
   node.b.push(function Some(val: any, update: Update, state: State) {
     let pass = false
@@ -2015,22 +2026,24 @@ const Check = function <V>(
     let c$ = check as any
     c$.gubu$ = c$.gubu$ || {}
     c$.gubu$.Check = true
-
+    c$.s = () => S.Check + '(' + stringify(check, null, true) + ')'
     node.b.push((check as Validate))
     // node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true)
+    node.t = (S.check as ValType)
     node.r = true
   }
   else if (S.object === typeof check) {
     let dstr = Object.prototype.toString.call(check)
     if (dstr.includes('RegExp')) {
-      let refn = (v: any) =>
+      let refn: any = (v: any) =>
         (null == v || Number.isNaN(v)) ? false : !!String(v).match(check as string)
       defprop(refn, S.name, {
         value: String(check)
       })
       defprop(refn, 'gubu$', { value: { Check: true } })
+      refn.s = () => S.Check + '(' + stringify(check, null, true) + ')'
       node.b.push(refn)
-      // node.s = stringify(check, null, true)
+      node.t = (S.check as ValType)
       node.r = true
     }
   }
@@ -2647,19 +2660,7 @@ function makeErrImpl(
 }
 
 
-// function node2str(n: Node<any>): string {
-//   /*
-//   return (null != n.s && '' !== n.s) ? ('function' === typeof n.s ? (n.s = n.s()) : n.s) :
-//     (!n.r && undefined !== n.v) ?
-//       ('function' === typeof n.v.constructor ? n.v : n.v.toString())
-//       : (n.s = n.t[0].toUpperCase() + n.t.slice(1))
-//   */
-
-
-//   return 'N'
-// }
-
-
+// Convert Node to JSON suitable for Gubu.build.
 function node2json(n: Node<any>): any {
   let t = n.t
 
@@ -2681,12 +2682,11 @@ function node2json(n: Node<any>): any {
       s = JSON.stringify(n.v)
     }
 
-    // console.log('N2J b', n.b)
-    s += n.b.map((v: any) => '.' + v.s(n)).join('')
+    s += n.b.map((v: any) => v.s ? ('.' + v.s(n)) : '').join('')
 
     return s
   }
-  else if ('any' === t) {
+  else if (S.any === t) {
     let s = ''
 
     if (n.r) {
@@ -2697,11 +2697,30 @@ function node2json(n: Node<any>): any {
       s += ('' === s ? '' : '.') + 'Open()'
     }
 
-    s += n.b.map((v: any) => '.' + v.s(n)).join('')
+    s += n.b.map((v: any) => v.s ? ('.' + v.s(n)) : '').join('')
 
     if (s.startsWith('.')) {
       s = s.slice(1)
     }
+
+    if ('' === s) {
+      s = 'Any()'
+    }
+
+    return s
+  }
+  else if (S.check === t) {
+    let s = ''
+
+    // Required is implicit with Check
+
+    s += n.b.map((v: any) => v.s ? ('.' + v.s(n)) : '').join('')
+
+    if (s.startsWith('.')) {
+      s = s.slice(1)
+    }
+
+    // console.log('N2J CHECK', n, s)
 
     return s
   }
@@ -2728,7 +2747,7 @@ function node2json(n: Node<any>): any {
       if (undefined === o.$$) {
         o.$$ = ''
       }
-      o.$$ += n.b.map((v: any) => '.' + v.s(n)).join('')
+      o.$$ += n.b.map((v: any) => v.s ? ('.' + v.s(n)) : '').join('')
       if (o.$$.startsWith('.')) {
         o.$$ = o.$$.slice(1)
       }
@@ -2743,7 +2762,6 @@ function node2json(n: Node<any>): any {
   else if ('list' === t) {
     // TODO: fix for refs in main loop when validating
     // make this work: build({ a: { '$$': 'One(Number,$$ref0)', '$$ref0': { x: '1' } } })
-
 
     let refs: any = {}
     let rI = 0
@@ -2768,29 +2786,6 @@ function node2json(n: Node<any>): any {
 }
 
 
-/*
-function descBuilder(node: Node<any>, shape: any, name: string, args: any[]) {
-  // console.log('DB', node.m, node.s, name)
-  const ns = null != node.s
-  const op = ns ? '.' : ''
-  const pre = true // null != node.m.ti$
-  const tnat = null != TNAT[name]
-
-  const desc =
-    (ns && pre ? node.s + op : '')
-    + name
-    + (!tnat ? ('(' + args.map((a: any) => stringify(a, null, true)).join(',')
-      + (null == shape ? '' : (',' + stringify(shape, null, true)))
-      + ')') : '')
-    + (ns && !pre ? op + node.s : '')
-
-  // console.log('DESC', desc, name, TNAT[name], tnat)
-
-  return desc
-}
-*/
-
-
 function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean) {
   let str: string
 
@@ -2804,6 +2799,10 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
     // src = node2str(src)
     src = JSON.stringify(node2json(src))
     // console.log('SRC-B', src)
+    if (dequote) {
+      src = 'string' === typeof src ? src.replace(/\\/g, '').replace(/"/g, '') : ''
+    }
+    return src
   }
 
   // console.log('SRC-C', src)
@@ -2832,6 +2831,12 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
             S.function === typeof val.toString ? val.toString() : val.constructor.name
         }
 
+      }
+      else if (!expand && GUBU$ === val?.$?.gubu$) {
+        val = JSON.stringify(node2json(val))
+        if (dequote) {
+          val = 'string' === typeof val ? val.replace(/\\/g, '').replace(/"/g, '') : ''
+        }
       }
       else if (S.function === typeof (val)) {
         // console.log('BBB', key, val)
@@ -2874,6 +2879,8 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
   if (true === dequote) {
     str = str.replace(/^"/, '').replace(/"$/, '')
   }
+
+  // console.log('STR', str)
 
   return str
 }

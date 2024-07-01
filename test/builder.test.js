@@ -281,12 +281,14 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
         expect(g2(['x', 1])).toEqual(['x', 1]);
         expect(g2(['x', 'y'])).toEqual(['x', 'y']);
         expect(g2(['x', 1, 'y', 2])).toEqual(['x', 1, 'y', 2]);
-        expect(() => g2([true])).toThrow(`Value "true" for property "0" does not satisfy any of: Number, String`);
+        expect(() => g2([true]))
+            .toThrow(`Value "true" for property "0" does not satisfy any of: Number, String`);
         let g3 = Gubu({ a: [Some(Number, String)] });
         expect(g3({ a: [1] })).toEqual({ a: [1] });
         expect(g3({ a: ['x'] })).toEqual({ a: ['x'] });
         expect(g3({ a: ['x', 1, 'y', 2] })).toEqual({ a: ['x', 1, 'y', 2] });
-        expect(() => g3({ a: [1, 2, true] })).toThrow(`Value "true" for property "a.2" does not satisfy any of: Number, String`);
+        expect(() => g3({ a: [1, 2, true] }))
+            .toThrow(`Value "true" for property "a.2" does not satisfy any of: Number, String`);
         let g4 = Gubu({ a: [Some(Open({ x: 1 }), Open({ x: 'X' }))] });
         expect(g4({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] }))
             .toEqual({ a: [{ x: 2 }, { x: 'Q' }, { x: 3, y: true }, { x: 'W', y: false }] });
@@ -296,31 +298,44 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"red","y":"
     });
     test('builder-all', () => {
         let g0 = Gubu(All(Open({ x: 1 }), Open({ y: 'a' })));
+        expect(g0.stringify())
+            .toEqual('{"$$":"All($$ref0,$$ref1)","$$ref0":{"x":"1","$$":"Open()"}' +
+            ',"$$ref1":{"y":"\\"a\\"","$$":"Open()"}}');
         expect(g0({ x: 11, y: 'aa' })).toEqual({ x: 11, y: 'aa' });
         expect(g0({})).toEqual({ x: 1, y: 'a' });
-        expect(() => g0({ x: 'b', y: 'a' })).toThrow(`Value "{x:b,y:a}" for property "" does not satisfy all of: {"x":1}, {"y":"a"}`);
+        expect(() => g0({ x: 'b', y: 'a' })).toThrow('Value "{x:b,y:a}" for property "" does not satisfy all of:' +
+            ' {x:1,$$:Open()}, {y:a,$$:Open()}');
         expect(() => g0()).toThrow('Validation failed for value "undefined" because the value is required.');
         let g0s = Gubu(All(Open({ x: 1 }), Open({ y: 'a' })).Skip());
         expect(g0s({ x: 11, y: 'aa' })).toEqual({ x: 11, y: 'aa' });
         expect(g0s({})).toEqual({ x: 1, y: 'a' });
-        expect(() => g0s({ x: 'b', y: 'a' })).toThrow(`Value "{x:b,y:a}" for property "" does not satisfy all of: {"x":1}, {"y":"a"}`);
+        expect(() => g0s({ x: 'b', y: 'a' })).toThrow('Value "{x:b,y:a}" for property "" does not satisfy all of:' +
+            ' {x:1,$$:Open()}, {y:a,$$:Open()}');
         expect(g0s()).toEqual(undefined);
         // TODO: Optional
         // expect(g0s()).toEqual({ x: 1, y: 'a' })
         let g1 = Gubu({
             a: All(Check((v) => v > 10), Check((v) => v < 20))
         });
+        // console.dir(g1.spec(), { depth: null })
         expect(g1({ a: 11 })).toEqual({ a: 11 });
-        expect(() => g1({ a: 0 })).toThrow('Value "0" for property "a" does not satisfy all of: (v) => v > 10, (v) => v < 20');
+        expect(() => g1({ a: 0 })).toThrow('Value "0" for property "a" does not satisfy all of: ' +
+            'Check((v) => v > 10), Check((v) => v < 20)');
         let g2 = Gubu(All({ x: 1, y: Any() }, { x: Any(), y: 'a' }));
         expect(g2({ x: 11, y: 'AA' })).toEqual({ x: 11, y: 'AA' });
-        expect(() => g2({ x: 11, y: true })).toThrow('Value "{x:11,y:true}" for property "" does not satisfy all of: {"x":1,"y":"any"}, {"x":"any","y":"a"}');
+        // g2({ x: 11, y: true })
+        expect(() => g2({ x: 11, y: true }))
+            .toThrow('Value "{x:11,y:true}" for property "" does not satisfy all of:' +
+            ' {"x":1,"y":"Any()"}, {"x":"Any()","y":"a"}');
         let g3 = Gubu(All({ x: 1, y: Any() }, { x: Any(), y: { z: 'a' } }));
         expect(g3({ x: 11, y: { z: 'AA' } })).toEqual({ x: 11, y: { z: 'AA' } });
-        expect(() => g3({ x: 11, y: { z: true } })).toThrow('Value "{x:11,y:{z:true}}" for property "" does not satisfy all of: {"x":1,"y":"any"}, {"x":"any","y":{"z":"a"}}');
+        expect(() => g3({ x: 11, y: { z: true } }))
+            .toThrow('Value "{x:11,y:{z:true}}" for property "" does not satisfy all of:' +
+            ' {"x":1,"y":"Any()"}, {"x":"Any()","y":{"z":"a"}}');
         let g4 = Gubu(All(Open({ x: 1 }), Open({ y: 2 })));
         expect(g4({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 });
-        expect(() => g4({ x: 'X', y: 'Y' })).toThrow('Value "{x:X,y:Y}" for property "" does not satisfy all of: {"x":1}, {"y":2}');
+        expect(() => g4({ x: 'X', y: 'Y' })).toThrow('Value "{x:X,y:Y}" for property "" does not satisfy all of:' +
+            ' {x:1,$$:Open()}, {y:2,$$:Open()}');
     });
     test('builder-skip', () => {
         let g0a = Gubu({ a: Skip(String) });
@@ -1252,7 +1267,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`);
             ' e:true u:{} a:[] b:[] m:{}}} n:1 r:false p:false d:0 k:[x] e:true u:{} a:[]' +
             ' b:[Min(1) Max(3)] m:{}}');
     });
-    test('compose-equiv-childreq', () => {
+    test('compose-node', () => {
         let g0 = Gubu({ a: Required(Child({ x: String }, { b: 1 })) });
         let g1 = Gubu({ a: Required({ b: 1 }).Child({ x: String }) });
         let g4 = Gubu({ a: Child({ x: String }, Required({ b: 1 })) });
