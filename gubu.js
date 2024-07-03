@@ -405,23 +405,45 @@ function nodize(shape, depth, meta) {
     return node;
 }
 exports.nodize = nodize;
-function nodizeDeep(n, depth) {
-    // console.log('ND-in', n)
+function nodizeDeep(root, depth) {
     var _a;
-    if (null == ((_a = n === null || n === void 0 ? void 0 : n.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
-        n = nodizeDeep(nodize(n, depth), depth);
-    }
-    else {
-        if (GUBU$NIL !== n.c) {
-            n.c = nodizeDeep(n.c, n.d + 1);
+    const nodes = [[{}, 'root', root, depth]];
+    for (let i = 0; i < nodes.length; i++) {
+        const p = nodes[i];
+        const n = p[0][p[1]] = nodize(p[2], p[3]);
+        if (undefined !== n.c) {
+            if (!((_a = n.c.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
+                nodes.push([n, 'c', n.c, n.d]);
+            }
         }
         let vt = typeof n.v;
         if (S.object === vt && null != n.v) {
-            Object.entries(n.v).map((m) => (n.v[m[0]] = nodizeDeep(m[1], n.d + 1)));
+            Object.entries(n.v).map((m) => {
+                var _a;
+                if (!((_a = m[1].$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
+                    nodes.push([n.v, m[0], m[1], n.d + 1]);
+                }
+            });
         }
     }
-    // console.log('ND-out', n)
-    return n;
+    // console.log('ND', nodes.length)
+    return nodes[0][0].root;
+    /*
+    if (null == n?.$?.gubu$) {
+      n = nodize(n, depth), depth
+    }
+  
+    if (undefined !== n.c && !n.c.$?.gubu$) {
+      n.c = nodize(n.c, n.d + 1)
+    }
+  
+    let vt = typeof n.v
+    if (S.object === vt && null != n.v) {
+      Object.entries(n.v).map((m: any[]) => (n.v[m[0]] = nodizeDeep(m[1], n.d + 1)))
+    }
+    return n
+  
+    */
 }
 // Create a GubuShape from a shape specification.
 function make(intop, inopts) {
@@ -858,7 +880,7 @@ function make(intop, inopts) {
         desc = truncate('' === desc ?
             stringify((null != top &&
                 top.$ &&
-                (GUBU$ === top.$.gubu$ || true === top.$.gubu$)) ? top.v : top) :
+                (GUBU$ === top.$.gubu$ || true === top.$.gubu$)) ? top.v : top, null, true) :
             desc);
         return `[Gubu ${opts.name} ${desc}]`;
     };
@@ -1140,14 +1162,23 @@ exports.truncate = truncate;
 // ===================
 // Value is required.
 const Required = function (shape) {
+    var _a;
     let node = buildize(this, shape);
+    // console.log('AAA', node)
     node.r = true;
     node.p = false;
-    node.f = undefined;
-    // Handle an explicit undefined.
-    if (undefined === shape && 1 === arguments.length) {
-        node.t = S.undefined;
-        node.v = undefined;
+    if (undefined === shape) {
+        node.f = undefined;
+        // Handle an explicit undefined.
+        if (1 === arguments.length) {
+            node.t = S.undefined;
+            node.v = undefined;
+        }
+    }
+    // Required(foo) by itself does set default value = foo,
+    // which might then be used later. But if chained, the default cannot survive.
+    else if ((_a = this === null || this === void 0 ? void 0 : this.$) === null || _a === void 0 ? void 0 : _a.gubu$) {
+        node.f = undefined;
     }
     return node;
 };
@@ -1226,27 +1257,28 @@ const Func = function (shape) {
 exports.Func = Func;
 // Specify default value.
 const Default = function (dval, shape) {
-    // let node = buildize(this, undefined === shape ? dval : shape)
-    // let node = buildize(this, dval)
-    // if (undefined !== shape) {
-    //   node.v = buildize(shape)
-    // }
-    // let node = buildize(this, shape)
-    // let node = buildize(this, undefined === shape ? dval : shape)
+    // console.log('AAA', this, shape)
     let node = buildize(this, dval);
+    // console.log('BBB', node)
     if (undefined !== shape) {
         node = buildize(node, shape);
     }
+    // console.log('CCC', node)
     node.r = false;
     node.f = dval;
-    let t = typeof dval;
-    if (S.function === t && IS_TYPE[dval.name]) {
-        node.t = dval.name.toLowerCase();
-        node.f = clone(EMPTY_VAL[node.t]);
+    if (undefined === shape) {
+        let t = typeof dval;
+        if (S.function === t && IS_TYPE[dval.name]) {
+            node.t = dval.name.toLowerCase();
+            node.f = clone(EMPTY_VAL[node.t]);
+        }
+    }
+    else {
+        const sn = nodize(shape);
+        node.t = sn.t;
     }
     // Always insert default.
     node.p = false;
-    // node.s = descBuilder(node, undefined, S.Default, undefined === dval ? [] : [dval])
     return node;
 };
 exports.Default = Default;
@@ -1396,8 +1428,8 @@ const One = function (...inshapes) {
 exports.One = One;
 // Value must match excatly one of the literal values provided.
 const Exact = function (...vals) {
-    let node = buildize(this);
-    node.b.push(function Exact(val, update, state) {
+    const node = buildize(this);
+    const validator = function Exact(val, update, state) {
         for (let i = 0; i < vals.length; i++) {
             if (val === vals[i]) {
                 return true;
@@ -1415,10 +1447,14 @@ const Exact = function (...vals) {
         }
         update.err =
             makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' must be exactly one of: ' +
-                `${state.node.s}.`);
+                vals.map((v) => stringify(v, null, true)).join(', '));
         update.done = true;
         return false;
-    });
+    };
+    validator.a = vals;
+    validator.s =
+        () => S.Exact + '(' + vals.map((v) => stringify(v, null, true)).join(',') + ')';
+    node.b.push(validator);
     return node;
 };
 exports.Exact = Exact;
@@ -1439,15 +1475,14 @@ exports.After = After;
 // Define a customer validation function.
 const Check = function (check, shape) {
     let node = buildize(this, shape);
+    node.r = true;
     if (S.function === typeof check) {
         let c$ = check;
         c$.gubu$ = c$.gubu$ || {};
         c$.gubu$.Check = true;
         c$.s = () => S.Check + '(' + stringify(check, null, true) + ')';
         node.b.push(check);
-        // node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true)
         node.t = S.check;
-        node.r = true;
     }
     else if (S.object === typeof check) {
         let dstr = Object.prototype.toString.call(check);
@@ -1460,14 +1495,16 @@ const Check = function (check, shape) {
             refn.s = () => S.Check + '(' + stringify(check, null, true) + ')';
             node.b.push(refn);
             node.t = S.check;
-            node.r = true;
         }
     }
     // string is type name.
     // TODO: validate check is ValType
     else if (S.string === typeof check) {
         node.t = check;
-        node.r = true;
+    }
+    if (undefined !== shape) {
+        const sn = nodize(shape);
+        node.t = sn.t;
     }
     return node;
 };
@@ -1638,12 +1675,6 @@ const Type = function (tname, shape) {
     let tnat = nodize(TNAT[tname]);
     // console.log('TYPE', tname, tnat)
     let node = buildize(this, shape);
-    // node = buildize(node, tnat)
-    // node = buildize(node, shape)
-    // console.log('TNAME', tname)
-    // node.s = descBuilder(node, undefined, tname, [])
-    //node.t = (tname.toLowerCase() as ValType)
-    //node.r = true
     if (node !== tnat) {
         node.t = tnat.t;
         node.r = tnat.r;
@@ -1749,13 +1780,6 @@ exports.Len = Len;
 function buildize(self, shape) {
     // Detect chaining. If not chained, ignore `this` if it is the global context.
     let globalNode = null != self && (self.window === self || self.global === self);
-    /*
-    if (!globalNode && undefined !== node0 && undefined !== node1) {
-      // TODO: standardize error
-      throw new Error('Cannot reset base value in chain: ' +
-        stringify(node0) + ' ' + stringify(node1))
-    }
-    */
     let node;
     if ((undefined === self || globalNode) && undefined !== shape) {
         // console.log('BUILDIZE-SHAPE', shape)
@@ -1767,8 +1791,10 @@ function buildize(self, shape) {
         if (undefined !== shape) {
             node = nodize(shape);
             let selfNode = nodize(self);
-            // console.log('BUILDER-MERGE', node, selfNode)
-            if (undefined === node.v) {
+            //console.log('BUILDER-MERGE', node, selfNode)
+            //console.log('BUILDER-NODEV', node.v)
+            // TODO: need a more robust way to prevent Builders breaking each other.
+            if (undefined === node.v && 'list' !== node.t) {
                 node.v = selfNode.v;
                 node.t = selfNode.t;
             }
@@ -2022,6 +2048,7 @@ function stringify(src, replacer, dequote, expand) {
     // console.log('SRC-C', src)
     try {
         str = JS(src, (key, val) => {
+            // console.log('AAA', key, val)
             var _a, _b, _c;
             if (replacer) {
                 val = replacer(key, val);
@@ -2042,10 +2069,18 @@ function stringify(src, replacer, dequote, expand) {
                 }
             }
             else if (!expand && GUBU$ === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
-                val = JSON.stringify(node2json(val));
-                if (dequote) {
-                    val = 'string' === typeof val ? val.replace(/\\/g, '').replace(/"/g, '') : '';
+                if ('number' === val.t || 'string' === val.t || 'boolean' === val.t) {
+                    val = val.v;
                 }
+                else {
+                    val = node2json(val);
+                    // console.log('CCC', key, val, dequote, typeof val)
+                    val = JSON.stringify(val);
+                    if (dequote) {
+                        val = 'string' === typeof val ? val.replace(/\\/g, '').replace(/"/g, '') : '';
+                    }
+                }
+                // console.log('BBB', key, val, dequote)
             }
             else if (S.function === typeof (val)) {
                 // console.log('BBB', key, val)
@@ -2073,7 +2108,7 @@ function stringify(src, replacer, dequote, expand) {
                 // val = node2str(val)
                 val = JSON.stringify(node2json(val));
             }
-            // console.log('WWW', val, typeof val)
+            // console.log('WWW', key, val, typeof val)
             return val;
         });
         str = String(str);

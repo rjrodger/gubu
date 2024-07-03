@@ -706,25 +706,48 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
 }
 
 
-function nodizeDeep(n: any, depth?: number) {
-  // console.log('ND-in', n)
+function nodizeDeep(root: any, depth: number) {
+  const nodes = [[{}, 'root', root, depth]]
 
-  if (null == n?.$?.gubu$) {
-    n = nodizeDeep(nodize(n, depth), depth)
-  }
-  else {
-    if (GUBU$NIL !== n.c) {
-      n.c = nodizeDeep(n.c, n.d + 1)
+  for (let i = 0; i < nodes.length; i++) {
+    const p = nodes[i]
+    const n = p[0][p[1]] = nodize(p[2], p[3])
+
+    if (undefined !== n.c) {
+      if (!n.c.$?.gubu$) {
+        nodes.push([n, 'c', n.c, n.d])
+      }
     }
 
     let vt = typeof n.v
     if (S.object === vt && null != n.v) {
-      Object.entries(n.v).map((m: any[]) => (n.v[m[0]] = nodizeDeep(m[1], n.d + 1)))
+      Object.entries(n.v).map((m: any[]) => {
+        if (!m[1].$?.gubu$) {
+          nodes.push([n.v, m[0], m[1], n.d + 1])
+        }
+      })
     }
   }
 
-  // console.log('ND-out', n)
+  // console.log('ND', nodes.length)
+  return nodes[0][0].root
+
+  /*
+  if (null == n?.$?.gubu$) {
+    n = nodize(n, depth), depth
+  }
+
+  if (undefined !== n.c && !n.c.$?.gubu$) {
+    n.c = nodize(n.c, n.d + 1)
+  }
+
+  let vt = typeof n.v
+  if (S.object === vt && null != n.v) {
+    Object.entries(n.v).map((m: any[]) => (n.v[m[0]] = nodizeDeep(m[1], n.d + 1)))
+  }
   return n
+
+  */
 }
 
 
@@ -1265,7 +1288,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           null != top &&
           top.$ &&
           (GUBU$ === top.$.gubu$ || true === (top.$ as any).gubu$)
-        ) ? top.v : top) :
+        ) ? top.v : top, null, true) :
       desc)
     return `[Gubu ${opts.name} ${desc}]`
   }
@@ -1632,15 +1655,28 @@ function truncate(str?: string, len?: number): string {
 // Value is required.
 const Required = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
+
+  // console.log('AAA', node)
+
   node.r = true
   node.p = false
-  node.f = undefined
 
-  // Handle an explicit undefined.
-  if (undefined === shape && 1 === arguments.length) {
-    node.t = (S.undefined as ValType)
-    node.v = undefined
+  if (undefined === shape) {
+    node.f = undefined
+
+    // Handle an explicit undefined.
+    if (1 === arguments.length) {
+      node.t = (S.undefined as ValType)
+      node.v = undefined
+    }
   }
+
+  // Required(foo) by itself does set default value = foo,
+  // which might then be used later. But if chained, the default cannot survive.
+  else if (this?.$?.gubu$) {
+    node.f = undefined
+  }
+
 
   return node
 }
@@ -1734,34 +1770,35 @@ const Func = function <V>(this: any, shape?: Node<V> | V): Node<V> {
 
 // Specify default value.
 const Default = function <V>(this: any, dval?: any, shape?: Node<V> | V): Node<V> {
-  // let node = buildize(this, undefined === shape ? dval : shape)
-  // let node = buildize(this, dval)
-  // if (undefined !== shape) {
-  //   node.v = buildize(shape)
-  // }
-  // let node = buildize(this, shape)
-
-  // let node = buildize(this, undefined === shape ? dval : shape)
+  // console.log('AAA', this, shape)
 
   let node = buildize(this, dval)
+
+  // console.log('BBB', node)
 
   if (undefined !== shape) {
     node = buildize(node, shape)
   }
 
+  // console.log('CCC', node)
+
   node.r = false
   node.f = dval
 
-  let t = typeof dval
-  if (S.function === t && IS_TYPE[dval.name]) {
-    node.t = (dval.name.toLowerCase() as ValType)
-    node.f = clone(EMPTY_VAL[node.t])
+  if (undefined === shape) {
+    let t = typeof dval
+    if (S.function === t && IS_TYPE[dval.name]) {
+      node.t = (dval.name.toLowerCase() as ValType)
+      node.f = clone(EMPTY_VAL[node.t])
+    }
+  }
+  else {
+    const sn = nodize(shape)
+    node.t = sn.t
   }
 
   // Always insert default.
   node.p = false
-
-  // node.s = descBuilder(node, undefined, S.Default, undefined === dval ? [] : [dval])
 
   return node
 }
@@ -1955,9 +1992,9 @@ const One = function(this: any, ...inshapes: any[]) {
 
 // Value must match excatly one of the literal values provided.
 const Exact = function(this: any, ...vals: any[]) {
-  let node = buildize(this)
+  const node = buildize(this)
 
-  node.b.push(function Exact(val: any, update: Update, state: State) {
+  const validator = function Exact(val: any, update: Update, state: State) {
     for (let i = 0; i < vals.length; i++) {
       if (val === vals[i]) {
         return true
@@ -1978,13 +2015,19 @@ const Exact = function(this: any, ...vals: any[]) {
     update.err =
       makeErr(state,
         S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' must be exactly one of: ' +
-        `${state.node.s}.`
+        vals.map((v: any) => stringify(v, null, true)).join(', ')
       )
 
     update.done = true
 
     return false
-  })
+  }
+
+  validator.a = vals
+  validator.s =
+    () => S.Exact + '(' + vals.map((v: any) => stringify(v, null, true)).join(',') + ')'
+
+  node.b.push(validator)
 
   return node
 }
@@ -2022,15 +2065,16 @@ const Check = function <V>(
 ): Node<V> {
   let node = buildize(this, shape)
 
+  node.r = true
+
   if (S.function === typeof check) {
     let c$ = check as any
     c$.gubu$ = c$.gubu$ || {}
     c$.gubu$.Check = true
     c$.s = () => S.Check + '(' + stringify(check, null, true) + ')'
     node.b.push((check as Validate))
-    // node.s = (null == node.s ? '' : node.s + ';') + stringify(check, null, true)
+
     node.t = (S.check as ValType)
-    node.r = true
   }
   else if (S.object === typeof check) {
     let dstr = Object.prototype.toString.call(check)
@@ -2043,15 +2087,19 @@ const Check = function <V>(
       defprop(refn, 'gubu$', { value: { Check: true } })
       refn.s = () => S.Check + '(' + stringify(check, null, true) + ')'
       node.b.push(refn)
+
       node.t = (S.check as ValType)
-      node.r = true
     }
   }
   // string is type name.
   // TODO: validate check is ValType
   else if (S.string === typeof check) {
     node.t = check as ValType
-    node.r = true
+  }
+
+  if (undefined !== shape) {
+    const sn = nodize(shape)
+    node.t = sn.t
   }
 
   return node
@@ -2282,15 +2330,6 @@ const Type = function <V>(
   // console.log('TYPE', tname, tnat)
 
   let node = buildize(this, shape)
-  // node = buildize(node, tnat)
-
-  // node = buildize(node, shape)
-  // console.log('TNAME', tname)
-  // node.s = descBuilder(node, undefined, tname, [])
-
-  //node.t = (tname.toLowerCase() as ValType)
-  //node.r = true
-
   if (node !== tnat) {
     node.t = tnat.t
     node.r = tnat.r
@@ -2452,24 +2491,11 @@ const Len = function <V>(
 
 
 
-
-
-
 // Make a Node chainable with Builder methods.
 function buildize<V>(self?: any, shape?: any): Node<V> {
   // Detect chaining. If not chained, ignore `this` if it is the global context.
 
   let globalNode = null != self && (self.window === self || self.global === self)
-
-  /*
-  if (!globalNode && undefined !== node0 && undefined !== node1) {
-    // TODO: standardize error
-    throw new Error('Cannot reset base value in chain: ' +
-      stringify(node0) + ' ' + stringify(node1))
-  }
-  */
-
-
   let node: Node<V>
 
   if ((undefined === self || globalNode) && undefined !== shape) {
@@ -2484,9 +2510,11 @@ function buildize<V>(self?: any, shape?: any): Node<V> {
       node = nodize(shape)
       let selfNode = nodize(self)
 
-      // console.log('BUILDER-MERGE', node, selfNode)
+      //console.log('BUILDER-MERGE', node, selfNode)
+      //console.log('BUILDER-NODEV', node.v)
 
-      if (undefined === node.v) {
+      // TODO: need a more robust way to prevent Builders breaking each other.
+      if (undefined === node.v && 'list' !== node.t) {
         node.v = selfNode.v
         node.t = selfNode.t
       }
@@ -2809,6 +2837,8 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
 
   try {
     str = JS(src, (key: any, val: any) => {
+      // console.log('AAA', key, val)
+
       if (replacer) {
         val = replacer(key, val)
       }
@@ -2833,10 +2863,18 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
 
       }
       else if (!expand && GUBU$ === val?.$?.gubu$) {
-        val = JSON.stringify(node2json(val))
-        if (dequote) {
-          val = 'string' === typeof val ? val.replace(/\\/g, '').replace(/"/g, '') : ''
+        if ('number' === val.t || 'string' === val.t || 'boolean' === val.t) {
+          val = val.v
         }
+        else {
+          val = node2json(val)
+          // console.log('CCC', key, val, dequote, typeof val)
+          val = JSON.stringify(val)
+          if (dequote) {
+            val = 'string' === typeof val ? val.replace(/\\/g, '').replace(/"/g, '') : ''
+          }
+        }
+        // console.log('BBB', key, val, dequote)
       }
       else if (S.function === typeof (val)) {
         // console.log('BBB', key, val)
@@ -2866,7 +2904,7 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
         val = JSON.stringify(node2json(val))
       }
 
-      // console.log('WWW', val, typeof val)
+      // console.log('WWW', key, val, typeof val)
       return val
     })
 
