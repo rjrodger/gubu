@@ -411,4 +411,9 @@ console.log(g1({ a: 1, b: true }))
 console.log(g1({ a: 1 }))
 console.log(g1({ a: 1, b: false, c: 'C' }))
 
-console.log(g1({},{skip:{depth:0}}))
+try {
+  console.log(g1({},{skip:{depth:1}}))
+}
+catch(e) {
+  console.log(e.desc())
+}

@@ -473,7 +473,11 @@ function make(intop, inopts) {
     // Lazily execute top against root to see if they match
     function exec(root, ctx, match // Suppress errors and return boolean result (true if match)
     ) {
-        let s = new State(root, top, ctx, match);
+        var _a, _b, _c;
+        const skipd = (_a = ctx === null || ctx === void 0 ? void 0 : ctx.skip) === null || _a === void 0 ? void 0 : _a.depth;
+        const skipa = Array.isArray((_b = ctx === null || ctx === void 0 ? void 0 : ctx.skip) === null || _b === void 0 ? void 0 : _b.depth) ? ctx.skip.depth : null;
+        const skipk = Array.isArray((_c = ctx === null || ctx === void 0 ? void 0 : ctx.skip) === null || _c === void 0 ? void 0 : _c.keys) ? ctx.skip.keys : null;
+        const s = new State(root, top, ctx, match);
         // Iterative depth-first traversal of the shape using append-only array stacks.
         // Stack entries are either sub-nodes to validate, or back pointers to
         // next depth-first sub-node index.
@@ -485,7 +489,11 @@ function make(intop, inopts) {
             let n = s.node;
             let done = false;
             let fatal = false;
-            let skip = n.p;
+            // Context skip can override node skip
+            let skip = (n.d === skipd ||
+                (skipa && skipa.includes(n.d)) ||
+                (skipk && 1 === n.d && skipk.includes(s.key))) ? true : n.p;
+            // console.log('SKIP', skip, s.key, n.d, ctx?.skip?.depth, n.r)
             // Call Befores
             if (0 < n.b.length) {
                 for (let bI = 0; bI < n.b.length; bI++) {
@@ -749,7 +757,8 @@ function make(intop, inopts) {
                 // Value itself, or default.
                 else if (undefined === s.val) {
                     let parentKey = s.path[s.dI];
-                    if (n.r &&
+                    if (!skip &&
+                        n.r &&
                         (S.undefined !== s.type || !s.parent.hasOwnProperty(parentKey))) {
                         s.ignoreVal = true;
                         s.curerr.push(makeErrImpl(S.required, s, 1060));

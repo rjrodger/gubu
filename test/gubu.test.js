@@ -2309,5 +2309,41 @@ Validation failed for index "1" with number "1" because the number is not of typ
         expect(g0({ x: { y: 1 } })).toEqual({ x: { y: 1 } });
         expect(g0({ x: Object.freeze({ y: 1 }) })).toEqual({ x: { y: 1 } });
     });
+    test('context-skipping', () => {
+        let g0 = Gubu({
+            a: Number,
+            b: Skip(Boolean),
+        });
+        expect(g0({ a: 1 })).toEqual({ a: 1 });
+        expect(g0({ a: 1, b: true })).toEqual({ a: 1, b: true });
+        expect(() => g0({ a: 1, b: true, c: 'C' })).toThrow('not allowed');
+        let g1 = Gubu(Open(g0));
+        expect(g1({ a: 1 })).toEqual({ a: 1 });
+        expect(g1({ a: 1, b: true })).toEqual({ a: 1, b: true });
+        expect(g1({ a: 1, b: true, c: 'C' })).toEqual({ a: 1, b: true, c: 'C' });
+        expect(g1({}, { skip: { depth: 1 } })).toEqual({});
+        expect(g1({ a: 1 }, { skip: { depth: 1 } })).toEqual({ a: 1 });
+        expect(g1({ a: 1, b: true }, { skip: { depth: 1 } })).toEqual({ a: 1, b: true });
+        expect(g1({ a: 1, b: true, c: 'C' }, { skip: { depth: 1 } }))
+            .toEqual({ a: 1, b: true, c: 'C' });
+        expect(g1({}, { skip: { depth: [1] } })).toEqual({});
+        expect(g1({ a: 1 }, { skip: { depth: [1] } })).toEqual({ a: 1 });
+        expect(g1({ a: 1, b: true }, { skip: { depth: [1] } })).toEqual({ a: 1, b: true });
+        expect(g1({ a: 1, b: true, c: 'C' }, { skip: { depth: [1] } }))
+            .toEqual({ a: 1, b: true, c: 'C' });
+        expect(g1({}, { skip: { keys: ['a'] } })).toEqual({});
+        expect(g1({ a: 1 }, { skip: { keys: ['a'] } })).toEqual({ a: 1 });
+        expect(g1({ a: 1, b: true }, { skip: { keys: ['a'] } })).toEqual({ a: 1, b: true });
+        expect(g1({ a: 1, b: true, c: 'C' }, { skip: { keys: ['a'] } }))
+            .toEqual({ a: 1, b: true, c: 'C' });
+        let g2 = Gubu({
+            a: Number,
+            b: { a: Boolean }
+        });
+        expect(g2({ b: { a: true } }, { skip: { keys: ['a'] } })).toEqual({ b: { a: true } });
+        expect(g2({ a: 1, b: { a: true } }, { skip: { keys: ['a'] } }))
+            .toEqual({ a: 1, b: { a: true } });
+        expect(() => g2({ a: 1, b: {} }, { skip: { keys: ['a'] } })).toThrow('required');
+    });
 });
 //# sourceMappingURL=gubu.test.js.map

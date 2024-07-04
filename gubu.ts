@@ -797,7 +797,11 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
     ctx?: Context,
     match?: boolean // Suppress errors and return boolean result (true if match)
   ): any {
-    let s = new State(root, top, ctx, match)
+    const skipd = ctx?.skip?.depth
+    const skipa = Array.isArray(ctx?.skip?.depth) ? ctx.skip.depth : null
+    const skipk = Array.isArray(ctx?.skip?.keys) ? ctx.skip.keys : null
+
+    const s = new State(root, top, ctx, match)
 
     // Iterative depth-first traversal of the shape using append-only array stacks.
     // Stack entries are either sub-nodes to validate, or back pointers to
@@ -813,7 +817,11 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
       let done = false
       let fatal = false
 
-      let skip = n.p
+      // Context skip can override node skip
+      let skip = (n.d === skipd ||
+        (skipa && skipa.includes(n.d)) ||
+        (skipk && 1 === n.d && skipk.includes(s.key))) ? true : n.p
+      // console.log('SKIP', skip, s.key, n.d, ctx?.skip?.depth, n.r)
 
       // Call Befores
       if (0 < n.b.length) {
@@ -1126,8 +1134,11 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
         else if (undefined === s.val) {
           let parentKey = s.path[s.dI]
 
-          if (n.r &&
-            (S.undefined !== s.type || !s.parent.hasOwnProperty(parentKey))) {
+          if (
+            !skip &&
+            n.r &&
+            (S.undefined !== s.type || !s.parent.hasOwnProperty(parentKey))
+          ) {
             s.ignoreVal = true
             s.curerr.push(makeErrImpl(S.required, s, 1060))
           }
@@ -1171,7 +1182,6 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           fatal = fatal || !!update.fatal
         }
       }
-
 
       // Explicit ignoreVal overrides Skip
       // let ignoreVal = s.node.p ? false === s.ignoreVal ? false : true : !!s.ignoreVal
