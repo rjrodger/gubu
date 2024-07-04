@@ -183,7 +183,7 @@ class State {
         this.sI = this.pI + 1;
         // TODO: remove and use ancestors?
         if (Object.isFrozen(this.parents[this.pI])) {
-            this.parents[this.pI] = Object.assign({}, this.parents[this.pI]);
+            this.parents[this.pI] = { ...this.parents[this.pI] };
         }
         this.parent = this.parents[this.pI];
         this.nextSibling = true;
@@ -209,7 +209,6 @@ class State {
 // Custom Error class.
 class GubuError extends TypeError {
     constructor(code, prefix, err, ctx) {
-        var _a;
         prefix = (null == prefix) ? '' : (prefix + ': ');
         super(prefix + err.map((e) => e.t).join('\n'));
         this.gubu = true;
@@ -219,19 +218,21 @@ class GubuError extends TypeError {
         this.code = code;
         this.prefix = prefix;
         this.desc = () => ({ name, code, err, ctx, });
-        this.stack = (_a = this.stack) === null || _a === void 0 ? void 0 : _a.replace(/.*\/gubu\/gubu\.[tj]s.*\n/g, '');
-        this.props = err.map((e) => {
-            var _a;
-            return ({
-                path: e.p,
-                what: e.w,
-                type: (_a = e.n) === null || _a === void 0 ? void 0 : _a.t,
-                value: e.v
-            });
-        });
+        this.stack = this.stack?.replace(/.*\/gubu\/gubu\.[tj]s.*\n/g, '');
+        this.props = err.map((e) => ({
+            path: e.p,
+            what: e.w,
+            type: e.n?.t,
+            value: e.v
+        }));
     }
     toJSON() {
-        return Object.assign(Object.assign({}, this), { err: this.desc().err, name: this.name, message: this.message });
+        return {
+            ...this,
+            err: this.desc().err,
+            name: this.name,
+            message: this.message,
+        };
     }
 }
 // TODO: There are a lot more!!! Error, Blob, etc
@@ -260,13 +261,12 @@ const EMPTY_VAL = {
 };
 // Normalize a value into a Node<S>.
 function nodize(shape, depth, meta) {
-    var _a, _b, _c, _d;
     // If using builder as property of Gubu, `this` is just Gubu, not a node.
     if (make === shape) {
         shape = undefined;
     }
     // Is this a (possibly incomplete) Node<S>?
-    else if (null != shape && ((_a = shape.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
+    else if (null != shape && shape.$?.gubu$) {
         // Assume complete if gubu$ has special internal reference.
         if (GUBU$ === shape.$.gubu$) {
             shape.d = null == depth ? shape.d : depth;
@@ -274,10 +274,10 @@ function nodize(shape, depth, meta) {
         }
         // Normalize an incomplete Node<S>, avoiding any recursive calls to norm.
         else if (true === shape.$.gubu$) {
-            let node = Object.assign({}, shape);
-            node.$ = Object.assign(Object.assign({ v$: VERSION }, node.$), { gubu$: GUBU$ });
+            let node = { ...shape };
+            node.$ = { v$: VERSION, ...node.$, gubu$: GUBU$ };
             node.v =
-                (null != node.v && S.object === typeof (node.v)) ? Object.assign({}, node.v) : node.v;
+                (null != node.v && S.object === typeof (node.v)) ? { ...node.v } : node.v;
             // Leave as-is: node.c
             node.t = node.t || typeof (node.v);
             if (S.function === node.t && IS_TYPE[node.v.name]) {
@@ -351,13 +351,13 @@ function nodize(shape, depth, meta) {
                 c = Any();
             }
         }
-        else if (v.gubu === GUBU || true === ((_b = v.$) === null || _b === void 0 ? void 0 : _b.gubu)) {
+        else if (v.gubu === GUBU || true === v.$?.gubu) {
             let gs = v.node ? v.node() : v;
             t = gs.t;
             v = gs.v;
             f = v;
             r = gs.r;
-            u = Object.assign({}, gs.u);
+            u = { ...gs.u };
             a = [...gs.a];
             b = [...gs.b];
         }
@@ -367,7 +367,7 @@ function nodize(shape, depth, meta) {
             UPPER_CASE_FIRST_RE.test(v.name)) {
             t = S.instance;
             r = true;
-            u.n = (_d = (_c = v.prototype) === null || _c === void 0 ? void 0 : _c.constructor) === null || _d === void 0 ? void 0 : _d.name;
+            u.n = v.prototype?.constructor?.name;
             u.i = v;
         }
     }
@@ -377,7 +377,7 @@ function nodize(shape, depth, meta) {
     else if (S.string === t && '' === v) {
         u.empty = true;
     }
-    let vmap = (null != v && (S.object === t || S.array === t)) ? Object.assign({}, v) : v;
+    let vmap = (null != v && (S.object === t || S.array === t)) ? { ...v } : v;
     let node = {
         $: GUBU,
         t,
@@ -395,7 +395,7 @@ function nodize(shape, depth, meta) {
         b,
         m: meta || {},
         [Symbol.for('nodejs.util.inspect.custom')]() {
-            const nd = Object.assign({}, this);
+            const nd = { ...this };
             delete nd.$;
             return JSON.stringify(nd, (_k, v) => 'function' === typeof v && !BuilderMap[v.name] ? v.name : v).replace(/"/g, '').replace(/,/g, ' ');
         }
@@ -405,21 +405,19 @@ function nodize(shape, depth, meta) {
 }
 exports.nodize = nodize;
 function nodizeDeep(root, depth) {
-    var _a;
     const nodes = [[{}, 'root', root, depth]];
     for (let i = 0; i < nodes.length; i++) {
         const p = nodes[i];
         const n = p[0][p[1]] = nodize(p[2], p[3]);
         if (undefined !== n.c) {
-            if (!((_a = n.c.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
+            if (!n.c.$?.gubu$) {
                 nodes.push([n, 'c', n.c, n.d]);
             }
         }
         let vt = typeof n.v;
         if (S.object === vt && null != n.v) {
             Object.entries(n.v).map((m) => {
-                var _a;
-                if (!((_a = m[1].$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
+                if (!m[1].$?.gubu$) {
                     nodes.push([n.v, m[0], m[1], n.d + 1]);
                 }
             });
@@ -473,10 +471,9 @@ function make(intop, inopts) {
     // Lazily execute top against root to see if they match
     function exec(root, ctx, match // Suppress errors and return boolean result (true if match)
     ) {
-        var _a, _b, _c;
-        const skipd = (_a = ctx === null || ctx === void 0 ? void 0 : ctx.skip) === null || _a === void 0 ? void 0 : _a.depth;
-        const skipa = Array.isArray((_b = ctx === null || ctx === void 0 ? void 0 : ctx.skip) === null || _b === void 0 ? void 0 : _b.depth) ? ctx.skip.depth : null;
-        const skipk = Array.isArray((_c = ctx === null || ctx === void 0 ? void 0 : ctx.skip) === null || _c === void 0 ? void 0 : _c.keys) ? ctx.skip.keys : null;
+        const skipd = ctx?.skip?.depth;
+        const skipa = Array.isArray(ctx?.skip?.depth) ? ctx.skip.depth : null;
+        const skipk = Array.isArray(ctx?.skip?.keys) ? ctx.skip.keys : null;
         const s = new State(root, top, ctx, match);
         // Iterative depth-first traversal of the shape using append-only array stacks.
         // Stack entries are either sub-nodes to validate, or back pointers to
@@ -565,7 +562,7 @@ function make(intop, inopts) {
                                             meta.short = n.v[k];
                                         }
                                         else {
-                                            meta = Object.assign(Object.assign({}, meta), n.v[k]);
+                                            meta = { ...meta, ...n.v[k] };
                                         }
                                         delete n.v[k];
                                         kI++;
@@ -725,7 +722,7 @@ function make(intop, inopts) {
                             s.ctx.log &&
                                 hasChildShape &&
                                 undefined == root &&
-                                s.ctx.log('kv', Object.assign(Object.assign({}, s), { key: 0, val: n.c }));
+                                s.ctx.log('kv', { ...s, key: 0, val: n.c });
                             s.ctx.log && s.ctx.log('ea', s);
                         }
                     }
@@ -916,13 +913,12 @@ function expr(spec, current) {
     // if ('string' != typeof spec) {
     //   console.log('EXPR', spec.i, spec.tokens && spec.tokens.slice(spec.i))
     // }
-    var _a, _b;
     let g = undefined;
     let top = false;
     if ('string' === typeof spec) {
         spec = { src: spec };
     }
-    const currentIsNode = (_a = current === null || current === void 0 ? void 0 : current.$) === null || _a === void 0 ? void 0 : _a.gubu$;
+    const currentIsNode = current?.$?.gubu$;
     spec.i = spec.i || 0;
     if (null == spec.tokens) {
         g = undefined != spec.val ? nodize(spec.val, (spec.d || 0) + 1, spec.meta) : undefined;
@@ -1007,7 +1003,7 @@ function expr(spec, current) {
             }
             else if (m = head.match(/^\$\$([^$]+)$/)) {
                 return spec.node ?
-                    ((((_b = spec.node.m) === null || _b === void 0 ? void 0 : _b.$$) || {})[m[1]] || spec.node.v['$$' + m[1]])
+                    ((spec.node.m?.$$ || {})[m[1]] || spec.node.v['$$' + m[1]])
                     : (spec.refs ? spec.refs[m[1]] : undefined);
             }
             else {
@@ -1088,13 +1084,12 @@ function build(v, top = true) {
 }
 exports.build = build;
 function handleValidate(vf, s) {
-    var _a;
     let update = {};
     let valid = false;
     let thrown;
     try {
         // Check does not have to deal with `undefined`
-        valid = undefined === s.val && ((_a = vf.gubu$) === null || _a === void 0 ? void 0 : _a.Check) ? true :
+        valid = undefined === s.val && (vf.gubu$?.Check) ? true :
             (s.check = vf, vf(s.val, update, s));
     }
     catch (ve) {
@@ -1152,7 +1147,7 @@ function pathstr(s) {
 }
 function valueLen(val) {
     return S.number === typeof (val) ? val :
-        S.number === typeof (val === null || val === void 0 ? void 0 : val.length) ? val.length :
+        S.number === typeof (val?.length) ? val.length :
             null != val && S.object === typeof (val) ? keys(val).length :
                 NaN;
 }
@@ -1169,7 +1164,6 @@ exports.truncate = truncate;
 // ===================
 // Value is required.
 const Required = function (shape) {
-    var _a;
     let node = buildize(this, shape);
     // console.log('AAA', node)
     node.r = true;
@@ -1184,7 +1178,7 @@ const Required = function (shape) {
     }
     // Required(foo) by itself does set default value = foo,
     // which might then be used later. But if chained, the default cannot survive.
-    else if ((_a = this === null || this === void 0 ? void 0 : this.$) === null || _a === void 0 ? void 0 : _a.gubu$) {
+    else if (this?.$?.gubu$) {
         node.f = undefined;
     }
     return node;
@@ -1347,7 +1341,7 @@ const All = function (...inshapes) {
         let pass = true;
         // let err: any = []
         for (let shape of shapes) {
-            let subctx = Object.assign(Object.assign({}, state.ctx), { err: [] });
+            let subctx = { ...state.ctx, err: [] };
             shape(val, subctx);
             if (0 < subctx.err.length) {
                 pass = false;
@@ -1381,12 +1375,12 @@ const Some = function (...inshapes) {
     node.b.push(function Some(val, update, state) {
         let pass = false;
         for (let shape of shapes) {
-            let subctx = Object.assign(Object.assign({}, state.ctx), { err: [] });
+            let subctx = { ...state.ctx, err: [] };
             let match = shape.match(val, subctx);
             if (match) {
                 update.val = shape(val, subctx);
             }
-            pass || (pass = match);
+            pass ||= match;
         }
         if (!pass) {
             update.why = S.Some;
@@ -1412,7 +1406,7 @@ const One = function (...inshapes) {
     node.b.push(function One(val, update, state) {
         let passN = 0;
         for (let shape of shapes) {
-            let subctx = Object.assign(Object.assign({}, state.ctx), { err: [] });
+            let subctx = { ...state.ctx, err: [] };
             if (shape.match(val, subctx)) {
                 passN++;
                 update.val = shape(val, subctx);
@@ -1555,7 +1549,7 @@ const Refer = function (inopts, shape) {
             if (undefined !== val || fill) {
                 let ref = state.ctx.ref = state.ctx.ref || {};
                 if (undefined !== ref[name]) {
-                    let node = Object.assign({}, ref[name]);
+                    let node = { ...ref[name] };
                     node.t = node.t || S.never;
                     update.node = node;
                     update.type = node.t;
@@ -1807,8 +1801,8 @@ function buildize(self, shape) {
             }
             ;
             ['f', 'r', 'p', 'c', 'e', 'z'].map((pn) => node[pn] = undefined !== selfNode[pn] ? selfNode[pn] : node[pn]);
-            node.u = Object.assign(Object.assign({}, selfNode.u), node.u);
-            node.m = Object.assign(Object.assign({}, selfNode.m), node.m);
+            node.u = Object.assign({ ...selfNode.u }, node.u);
+            node.m = Object.assign({ ...selfNode.m }, node.m);
             node.a = selfNode.a.concat(node.a);
             node.b = selfNode.b.concat(node.b);
             // console.log('BUILDER-DONE', node)
@@ -1871,14 +1865,13 @@ exports.makeErr = makeErr;
 // TODO: optional message prefix from ctx
 // Internal utility to make ErrDesc objects.
 function makeErrImpl(why, s, mark, text, user, fname) {
-    var _a;
     let err = {
         k: s.key,
         n: s.node,
         v: s.val,
         p: pathstr(s),
         w: why,
-        c: ((_a = s.check) === null || _a === void 0 ? void 0 : _a.name) || 'none',
+        c: s.check?.name || 'none',
         a: s.checkargs || {},
         m: mark,
         t: '',
@@ -1895,7 +1888,7 @@ function makeErrImpl(why, s, mark, text, user, fname) {
         let propkind = (valstr.startsWith('[') || isarr(s.parents[s.pI])) ?
             'index' : 'property';
         let propkindverb = 'is';
-        let propkey = user === null || user === void 0 ? void 0 : user.k;
+        let propkey = user?.k;
         propkey = isarr(propkey) ?
             (propkind = (1 < propkey.length ?
                 (propkindverb = 'are', 'properties') : propkind),
@@ -1936,7 +1929,6 @@ function makeErrImpl(why, s, mark, text, user, fname) {
 }
 // Convert Node to JSON suitable for Gubu.build.
 function node2json(n) {
-    var _a;
     let t = n.t;
     const fixed = {
         number: S.Number,
@@ -1959,7 +1951,7 @@ function node2json(n) {
         if (n.r) {
             s += 'Required()';
         }
-        if ('any' == ((_a = n.c) === null || _a === void 0 ? void 0 : _a.t)) {
+        if ('any' == n.c?.t) {
             s += ('' === s ? '' : '.') + 'Open()';
         }
         s += n.b.map((v) => v.s ? ('.' + v.s(n)) : '').join('');
@@ -2022,7 +2014,7 @@ function node2json(n) {
             .map((n) => node2json(n))
             .map((n, _) => S.object === typeof n ? (refs[_ = '$$ref' + (rI++)] = n, _) : n);
         let s = n.b[0].name + '(' + list.join(',') + ')';
-        return 0 === rI ? s : Object.assign({ $$: s }, refs);
+        return 0 === rI ? s : { $$: s, ...refs };
     }
     else if ('array' === t) {
         let a = [];
@@ -2056,7 +2048,6 @@ function stringify(src, replacer, dequote, expand) {
     try {
         str = JS(src, (key, val) => {
             // console.log('AAA', key, val)
-            var _a, _b, _c;
             if (replacer) {
                 val = replacer(key, val);
             }
@@ -2075,7 +2066,7 @@ function stringify(src, replacer, dequote, expand) {
                         S.function === typeof val.toString ? val.toString() : val.constructor.name;
                 }
             }
-            else if (!expand && GUBU$ === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
+            else if (!expand && GUBU$ === val?.$?.gubu$) {
                 if ('number' === val.t || 'string' === val.t || 'boolean' === val.t) {
                     val = val.v;
                 }
@@ -2110,7 +2101,7 @@ function stringify(src, replacer, dequote, expand) {
                 return 'NaN';
             }
             else if (true !== expand &&
-                (true === ((_b = val === null || val === void 0 ? void 0 : val.$) === null || _b === void 0 ? void 0 : _b.gubu$) || GUBU$ === ((_c = val === null || val === void 0 ? void 0 : val.$) === null || _c === void 0 ? void 0 : _c.gubu$))) {
+                (true === val?.$?.gubu$ || GUBU$ === val?.$?.gubu$)) {
                 // console.log('EEE', key, val)
                 // val = node2str(val)
                 val = JSON.stringify(node2json(val));
@@ -2133,7 +2124,10 @@ exports.stringify = stringify;
 function clone(x) {
     return null == x ? x : S.object !== typeof (x) ? x : JP(JS(x));
 }
-const G$ = (node) => nodize(Object.assign(Object.assign({}, node), { $: { gubu$: true } }));
+const G$ = (node) => nodize({
+    ...node,
+    $: { gubu$: true }
+});
 exports.G$ = G$;
 const BuilderMap = {
     Above,
@@ -2175,7 +2169,14 @@ if (S.undefined !== typeof (window)) {
         defprop(BuilderMap[builderName], S.name, { value: builderName });
     }
 }
-Object.assign(make, Object.assign(Object.assign(Object.assign({ Gubu: make }, BuilderMap), (Object.entries(BuilderMap).reduce((a, n) => (a['G' + n[0]] = n[1], a), {}))), { isShape: (v) => (v && GUBU === v.gubu), G$,
+Object.assign(make, {
+    Gubu: make,
+    // Builders by name, allows `const { Open } = Gubu`.
+    ...BuilderMap,
+    // Builders by alias, allows `const { GOpen } = Gubu`, to avoid naming conflicts.
+    ...(Object.entries(BuilderMap).reduce((a, n) => (a['G' + n[0]] = n[1], a), {})),
+    isShape: (v) => (v && GUBU === v.gubu),
+    G$,
     buildize,
     makeErr,
     stringify,
@@ -2183,7 +2184,8 @@ Object.assign(make, Object.assign(Object.assign(Object.assign({ Gubu: make }, Bu
     nodize,
     expr,
     build,
-    MakeArgu }));
+    MakeArgu,
+});
 defprop(make, S.name, { value: S.gubu });
 // The primary export.
 const Gubu = make;

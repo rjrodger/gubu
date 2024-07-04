@@ -102,7 +102,7 @@ describe('gubu', () => {
         expect(shape(data).x).toEqual(2);
         expect(shape(data).y).toEqual('Y');
         // CONSOLE-LOG(data.q) // UNCOMMENT TO VERIFY COMPILE FAILS
-        let g3 = Gubu(Object.assign({}, new Foo(1)));
+        let g3 = Gubu({ ...new Foo(1) });
         // let d3 = { a: 11, x: true }
         let d3 = { a: 11 };
         if (g3.valid(d3)) {
