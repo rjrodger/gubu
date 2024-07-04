@@ -36,8 +36,7 @@ const GUBU = { gubu$: GUBU$, v$: VERSION }
 
 // TODO GUBU$UNDEF for explicit undefined
 // A special marker for property abscence.
-const GUBU$NIL = undefined // Symbol.for('gubu$nil')
-// const GUBU$NIL = Symbol.for('gubu$nil')
+const GUBU$UNDEF = Symbol.for('gubu$undef')
 
 // RegExp: first letter is upper case
 const UPPER_CASE_FIRST_RE = /^[A-Z]/
@@ -84,6 +83,10 @@ type Context = Record<string, any> & {
   // Provide an array to collect errors, instead of throwing.
   err?: ErrDesc[] | boolean
   log?: (point: string, state: State) => void
+  skip?: {
+    depth?: number | number[]
+    keys?: string[]
+  }
 }
 
 
@@ -582,7 +585,7 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
 
   let v = shape
   let f = v
-  let c: any = GUBU$NIL
+  let c: any = undefined
   let r = false // Not required by default.
   let p = false // Only true when Skip builder is used.
   let u: any = {}
@@ -810,6 +813,8 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
       let done = false
       let fatal = false
 
+      let skip = n.p
+
       // Call Befores
       if (0 < n.b.length) {
         for (let bI = 0; bI < n.b.length; bI++) {
@@ -854,13 +859,13 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           }
 
           // Not skippable, use default or create object
-          else if (!n.p && valundef && undefined !== n.f) {
+          else if (!skip && valundef && undefined !== n.f) {
             s.updateVal(n.f)
             s.fromDflt = true
             val = s.val
             descend = false
           }
-          else if (!n.p || !valundef) {
+          else if (!skip || !valundef) {
             // Descend into object, constructing child defaults
             s.updateVal(s.val || (s.fromDflt = true, {}))
             val = s.val
@@ -967,10 +972,9 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
               }
 
               let extra = keys(val).filter(k => undefined === n.v[k])
-              // console.log('OBJECT EXTRA', val, extra, n.c, GUBU$NIL)
 
               if (0 < extra.length) {
-                if (GUBU$NIL === n.c) {
+                if (undefined === n.c) {
                   s.ignoreVal = true
                   s.curerr.push(makeErrImpl(
                     S.closed, s, 1100, undefined, { k: extra }))
@@ -1012,15 +1016,15 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           else if (!valundef && !isarr(s.val)) {
             s.curerr.push(makeErrImpl(S.type, s, 1040))
           }
-          else if (!n.p && valundef && undefined !== n.f) {
+          else if (!skip && valundef && undefined !== n.f) {
             s.updateVal(n.f)
             s.fromDflt = true
           }
-          else if (!n.p || null != s.val) {
+          else if (!skip || null != s.val) {
             s.updateVal(s.val || (s.fromDflt = true, []))
 
             // n.c set by nodize for array with len=1
-            let hasChildShape = GUBU$NIL !== n.c
+            let hasChildShape = undefined !== n.c
             let hasValueElements = 0 < s.val.length
             let elementKeys = keys(n.v).filter(k => !isNaN(+k))
             let hasFixedElements = 0 < elementKeys.length
@@ -1130,7 +1134,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
           else if (
             // undefined !== n.v &&
             undefined !== n.f &&
-            !n.p ||
+            !skip ||
             S.undefined === s.type
           ) {
             // Inject default value.
@@ -1170,7 +1174,8 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
 
       // Explicit ignoreVal overrides Skip
-      let ignoreVal = s.node.p ? false === s.ignoreVal ? false : true : !!s.ignoreVal
+      // let ignoreVal = s.node.p ? false === s.ignoreVal ? false : true : !!s.ignoreVal
+      let ignoreVal = skip ? false === s.ignoreVal ? false : true : !!s.ignoreVal
       let setParent = !s.match && null != s.parent && !done && !ignoreVal
 
       if (setParent) {
@@ -1231,9 +1236,6 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
 
   gubuShape.spec = () => {
-    // TODO: when c is GUBU$NIL it is not present, should have some indicator value
-    // console.dir(top, { depth: null })
-
     // Normalize spec, discard errors.
     gubuShape(undefined, { err: false })
     const str = stringify(top, (_key: string, val: any) => {
@@ -2111,10 +2113,10 @@ const Closed = function <V>(this: any, shape?: Node<V> | V): Node<V> {
   let node = buildize(this, shape)
 
   // Makes one element array fixed.
-  if (S.array === node.t && GUBU$NIL !== node.c && 0 === node.n) {
+  if (S.array === node.t && undefined !== node.c && 0 === node.n) {
     node.v = [node.c]
   }
-  node.c = GUBU$NIL
+  node.c = undefined
 
   return node
 }
@@ -2758,7 +2760,7 @@ function node2json(n: Node<any>): any {
       o[k] = node2json(n.v[k])
     }
 
-    if (GUBU$NIL !== n.c) {
+    if (undefined !== n.c) {
       if (fixed[n.c.t]) {
         o.$$ = 'Child(' + fixed[n.c.t] + ')'
       }
@@ -2801,7 +2803,7 @@ function node2json(n: Node<any>): any {
   }
   else if ('array' === t) {
     let a: any[] = []
-    if (GUBU$NIL !== n.c) {
+    if (undefined !== n.c) {
       a[0] = node2json(n.c)
     }
     else {

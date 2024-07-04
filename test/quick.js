@@ -375,18 +375,27 @@ let g0 = Gubu({ a: Required({ b: 1 }).Child({ x: String }) })
 // let g0 = Gubu(Optional(Required('a')))
 //let g0 = Gubu({ a: Child({ x: String }).Required({ b: 1 }) })
 // let g0 = Gubu({ a: Required({ b: 1 }) })
-let g0 = Gubu({ a: Child({ x: String }) })
+// let g0 = Gubu({ a: Child({ x: String }) })
 
 ///let g0 = Gubu({ a: Default({ b: 'B' }, All(Open({ b: String }), Max(2))) })
 // let g0 = Gubu({ a: All(Open({ b: String }), Max(2)) })
 
 // let g0 = Gubu(Exact('red'))
 
+
+let g0 = Gubu({
+  a: Number,
+  b: Skip(Boolean),
+})
+
+let g1 = Gubu(Open(g0))
+
+
 console.log('=========')
 // console.log(c0.stringify())
 // console.log(c0(1))
-console.dir(g0.spec(),{depth:null})
-console.log(g0.stringify())
+console.dir(g1.spec(),{depth:null})
+console.log(g1.stringify())
 // console.log(g0())
 // console.log(g0())
 //console.log(g0('a'))
@@ -395,7 +404,11 @@ console.log(g0.stringify())
 
 // console.log(g0({}))
 // console.log(g0({ a: {} }))
-console.log(g0({ a: { b: { x: 'X' } } }))
+// console.log(g0({ a: { b: { x: 'X' } } }))
 //console.log(g0({ a: { b: 'X', c: 'Y' } }))
 
+console.log(g1({ a: 1, b: true }))
+console.log(g1({ a: 1 }))
+console.log(g1({ a: 1, b: false, c: 'C' }))
 
+console.log(g1({},{skip:{depth:0}}))

@@ -20,6 +20,10 @@ type GubuOptions = {
 type Context = Record<string, any> & {
     err?: ErrDesc[] | boolean;
     log?: (point: string, state: State) => void;
+    skip?: {
+        depth?: number | number[];
+        keys?: string[];
+    };
 };
 type ValType = 'any' | // Any type.
 'array' | // An array.
