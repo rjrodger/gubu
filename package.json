@@ -1,6 +1,6 @@
 {
   "name": "gubu",
-  "version": "7.1.1",
+  "version": "8.0.0",
   "description": "An object shape validation utility.",
   "main": "gubu.js",
   "browser": "gubu.min.js",
@@ -23,10 +23,10 @@
     "test-some": "npm run version && jest -t",
     "test-some-pure": "npm run version && jest --config jest.config.pure.js -t",
     "test-watch": "npm run version && jest --coverage --watchAll",
-    "test-web": "npm run build && npm run build-web && browserify -i util -o test/web.js -e test/entry.js -im && open test/web.html",
+    "test-web": "npm run build && npm run build-web && browserify -i util -o test/web.js -e test/entry.js -im && open test/web.test.html",
     "watch": "npm run version && tsc -w -d",
     "build": "npm run version && tsc -d",
-    "build-web": "cp gubu.js gubu.min.js && browserify -i util -o gubu.min.js -e gubu.web.js -s Gubu -im -p tinyify",
+    "build-web": "cp gubu.js gubu.min.js && browserify -i util -o gubu.min.js -e gubu.web.js -s Gubu -im",
     "version": "node -r fs -e \"v=require('./package.json').version;s=fs.readFileSync('./gubu.ts').toString();if(!s.includes('VERSION = \\''+v+'\\'')){s=s.replace(/VERSION = '.*?'/,'VERSION = \\''+v+'\\'');fs.writeFileSync('./gubu.ts',s)}\"",
     "clean": "rm -rf node_modules yarn.lock package-lock.json",
     "reset": "npm run clean && npm i && npm run build && npm test",
@@ -46,6 +46,7 @@
     "README.md"
   ],
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^26.0.1",
     "@types/jest": "^29.5.12",
     "browserify": "^17.0.0",
     "es-jest": "^2.1.0",
@@ -54,6 +55,11 @@
     "jest": "^29.7.0",
     "tinyify": "^4.0.0",
     "ts-jest": "^29.1.5",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "vite": "^5.2.8",
+    "vite-plugin-commonjs": "^0.10.1"
+  },
+  "overrides": {
+    "acorn": "8.12.1"
   }
 }

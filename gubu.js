@@ -1,8 +1,16 @@
 "use strict";
 /* Copyright (c) 2021-2024 Richard Rodger and other contributors, MIT License */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Rest = exports.Type = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Never = exports.Min = exports.Max = exports.Len = exports.Key = exports.Ignore = exports.Func = exports.Fault = exports.Exact = exports.Empty = exports.Define = exports.Default = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.build = exports.MakeArgu = exports.expr = exports.truncate = exports.stringify = exports.makeErr = exports.buildize = exports.nodize = exports.G$ = exports.Gubu = void 0;
-exports.GRest = exports.GType = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GLen = exports.GKey = exports.GIgnore = exports.GFunc = exports.GFault = exports.GExact = exports.GEmpty = exports.GDefine = exports.GDefault = void 0;
+exports.GKey = exports.GIgnore = exports.GFunc = exports.GFault = exports.GExact = exports.GEmpty = exports.GDefine = exports.GDefault = exports.GClosed = exports.GChild = exports.GCheck = exports.GBelow = exports.GBefore = exports.GAny = exports.GAll = exports.GAfter = exports.GAbove = exports.Rest = exports.Type = exports.Some = exports.Skip = exports.Required = exports.Rename = exports.Refer = exports.Optional = exports.Open = exports.One = exports.Never = exports.Min = exports.Max = exports.Len = exports.Key = exports.Ignore = exports.Func = exports.Fault = exports.Exact = exports.Empty = exports.Define = exports.Default = exports.Closed = exports.Child = exports.Check = exports.Below = exports.Before = exports.Any = exports.All = exports.After = exports.Above = exports.G$ = exports.Gubu = void 0;
+exports.GRest = exports.GType = exports.GSome = exports.GSkip = exports.GRequired = exports.GRename = exports.GRefer = exports.GOptional = exports.GOpen = exports.GOne = exports.GNever = exports.GMin = exports.GMax = exports.GLen = void 0;
+exports.nodize = nodize;
+exports.buildize = buildize;
+exports.makeErr = makeErr;
+exports.stringify = stringify;
+exports.truncate = truncate;
+exports.expr = expr;
+exports.MakeArgu = MakeArgu;
+exports.build = build;
 // FIX: does not work if Gubu is inside a Proxy - jest fails
 // FEATURE: regexp in array: [/a/] => all elements must match /a/
 // FEATURE: validator on completion of object or array
@@ -22,7 +30,7 @@ exports.GRest = exports.GType = exports.GSome = exports.GSkip = exports.GRequire
 // DOC: Optional
 const util_1 = require("util");
 // Package version.
-const VERSION = '7.1.1';
+const VERSION = '8.0.0';
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$');
 // A singleton for fast equality checks.
@@ -403,7 +411,6 @@ function nodize(shape, depth, meta) {
     // console.log('NODIZE', shape, node)
     return node;
 }
-exports.nodize = nodize;
 function nodizeDeep(root, depth) {
     const nodes = [[{}, 'root', root, depth]];
     for (let i = 0; i < nodes.length; i++) {
@@ -1057,7 +1064,6 @@ function expr(spec, current) {
     // console.log('RES-OUT', stringify(g), g)
     return g;
 }
-exports.expr = expr;
 function build(v, top = true) {
     let out;
     const t = Array.isArray(v) ? 'array' : null === v ? 'null' : typeof v;
@@ -1082,7 +1088,6 @@ function build(v, top = true) {
     }
     return out;
 }
-exports.build = build;
 function handleValidate(vf, s) {
     let update = {};
     let valid = false;
@@ -1159,7 +1164,6 @@ function truncate(str, len) {
     substr = outlen < strlen ? substr.substring(0, outlen - 3) + '...' : substr;
     return substr.substring(0, outlen);
 }
-exports.truncate = truncate;
 // Builder Definitions
 // ===================
 // Value is required.
@@ -1380,7 +1384,7 @@ const Some = function (...inshapes) {
             if (match) {
                 update.val = shape(val, subctx);
             }
-            pass ||= match;
+            pass || (pass = match);
         }
         if (!pass) {
             update.why = S.Some;
@@ -1856,12 +1860,10 @@ function buildize(self, shape) {
         Type,
     });
 }
-exports.buildize = buildize;
 // External utility to make ErrDesc objects.
 function makeErr(state, text, why, user) {
     return makeErrImpl(why || S.check, state, 4000, text, user);
 }
-exports.makeErr = makeErr;
 // TODO: optional message prefix from ctx
 // Internal utility to make ErrDesc objects.
 function makeErrImpl(why, s, mark, text, user, fname) {
@@ -2120,7 +2122,6 @@ function stringify(src, replacer, dequote, expand) {
     // console.log('STR', str)
     return str;
 }
-exports.stringify = stringify;
 function clone(x) {
     return null == x ? x : S.object !== typeof (x) ? x : JP(JS(x));
 }
@@ -2339,5 +2340,4 @@ function MakeArgu(prefix) {
             shape(buildArgMap(args));
     };
 }
-exports.MakeArgu = MakeArgu;
 //# sourceMappingURL=gubu.js.map

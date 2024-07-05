@@ -26,6 +26,8 @@ const buildize = Gubu.buildize
 const makeErr = Gubu.makeErr
 
 
+const VERSION = Pkg.version
+
 const {
   Above,
   After,
@@ -1588,7 +1590,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
     expect(g6({ x: 22 })).toEqual({ x: 22 })
     expect(g6.stringify()).toEqual('{"x":"11","$$":"Min(1).Max(3)"}')
     expect((g6.node()[cs]()))
-      .toEqual('{t:object v:{x:{$:{v$:7.1.1} t:number v:11 f:11 n:0 r:false p:false d:1 k:[]' +
+      .toEqual('{t:object v:{x:{$:{v$:' + VERSION + '} t:number v:11 f:11 n:0 r:false p:false d:1 k:[]' +
         ' e:true u:{} a:[] b:[] m:{}}} n:1 r:false p:false d:0 k:[x] e:true u:{} a:[]' +
         ' b:[Min(1) Max(3)] m:{}}')
 
@@ -1596,7 +1598,7 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
     expect(g7({ x: 22 })).toEqual({ x: 22 })
     expect(g7.stringify()).toEqual('{"x":"11","$$":"Min(1).Max(3)"}')
     expect((g7.node()[cs]()))
-      .toEqual('{t:object v:{x:{$:{v$:7.1.1} t:number v:11 f:11 n:0 r:false p:false d:1 k:[]' +
+      .toEqual('{t:object v:{x:{$:{v$:' + VERSION + '} t:number v:11 f:11 n:0 r:false p:false d:1 k:[]' +
         ' e:true u:{} a:[] b:[] m:{}}} n:1 r:false p:false d:0 k:[x] e:true u:{} a:[]' +
         ' b:[Min(1) Max(3)] m:{}}')
   })
