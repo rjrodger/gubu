@@ -33,7 +33,7 @@ exports.build = build;
 // DOC: Optional
 const util_1 = require("util");
 // Package version.
-const VERSION = '8.0.0';
+const VERSION = '8.0.1';
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$');
 // A singleton for fast equality checks.
@@ -2359,7 +2359,7 @@ module.exports = Gubu
 },{}],3:[function(require,module,exports){
 module.exports={
   "name": "gubu",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "An object shape validation utility.",
   "main": "gubu.js",
   "browser": "gubu.min.js",
