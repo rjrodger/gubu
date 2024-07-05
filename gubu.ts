@@ -26,7 +26,7 @@ import { inspect } from 'util'
 
 
 // Package version.
-const VERSION = '8.0.1'
+const VERSION = '8.0.2'
 
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$')
@@ -153,6 +153,7 @@ type Validate =
   {
     s?: (n: Node<any>) => string, // stringify validator of builder
     a?: any[] // args to the builder
+    n?: string // name of builder
   }
 
 
@@ -1277,22 +1278,6 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   }
 
 
-  /*
-  gubuShape.stringify = (...rest: any) => {
-    let n = top
-    n = (null != n && n.$ && (GUBU$ === n.$.gubu$ || true === (n.$ as any).gubu$)) ?
-      ('array' === n.t ? [n.c] :
-        (null == n.s ? n.v : ('function' === typeof n.s ? (n.s = n.s()) : n.s))) : n
-    // console.log('STR', n, top, rest)
-
-    let str = Gubu.stringify(n, ...rest)
-    str = str.replace(/^"/, '').replace(/"$/, '')
-
-    return str
-  }
-  */
-
-
   gubuShape.toString = () => {
     desc = truncate('' === desc ?
       stringify(
@@ -1910,8 +1895,8 @@ const All = function(this: any, ...inshapes: any[]) {
     return pass
   }
 
+  validator.n = S.All
   validator.a = inshapes
-  // validator.s = () => S.All + '(' + inshapes.map((s: any) => stringify(s)).join(',') + ')'
 
   node.b.push(validator)
 
@@ -1927,11 +1912,10 @@ const Some = function(this: any, ...inshapes: any[]) {
   node.r = true
 
   let shapes = inshapes.map(s => Gubu(s))
-  // node.u.list = inshapes
   node.u.list = shapes.map(g => g.node())
 
 
-  node.b.push(function Some(val: any, update: Update, state: State) {
+  const validator = function Some(val: any, update: Update, state: State) {
     let pass = false
 
     for (let shape of shapes) {
@@ -1956,7 +1940,12 @@ const Some = function(this: any, ...inshapes: any[]) {
     }
 
     return pass
-  })
+  }
+
+  validator.n = S.Some
+  validator.a = inshapes
+
+  node.b.push(validator)
 
   return node
 }
@@ -1972,7 +1961,7 @@ const One = function(this: any, ...inshapes: any[]) {
   // node.u.list = inshapes
   node.u.list = shapes.map(g => g.node())
 
-  node.b.push(function One(val: any, update: Update, state: State) {
+  const validator = function One(val: any, update: Update, state: State) {
     let passN = 0
 
     for (let shape of shapes) {
@@ -1996,7 +1985,12 @@ const One = function(this: any, ...inshapes: any[]) {
     }
 
     return true
-  })
+  }
+
+  validator.n = S.One
+  validator.a = inshapes
+
+  node.b.push(validator)
 
   return node
 }
@@ -2035,6 +2029,7 @@ const Exact = function(this: any, ...vals: any[]) {
     return false
   }
 
+  validator.n = S.Exact
   validator.a = vals
   validator.s =
     () => S.Exact + '(' + vals.map((v: any) => stringify(v, null, true)).join(',') + ')'
@@ -2375,6 +2370,7 @@ function makeSizeBuilder(
 
   Object.defineProperty(validator, S.name, { value: name })
 
+  validator.n = name
   validator.a = [size]
   validator.s = () => name + '(' + size + ')'
 
@@ -2808,7 +2804,7 @@ function node2json(n: Node<any>): any {
     let list = n.u.list
       .map((n: any) => node2json(n))
       .map((n: any, _: any) => S.object === typeof n ? (refs[_ = '$$ref' + (rI++)] = n, _) : n)
-    let s = n.b[0].name + '(' + list.join(',') + ')'
+    let s = (n.b[0].n || n.b[0].name) + '(' + list.join(',') + ')'
     return 0 === rI ? s : { $$: s, ...refs }
   }
   else if ('array' === t) {
@@ -2980,6 +2976,7 @@ const BuilderMap = {
   Rest,
   Type,
 }
+
 
 // Fix builder names after terser mangles them.
 /* istanbul ignore next */

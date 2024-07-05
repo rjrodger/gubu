@@ -429,7 +429,11 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"Exact(red)
 
 
   test('builder-all', () => {
+
     let g0 = Gubu(All(Open({ x: 1 }), Open({ y: 'a' })))
+
+    // console.log(g0.stringify())
+
     expect(g0.stringify())
       .toEqual('{"$$":"All($$ref0,$$ref1)","$$ref0":{"x":"1","$$":"Open()"}' +
         ',"$$ref1":{"y":"\\"a\\"","$$":"Open()"}}')
@@ -441,6 +445,8 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"Exact(red)
     expect(() =>
       g0()).toThrow('Validation failed for value "undefined" because the value is required.')
 
+
+
     let g0s = Gubu(All(Open({ x: 1 }), Open({ y: 'a' })).Skip())
     expect(g0s({ x: 11, y: 'aa' })).toEqual({ x: 11, y: 'aa' })
     expect(g0s({})).toEqual({ x: 1, y: 'a' })
@@ -451,6 +457,7 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"Exact(red)
 
     // TODO: Optional
     // expect(g0s()).toEqual({ x: 1, y: 'a' })
+
 
 
     let g1 = Gubu({

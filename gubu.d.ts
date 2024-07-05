@@ -68,6 +68,7 @@ type Builder<S> = (opts?: any, // Builder options.
 type Validate = ((val: any, update: Update, state: State) => boolean) & {
     s?: (n: Node<any>) => string;
     a?: any[];
+    n?: string;
 };
 declare class State {
     match: boolean;

@@ -30,7 +30,7 @@ exports.build = build;
 // DOC: Optional
 const util_1 = require("util");
 // Package version.
-const VERSION = '8.0.1';
+const VERSION = '8.0.2';
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$');
 // A singleton for fast equality checks.
@@ -217,6 +217,7 @@ class State {
 // Custom Error class.
 class GubuError extends TypeError {
     constructor(code, prefix, err, ctx) {
+        var _a;
         prefix = (null == prefix) ? '' : (prefix + ': ');
         super(prefix + err.map((e) => e.t).join('\n'));
         this.gubu = true;
@@ -226,13 +227,16 @@ class GubuError extends TypeError {
         this.code = code;
         this.prefix = prefix;
         this.desc = () => ({ name, code, err, ctx, });
-        this.stack = this.stack?.replace(/.*\/gubu\/gubu\.[tj]s.*\n/g, '');
-        this.props = err.map((e) => ({
-            path: e.p,
-            what: e.w,
-            type: e.n?.t,
-            value: e.v
-        }));
+        this.stack = (_a = this.stack) === null || _a === void 0 ? void 0 : _a.replace(/.*\/gubu\/gubu\.[tj]s.*\n/g, '');
+        this.props = err.map((e) => {
+            var _a;
+            return ({
+                path: e.p,
+                what: e.w,
+                type: (_a = e.n) === null || _a === void 0 ? void 0 : _a.t,
+                value: e.v
+            });
+        });
     }
     toJSON() {
         return {
@@ -269,12 +273,13 @@ const EMPTY_VAL = {
 };
 // Normalize a value into a Node<S>.
 function nodize(shape, depth, meta) {
+    var _a, _b, _c, _d;
     // If using builder as property of Gubu, `this` is just Gubu, not a node.
     if (make === shape) {
         shape = undefined;
     }
     // Is this a (possibly incomplete) Node<S>?
-    else if (null != shape && shape.$?.gubu$) {
+    else if (null != shape && ((_a = shape.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
         // Assume complete if gubu$ has special internal reference.
         if (GUBU$ === shape.$.gubu$) {
             shape.d = null == depth ? shape.d : depth;
@@ -359,7 +364,7 @@ function nodize(shape, depth, meta) {
                 c = Any();
             }
         }
-        else if (v.gubu === GUBU || true === v.$?.gubu) {
+        else if (v.gubu === GUBU || true === ((_b = v.$) === null || _b === void 0 ? void 0 : _b.gubu)) {
             let gs = v.node ? v.node() : v;
             t = gs.t;
             v = gs.v;
@@ -375,7 +380,7 @@ function nodize(shape, depth, meta) {
             UPPER_CASE_FIRST_RE.test(v.name)) {
             t = S.instance;
             r = true;
-            u.n = v.prototype?.constructor?.name;
+            u.n = (_d = (_c = v.prototype) === null || _c === void 0 ? void 0 : _c.constructor) === null || _d === void 0 ? void 0 : _d.name;
             u.i = v;
         }
     }
@@ -412,19 +417,21 @@ function nodize(shape, depth, meta) {
     return node;
 }
 function nodizeDeep(root, depth) {
+    var _a;
     const nodes = [[{}, 'root', root, depth]];
     for (let i = 0; i < nodes.length; i++) {
         const p = nodes[i];
         const n = p[0][p[1]] = nodize(p[2], p[3]);
         if (undefined !== n.c) {
-            if (!n.c.$?.gubu$) {
+            if (!((_a = n.c.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
                 nodes.push([n, 'c', n.c, n.d]);
             }
         }
         let vt = typeof n.v;
         if (S.object === vt && null != n.v) {
             Object.entries(n.v).map((m) => {
-                if (!m[1].$?.gubu$) {
+                var _a;
+                if (!((_a = m[1].$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
                     nodes.push([n.v, m[0], m[1], n.d + 1]);
                 }
             });
@@ -478,9 +485,10 @@ function make(intop, inopts) {
     // Lazily execute top against root to see if they match
     function exec(root, ctx, match // Suppress errors and return boolean result (true if match)
     ) {
-        const skipd = ctx?.skip?.depth;
-        const skipa = Array.isArray(ctx?.skip?.depth) ? ctx.skip.depth : null;
-        const skipk = Array.isArray(ctx?.skip?.keys) ? ctx.skip.keys : null;
+        var _a, _b, _c;
+        const skipd = (_a = ctx === null || ctx === void 0 ? void 0 : ctx.skip) === null || _a === void 0 ? void 0 : _a.depth;
+        const skipa = Array.isArray((_b = ctx === null || ctx === void 0 ? void 0 : ctx.skip) === null || _b === void 0 ? void 0 : _b.depth) ? ctx.skip.depth : null;
+        const skipk = Array.isArray((_c = ctx === null || ctx === void 0 ? void 0 : ctx.skip) === null || _c === void 0 ? void 0 : _c.keys) ? ctx.skip.keys : null;
         const s = new State(root, top, ctx, match);
         // Iterative depth-first traversal of the shape using append-only array stacks.
         // Stack entries are either sub-nodes to validate, or back pointers to
@@ -873,20 +881,6 @@ function make(intop, inopts) {
     gubuShape.jsonify = () => {
         return null == json ? (json = node2json(gubuShape.node())) : json;
     };
-    /*
-    gubuShape.stringify = (...rest: any) => {
-      let n = top
-      n = (null != n && n.$ && (GUBU$ === n.$.gubu$ || true === (n.$ as any).gubu$)) ?
-        ('array' === n.t ? [n.c] :
-          (null == n.s ? n.v : ('function' === typeof n.s ? (n.s = n.s()) : n.s))) : n
-      // console.log('STR', n, top, rest)
-  
-      let str = Gubu.stringify(n, ...rest)
-      str = str.replace(/^"/, '').replace(/"$/, '')
-  
-      return str
-    }
-    */
     gubuShape.toString = () => {
         desc = truncate('' === desc ?
             stringify((null != top &&
@@ -920,12 +914,13 @@ function expr(spec, current) {
     // if ('string' != typeof spec) {
     //   console.log('EXPR', spec.i, spec.tokens && spec.tokens.slice(spec.i))
     // }
+    var _a, _b;
     let g = undefined;
     let top = false;
     if ('string' === typeof spec) {
         spec = { src: spec };
     }
-    const currentIsNode = current?.$?.gubu$;
+    const currentIsNode = (_a = current === null || current === void 0 ? void 0 : current.$) === null || _a === void 0 ? void 0 : _a.gubu$;
     spec.i = spec.i || 0;
     if (null == spec.tokens) {
         g = undefined != spec.val ? nodize(spec.val, (spec.d || 0) + 1, spec.meta) : undefined;
@@ -1010,7 +1005,7 @@ function expr(spec, current) {
             }
             else if (m = head.match(/^\$\$([^$]+)$/)) {
                 return spec.node ?
-                    ((spec.node.m?.$$ || {})[m[1]] || spec.node.v['$$' + m[1]])
+                    ((((_b = spec.node.m) === null || _b === void 0 ? void 0 : _b.$$) || {})[m[1]] || spec.node.v['$$' + m[1]])
                     : (spec.refs ? spec.refs[m[1]] : undefined);
             }
             else {
@@ -1089,12 +1084,13 @@ function build(v, top = true) {
     return out;
 }
 function handleValidate(vf, s) {
+    var _a;
     let update = {};
     let valid = false;
     let thrown;
     try {
         // Check does not have to deal with `undefined`
-        valid = undefined === s.val && (vf.gubu$?.Check) ? true :
+        valid = undefined === s.val && ((_a = vf.gubu$) === null || _a === void 0 ? void 0 : _a.Check) ? true :
             (s.check = vf, vf(s.val, update, s));
     }
     catch (ve) {
@@ -1152,7 +1148,7 @@ function pathstr(s) {
 }
 function valueLen(val) {
     return S.number === typeof (val) ? val :
-        S.number === typeof (val?.length) ? val.length :
+        S.number === typeof (val === null || val === void 0 ? void 0 : val.length) ? val.length :
             null != val && S.object === typeof (val) ? keys(val).length :
                 NaN;
 }
@@ -1168,6 +1164,7 @@ function truncate(str, len) {
 // ===================
 // Value is required.
 const Required = function (shape) {
+    var _a;
     let node = buildize(this, shape);
     // console.log('AAA', node)
     node.r = true;
@@ -1182,7 +1179,7 @@ const Required = function (shape) {
     }
     // Required(foo) by itself does set default value = foo,
     // which might then be used later. But if chained, the default cannot survive.
-    else if (this?.$?.gubu$) {
+    else if ((_a = this === null || this === void 0 ? void 0 : this.$) === null || _a === void 0 ? void 0 : _a.gubu$) {
         node.f = undefined;
     }
     return node;
@@ -1361,8 +1358,8 @@ const All = function (...inshapes) {
         }
         return pass;
     };
+    validator.n = S.All;
     validator.a = inshapes;
-    // validator.s = () => S.All + '(' + inshapes.map((s: any) => stringify(s)).join(',') + ')'
     node.b.push(validator);
     return node;
 };
@@ -1374,9 +1371,8 @@ const Some = function (...inshapes) {
     node.t = S.list;
     node.r = true;
     let shapes = inshapes.map(s => Gubu(s));
-    // node.u.list = inshapes
     node.u.list = shapes.map(g => g.node());
-    node.b.push(function Some(val, update, state) {
+    const validator = function Some(val, update, state) {
         let pass = false;
         for (let shape of shapes) {
             let subctx = { ...state.ctx, err: [] };
@@ -1395,7 +1391,10 @@ const Some = function (...inshapes) {
             ];
         }
         return pass;
-    });
+    };
+    validator.n = S.Some;
+    validator.a = inshapes;
+    node.b.push(validator);
     return node;
 };
 exports.Some = Some;
@@ -1407,7 +1406,7 @@ const One = function (...inshapes) {
     let shapes = inshapes.map(s => Gubu(s));
     // node.u.list = inshapes
     node.u.list = shapes.map(g => g.node());
-    node.b.push(function One(val, update, state) {
+    const validator = function One(val, update, state) {
         let passN = 0;
         for (let shape of shapes) {
             let subctx = { ...state.ctx, err: [] };
@@ -1427,7 +1426,10 @@ const One = function (...inshapes) {
             ];
         }
         return true;
-    });
+    };
+    validator.n = S.One;
+    validator.a = inshapes;
+    node.b.push(validator);
     return node;
 };
 exports.One = One;
@@ -1456,6 +1458,7 @@ const Exact = function (...vals) {
         update.done = true;
         return false;
     };
+    validator.n = S.Exact;
     validator.a = vals;
     validator.s =
         () => S.Exact + '(' + vals.map((v) => stringify(v, null, true)).join(',') + ')';
@@ -1700,6 +1703,7 @@ function makeSizeBuilder(self, size, shape, name, valid) {
         return valid(valueLen(val), size, val, update, state);
     };
     Object.defineProperty(validator, S.name, { value: name });
+    validator.n = name;
     validator.a = [size];
     validator.s = () => name + '(' + size + ')';
     validator[Symbol.for('nodejs.util.inspect.custom')] = validator.s();
@@ -1867,13 +1871,14 @@ function makeErr(state, text, why, user) {
 // TODO: optional message prefix from ctx
 // Internal utility to make ErrDesc objects.
 function makeErrImpl(why, s, mark, text, user, fname) {
+    var _a;
     let err = {
         k: s.key,
         n: s.node,
         v: s.val,
         p: pathstr(s),
         w: why,
-        c: s.check?.name || 'none',
+        c: ((_a = s.check) === null || _a === void 0 ? void 0 : _a.name) || 'none',
         a: s.checkargs || {},
         m: mark,
         t: '',
@@ -1890,7 +1895,7 @@ function makeErrImpl(why, s, mark, text, user, fname) {
         let propkind = (valstr.startsWith('[') || isarr(s.parents[s.pI])) ?
             'index' : 'property';
         let propkindverb = 'is';
-        let propkey = user?.k;
+        let propkey = user === null || user === void 0 ? void 0 : user.k;
         propkey = isarr(propkey) ?
             (propkind = (1 < propkey.length ?
                 (propkindverb = 'are', 'properties') : propkind),
@@ -1931,6 +1936,7 @@ function makeErrImpl(why, s, mark, text, user, fname) {
 }
 // Convert Node to JSON suitable for Gubu.build.
 function node2json(n) {
+    var _a;
     let t = n.t;
     const fixed = {
         number: S.Number,
@@ -1953,7 +1959,7 @@ function node2json(n) {
         if (n.r) {
             s += 'Required()';
         }
-        if ('any' == n.c?.t) {
+        if ('any' == ((_a = n.c) === null || _a === void 0 ? void 0 : _a.t)) {
             s += ('' === s ? '' : '.') + 'Open()';
         }
         s += n.b.map((v) => v.s ? ('.' + v.s(n)) : '').join('');
@@ -2015,7 +2021,7 @@ function node2json(n) {
         let list = n.u.list
             .map((n) => node2json(n))
             .map((n, _) => S.object === typeof n ? (refs[_ = '$$ref' + (rI++)] = n, _) : n);
-        let s = n.b[0].name + '(' + list.join(',') + ')';
+        let s = (n.b[0].n || n.b[0].name) + '(' + list.join(',') + ')';
         return 0 === rI ? s : { $$: s, ...refs };
     }
     else if ('array' === t) {
@@ -2050,6 +2056,7 @@ function stringify(src, replacer, dequote, expand) {
     try {
         str = JS(src, (key, val) => {
             // console.log('AAA', key, val)
+            var _a, _b, _c;
             if (replacer) {
                 val = replacer(key, val);
             }
@@ -2068,7 +2075,7 @@ function stringify(src, replacer, dequote, expand) {
                         S.function === typeof val.toString ? val.toString() : val.constructor.name;
                 }
             }
-            else if (!expand && GUBU$ === val?.$?.gubu$) {
+            else if (!expand && GUBU$ === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
                 if ('number' === val.t || 'string' === val.t || 'boolean' === val.t) {
                     val = val.v;
                 }
@@ -2103,7 +2110,7 @@ function stringify(src, replacer, dequote, expand) {
                 return 'NaN';
             }
             else if (true !== expand &&
-                (true === val?.$?.gubu$ || GUBU$ === val?.$?.gubu$)) {
+                (true === ((_b = val === null || val === void 0 ? void 0 : val.$) === null || _b === void 0 ? void 0 : _b.gubu$) || GUBU$ === ((_c = val === null || val === void 0 ? void 0 : val.$) === null || _c === void 0 ? void 0 : _c.gubu$))) {
                 // console.log('EEE', key, val)
                 // val = node2str(val)
                 val = JSON.stringify(node2json(val));
