@@ -11,11 +11,10 @@ type GubuOptions = {
     keyexpr?: {
         active?: boolean;
     };
-    keyspec?: {
+    valexpr?: {
         active?: boolean;
         keymark?: string;
     };
-    prefix?: string;
 };
 type Context = Record<string, any> & {
     err?: ErrDesc[] | boolean;
@@ -133,7 +132,7 @@ type ErrDesc = {
 declare class GubuError extends TypeError {
     gubu: boolean;
     code: string;
-    prefix: string;
+    gname: string;
     props: ({
         path: string;
         type: string;
@@ -145,7 +144,7 @@ declare class GubuError extends TypeError {
         err: ErrDesc[];
         ctx: any;
     });
-    constructor(code: string, prefix: string | undefined, err: ErrDesc[], ctx: any);
+    constructor(code: string, gname: string | undefined, err: ErrDesc[], ctx: any);
     toJSON(): this & {
         err: any;
         name: string;
@@ -170,6 +169,7 @@ declare function make<S>(intop?: S | Node<S>, inopts?: GubuOptions): {
 };
 declare function expr(spec: {
     src: string;
+    keymark?: string;
     val?: any;
     d?: number;
     meta?: NodeMeta;
@@ -179,7 +179,7 @@ declare function expr(spec: {
     i?: number;
     refs?: any;
 } | string, current?: any): any;
-declare function build(v: any, top?: boolean): any;
+declare function build(v: any, opts?: GubuOptions, top?: boolean): any;
 declare function truncate(str?: string, len?: number): string;
 declare const Required: <V>(this: any, shape?: Node<V> | V) => Node<V>;
 declare const Open: <V>(this: any, shape?: Node<V> | V) => Node<V>;
@@ -303,6 +303,6 @@ declare const GSome: (this: any, ...inshapes: any[]) => Node<unknown>;
 declare const GType: <V>(this: any, tname: string, shape?: Node<V> | V) => Node<V>;
 type args = any[] | IArguments;
 type Argu = (args: args | string, whence: string | Record<string, any>, spec?: Record<string, any>) => (typeof args extends string ? ((args: args) => Record<string, any>) : Record<string, any>);
-declare function MakeArgu(prefix: string): Argu;
+declare function MakeArgu(name: string): Argu;
 export type { Validate, Update, Context, Builder, Node, State, GubuShape, };
 export { Gubu, G$, nodize, buildize, makeErr, stringify, truncate, expr, MakeArgu, build, Above, After, All, Any, Before, Below, Check, Child, Closed, Default, Define, Empty, Exact, Fault, Func, Ignore, Key, Len, Max, Min, Never, One, Open, Optional, Refer, Rename, Required, Skip, Some, Type, Rest, GAbove, GAfter, GAll, GAny, GBefore, GBelow, GCheck, GChild, GClosed, GDefault, GDefine, GEmpty, GExact, GFault, GFunc, GIgnore, GKey, GLen, GMax, GMin, GNever, GOne, GOpen, GOptional, GRefer, GRename, GRequired, GSkip, GSome, GType, GRest, };

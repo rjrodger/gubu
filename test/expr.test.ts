@@ -216,7 +216,8 @@ describe('expr', () => {
     expect(g2([{ b: 2 }])).toEqual([{ b: 2 }])
     expect(() => g2([{ c: 'C' }])).toThrow('not of type number')
 
-    let g3 = Gubu.build({ 'a:Child(Number)': 0 })
+    let g3 = Gubu.build({ 'a:Child(Number)': undefined })
+    // console.dir(g3.spec(), { depth: null })
     expect(g3.stringify()).toEqual('{"a":"Child(Number)"}')
     expect(g3({ a: { b: 2 } })).toEqual({ a: { b: 2 } })
     expect(() => g3({ a: { c: 'C' } })).toThrow('not of type number')
@@ -433,7 +434,7 @@ describe('expr', () => {
 
   test('desc-child', () => {
     let d0 = { a: { '$$': 'Child($$child)', '$$child': { x: Number } } }
-    let g0 = Gubu(d0, { keyspec: { active: true } })
+    let g0 = Gubu(d0, { valexpr: { active: true } })
     //let g0 = Gubu({ a: Child({ x: Number }) })
     //console.dir(g0.spec(), { depth: null })
 
@@ -458,6 +459,15 @@ describe('expr', () => {
     expect(Gubu({ a: One(Number, String) }).stringify()).toEqual('{"a":"One(Number,String)"}')
     expect(Gubu({ a: Some(Number, String) }).stringify()).toEqual('{"a":"Some(Number,String)"}')
     expect(Gubu({ a: All(Number, String) }).stringify()).toEqual('{"a":"All(Number,String)"}')
+  })
+
+
+  test('build-opts', () => {
+    let g0 = Gubu.build({ a: 1 }, { name: 'foo' })
+    expect('' + g0).toEqual('[Gubu foo {"a":1}]')
+    expect(() => g0({ a: 'A' }))
+      .toThrow('foo: Validation failed for property "a" with string "A" because ' +
+        'the string is not of type number.')
   })
 })
 

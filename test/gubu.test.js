@@ -36,7 +36,7 @@ exports.Bar = Bar;
 describe('gubu', () => {
     test('happy', () => {
         expect(Gubu()).toBeDefined();
-        expect(Gubu().toString()).toMatch(/\[Gubu G\d+ undefined\]/);
+        expect(Gubu().toString()).toMatch(/\[Gubu G\$\d+ undefined\]/);
         expect(Gubu(undefined, { name: 'foo' }).toString()).toMatch(/\[Gubu foo undefined\]/);
         expect(Gubu('x', { name: 'bar' }).toString()).toMatch(/\[Gubu bar x\]/);
         let g0 = Gubu({
@@ -1547,7 +1547,7 @@ Validation failed for index "1" with number "1" because the number is not of typ
                     }
                 ]
             });
-            expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","prefix":"","props":[{"path":"","what":"type","type":"nan","value":1}],"err":[{"n":{"$":{"v$":"' + package_json_1.default.version + '"},"t":"nan","v":null,"f":null,"n":0,"r":false,"p":false,"d":0,"k":[],"e":true,"u":{},"a":[],"b":[],"m":{}},"v":1,"p":"","w":"type","c":"none","a":{},"m":1050,"t":"Validation failed for number \\"1\\" because the number is not of type nan.","u":{}}],"message":"Validation failed for number \\"1\\" because the number is not of type nan."}');
+            expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","gname":"","props":[{"path":"","what":"type","type":"nan","value":1}],"err":[{"n":{"$":{"v$":"' + package_json_1.default.version + '"},"t":"nan","v":null,"f":null,"n":0,"r":false,"p":false,"d":0,"k":[],"e":true,"u":{},"a":[],"b":[],"m":{}},"v":1,"p":"","w":"type","c":"none","a":{},"m":1050,"t":"Validation failed for number \\"1\\" because the number is not of type nan.","u":{}}],"message":"Validation failed for number \\"1\\" because the number is not of type nan."}');
         }
     });
     test('spec-basic', () => {
