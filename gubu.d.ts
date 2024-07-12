@@ -119,6 +119,7 @@ type Update = {
 };
 type ErrDesc = {
     key: string;
+    type: string;
     node: Node<any>;
     value: any;
     path: string;

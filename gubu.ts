@@ -26,7 +26,7 @@ import { inspect } from 'util'
 
 
 // Package version.
-const VERSION = '8.2.0'
+const VERSION = '8.2.1'
 
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$')
@@ -435,6 +435,7 @@ type Update = {
 // Validation error description.
 type ErrDesc = {
   key: string                // Key of failing value.
+  type: string               // type of node
   node: Node<any>            // Failing shape node.
   value: any                 // Failing value.
   path: string               // Key path to value.
@@ -2520,6 +2521,7 @@ function makeErrImpl(
 ): ErrDesc {
   let err: ErrDesc = {
     key: s.key,
+    type: s.node.t,
     node: s.node,
     value: s.val,
     path: pathstr(s),

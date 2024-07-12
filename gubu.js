@@ -30,7 +30,7 @@ exports.build = build;
 // DOC: Optional
 const util_1 = require("util");
 // Package version.
-const VERSION = '8.2.0';
+const VERSION = '8.2.1';
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$');
 // A singleton for fast equality checks.
@@ -1812,6 +1812,7 @@ function makeErrImpl(why, s, mark, text, user, fname) {
     var _a;
     let err = {
         key: s.key,
+        type: s.node.t,
         node: s.node,
         value: s.val,
         path: pathstr(s),
