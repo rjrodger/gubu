@@ -121,7 +121,7 @@ describe('gubu', () => {
     let ctx0: any = { err: [] }
     expect(g0.valid(v0, ctx0)).toEqual(false)
     expect(v0).toEqual({ z: true, x: 1, y: 'Y' })
-    expect(ctx0.err[0].w).toEqual('closed')
+    expect(ctx0.err[0].why).toEqual('closed')
 
     let v1 = {}
     expect(g0.match(v1)).toEqual(true)
@@ -552,28 +552,28 @@ describe('gubu', () => {
     let c0 = { err: ([] as any) }
     expect(g1.match(tmp.a1 = { a: 1 }, c0)).toEqual(false)
     expect(tmp.a1).toEqual({ a: 1 })
-    expect(c0.err[0].w).toEqual('type')
-
+    expect(c0.err[0].why).toEqual('type')
   })
 
 
   test('error-basic', () => {
     let g0 = Gubu(Number)
     expect(g0(1)).toEqual(1)
-    expect(() => g0('x')).toThrow('Validation failed for string "x" because the string is not of type number.')
+    expect(() => g0('x'))
+      .toThrow('Validation failed for string "x" because the string is not of type number.')
 
     let ctx0 = { err: [] }
     g0('x', ctx0)
     expect(ctx0).toMatchObject({
       err: [
         {
-          n: { t: 'number' },
-          v: 'x',
-          p: '',
-          w: 'type',
-          m: 1050,
-          t: 'Validation failed for string "x" because the string is not of type number.',
-          u: {},
+          node: { t: 'number' },
+          value: 'x',
+          path: '',
+          why: 'type',
+          mark: 1050,
+          text: 'Validation failed for string "x" because the string is not of type number.',
+          use: {},
         }
       ]
     })
@@ -582,7 +582,8 @@ describe('gubu', () => {
       g0('x')
     }
     catch (e: any) {
-      expect(e.message).toEqual('Validation failed for string "x" because the string is not of type number.')
+      expect(e.message).toEqual('Validation failed for string "x" because ' +
+        'the string is not of type number.')
       expect(e).toMatchObject({
         gubu: true,
         code: 'shape',
@@ -593,14 +594,14 @@ describe('gubu', () => {
           code: 'shape',
           err: [
             {
-              k: undefined,
-              n: { t: 'number' },
-              v: 'x',
-              p: '',
-              w: 'type',
-              m: 1050,
-              t: 'Validation failed for string "x" because the string is not of type number.',
-              u: {},
+              key: undefined,
+              node: { t: 'number' },
+              value: 'x',
+              path: '',
+              why: 'type',
+              mark: 1050,
+              text: 'Validation failed for string "x" because the string is not of type number.',
+              use: {},
             }
           ],
           ctx: {}
@@ -615,24 +616,25 @@ describe('gubu', () => {
       {
         err: [
           {
-            k: 'a',
-            n: { t: 'string' },
-            v: 1,
-            p: 'q.a',
-            w: 'type',
-            m: 1050,
-            t: 'Validation failed for property "q.a" with number "1" because the number is not of type string.',
-            u: {},
+            key: 'a',
+            node: { t: 'string' },
+            value: 1,
+            path: 'q.a',
+            why: 'type',
+            mark: 1050,
+            text: 'Validation failed for property "q.a" with number "1" because ' +
+              'the number is not of type string.',
+            use: {},
           },
           {
-            k: 'b',
-            n: { t: 'number' },
-            v: 'x',
-            p: 'q.b',
-            w: 'type',
-            m: 1050,
-            t: 'Validation failed for property "q.b" with string "x" because the string is not of type number.',
-            u: {},
+            key: 'b',
+            node: { t: 'number' },
+            value: 'x',
+            path: 'q.b',
+            why: 'type',
+            mark: 1050,
+            text: 'Validation failed for property "q.b" with string "x" because the string is not of type number.',
+            use: {},
           }
         ]
       })
@@ -654,24 +656,24 @@ Validation failed for property "q.b" with string "x" because the string is not o
           code: 'shape',
           err: [
             {
-              k: 'a',
-              n: { t: 'string' },
-              v: 1,
-              p: 'q.a',
-              w: 'type',
-              m: 1050,
-              t: 'Validation failed for property "q.a" with number "1" because the number is not of type string.',
-              u: {},
+              key: 'a',
+              node: { t: 'string' },
+              value: 1,
+              path: 'q.a',
+              why: 'type',
+              mark: 1050,
+              text: 'Validation failed for property "q.a" with number "1" because the number is not of type string.',
+              use: {},
             },
             {
-              k: 'b',
-              n: { t: 'number' },
-              v: 'x',
-              p: 'q.b',
-              w: 'type',
-              m: 1050,
-              t: 'Validation failed for property "q.b" with string "x" because the string is not of type number.',
-              u: {},
+              key: 'b',
+              node: { t: 'number' },
+              value: 'x',
+              path: 'q.b',
+              why: 'type',
+              mark: 1050,
+              text: 'Validation failed for property "q.b" with string "x" because the string is not of type number.',
+              use: {},
             }
           ],
           ctx: {}
@@ -1592,29 +1594,6 @@ Validation failed for property "q.b" with string "x" because the string is not o
     expect(() => g4([1, 'a'])).toThrow('Validation failed for index "1" with string "a" because the string is not of type number.')
     expect(() => g4([1, 2, 'a'])).toThrow('Validation failed for index "2" with string "a" because the string is not of type number.')
 
-    /*
-    let g4v = Gubu(Value(Number, []))
-    expect(g4v()).toEqual([])
-    expect(g4v([])).toEqual([])
-    expect(g4v([1])).toEqual([1])
-    expect(g4v([1, 2])).toEqual([1, 2])
-    expect(g4v([1, 2, 3])).toEqual([1, 2, 3])
-    expect(() => g4v(['a'])).toThrow('Validation failed for index "0" with string "a" because the string is not of type number.')
-    expect(() => g4v([1, 'a'])).toThrow('Validation failed for index "1" with string "a" because the string is not of type number.')
-    expect(() => g4v([1, 2, 'a'])).toThrow('Validation failed for index "2" with string "a" because the string is not of type number.')
-
-    // Value overrides single element
-
-    let g4vo = Gubu(Value(Number, [String]))
-    expect(g4vo()).toEqual([])
-    expect(g4vo([])).toEqual([])
-    expect(g4vo([1])).toEqual([1])
-    expect(g4vo([1, 2])).toEqual([1, 2])
-    expect(g4vo([1, 2, 3])).toEqual([1, 2, 3])
-    expect(() => g4vo(['a'])).toThrow('Validation failed for index "0" with string "a" because the string is not of type number.')
-    expect(() => g4vo([1, 'a'])).toThrow('Validation failed for index "1" with string "a" because the string is not of type number.')
-    expect(() => g4vo([1, 2, 'a'])).toThrow('Validation failed for index "2" with string "a" because the string is not of type number.')
-    */
 
     // NOTE: array without spec can hold anything.
     let g6 = Gubu([])
@@ -1796,8 +1775,6 @@ Validation failed for property "q.b" with string "x" because the string is not o
   })
 
 
-
-
   test('deep-object-basic', () => {
     let a1 = Gubu({ a: 1 })
     expect(a1({})).toMatchObject({ a: 1 })
@@ -1831,7 +1808,6 @@ Validation failed for property "q.b" with string "x" because the string is not o
       i: { j: { k: 4 }, l: { m: 5 } },
       n: { o: 6 }
     })
-
   })
 
 
@@ -1941,19 +1917,20 @@ Validation failed for index "1" with number "1" because the number is not of typ
     let o0 = g0(1, { err })
     expect(o0).toEqual(1)
     expect(err).toMatchObject([{
-      n: { t: 'nan', v: NaN, r: false, d: 0, u: {} },
-      v: 1,
-      p: '',
-      w: 'type',
-      m: 1050,
-      t: 'Validation failed for number "1" because the number is not of type nan.'
+      node: { t: 'nan', v: NaN, r: false, d: 0, u: {} },
+      value: 1,
+      path: '',
+      why: 'type',
+      mark: 1050,
+      text: 'Validation failed for number "1" because the number is not of type nan.'
     }])
 
     try {
       g0(1, { a: 'A' })
     }
     catch (e: any) {
-      expect(e.message).toEqual('Validation failed for number "1" because the number is not of type nan.')
+      expect(e.message)
+        .toEqual('Validation failed for number "1" because the number is not of type nan.')
       expect(e.code).toEqual('shape')
       expect(e.gubu).toEqual(true)
       expect(e.name).toEqual('GubuError')
@@ -1962,19 +1939,19 @@ Validation failed for index "1" with number "1" because the number is not of typ
         ctx: { a: 'A' },
         err: [
           {
-            n: { t: 'nan', v: NaN, r: false, d: 0, u: {} },
-            v: 1,
-            p: '',
-            w: 'type',
-            c: 'none',
-            a: {},
-            m: 1050,
-            t: 'Validation failed for number "1" because the number is not of type nan.'
+            node: { t: 'nan', v: NaN, r: false, d: 0, u: {} },
+            value: 1,
+            path: '',
+            why: 'type',
+            check: 'none',
+            args: {},
+            mark: 1050,
+            text: 'Validation failed for number "1" because the number is not of type nan.'
           }
         ]
       })
 
-      expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","gname":"","props":[{"path":"","what":"type","type":"nan","value":1}],"err":[{"n":{"$":{"v$":"' + Pkg.version + '"},"t":"nan","v":null,"f":null,"n":0,"r":false,"p":false,"d":0,"k":[],"e":true,"u":{},"a":[],"b":[],"m":{}},"v":1,"p":"","w":"type","c":"none","a":{},"m":1050,"t":"Validation failed for number \\"1\\" because the number is not of type nan.","u":{}}],"message":"Validation failed for number \\"1\\" because the number is not of type nan."}')
+      expect(JSON.stringify(e)).toEqual('{"gubu":true,"name":"GubuError","code":"shape","gname":"","props":[{"path":"","what":"type","type":"nan","value":1}],"err":[{"node":{"$":{"v$":"' + Pkg.version + '"},"t":"nan","v":null,"f":null,"n":0,"r":false,"p":false,"d":0,"k":[],"e":true,"u":{},"a":[],"b":[],"m":{}},"value":1,"path":"","why":"type","check":"none","args":{},"mark":1050,"text":"Validation failed for number \\"1\\" because the number is not of type nan.","use":{}}],"message":"Validation failed for number \\"1\\" because the number is not of type nan."}')
     }
   })
 

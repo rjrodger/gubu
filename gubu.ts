@@ -26,7 +26,7 @@ import { inspect } from 'util'
 
 
 // Package version.
-const VERSION = '8.1.0'
+const VERSION = '8.2.0'
 
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$')
@@ -434,16 +434,16 @@ type Update = {
 
 // Validation error description.
 type ErrDesc = {
-  k: string  // Key of failing value.
-  n: Node<any>    // Failing shape node.
-  v: any     // Failing value.
-  p: string  // Key path to value.
-  w: string  // Error code ("why").
-  c: string  // Check function name.
-  a: Record<string, any>     // Builder args.
-  m: number  // Error mark for debugging.
-  t: string  // Error message text.
-  u: any     // User custom info.
+  key: string                // Key of failing value.
+  node: Node<any>            // Failing shape node.
+  value: any                 // Failing value.
+  path: string               // Key path to value.
+  why: string                // Error code ("why").
+  check: string              // Check function name.
+  args: Record<string, any>  // Builder args.
+  mark: number               // Error mark for debugging.
+  text: string               // Error message text.
+  use: any                   // User custom info.
 }
 
 
@@ -466,7 +466,7 @@ class GubuError extends TypeError {
     ctx: any,
   ) {
     gname = (null == gname) ? '' : (!gname.startsWith('G$') ? gname + ': ' : '')
-    super(gname + err.map((e: ErrDesc) => e.t).join('\n'))
+    super(gname + err.map((e: ErrDesc) => e.text).join('\n'))
     let name = 'GubuError'
     let ge = this as unknown as any
     ge.name = name
@@ -477,10 +477,10 @@ class GubuError extends TypeError {
     this.stack = this.stack?.replace(/.*\/gubu\/gubu\.[tj]s.*\n/g, '')
 
     this.props = err.map((e: ErrDesc) => ({
-      path: e.p,
-      what: e.w,
-      type: e.n?.t,
-      value: e.v
+      path: e.path,
+      what: e.why,
+      type: e.node?.t,
+      value: e.value
     }))
 
   }
@@ -2519,16 +2519,16 @@ function makeErrImpl(
   fname?: string,
 ): ErrDesc {
   let err: ErrDesc = {
-    k: s.key,
-    n: s.node,
-    v: s.val,
-    p: pathstr(s),
-    w: why,
-    c: s.check?.name || 'none',
-    a: s.checkargs || {},
-    m: mark,
-    t: '',
-    u: user || {},
+    key: s.key,
+    node: s.node,
+    value: s.val,
+    path: pathstr(s),
+    why: why,
+    check: s.check?.name || 'none',
+    args: s.checkargs || {},
+    mark: mark,
+    text: '',
+    use: user || {},
   }
 
   let jstr = undefined === s.val ? S.undefined : stringify(s.val)
@@ -2553,8 +2553,8 @@ function makeErrImpl(
         propkey.join(', ')) :
       propkey
 
-    err.t = `Validation failed for ` +
-      (0 < err.p.length ? `${propkind} "${err.p}" with ` : '') +
+    err.text = `Validation failed for ` +
+      (0 < err.path.length ? `${propkind} "${err.path}" with ` : '') +
       `${valkind} "${valstr}" because ` +
 
       (
@@ -2585,12 +2585,12 @@ function makeErrImpl(
                   `check "${null == fname ? why : fname}" failed`
       )
 
-      + (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.')
+      + (err.use.thrown ? ' (threw: ' + err.use.thrown.message + ')' : '.')
   }
   else {
-    err.t = text
+    err.text = text
       .replace(/\$VALUE/g, valstr)
-      .replace(/\$PATH/g, err.p)
+      .replace(/\$PATH/g, err.path)
   }
 
   return err

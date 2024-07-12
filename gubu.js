@@ -30,7 +30,7 @@ exports.build = build;
 // DOC: Optional
 const util_1 = require("util");
 // Package version.
-const VERSION = '8.1.0';
+const VERSION = '8.2.0';
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$');
 // A singleton for fast equality checks.
@@ -219,7 +219,7 @@ class GubuError extends TypeError {
     constructor(code, gname, err, ctx) {
         var _a;
         gname = (null == gname) ? '' : (!gname.startsWith('G$') ? gname + ': ' : '');
-        super(gname + err.map((e) => e.t).join('\n'));
+        super(gname + err.map((e) => e.text).join('\n'));
         this.gubu = true;
         let name = 'GubuError';
         let ge = this;
@@ -231,10 +231,10 @@ class GubuError extends TypeError {
         this.props = err.map((e) => {
             var _a;
             return ({
-                path: e.p,
-                what: e.w,
-                type: (_a = e.n) === null || _a === void 0 ? void 0 : _a.t,
-                value: e.v
+                path: e.path,
+                what: e.why,
+                type: (_a = e.node) === null || _a === void 0 ? void 0 : _a.t,
+                value: e.value
             });
         });
     }
@@ -1811,16 +1811,16 @@ function makeErr(state, text, why, user) {
 function makeErrImpl(why, s, mark, text, user, fname) {
     var _a;
     let err = {
-        k: s.key,
-        n: s.node,
-        v: s.val,
-        p: pathstr(s),
-        w: why,
-        c: ((_a = s.check) === null || _a === void 0 ? void 0 : _a.name) || 'none',
-        a: s.checkargs || {},
-        m: mark,
-        t: '',
-        u: user || {},
+        key: s.key,
+        node: s.node,
+        value: s.val,
+        path: pathstr(s),
+        why: why,
+        check: ((_a = s.check) === null || _a === void 0 ? void 0 : _a.name) || 'none',
+        args: s.checkargs || {},
+        mark: mark,
+        text: '',
+        use: user || {},
     };
     let jstr = undefined === s.val ? S.undefined : stringify(s.val);
     let valstr = truncate(jstr.replace(/"/g, ''));
@@ -1839,8 +1839,8 @@ function makeErrImpl(why, s, mark, text, user, fname) {
                 (propkindverb = 'are', 'properties') : propkind),
                 propkey.join(', ')) :
             propkey;
-        err.t = `Validation failed for ` +
-            (0 < err.p.length ? `${propkind} "${err.p}" with ` : '') +
+        err.text = `Validation failed for ` +
+            (0 < err.path.length ? `${propkind} "${err.path}" with ` : '') +
             `${valkind} "${valstr}" because ` +
             (S.type === why ?
                 (S.instance === s.node.t ?
@@ -1863,12 +1863,12 @@ function makeErrImpl(why, s, mark, text, user, fname) {
                                                 'no value is allowed'
                                                 :
                                                     `check "${null == fname ? why : fname}" failed`)
-            + (err.u.thrown ? ' (threw: ' + err.u.thrown.message + ')' : '.');
+            + (err.use.thrown ? ' (threw: ' + err.use.thrown.message + ')' : '.');
     }
     else {
-        err.t = text
+        err.text = text
             .replace(/\$VALUE/g, valstr)
-            .replace(/\$PATH/g, err.p);
+            .replace(/\$PATH/g, err.path);
     }
     return err;
 }

@@ -118,16 +118,16 @@ type Update = {
     fatal?: boolean;
 };
 type ErrDesc = {
-    k: string;
-    n: Node<any>;
-    v: any;
-    p: string;
-    w: string;
-    c: string;
-    a: Record<string, any>;
-    m: number;
-    t: string;
-    u: any;
+    key: string;
+    node: Node<any>;
+    value: any;
+    path: string;
+    why: string;
+    check: string;
+    args: Record<string, any>;
+    mark: number;
+    text: string;
+    use: any;
 };
 declare class GubuError extends TypeError {
     gubu: boolean;
