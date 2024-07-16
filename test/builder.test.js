@@ -316,18 +316,18 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"Exact(red)
         let g0 = Gubu(All(Open({ x: 1 }), Open({ y: 'a' })));
         // console.log(g0.stringify())
         expect(g0.stringify())
-            .toEqual('{"$$":"All($$ref0,$$ref1)","$$ref0":{"x":"1","$$":"Open()"}' +
-            ',"$$ref1":{"y":"\\"a\\"","$$":"Open()"}}');
+            .toEqual('{"$$":"All($$ref0,$$ref1)","$$ref0":{"x":"1","$$":"Open"}' +
+            ',"$$ref1":{"y":"\\"a\\"","$$":"Open"}}');
         expect(g0({ x: 11, y: 'aa' })).toEqual({ x: 11, y: 'aa' });
         expect(g0({})).toEqual({ x: 1, y: 'a' });
         expect(() => g0({ x: 'b', y: 'a' })).toThrow('Value "{x:b,y:a}" for property "" does not satisfy all of:' +
-            ' {x:1,$$:Open()}, {y:a,$$:Open()}');
+            ' {x:1,$$:Open}, {y:a,$$:Open}');
         expect(() => g0()).toThrow('Validation failed for value "undefined" because the value is required.');
         let g0s = Gubu(All(Open({ x: 1 }), Open({ y: 'a' })).Skip());
         expect(g0s({ x: 11, y: 'aa' })).toEqual({ x: 11, y: 'aa' });
         expect(g0s({})).toEqual({ x: 1, y: 'a' });
         expect(() => g0s({ x: 'b', y: 'a' })).toThrow('Value "{x:b,y:a}" for property "" does not satisfy all of:' +
-            ' {x:1,$$:Open()}, {y:a,$$:Open()}');
+            ' {x:1,$$:Open}, {y:a,$$:Open}');
         expect(g0s()).toEqual(undefined);
         // TODO: Optional
         // expect(g0s()).toEqual({ x: 1, y: 'a' })
@@ -343,16 +343,16 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"Exact(red)
         // g2({ x: 11, y: true })
         expect(() => g2({ x: 11, y: true }))
             .toThrow('Value "{x:11,y:true}" for property "" does not satisfy all of:' +
-            ' {"x":1,"y":"Any()"}, {"x":"Any()","y":"a"}');
+            ' {"x":1,"y":"Any"}, {"x":"Any","y":"a"}');
         let g3 = Gubu(All({ x: 1, y: Any() }, { x: Any(), y: { z: 'a' } }));
         expect(g3({ x: 11, y: { z: 'AA' } })).toEqual({ x: 11, y: { z: 'AA' } });
         expect(() => g3({ x: 11, y: { z: true } }))
             .toThrow('Value "{x:11,y:{z:true}}" for property "" does not satisfy all of:' +
-            ' {"x":1,"y":"Any()"}, {"x":"Any()","y":{"z":"a"}}');
+            ' {"x":1,"y":"Any"}, {"x":"Any","y":{"z":"a"}}');
         let g4 = Gubu(All(Open({ x: 1 }), Open({ y: 2 })));
         expect(g4({ x: 11, y: 22 })).toEqual({ x: 11, y: 22 });
         expect(() => g4({ x: 'X', y: 'Y' })).toThrow('Value "{x:X,y:Y}" for property "" does not satisfy all of:' +
-            ' {x:1,$$:Open()}, {y:2,$$:Open()}');
+            ' {x:1,$$:Open}, {y:2,$$:Open}');
     });
     test('builder-skip', () => {
         let g0a = Gubu({ a: Skip(String) });
@@ -1521,7 +1521,7 @@ Validation failed for property "x" with value "undefined" because the value is r
         expect(shape_AllB2({ a: { b: 'X', c: 'Y' } })).toEqual({ a: { b: 'X', c: 'Y' } });
         expect(() => shape_AllB2({ a: { b: 'X', c: 'Y', d: 'Z' } }))
             .toThrow('Value "{b:X,c:Y,d:Z}" for property "a" does not satisfy all of:' +
-            ' {b:String,$$:Open()}, Max(2)');
+            ' {b:String,$$:Open}, Max(2)');
         expect(shape_AllB2({})).toEqual({ a: { b: 'B' } });
         let shape_AllB3 = Gubu({ a: Skip(All(Open({ b: String }), Max(2))) });
         expect(shape_AllB3({ a: { b: 'X' } })).toEqual({ a: { b: 'X' } });

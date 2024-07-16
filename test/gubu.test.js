@@ -1917,7 +1917,7 @@ Validation failed for index "1" with number "1" because the number is not of typ
         expect(stringify(Gubu({ a: Number }).spec())).toEqual('{"a":"Number"}');
         expect(stringify(Gubu({ a: String }).spec())).toEqual('{"a":"String"}');
         expect(stringify(Gubu({ a: Boolean }).spec())).toEqual('{"a":"Boolean"}');
-        expect(stringify(Required())).toEqual(`"Required()"`);
+        expect(stringify(Required())).toEqual(`"Required"`);
         let c0 = {};
         c0.x = c0;
         expect(stringify(c0)).toEqual('"[object Object]"');
@@ -2326,6 +2326,21 @@ Validation failed for index "1" with number "1" because the number is not of typ
         expect(g2({ a: 1, b: { a: true } }, { skip: { keys: ['a'] } }))
             .toEqual({ a: 1, b: { a: true } });
         expect(() => g2({ a: 1, b: {} }, { skip: { keys: ['a'] } })).toThrow('required');
+    });
+    test('array-regexp', () => {
+        let g0 = Gubu({ x: [/a/] });
+        expect(g0.jsonify()).toEqual({ x: ['/a/'] });
+        expect(g0.stringify()).toEqual('{"x":["/a/"]}');
+        expect(g0({ x: [] })).toEqual({ x: [] });
+        expect(g0({ x: ['a'] })).toEqual({ x: ['a'] });
+        expect(g0({ x: ['ba', 'ac', 'dad'] })).toEqual({ x: ['ba', 'ac', 'dad'] });
+        expect(() => g0({ x: ['q'] })).toThrow('string did not match /a/');
+        let g0r = Gubu.build(g0.jsonify());
+        expect(g0r.stringify()).toEqual('{"x":["/a/"]}');
+        expect(g0r({ x: [] })).toEqual({ x: [] });
+        expect(g0r({ x: ['a'] })).toEqual({ x: ['a'] });
+        expect(g0r({ x: ['ba', 'ac', 'dad'] })).toEqual({ x: ['ba', 'ac', 'dad'] });
+        expect(() => g0r({ x: ['q'] })).toThrow('string did not match /a/');
     });
 });
 //# sourceMappingURL=gubu.test.js.map

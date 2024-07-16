@@ -2,7 +2,6 @@
 
 // FIX: does not work if Gubu is inside a Proxy - jest fails
 
-// FEATURE: regexp in array: [/a/] => all elements must match /a/
 // FEATURE: validator on completion of object or array
 // FEATURE: support non-index properties on array shape
 // FEATURE: state should indicate if value was present, not just undefined
@@ -26,7 +25,7 @@ import { inspect } from 'util'
 
 
 // Package version.
-const VERSION = '8.2.1'
+const VERSION = '8.3.0'
 
 // Unique symbol for marking and recognizing Gubu shapes.
 const GUBU$ = Symbol.for('gubu$')
@@ -1331,7 +1330,7 @@ function expr(
     // C: class parens-dot
     // D: quoted string
     // L: backslash escape within string
-    // E: unescaped chat (not a quote or backslash)
+    // E: unescaped char (not a quote or backslash)
     // F: regexp
     // M: literal dot
     // H: not a regexp escape or end slash
@@ -1522,7 +1521,7 @@ function handleValidate(vf: Validate, s: State): Update {
     }
 
     let w = update.why || S.check
-    let p = pathstr(s)
+    let path = pathstr(s)
 
     if (S.string === typeof (update.err)) {
       s.curerr.push(makeErr(s, (update.err as string)))
@@ -1530,8 +1529,8 @@ function handleValidate(vf: Validate, s: State): Update {
     else if (S.object === typeof (update.err)) {
       // Assumes makeErr already called
       s.curerr.push(...[update.err].flat().filter(e => null != e).map((e: any) => {
-        e.p = null == e.p ? p : e.p
-        e.m = null == e.m ? 2010 : e.m
+        e.path = null == e.path ? path : e.path
+        e.mark = null == e.mark ? 2010 : e.mark
         return e
       }))
     }
@@ -2629,11 +2628,11 @@ function node2json(n: Node<any>): any {
     let s = ''
 
     if (n.r) {
-      s += 'Required()'
+      s += S.Required
     }
 
-    if ('any' == n.c?.t) {
-      s += ('' === s ? '' : '.') + 'Open()'
+    if (S.any == n.c?.t) {
+      s += ('' === s ? '' : '.') + S.Open
     }
 
     s += n.b.map((v: any) => v.s ? ('.' + v.s(n)) : '').join('')
@@ -2643,7 +2642,7 @@ function node2json(n: Node<any>): any {
     }
 
     if ('' === s) {
-      s = 'Any()'
+      s = S.Any
     }
 
     return s
@@ -2669,13 +2668,13 @@ function node2json(n: Node<any>): any {
 
     if (undefined !== n.c) {
       if (fixed[n.c.t]) {
-        o.$$ = 'Child(' + fixed[n.c.t] + ')'
+        o.$$ = S.Child + '(' + fixed[n.c.t] + ')'
       }
       else if ('any' === n.c.t) {
-        o.$$ = 'Open()'
+        o.$$ = S.Open
       }
       else {
-        o.$$ = 'Child($$child)'
+        o.$$ = S.Child + '($$child)'
         o.$$child = node2json(n.c)
       }
     }
@@ -2691,12 +2690,12 @@ function node2json(n: Node<any>): any {
     }
 
     // naturalize, since `Child(Number)` implies `Child(Number,{})`
-    if (o.$$ && 1 === Object.keys(o).length && o.$$.startsWith('Child')) {
+    if (o.$$ && 1 === Object.keys(o).length && o.$$.startsWith(S.Child)) {
       return o.$$
     }
     return o
   }
-  else if ('list' === t) {
+  else if (S.list === t) {
     let refs: any = {}
     let rI = 0
     let list = n.u.list
@@ -2705,7 +2704,7 @@ function node2json(n: Node<any>): any {
     let s = (n.b[0].n || n.b[0].name) + '(' + list.join(',') + ')'
     return 0 === rI ? s : { $$: s, ...refs }
   }
-  else if ('array' === t) {
+  else if (S.array === t) {
     let a: any[] = []
     if (undefined !== n.c) {
       a[0] = node2json(n.c)
@@ -2716,6 +2715,9 @@ function node2json(n: Node<any>): any {
         .map((n: any) => node2json(n))
     }
     return a
+  }
+  else if (S.regexp === t) {
+    return n.v.toString()
   }
 }
 
