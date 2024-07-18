@@ -162,7 +162,7 @@ declare function make<S>(intop?: S | Node<S>, inopts?: GubuOptions): {
     node(): Node<S>;
     stringify(...rest: any[]): string;
     jsonify(): any;
-    toString(): string;
+    toString(this: any): string;
     gubu: {
         gubu$: symbol;
         v$: string;

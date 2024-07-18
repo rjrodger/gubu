@@ -383,6 +383,7 @@ let g0 = Gubu({ a: Required({ b: 1 }).Child({ x: String }) })
 // let g0 = Gubu(Exact('red'))
 
 
+/*
 let g0 = Gubu({
   a: Number,
   b: Skip(Boolean),
@@ -417,3 +418,11 @@ try {
 catch(e) {
   console.log(e.desc())
 }
+*/
+
+
+
+let g0 = Gubu({x:Number})
+console.log(g0.stringify())
+
+

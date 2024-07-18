@@ -333,10 +333,26 @@ describe('expr', () => {
     });
     test('build-opts', () => {
         let g0 = Gubu.build({ a: 1 }, { name: 'foo' });
-        expect('' + g0).toEqual('[Gubu foo {"a":1}]');
+        expect('' + g0).toEqual('[Gubu foo {"a":"1"}]');
         expect(() => g0({ a: 'A' }))
             .toThrow('foo: Validation failed for property "a" with string "A" because ' +
             'the string is not of type number.');
+    });
+    test('desc-number', () => {
+        let g0 = Gubu({ x: Number });
+        expect(g0.stringify()).toEqual('{"x":"Number"}');
+        expect(g0.jsonify()).toEqual({ x: 'Number' });
+        let g1 = Gubu({ x: Number });
+        expect(g1.jsonify()).toEqual({ x: 'Number' });
+        expect(g1.stringify()).toEqual('{"x":"Number"}');
+        let g2 = Gubu({ x: Number }, { name: 'foo' });
+        expect(g2.toString()).toEqual('[Gubu foo {"x":"Number"}]');
+        expect(g2.stringify()).toEqual('{"x":"Number"}');
+        expect(g2.jsonify()).toEqual({ x: 'Number' });
+        let g3 = Gubu({ x: Number }, { name: 'foo' });
+        expect(g3.toString()).toEqual('[Gubu foo {"x":"Number"}]');
+        expect(g3.jsonify()).toEqual({ x: 'Number' });
+        expect(g3.stringify()).toEqual('{"x":"Number"}');
     });
 });
 //# sourceMappingURL=expr.test.js.map

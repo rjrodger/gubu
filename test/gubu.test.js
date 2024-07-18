@@ -36,8 +36,8 @@ exports.Bar = Bar;
 describe('gubu', () => {
     test('happy', () => {
         expect(Gubu()).toBeDefined();
-        expect(Gubu().toString()).toMatch(/\[Gubu G\$\d+ undefined\]/);
-        expect(Gubu(undefined, { name: 'foo' }).toString()).toMatch(/\[Gubu foo undefined\]/);
+        expect(Gubu().toString()).toMatch(/\[Gubu G\$\d+ Any\]/);
+        expect(Gubu(undefined, { name: 'foo' }).toString()).toMatch(/\[Gubu foo Any\]/);
         expect(Gubu('x', { name: 'bar' }).toString()).toMatch(/\[Gubu bar x\]/);
         let g0 = Gubu({
             a: 'foo',

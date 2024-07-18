@@ -1241,6 +1241,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
   gubuShape.stringify = (...rest: any[]) => {
     const json = gubuShape.jsonify()
+
     return '' === desc ?
       (desc = ('string' === typeof json ? json.replace(/^"(.*)"$/, '$1') :
         JSON.stringify(json, ...rest))) : desc
@@ -1251,16 +1252,9 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   }
 
 
-  gubuShape.toString = () => {
-    desc = truncate('' === desc ?
-      stringify(
-        (
-          null != top &&
-          top.$ &&
-          (GUBU$ === top.$.gubu$ || true === (top.$ as any).gubu$)
-        ) ? top.v : top, null, true) :
-      desc)
-    return `[Gubu ${opts.name} ${desc}]`
+  gubuShape.toString = function(this: any) {
+    desc = '' === desc ? this.stringify() : desc
+    return `[Gubu ${opts.name} ${truncate(desc)}]`
   }
 
   if (inspect && inspect.custom) {

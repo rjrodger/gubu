@@ -810,7 +810,7 @@ Value "{x:green,z:Z}" for property "1" does not satisfy one of: {"x":"Exact(red)
           return true
         }))
 
-    expect('' + g0).toMatch(/\[Gubu G\$\d+ \{"a":1\}\]/)
+    expect('' + g0).toMatch(/\[Gubu G\$\d+ \{"a":"1","\$\$":"Open"\}\]/)
     expect(g0({ a: 2 })).toMatchObject({ a: 2, b: 3, c: 20 })
 
     let g1 = Gubu({

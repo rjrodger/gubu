@@ -867,13 +867,9 @@ function make(intop, inopts) {
     gubuShape.jsonify = () => {
         return null == json ? (json = node2json(gubuShape.node())) : json;
     };
-    gubuShape.toString = () => {
-        desc = truncate('' === desc ?
-            stringify((null != top &&
-                top.$ &&
-                (GUBU$ === top.$.gubu$ || true === top.$.gubu$)) ? top.v : top, null, true) :
-            desc);
-        return `[Gubu ${opts.name} ${desc}]`;
+    gubuShape.toString = function () {
+        desc = '' === desc ? this.stringify() : desc;
+        return `[Gubu ${opts.name} ${truncate(desc)}]`;
     };
     if (util_1.inspect && util_1.inspect.custom) {
         gubuShape[util_1.inspect.custom] = gubuShape.toString;
