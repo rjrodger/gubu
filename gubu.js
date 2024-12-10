@@ -409,7 +409,8 @@ function nodize(shape, depth, meta) {
         [Symbol.for('nodejs.util.inspect.custom')]() {
             const nd = { ...this };
             delete nd.$;
-            return JSON.stringify(nd, (_k, v) => 'function' === typeof v && !BuilderMap[v.name] ? v.name : v).replace(/"/g, '').replace(/,/g, ' ');
+            return JSON.stringify(nd, (_k, v) => 'function' === typeof v &&
+                !BuilderMap[v.name] && !TNAT[v.name] ? v.name : v).replace(/"/g, '').replace(/,/g, ' ');
         }
     };
     return node;
@@ -846,12 +847,12 @@ function make(intop, inopts) {
     gubuShape.spec = () => {
         // Normalize spec, discard errors.
         gubuShape(undefined, { err: false });
-        const str = stringify(top, (_key, val) => {
+        const str = stringify(top, false, true, { key: Object.keys(TNAT) }, (_key, val) => {
             if (GUBU$ === val) {
                 return true;
             }
             return val;
-        }, false, true);
+        });
         return JP(str);
     };
     gubuShape.node = () => {
@@ -1315,7 +1316,7 @@ const All = function (...inshapes) {
             update.err = [
                 makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
                     ' does not satisfy all of: ' +
-                    `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+                    `${inshapes.map(x => stringify(x, true)).join(', ')}`)
             ];
         }
         return pass;
@@ -1349,7 +1350,7 @@ const Some = function (...inshapes) {
             update.err = [
                 makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
                     ' does not satisfy any of: ' +
-                    `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+                    `${inshapes.map(x => stringify(x, true)).join(', ')}`)
             ];
         }
         return pass;
@@ -1384,7 +1385,7 @@ const One = function (...inshapes) {
             update.err = [
                 makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
                     ' does not satisfy one of: ' +
-                    `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+                    `${inshapes.map(x => stringify(x, true)).join(', ')}`)
             ];
         }
         return true;
@@ -1415,14 +1416,14 @@ const Exact = function (...vals) {
         }
         update.err =
             makeErr(state, S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' must be exactly one of: ' +
-                vals.map((v) => stringify(v, null, true)).join(', '));
+                vals.map((v) => stringify(v, true)).join(', '));
         update.done = true;
         return false;
     };
     validator.n = S.Exact;
     validator.a = vals;
     validator.s =
-        () => S.Exact + '(' + vals.map((v) => stringify(v, null, true)).join(',') + ')';
+        () => S.Exact + '(' + vals.map((v) => stringify(v, true)).join(',') + ')';
     node.b.push(validator);
     return node;
 };
@@ -1449,7 +1450,7 @@ const Check = function (check, shape) {
         let c$ = check;
         c$.gubu$ = c$.gubu$ || {};
         c$.gubu$.Check = true;
-        c$.s = () => S.Check + '(' + stringify(check, null, true) + ')';
+        c$.s = () => S.Check + '(' + stringify(check, true) + ')';
         node.b.push(check);
         node.t = S.check;
     }
@@ -1461,7 +1462,7 @@ const Check = function (check, shape) {
                 value: String(check)
             });
             defprop(refn, 'gubu$', { value: { Check: true } });
-            refn.s = () => S.Check + '(' + stringify(check, null, true) + ')';
+            refn.s = () => S.Check + '(' + stringify(check, true) + ')';
             node.b.push(refn);
             node.t = S.check;
         }
@@ -1636,8 +1637,8 @@ const Rest = function (child, shape) {
     return node;
 };
 exports.Rest = Rest;
-const Type = function (tname, shape) {
-    let tnat = nodize(TNAT[tname]);
+const Type = function (tref, shape) {
+    let tnat = nodize(TNAT[tref] || tref);
     let node = buildize(this, shape);
     if (node !== tnat) {
         node.t = tnat.t;
@@ -1770,33 +1771,42 @@ function buildize(self, shape) {
     }
     // Only add chainable Builders.
     // NOTE: One, Some, All not chainable.
-    return node.Above ? node : Object.assign(node, {
-        Above,
-        After,
-        Any,
-        Before,
-        Below,
-        Check,
-        Child,
-        Closed,
-        Default,
-        Define,
-        Empty,
-        Exact,
-        Fault,
-        Ignore,
-        Len,
-        Max,
-        Min,
-        Never,
-        Open,
-        Refer,
-        Rename,
-        Required,
-        Rest,
-        Skip,
-        Type,
-    });
+    return node.Above ? node : // No need if already made chainable
+        Object.assign(node, {
+            Above,
+            After,
+            Any,
+            Before,
+            Below,
+            Check,
+            Child,
+            Closed,
+            Default,
+            Define,
+            Empty,
+            Exact,
+            Fault,
+            Ignore,
+            Len,
+            Max,
+            Min,
+            Never,
+            Open,
+            Optional,
+            Refer,
+            Rename,
+            Required,
+            Rest,
+            Skip,
+            Type,
+            String: () => Type.call(node, String),
+            Number: () => Type.call(node, Number),
+            Boolean: () => Type.call(node, Boolean),
+            Object: () => Type.call(node, Object),
+            Array: () => Type.call(node, Array),
+            Function: () => Type.call(node, Function),
+            Symbol: () => Type.call(node, Symbol),
+        });
 }
 // External utility to make ErrDesc objects.
 function makeErr(state, text, why, user) {
@@ -1818,8 +1828,10 @@ function makeErrImpl(why, s, mark, text, user, fname) {
         text: '',
         use: user || {},
     };
-    let jstr = undefined === s.val ? S.undefined : stringify(s.val);
-    let valstr = truncate(jstr.replace(/"/g, ''));
+    // TODO: truncate len, and ignore should be GubuOptions
+    let jstr = undefined === s.val ? S.undefined :
+        stringify(s.val, false, false, { key: [/\$$/] });
+    let valstr = truncate(jstr.replace(/"/g, ''), 111);
     text = text || s.node.z;
     if (null == text || '' === text) {
         let valkind = valstr.startsWith('[') ? S.array :
@@ -1971,7 +1983,7 @@ function node2json(n) {
         return n.v.toString();
     }
 }
-function stringify(src, replacer, dequote, expand) {
+function stringify(src, dequote, expand, ignore, replacer) {
     let str;
     const use_node2str = !expand &&
         !!(src && src.$) && (GUBU$ === src.$.gubu$ || true === src.$.gubu$);
@@ -1984,11 +1996,16 @@ function stringify(src, replacer, dequote, expand) {
     }
     try {
         str = JS(src, (key, val) => {
-            var _a, _b, _c;
+            var _a, _b, _c, _d, _e, _f;
             if (replacer) {
                 val = replacer(key, val);
             }
-            if (null != val &&
+            if (((_a = ignore === null || ignore === void 0 ? void 0 : ignore.key) === null || _a === void 0 ? void 0 : _a.reduce((a, n) => (a ? a : n === key || key.match(n)), false))
+                ||
+                    ((_b = ignore === null || ignore === void 0 ? void 0 : ignore.val) === null || _b === void 0 ? void 0 : _b.reduce((a, n) => (a ? a : n === val || key.match(n)), false))) {
+                val = undefined;
+            }
+            else if (null != val &&
                 S.object === typeof (val) &&
                 val.constructor &&
                 S.Object !== val.constructor.name &&
@@ -2002,7 +2019,7 @@ function stringify(src, replacer, dequote, expand) {
                         S.function === typeof val.toString ? val.toString() : val.constructor.name;
                 }
             }
-            else if (!expand && GUBU$ === ((_a = val === null || val === void 0 ? void 0 : val.$) === null || _a === void 0 ? void 0 : _a.gubu$)) {
+            else if (!expand && GUBU$ === ((_c = val === null || val === void 0 ? void 0 : val.$) === null || _c === void 0 ? void 0 : _c.gubu$)) {
                 if ('number' === val.t || 'string' === val.t || 'boolean' === val.t) {
                     val = val.v;
                 }
@@ -2018,6 +2035,9 @@ function stringify(src, replacer, dequote, expand) {
                 if (S.function === typeof (make[val.name]) && isNaN(+key)) {
                     val = undefined;
                 }
+                else if ((_d = ignore === null || ignore === void 0 ? void 0 : ignore.val) === null || _d === void 0 ? void 0 : _d.reduce((a, n) => (a ? a : n === val.name || val.name.match(n)), false)) {
+                    val = undefined;
+                }
                 else if (null != val.name && '' !== val.name) {
                     val = val.name;
                 }
@@ -2029,10 +2049,10 @@ function stringify(src, replacer, dequote, expand) {
                 val = String(val.toString());
             }
             else if (Number.isNaN(val)) {
-                return 'NaN';
+                val = 'NaN';
             }
             else if (true !== expand &&
-                (true === ((_b = val === null || val === void 0 ? void 0 : val.$) === null || _b === void 0 ? void 0 : _b.gubu$) || GUBU$ === ((_c = val === null || val === void 0 ? void 0 : val.$) === null || _c === void 0 ? void 0 : _c.gubu$))) {
+                (true === ((_e = val === null || val === void 0 ? void 0 : val.$) === null || _e === void 0 ? void 0 : _e.gubu$) || GUBU$ === ((_f = val === null || val === void 0 ? void 0 : val.$) === null || _f === void 0 ? void 0 : _f.gubu$))) {
                 val = JSON.stringify(node2json(val));
             }
             return val;

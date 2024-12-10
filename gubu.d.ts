@@ -69,6 +69,11 @@ type Validate = ((val: any, update: Update, state: State) => boolean) & {
     a?: any[];
     n?: string;
 };
+type ShapeResult<T> = T extends Node<any> ? any : T extends StringConstructor ? string : T extends NumberConstructor ? number : T extends BooleanConstructor ? boolean : T extends ArrayConstructor ? any[] : T extends ObjectConstructor ? any : T extends FunctionConstructor ? Function : T extends SymbolConstructor ? symbol : T extends {
+    [key: string]: any;
+} ? {
+    [K in keyof T]: ShapeResult<T[K]>;
+} : T;
 declare class State {
     match: boolean;
     dI: number;
@@ -154,7 +159,7 @@ declare class GubuError extends TypeError {
 }
 declare function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S>;
 declare function make<S>(intop?: S | Node<S>, inopts?: GubuOptions): {
-    <V>(root?: V, ctx?: Context): V & S;
+    <V>(root?: V, ctx?: Context): V & ShapeResult<S>;
     valid: <V>(root?: V, ctx?: Context) => root is (V & S);
     match(root?: any, ctx?: Context): boolean;
     error(root?: any, ctx?: Context): GubuError[];
@@ -207,7 +212,7 @@ declare const Refer: <V>(this: any, inopts: any, shape?: Node<V> | V) => Node<V>
 declare const Rename: <V>(this: any, inopts: any, shape?: Node<V> | V) => Node<V>;
 declare const Child: <V>(this: any, child?: any, shape?: Node<V> | V) => Node<V>;
 declare const Rest: <V>(this: any, child?: any, shape?: Node<V> | V) => Node<V>;
-declare const Type: <V>(this: any, tname: string, shape?: Node<V> | V) => Node<V>;
+declare const Type: <V extends "Number" | "String" | "Boolean" | "Object" | "Array" | "Function" | "Symbol" | StringConstructor | NumberConstructor | BooleanConstructor | ArrayConstructor | ObjectConstructor | FunctionConstructor | SymbolConstructor | Symbol | Record<any, any> | null | undefined | typeof NaN>(this: any, tref: V, shape?: any) => (V extends "Number" | NumberConstructor ? number : V extends "Boolean" | BooleanConstructor ? boolean : V extends "String" | StringConstructor ? string : V extends "Array" | ArrayConstructor ? any[] : V extends "Object" | ObjectConstructor ? any : V extends "Function" | FunctionConstructor ? Function : V extends "Symbol" | SymbolConstructor ? Symbol : V extends null ? null : V extends undefined ? undefined : V);
 declare const Min: <V>(this: any, min: number | string, shape?: Node<V> | V) => Node<V>;
 declare const Max: <V>(this: any, max: number | string, shape?: Node<V> | V) => Node<V>;
 declare const Above: <V>(this: any, above: number | string, shape?: Node<V> | V) => Node<V>;
@@ -215,7 +220,10 @@ declare const Below: <V>(this: any, below: number | string, shape?: Node<V> | V)
 declare const Len: <V>(this: any, len: number, shape?: Node<V> | V) => Node<V>;
 declare function buildize<V>(self?: any, shape?: any): Node<V>;
 declare function makeErr(state: State, text?: string, why?: string, user?: any): ErrDesc;
-declare function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean): any;
+declare function stringify(src: any, dequote?: boolean, expand?: boolean, ignore?: {
+    key?: (string | RegExp)[];
+    val?: (string | RegExp)[];
+}, replacer?: any): any;
 declare const G$: (node: any) => Node<any>;
 declare const BuilderMap: {
     Above: <V>(this: any, above: number | string, shape?: Node<V> | V) => Node<V>;
@@ -248,7 +256,7 @@ declare const BuilderMap: {
     Skip: <V>(this: any, shape?: Node<V> | V) => Node<V>;
     Some: (this: any, ...inshapes: any[]) => Node<unknown>;
     Rest: <V>(this: any, child?: any, shape?: Node<V> | V) => Node<V>;
-    Type: <V>(this: any, tname: string, shape?: Node<V> | V) => Node<V>;
+    Type: <V extends "Number" | "String" | "Boolean" | "Object" | "Array" | "Function" | "Symbol" | StringConstructor | NumberConstructor | BooleanConstructor | ArrayConstructor | ObjectConstructor | FunctionConstructor | SymbolConstructor | Symbol | Record<any, any> | null | undefined | typeof NaN>(this: any, tref: V, shape?: any) => (V extends "Number" | NumberConstructor ? number : V extends "Boolean" | BooleanConstructor ? boolean : V extends "String" | StringConstructor ? string : V extends "Array" | ArrayConstructor ? any[] : V extends "Object" | ObjectConstructor ? any : V extends "Function" | FunctionConstructor ? Function : V extends "Symbol" | SymbolConstructor ? Symbol : V extends null ? null : V extends undefined ? undefined : V);
 };
 type GubuShape = ReturnType<typeof make> & {
     valid: <D, S>(root?: D, ctx?: any) => root is (D & S);
@@ -301,7 +309,7 @@ declare const GRename: <V>(this: any, inopts: any, shape?: Node<V> | V) => Node<
 declare const GRequired: <V>(this: any, shape?: Node<V> | V) => Node<V>;
 declare const GSkip: <V>(this: any, shape?: Node<V> | V) => Node<V>;
 declare const GSome: (this: any, ...inshapes: any[]) => Node<unknown>;
-declare const GType: <V>(this: any, tname: string, shape?: Node<V> | V) => Node<V>;
+declare const GType: <V extends "Number" | "String" | "Boolean" | "Object" | "Array" | "Function" | "Symbol" | StringConstructor | NumberConstructor | BooleanConstructor | ArrayConstructor | ObjectConstructor | FunctionConstructor | SymbolConstructor | Symbol | Record<any, any> | null | undefined | typeof NaN>(this: any, tref: V, shape?: any) => (V extends "Number" | NumberConstructor ? number : V extends "Boolean" | BooleanConstructor ? boolean : V extends "String" | StringConstructor ? string : V extends "Array" | ArrayConstructor ? any[] : V extends "Object" | ObjectConstructor ? any : V extends "Function" | FunctionConstructor ? Function : V extends "Symbol" | SymbolConstructor ? Symbol : V extends null ? null : V extends undefined ? undefined : V);
 type args = any[] | IArguments;
 type Argu = (args: args | string, whence: string | Record<string, any>, spec?: Record<string, any>) => (typeof args extends string ? ((args: args) => Record<string, any>) : Record<string, any>);
 declare function MakeArgu(name: string): Argu;

@@ -149,6 +149,21 @@ type Validate =
   }
 
 
+type ShapeResult<T> =
+  T extends Node<any> ? any :
+  T extends StringConstructor ? string :
+  T extends NumberConstructor ? number :
+  T extends BooleanConstructor ? boolean :
+  T extends ArrayConstructor ? any[] :
+  T extends ObjectConstructor ? any :
+  T extends FunctionConstructor ? Function :
+  T extends SymbolConstructor ? symbol :
+  T extends { [key: string]: any } ? { [K in keyof T]: ShapeResult<T[K]> } :
+  T
+
+
+
+
 // Help the minifier
 const S = {
   gubu: 'gubu',
@@ -692,7 +707,8 @@ function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
       delete nd.$
       return JSON.stringify(
         nd,
-        (_k, v) => 'function' === typeof v && !(BuilderMap as any)[v.name] ? v.name : v
+        (_k, v) => 'function' === typeof v &&
+          !(BuilderMap as any)[v.name] && !TNAT[v.name] ? v.name : v
       ).replace(/"/g, '').replace(/,/g, ' ')
     }
   } as unknown as Node<S>)
@@ -1191,7 +1207,7 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
 
 
   function gubuShape<V>(root?: V, ctx?: Context):
-    V & S {
+    V & ShapeResult<S> {
     return (exec(root, ctx, false))
   }
 
@@ -1223,12 +1239,13 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   gubuShape.spec = () => {
     // Normalize spec, discard errors.
     gubuShape(undefined, { err: false })
-    const str = stringify(top, (_key: string, val: any) => {
-      if (GUBU$ === val) {
-        return true
-      }
-      return val
-    }, false, true)
+    const str = stringify(top, false, true, { key: Object.keys(TNAT) },
+      (_key: string, val: any) => {
+        if (GUBU$ === val) {
+          return true
+        }
+        return val
+      })
     return JP(str)
   }
 
@@ -1822,7 +1839,7 @@ const All = function(this: any, ...inshapes: any[]) {
         makeErr(state,
           S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
           ' does not satisfy all of: ' +
-          `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+          `${inshapes.map(x => stringify(x, true)).join(', ')}`)
       ]
     }
 
@@ -1869,7 +1886,7 @@ const Some = function(this: any, ...inshapes: any[]) {
         makeErr(state,
           S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
           ' does not satisfy any of: ' +
-          `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+          `${inshapes.map(x => stringify(x, true)).join(', ')}`)
       ]
     }
 
@@ -1914,7 +1931,7 @@ const One = function(this: any, ...inshapes: any[]) {
         makeErr(state,
           S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH +
           ' does not satisfy one of: ' +
-          `${inshapes.map(x => stringify(x, null, true)).join(', ')}`)
+          `${inshapes.map(x => stringify(x, true)).join(', ')}`)
       ]
     }
 
@@ -1954,7 +1971,7 @@ const Exact = function(this: any, ...vals: any[]) {
     update.err =
       makeErr(state,
         S.Value + ' ' + S.$VALUE + S.forprop + S.$PATH + ' must be exactly one of: ' +
-        vals.map((v: any) => stringify(v, null, true)).join(', ')
+        vals.map((v: any) => stringify(v, true)).join(', ')
       )
 
     update.done = true
@@ -1965,7 +1982,7 @@ const Exact = function(this: any, ...vals: any[]) {
   validator.n = S.Exact
   validator.a = vals
   validator.s =
-    () => S.Exact + '(' + vals.map((v: any) => stringify(v, null, true)).join(',') + ')'
+    () => S.Exact + '(' + vals.map((v: any) => stringify(v, true)).join(',') + ')'
 
   node.b.push(validator)
 
@@ -2011,7 +2028,7 @@ const Check = function <V>(
     let c$ = check as any
     c$.gubu$ = c$.gubu$ || {}
     c$.gubu$.Check = true
-    c$.s = () => S.Check + '(' + stringify(check, null, true) + ')'
+    c$.s = () => S.Check + '(' + stringify(check, true) + ')'
     node.b.push((check as Validate))
 
     node.t = (S.check as ValType)
@@ -2025,7 +2042,7 @@ const Check = function <V>(
         value: String(check)
       })
       defprop(refn, 'gubu$', { value: { Check: true } })
-      refn.s = () => S.Check + '(' + stringify(check, null, true) + ')'
+      refn.s = () => S.Check + '(' + stringify(check, true) + ')'
       node.b.push(refn)
 
       node.t = (S.check as ValType)
@@ -2256,12 +2273,39 @@ const Rest = function <V>(
 }
 
 
-const Type = function <V>(
+const Type = function <V extends
+  'Number' |
+  'String' |
+  'Boolean' |
+  'Object' |
+  'Array' |
+  'Function' |
+  'Symbol' |
+  StringConstructor |
+  NumberConstructor |
+  BooleanConstructor |
+  ArrayConstructor |
+  ObjectConstructor |
+  FunctionConstructor |
+  SymbolConstructor | Symbol |
+  Record<any, any> |
+  null | undefined | typeof NaN
+>(
   this: any,
-  tname: string,
-  shape?: Node<V> | V
-): Node<V> {
-  let tnat = nodize(TNAT[tname])
+  tref: V,
+  shape?: any
+): (
+    V extends 'Number' | NumberConstructor ? number :
+    V extends 'Boolean' | BooleanConstructor ? boolean :
+    V extends 'String' | StringConstructor ? string :
+    V extends 'Array' | ArrayConstructor ? any[] :
+    V extends 'Object' | ObjectConstructor ? any :
+    V extends 'Function' | FunctionConstructor ? Function :
+    V extends 'Symbol' | SymbolConstructor ? Symbol :
+    V extends null ? null :
+    V extends undefined ? undefined :
+    V) {
+  let tnat = nodize(TNAT[tref as string] || tref)
 
   let node = buildize(this, shape)
   if (node !== tnat) {
@@ -2271,7 +2315,7 @@ const Type = function <V>(
     node.v = tnat.v
   }
 
-  return node
+  return (node as any)
 }
 
 
@@ -2461,33 +2505,43 @@ function buildize<V>(self?: any, shape?: any): Node<V> {
 
   // Only add chainable Builders.
   // NOTE: One, Some, All not chainable.
-  return node.Above ? node : Object.assign(node, {
-    Above,
-    After,
-    Any,
-    Before,
-    Below,
-    Check,
-    Child,
-    Closed,
-    Default,
-    Define,
-    Empty,
-    Exact,
-    Fault,
-    Ignore,
-    Len,
-    Max,
-    Min,
-    Never,
-    Open,
-    Refer,
-    Rename,
-    Required,
-    Rest,
-    Skip,
-    Type,
-  })
+  return node.Above ? node : // No need if already made chainable
+    Object.assign(node, {
+      Above,
+      After,
+      Any,
+      Before,
+      Below,
+      Check,
+      Child,
+      Closed,
+      Default,
+      Define,
+      Empty,
+      Exact,
+      Fault,
+      Ignore,
+      Len,
+      Max,
+      Min,
+      Never,
+      Open,
+      Optional,
+      Refer,
+      Rename,
+      Required,
+      Rest,
+      Skip,
+      Type,
+
+      String: () => Type.call(node, String),
+      Number: () => Type.call(node, Number),
+      Boolean: () => Type.call(node, Boolean),
+      Object: () => Type.call(node, Object),
+      Array: () => Type.call(node, Array),
+      Function: () => Type.call(node, Function),
+      Symbol: () => Type.call(node, Symbol),
+    })
 }
 
 
@@ -2526,8 +2580,11 @@ function makeErrImpl(
     use: user || {},
   }
 
-  let jstr = undefined === s.val ? S.undefined : stringify(s.val)
-  let valstr = truncate(jstr.replace(/"/g, ''))
+  // TODO: truncate len, and ignore should be GubuOptions
+  let jstr = undefined === s.val ? S.undefined :
+    stringify(s.val, false, false, { key: [/\$$/] }
+    )
+  let valstr = truncate(jstr.replace(/"/g, ''), 111)
 
   text = text || s.node.z
 
@@ -2716,7 +2773,13 @@ function node2json(n: Node<any>): any {
 }
 
 
-function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean) {
+function stringify(
+  src: any,
+  dequote?: boolean,
+  expand?: boolean,
+  ignore?: { key?: (string | RegExp)[], val?: (string | RegExp)[] },
+  replacer?: any,
+) {
   let str: string
 
   const use_node2str = !expand &&
@@ -2738,12 +2801,22 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
       }
 
       if (
+        ignore?.key?.reduce((a, n) =>
+          (a ? a : n === key || key.match(n)), false)
+        ||
+        ignore?.val?.reduce((a, n) =>
+          (a ? a : n === val || key.match(n)), false)
+      ) {
+        val = undefined
+      }
+      else if (
         null != val &&
         S.object === typeof (val) &&
         val.constructor &&
         S.Object !== val.constructor.name &&
         S.Array !== val.constructor.name
       ) {
+
         let strdesc = toString.call(val)
         if ('[object RegExp]' === strdesc) {
           val = val.toString()
@@ -2770,6 +2843,10 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
         if (S.function === typeof ((make as any)[val.name]) && isNaN(+key)) {
           val = undefined
         }
+        else if (ignore?.val?.reduce((a, n) =>
+          (a ? a : n === val.name || val.name.match(n)), false)) {
+          val = undefined
+        }
         else if (null != val.name && '' !== val.name) {
           val = val.name
         }
@@ -2781,7 +2858,7 @@ function stringify(src: any, replacer?: any, dequote?: boolean, expand?: boolean
         val = String(val.toString())
       }
       else if (Number.isNaN(val)) {
-        return 'NaN'
+        val = 'NaN'
       }
       else if (true !== expand &&
         (true === val?.$?.gubu$ || GUBU$ === val?.$?.gubu$)) {

@@ -49,6 +49,28 @@ describe('gubu', () => {
         expect(g0({ a: 'bar', b: 999 })).toEqual({ a: 'bar', b: 999 });
         expect(() => g0({ a: 'bar', b: 999, c: true })).toThrow('not allowed');
     });
+    // (tide-display-help-buffer)
+    test('type-infer', () => {
+        let s0 = Gubu({ a: String, b: 'B' });
+        let v0 = s0({ a: 'A' });
+        // console.log('v0', v0)
+        expect(v0).toEqual({ a: 'A', b: 'B' });
+        v0.a = 'AA';
+        v0.b = 'BB';
+        let s1 = Gubu('x');
+        let v1 = s1('y');
+        expect(v1).toEqual('y');
+        let s2 = Gubu({ x: { y: Required(String) } });
+        let v2 = s2({ x: { y: 'Y' } });
+        expect(v2).toEqual({ x: { y: 'Y' } });
+        let s3 = Gubu({ x: { y: One(String, Number), z: One(String, Number) } });
+        let v3 = s3({ x: { y: 1, z: 'Z' } });
+        expect(v3).toEqual({ x: { y: 1, z: 'Z' } });
+        let s4 = Gubu({ x: Object });
+        let v4 = s4({ x: { y: 'Y' } });
+        expect(v4).toEqual({ x: { y: 'Y' } });
+        expect(v4.x.y).toEqual('Y');
+    });
     // TODO: type support - remove the any's
     test('valid-basic', () => {
         let g0 = Gubu({ x: 1, y: 'Y' });
@@ -875,7 +897,8 @@ Validation failed for property "q.b" with string "x" because the string is not o
         expect(os1eO({ a: '' })).toEqual({ a: '' });
         expect(os1eO({ a: 'x' })).toEqual({ a: 'x' });
         // Long values are truncated in error descriptions.
-        expect(() => Gubu(Number)('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toThrow('Validation failed for string "aaaaaaaaaaaaaaaaaaaaaaaaaaa..." because the string is not of type number.');
+        expect(() => Gubu(Number)('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'))
+            .toThrow('Validation failed for string "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..." because the string is not of type number.');
         // Explicit `undefined` and `null`
         const u0 = Gubu({ a: undefined });
         expect(u0({ a: undefined })).toEqual({ a: undefined });

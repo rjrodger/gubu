@@ -190,6 +190,9 @@ describe('builder', () => {
     expect(Gubu(Optional(undefined))()).toEqual(undefined)
     expect(Gubu(Optional(undefined))(undefined)).toEqual(undefined)
     expect(() => Gubu(Optional(undefined))('a')).toThrow('type')
+
+    expect(Gubu(Empty().Optional())('a')).toEqual('a')
+    expect(Gubu(Optional().Empty())('b')).toEqual('b')
   })
 
 
@@ -318,6 +321,23 @@ describe('builder', () => {
     let v0 = Gubu(Check((v: any) => !!v, Number))
     expect(v0(1)).toEqual(1)
     expect(() => v0('a')).toThrow('number')
+
+
+    let m0 = Gubu({
+      a: Check((v: any) => 2 === 1 + +v).Type(String)
+    })
+    expect(m0({ a: '1' })).toEqual({ a: '1' })
+    expect(() => m0({ a: '2' })).toThrow('because check')
+    expect(() => m0({ a: 1 })).toThrow('not of type string')
+
+
+    let m1 = Gubu({
+      a: Check((v: any) => 2 === 1 + +v).String()
+    })
+    expect(m1({ a: '1' })).toEqual({ a: '1' })
+    expect(() => m1({ a: '2' })).toThrow('because check')
+    expect(() => m1({ a: 1 })).toThrow('not of type string')
+
   })
 
 
@@ -1549,15 +1569,93 @@ Value "5" for property "d.1" must be below 4 (was 5).`)
   })
 
 
+
   test('builder-type', () => {
 
-    let d0 = Gubu({
+    let s0 = {
       a: Type('Number')
-    })
+    }
+
+    let d0 = Gubu(s0)
+
+    let v0a = d0({ a: 1 })
+
+    // let x: { a: number } & { a: string } = { a: 1 }
 
     expect(d0.stringify(null, true)).toEqual('{"a":"Number"}')
-    expect(d0({ a: 1 })).toEqual({ a: 1 })
+    expect(v0a).toEqual({ a: 1 })
     expect(() => d0({ a: 'A' })).toThrow('not of type number')
+
+    let s1 = {
+      a: Type(Boolean)
+    }
+
+    let d1 = Gubu(s1)
+
+    let v1a = d1({ a: false })
+
+    expect(d1.stringify(null, true)).toEqual('{"a":"Boolean"}')
+    expect(d1({ a: true })).toEqual({ a: true })
+    expect(v1a).toEqual({ a: false })
+    expect(() => d1({ a: 'A' })).toThrow('not of type boolean')
+
+
+    // Type inference
+
+    let x = {
+      S: Type('String'),
+      N: Type('Number'),
+      B: Type('Boolean'),
+      O: Type('Object'),
+      A: Type('Array'),
+      F: Type('Function'),
+      Y: Type('Symbol'),
+      s: Type(String),
+      n: Type(Number),
+      b: Type(Boolean),
+      o: Type(Object),
+      a: Type(Array),
+      f: Type(Function),
+      y: Type(Symbol),
+      l: Type(null),
+      u: Type(undefined),
+      x: Type(NaN),
+      d0: Type({ y: 1 }),
+      d1: Type([11]),
+      d2: Type(() => 0),
+      d3: Type(Symbol.for('X')),
+    }
+
+    x = {
+      S: 's',
+      N: 11,
+      B: true,
+      O: {},
+      A: [],
+      F: () => ({ f: 1 }),
+      Y: Symbol.for('Z'),
+      s: 'S',
+      n: 22,
+      b: false,
+      o: {},
+      a: [],
+      f: () => ({ f: 2, g: 3 }),
+      y: Symbol.for('Q'),
+      l: null,
+      u: undefined,
+      x: NaN,
+      d0: { y: 2 },
+      d1: [22, 33],
+      d2: () => 2,
+      d3: Symbol.for('Y'),
+    }
+
+    x.O = x.o = { q: 1 }
+    x.A = x.a = ['q']
+    x.F = x.f = () => ({ f: 3, g: 4, h: 5 })
+    x.Y = x.y = Symbol.for('W')
+
+    // console.log(x)
 
   })
 
@@ -2097,7 +2195,7 @@ Validation failed for property "b" with string "B" because the string is not of 
     expect(shape_ValueB0({ x: 10 })).toEqual({ x: 10 })
     expect(shape_ValueB0({ x: 10, y: 11 })).toEqual({ x: 10, y: 11 })
     expect(() => shape_ValueB0({ x: true })).toThrow('Validation failed for property "x" with boolean "true" because the boolean is not of type number.')
-
+  
     let shape_ValueB1 = Gubu({
       page: Value(
         {
@@ -2115,7 +2213,7 @@ Validation failed for property "b" with string "B" because the string is not of 
           },
         })
     })
-
+  
     expect(shape_ValueB1({
       page: {
         about: {
