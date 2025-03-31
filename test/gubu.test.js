@@ -551,6 +551,19 @@ Validation failed for property "q.b" with string "x" because the string is not o
             });
         }
     });
+    test('error-custom', () => {
+        let g0 = Gubu(Number, { name: 'G0' });
+        let ctx0 = { prefix: 'P0', suffix: 'S0' };
+        expect(g0(1, ctx0)).toEqual(1);
+        expect(() => g0('x', ctx0))
+            .toThrow('G0: P0: Validation failed for string "x" because ' +
+            'the string is not of type number. S0');
+        let ctx1 = { prefix: 'P1', suffix: 'S1' };
+        expect(g0(11, ctx1)).toEqual(11);
+        expect(() => g0('y', ctx1))
+            .toThrow('G0: P1: Validation failed for string "y" because ' +
+            'the string is not of type number. S1');
+    });
     test('shapes-basic', () => {
         let tmp = {};
         expect(Gubu(String)('x')).toEqual('x');

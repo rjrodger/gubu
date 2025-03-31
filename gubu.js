@@ -40,6 +40,8 @@ const GUBU = { gubu$: GUBU$, v$: VERSION };
 // RegExp: first letter is upper case
 const UPPER_CASE_FIRST_RE = /^[A-Z]/;
 const { toString } = Object.prototype;
+// TODO: make this work
+// type Shape<S> = (<V>(root?: V, ctx?: Context) => V & ShapeResult<S>)
 // Help the minifier
 const S = {
     gubu: 'gubu',
@@ -218,7 +220,9 @@ class GubuError extends TypeError {
     constructor(code, gname, err, ctx) {
         var _a;
         gname = (null == gname) ? '' : (!gname.startsWith('G$') ? gname + ': ' : '');
-        super(gname + err.map((e) => e.text).join('\n'));
+        const prefix = (null == ctx.prefix ? '' : ctx.prefix + ': ');
+        const suffix = (null == ctx.suffix ? '' : ' ' + ctx.suffix);
+        super(gname + prefix + err.map((e) => e.text).join('\n') + suffix);
         this.gubu = true;
         let name = 'GubuError';
         let ge = this;
@@ -274,7 +278,7 @@ const EMPTY_VAL = {
 function nodize(shape, depth, meta) {
     var _a, _b, _c, _d;
     // If using builder as property of Gubu, `this` is just Gubu, not a node.
-    if (make === shape) {
+    if (shapify === shape) {
         shape = undefined;
     }
     // Is this a (possibly incomplete) Node<S>?
@@ -437,25 +441,9 @@ function nodizeDeep(root, depth) {
         }
     }
     return nodes[0][0].root;
-    /*
-    if (null == n?.$?.gubu$) {
-      n = nodize(n, depth), depth
-    }
-  
-    if (undefined !== n.c && !n.c.$?.gubu$) {
-      n.c = nodize(n.c, n.d + 1)
-    }
-  
-    let vt = typeof n.v
-    if (S.object === vt && null != n.v) {
-      Object.entries(n.v).map((m: any[]) => (n.v[m[0]] = nodizeDeep(m[1], n.d + 1)))
-    }
-    return n
-  
-    */
 }
 // Create a GubuShape from a shape specification.
-function make(intop, inopts) {
+function shapify(intop, inopts) {
     const opts = null == inopts ? {} : inopts;
     // TODO: move to prepopts utility function
     // Ironically, we can't Gubu GubuOptions, so we have to set
@@ -823,30 +811,30 @@ function make(intop, inopts) {
         }
         return s.match ? 0 === s.err.length : s.root;
     }
-    function gubuShape(root, ctx) {
+    const shape = (root, ctx) => {
         return (exec(root, ctx, false));
-    }
+    };
     function valid(root, ctx) {
         let actx = ctx || {};
         actx.err = actx.err || [];
         exec(root, actx, false);
         return 0 === actx.err.length;
     }
-    gubuShape.valid = valid;
-    gubuShape.match = (root, ctx) => {
+    shape.valid = valid;
+    shape.match = (root, ctx) => {
         ctx = ctx || {};
         return exec(root, ctx, true);
     };
     // List the errors from a given root value.
-    gubuShape.error = (root, ctx) => {
+    shape.error = (root, ctx) => {
         let actx = ctx || {};
         actx.err = actx.err || [];
         exec(root, actx, false);
         return actx.err;
     };
-    gubuShape.spec = () => {
+    shape.spec = () => {
         // Normalize spec, discard errors.
-        gubuShape(undefined, { err: false });
+        shape(undefined, { err: false });
         const str = stringify(top, false, true, { key: Object.keys(TNAT) }, (_key, val) => {
             if (GUBU$ === val) {
                 return true;
@@ -855,30 +843,30 @@ function make(intop, inopts) {
         });
         return JP(str);
     };
-    gubuShape.node = () => {
-        gubuShape.spec();
+    shape.node = () => {
+        shape.spec();
         return top;
     };
-    gubuShape.stringify = (...rest) => {
-        const json = gubuShape.jsonify();
+    shape.stringify = (...rest) => {
+        const json = shape.jsonify();
         return '' === desc ?
             (desc = ('string' === typeof json ? json.replace(/^"(.*)"$/, '$1') :
                 JSON.stringify(json, ...rest))) : desc;
     };
-    gubuShape.jsonify = () => {
-        return null == json ? (json = node2json(gubuShape.node())) : json;
+    shape.jsonify = () => {
+        return null == json ? (json = node2json(shape.node())) : json;
     };
-    gubuShape.toString = function () {
+    shape.toString = function () {
         desc = '' === desc ? this.stringify() : desc;
         return `[Gubu ${opts.name} ${truncate(desc)}]`;
     };
     if (util_1.inspect && util_1.inspect.custom) {
-        gubuShape[util_1.inspect.custom] = gubuShape.toString;
+        shape[util_1.inspect.custom] = shape.toString;
     }
-    gubuShape.gubu = GUBU;
+    shape.gubu = GUBU;
     // Validate shape spec. This will throw if there's an issue with the spec.
-    gubuShape.spec();
-    return gubuShape;
+    shape.spec();
+    return shape;
 }
 // Parse a builder expression into actual Builders.
 // Function call syntax; Depth first; literals must be JSON values;
@@ -2032,7 +2020,7 @@ function stringify(src, dequote, expand, ignore, replacer) {
                 }
             }
             else if (S.function === typeof (val)) {
-                if (S.function === typeof (make[val.name]) && isNaN(+key)) {
+                if (S.function === typeof (shapify[val.name]) && isNaN(+key)) {
                     val = undefined;
                 }
                 else if ((_d = ignore === null || ignore === void 0 ? void 0 : ignore.val) === null || _d === void 0 ? void 0 : _d.reduce((a, n) => (a ? a : n === val.name || val.name.match(n)), false)) {
@@ -2115,8 +2103,8 @@ if (S.undefined !== typeof (window)) {
         defprop(BuilderMap[builderName], S.name, { value: builderName });
     }
 }
-Object.assign(make, {
-    Gubu: make,
+Object.assign(shapify, {
+    Gubu: shapify,
     // Builders by name, allows `const { Open } = Gubu`.
     ...BuilderMap,
     // Builders by alias, allows `const { GOpen } = Gubu`, to avoid naming conflicts.
@@ -2132,9 +2120,9 @@ Object.assign(make, {
     build,
     MakeArgu,
 });
-defprop(make, S.name, { value: S.gubu });
+defprop(shapify, S.name, { value: S.gubu });
 // The primary export.
-const Gubu = make;
+const Gubu = shapify;
 exports.Gubu = Gubu;
 // "G" Namespaced builders for convenient use in case of conflicts.
 const GAbove = Above;

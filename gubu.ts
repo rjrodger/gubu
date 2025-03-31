@@ -79,6 +79,8 @@ type Context = Record<string, any> & {
     depth?: number | number[]
     keys?: string[]
   }
+  prefix?: string
+  suffix?: string
 }
 
 
@@ -162,6 +164,8 @@ type ShapeResult<T> =
   T
 
 
+// TODO: make this work
+// type Shape<S> = (<V>(root?: V, ctx?: Context) => V & ShapeResult<S>)
 
 
 // Help the minifier
@@ -481,7 +485,11 @@ class GubuError extends TypeError {
     ctx: any,
   ) {
     gname = (null == gname) ? '' : (!gname.startsWith('G$') ? gname + ': ' : '')
-    super(gname + err.map((e: ErrDesc) => e.text).join('\n'))
+    const prefix = (null == ctx.prefix ? '' : ctx.prefix + ': ')
+    const suffix = (null == ctx.suffix ? '' : ' ' + ctx.suffix)
+
+    super(gname + prefix + err.map((e: ErrDesc) => e.text).join('\n') + suffix)
+
     let name = 'GubuError'
     let ge = this as unknown as any
     ge.name = name
@@ -543,7 +551,7 @@ const EMPTY_VAL: { [name: string]: any } = {
 function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S> {
 
   // If using builder as property of Gubu, `this` is just Gubu, not a node.
-  if (make === shape) {
+  if (shapify === shape) {
     shape = undefined
   }
 
@@ -741,28 +749,11 @@ function nodizeDeep(root: any, depth: number) {
   }
 
   return nodes[0][0].root
-
-  /*
-  if (null == n?.$?.gubu$) {
-    n = nodize(n, depth), depth
-  }
-
-  if (undefined !== n.c && !n.c.$?.gubu$) {
-    n.c = nodize(n.c, n.d + 1)
-  }
-
-  let vt = typeof n.v
-  if (S.object === vt && null != n.v) {
-    Object.entries(n.v).map((m: any[]) => (n.v[m[0]] = nodizeDeep(m[1], n.d + 1)))
-  }
-  return n
-
-  */
 }
 
 
 // Create a GubuShape from a shape specification.
-function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
+function shapify<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   const opts: GubuOptions = null == inopts ? {} : inopts
 
   // TODO: move to prepopts utility function
@@ -1206,11 +1197,11 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   }
 
 
-  function gubuShape<V>(root?: V, ctx?: Context):
-    V & ShapeResult<S> {
-    return (exec(root, ctx, false))
-  }
-
+  const shape =
+    <V>(root?: V, ctx?: Context):
+      V & ShapeResult<S> => {
+      return (exec(root, ctx, false))
+    }
 
   function valid<V>(root?: V, ctx?: Context): root is (V & S) {
     let actx: any = ctx || {}
@@ -1218,17 +1209,17 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
     exec(root, actx, false)
     return 0 === actx.err.length
   }
-  gubuShape.valid = valid
+  shape.valid = valid
 
 
-  gubuShape.match = (root?: any, ctx?: Context): boolean => {
+  shape.match = (root?: any, ctx?: Context): boolean => {
     ctx = ctx || {}
     return (exec(root, ctx, true) as boolean)
   }
 
 
   // List the errors from a given root value.
-  gubuShape.error = (root?: any, ctx?: Context): GubuError[] => {
+  shape.error = (root?: any, ctx?: Context): GubuError[] => {
     let actx: any = ctx || {}
     actx.err = actx.err || []
     exec(root, actx, false)
@@ -1236,9 +1227,9 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   }
 
 
-  gubuShape.spec = () => {
+  shape.spec = () => {
     // Normalize spec, discard errors.
-    gubuShape(undefined, { err: false })
+    shape(undefined, { err: false })
     const str = stringify(top, false, true, { key: Object.keys(TNAT) },
       (_key: string, val: any) => {
         if (GUBU$ === val) {
@@ -1250,40 +1241,40 @@ function make<S>(intop?: S | Node<S>, inopts?: GubuOptions) {
   }
 
 
-  gubuShape.node = (): Node<S> => {
-    gubuShape.spec()
+  shape.node = (): Node<S> => {
+    shape.spec()
     return top
   }
 
 
-  gubuShape.stringify = (...rest: any[]) => {
-    const json = gubuShape.jsonify()
+  shape.stringify = (...rest: any[]) => {
+    const json = shape.jsonify()
 
     return '' === desc ?
       (desc = ('string' === typeof json ? json.replace(/^"(.*)"$/, '$1') :
         JSON.stringify(json, ...rest))) : desc
   }
 
-  gubuShape.jsonify = () => {
-    return null == json ? (json = node2json(gubuShape.node())) : json
+  shape.jsonify = () => {
+    return null == json ? (json = node2json(shape.node())) : json
   }
 
 
-  gubuShape.toString = function(this: any) {
+  shape.toString = function(this: any) {
     desc = '' === desc ? this.stringify() : desc
     return `[Gubu ${opts.name} ${truncate(desc)}]`
   }
 
   if (inspect && inspect.custom) {
-    (gubuShape as any)[inspect.custom] = gubuShape.toString
+    (shape as any)[inspect.custom] = shape.toString
   }
 
-  gubuShape.gubu = GUBU
+  shape.gubu = GUBU
 
   // Validate shape spec. This will throw if there's an issue with the spec.
-  gubuShape.spec()
+  shape.spec()
 
-  return gubuShape
+  return shape
 }
 
 
@@ -2840,7 +2831,7 @@ function stringify(
         }
       }
       else if (S.function === typeof (val)) {
-        if (S.function === typeof ((make as any)[val.name]) && isNaN(+key)) {
+        if (S.function === typeof ((shapify as any)[val.name]) && isNaN(+key)) {
           val = undefined
         }
         else if (ignore?.val?.reduce((a, n) =>
@@ -2937,8 +2928,8 @@ if (S.undefined !== typeof (window)) {
 }
 
 
-Object.assign(make, {
-  Gubu: make,
+Object.assign(shapify, {
+  Gubu: shapify,
 
   // Builders by name, allows `const { Open } = Gubu`.
   ...BuilderMap,
@@ -2961,7 +2952,7 @@ Object.assign(make, {
 })
 
 
-type GubuShape = ReturnType<typeof make> &
+type GubuShape = ReturnType<typeof shapify> &
 {
   valid: <D, S>(root?: D, ctx?: any) => root is (D & S),
   match: (root?: any, ctx?: any) => boolean,
@@ -2974,7 +2965,7 @@ type GubuShape = ReturnType<typeof make> &
 
 
 
-type Gubu = typeof make & typeof BuilderMap & {
+type Gubu = typeof shapify & typeof BuilderMap & {
   G$: typeof G$,
   buildize: typeof buildize,
   makeErr: typeof makeErr,
@@ -2986,11 +2977,11 @@ type Gubu = typeof make & typeof BuilderMap & {
   MakeArgu: typeof MakeArgu,
 }
 
-defprop(make, S.name, { value: S.gubu })
+defprop(shapify, S.name, { value: S.gubu })
 
 
 // The primary export.
-const Gubu: Gubu = (make as Gubu)
+const Gubu: Gubu = (shapify as Gubu)
 
 
 // "G" Namespaced builders for convenient use in case of conflicts.

@@ -23,6 +23,8 @@ type Context = Record<string, any> & {
         depth?: number | number[];
         keys?: string[];
     };
+    prefix?: string;
+    suffix?: string;
 };
 type ValType = 'any' | // Any type.
 'array' | // An array.
@@ -158,7 +160,7 @@ declare class GubuError extends TypeError {
     };
 }
 declare function nodize<S>(shape?: any, depth?: number, meta?: NodeMeta): Node<S>;
-declare function make<S>(intop?: S | Node<S>, inopts?: GubuOptions): {
+declare function shapify<S>(intop?: S | Node<S>, inopts?: GubuOptions): {
     <V>(root?: V, ctx?: Context): V & ShapeResult<S>;
     valid: <V>(root?: V, ctx?: Context) => root is (V & S);
     match(root?: any, ctx?: Context): boolean;
@@ -258,7 +260,7 @@ declare const BuilderMap: {
     Rest: <V>(this: any, child?: any, shape?: Node<V> | V) => Node<V>;
     Type: <V extends "Number" | "String" | "Boolean" | "Object" | "Array" | "Function" | "Symbol" | StringConstructor | NumberConstructor | BooleanConstructor | ArrayConstructor | ObjectConstructor | FunctionConstructor | SymbolConstructor | Symbol | Record<any, any> | null | undefined | typeof NaN>(this: any, tref: V, shape?: any) => (V extends "Number" | NumberConstructor ? number : V extends "Boolean" | BooleanConstructor ? boolean : V extends "String" | StringConstructor ? string : V extends "Array" | ArrayConstructor ? any[] : V extends "Object" | ObjectConstructor ? any : V extends "Function" | FunctionConstructor ? Function : V extends "Symbol" | SymbolConstructor ? Symbol : V extends null ? null : V extends undefined ? undefined : V);
 };
-type GubuShape = ReturnType<typeof make> & {
+type GubuShape = ReturnType<typeof shapify> & {
     valid: <D, S>(root?: D, ctx?: any) => root is (D & S);
     match: (root?: any, ctx?: any) => boolean;
     error: (root?: any, ctx?: Context) => GubuError[];
@@ -267,7 +269,7 @@ type GubuShape = ReturnType<typeof make> & {
     isShape: (v: any) => boolean;
     gubu: typeof GUBU;
 };
-type Gubu = typeof make & typeof BuilderMap & {
+type Gubu = typeof shapify & typeof BuilderMap & {
     G$: typeof G$;
     buildize: typeof buildize;
     makeErr: typeof makeErr;
